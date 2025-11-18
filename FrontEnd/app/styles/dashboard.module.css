@@ -1,0 +1,375 @@
+/* ============================================
+   DASHBOARD - ESTILOS AJUSTADOS COM RESPONSIVIDADE MOBILE
+   ============================================ */
+
+/* Layout Principal */
+.dashboardContainer {
+  min-height: 100vh;
+  background: #0a1929;
+  color: white;
+  font-family: "Inter", sans-serif;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #0f172a;
+  color: white;
+  font-size: 1.2rem;
+}
+
+/* Header */
+.dashboardHeader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 73px;
+  background: #0d2137;
+  border-bottom: 1px solid #1a3a52;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1000;
+}
+
+.headerBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.headerLogo {
+  color: white;
+}
+
+.headerTitle {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.headerUser {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.headerUserName {
+  font-size: 1.125rem;
+}
+
+.headerUserAvatar,
+.headerUserInitials {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #22c55e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: white;
+}
+
+.headerUserInitials {
+  background: linear-gradient(to bottom right, #22c55e, #16a34a);
+}
+
+/* Layout com Sidebar */
+.dashboardLayout {
+  display: flex;
+  margin-top: 73px; /* altura do header */
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 73px;
+  left: 0;
+  width: 16rem;
+  height: calc(100vh - 73px);
+  background: #0d2137;
+  border-right: 1px solid #1a3a52;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  z-index: 900;
+  overflow-y: auto;
+}
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebarNavItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  color: #d1d5db;
+  transition: background-color 0.2s, color 0.2s;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  text-align: left;
+}
+
+.sidebarNavItem:hover {
+  background: #1a3a52;
+}
+
+.sidebarNavItemActive {
+  background: #22c55e;
+  color: white;
+  font-weight: 500;
+}
+
+/* Main Content */
+.mainContent {
+  flex: 1;
+  margin-left: 16rem; /* largura da sidebar */
+  padding: 2rem;
+  min-height: calc(100vh - 73px);
+  overflow-y: auto;
+  background: #0a1929;
+}
+
+/* Inner wrapper */
+.mainContentInner {
+  max-width: 90rem;
+  margin: 0 auto;
+}
+
+/* Welcome Section */
+.welcomeSection {
+  margin-bottom: 2rem;
+}
+
+.welcomeTitle {
+  font-size: 2.25rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.welcomeSubtitle {
+  font-size: 1.25rem;
+  color: #9ca3af;
+}
+
+/* Metrics Grid */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.metricCard {
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  color: white;
+}
+
+.metricCardGreen {
+  background: #22c55e;
+}
+
+.metricCardBlue {
+  background: #3b82f6;
+}
+
+.metricCardOrange {
+  background: #f97316;
+}
+
+.metricCardIndigo {
+  background: #4f46e5;
+}
+
+.metricIcon {
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 1rem;
+}
+
+.metricLabel {
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+  opacity: 0.9;
+}
+
+.metricValue {
+  font-size: 1.875rem;
+  font-weight: bold;
+}
+
+.metricSubtext {
+  font-size: 0.75rem;
+  opacity: 0.75;
+  margin-bottom: 0.25rem;
+}
+
+/* Content Grid */
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+/* Chart Card */
+.chartCard {
+  background: #0d2137;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid #1a3a52;
+}
+
+.chartTitle {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+}
+
+.chartContainer {
+  position: relative;
+  height: 16rem;
+}
+
+/* Product Table */
+.productTable {
+  margin-top: 2rem;
+  background: #0d2137;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid #1a3a52;
+}
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHead {
+  border-bottom: 1px solid #1a3a52;
+}
+
+.tableHeadCell {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.tableRow {
+  border-bottom: 1px solid #1a3a52;
+}
+
+.tableCell {
+  padding: 1rem;
+}
+
+.statusBadge {
+  background: #22c55e;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* RESPONSIVIDADE MOBILE (ajustado para voltar ao comportamento antigo) */
+@media (max-width: 767px) {
+  .dashboardLayout {
+    flex-direction: column; /* Conteúdo principal em cima, menu abaixo */
+  }
+
+  .sidebar {
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-top: 1px solid #1a3a52;
+    padding: 0.5rem 0;
+    flex-direction: row;
+    justify-content: space-around;
+    background-color: #0f1c2e;
+    overflow-x: auto;
+  }
+
+  .sidebarNav {
+    flex-direction: row;
+    gap: 0;
+    justify-content: center;
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .sidebarNavItem {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0;
+  }
+
+  .sidebarNavItem span {
+    display: none; /* esconde nomes no mobile */
+  }
+
+  .sidebarNavItem svg {
+    width: 1.8rem;
+    height: 1.8rem;
+    margin: 0;
+  }
+
+  .mainContent {
+    margin-left: 0; /* remove espaço lateral da sidebar fixa */
+    margin-top: 73px; /* ainda respeita header fixo */
+    padding: 1rem;
+  }
+}
+
+/* TABLET */
+@media (min-width: 768px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .contentGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* DESKTOP */
+@media (min-width: 1024px) {
+  .metricsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .contentGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .chartCard {
+    grid-column: span 2;
+  }
+}

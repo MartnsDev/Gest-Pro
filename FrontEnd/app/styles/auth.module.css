@@ -1,0 +1,423 @@
+/* ============================================
+   AUTH PAGES - ESTILOS COMPARTILHADOS
+   Login, Cadastro e Recuperação de Senha
+   ============================================ */
+
+/* Container Principa l */
+.authContainer {
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    #0a2e3d 0%,
+    #0f3d4a 25%,
+    #1a4d5c 50%,
+    #16a085 100%
+  );
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cabeçalho Superior */
+.authHeader {
+  width: 100%;
+  text-align: center;
+  padding-top: 3rem;
+  z-index: 20;
+}
+
+.authHeaderTitle {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0 1rem;
+  text-transform: uppercase;
+}
+
+/* Container de Conteúdo */
+.authContent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.authContentInner {
+  width: 100%;
+  max-width: 75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+}
+
+/* Ilustração Lateral */
+.authIllustration {
+  flex: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding-right: 2rem;
+}
+
+.authIllustrationImage {
+  position: relative;
+  width: 100%;
+  max-width: 28rem;
+}
+
+/* Card do Formulário */
+.authCard {
+  width: 100%;
+  flex: 1;
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.authCardInner {
+  width: 100%;
+  max-width: 24rem;
+}
+
+/* Logo */
+.authLogo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+/* Formulário */
+.authForm {
+  display: grid;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Campos de Input */
+.inputGroup {
+  position: relative;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #9ca3af;
+}
+
+.inputField {
+  width: 100%;
+  padding: 1rem 1.25rem 1rem 3.5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 1rem;
+  font-size: 1rem;
+  color: #374151;
+  transition: all 0.2s;
+  background: #f9fafb;
+}
+
+.inputField:focus {
+  outline: none;
+  border-color: #10b981;
+  background: white;
+}
+
+.inputField::placeholder {
+  color: #9ca3af;
+}
+
+.inputField:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Botões */
+.btnPrimary {
+  width: 100%;
+  background: #10b981;
+  color: white;
+  font-weight: 700;
+  font-size: 1.125rem;
+  padding: 1rem 1.5rem;
+  border-radius: 1rem;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
+  border: none;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px -5px rgba(16, 185, 129, 0.5);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  width: 100%;
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #374151;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.875rem 1.5rem;
+  border-radius: 1rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.btnSecondary:hover:not(:disabled) {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.btnSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Links */
+.authLink {
+  color: #10b981;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.authLink:hover {
+  color: #059669;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  transition: color 0.2s;
+}
+
+.backLink:hover {
+  color: #374151;
+}
+
+/* Mensagens de Erro */
+.errorMessage {
+  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.75rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.successMessage {
+  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 0.75rem;
+  color: #16a34a;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Rodapé */
+.authFooter {
+  width: 100%;
+  text-align: center;
+  padding-bottom: 3rem;
+  z-index: 20;
+}
+
+.authFooterText {
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 500;
+  padding: 0 1rem;
+}
+
+/* Upload de Foto */
+.photoUpload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.photoPreview {
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #10b981;
+}
+
+.photoPlaceholder {
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  background: #f3f4f6;
+  border: 4px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photoUploadBtn {
+  cursor: pointer;
+  background: #10b981;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.photoUploadBtn:hover {
+  background: #059669;
+}
+
+/* Responsividade */
+@media (min-width: 768px) {
+  .authHeader {
+    padding-top: 3.5rem;
+  }
+
+  .authHeaderTitle {
+    font-size: 1.75rem;
+  }
+
+  .authContent {
+    padding: 3rem 2rem;
+  }
+
+  .authContentInner {
+    flex-direction: row;
+    gap: 4rem;
+    max-width: 80rem;
+  }
+
+  .authIllustration {
+    display: flex;
+    padding-right: 2rem;
+  }
+
+  .authIllustrationImage {
+    max-width: 32rem;
+  }
+
+  .authCard {
+    padding: 2.5rem;
+    max-width: 28rem;
+  }
+
+  .authCardInner {
+    max-width: 24rem;
+  }
+
+  .authLogo {
+    margin-bottom: 2.5rem;
+  }
+
+  .authForm {
+    gap: 1.25rem;
+  }
+
+  .inputField {
+    padding: 1.125rem 1.25rem 1.125rem 3.5rem;
+    font-size: 1rem;
+  }
+
+  .btnPrimary {
+    padding: 1.125rem 1.5rem;
+    font-size: 1.125rem;
+  }
+
+  .btnSecondary {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .authFooter {
+    padding-bottom: 3.5rem;
+  }
+
+  .authFooterText {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .authHeaderTitle {
+    font-size: 2rem;
+  }
+
+  .authContentInner {
+    gap: 5rem;
+    max-width: 90rem;
+  }
+
+  .authIllustrationImage {
+    max-width: 36rem;
+  }
+
+  .authCard {
+    padding: 3rem;
+    max-width: 30rem;
+  }
+
+  .authFooterText {
+    font-size: 1.375rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .authContentInner {
+    gap: 0.5rem;
+    max-width: 80rem;
+  }
+
+  .authIllustrationImage {
+    max-width: 600rem;
+  }
+
+  .authCard {
+    max-width: 32rem;
+  }
+}
