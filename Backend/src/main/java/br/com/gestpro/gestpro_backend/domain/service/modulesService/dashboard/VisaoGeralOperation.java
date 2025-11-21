@@ -15,9 +15,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class VisaoGeralOperation {
@@ -89,24 +87,20 @@ public class VisaoGeralOperation {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, PlanoDTO> planoUsuarioLogado(String emailUsuario) {
-        Map<String, PlanoDTO> info = new HashMap<>();
-
-        usuarioRepository.findByEmail(emailUsuario).ifPresentOrElse(usuario -> {
-            TipoPlano tipoPlano = usuario.getTipoPlano();
-            LocalDate dataExpiracao = usuario.getDataExpiracaoPlano();
-
-            long diasRestantes = dataExpiracao != null
-                    ? ChronoUnit.DAYS.between(LocalDate.now(), dataExpiracao)
-                    : 0;
-            diasRestantes = Math.max(diasRestantes, 0);
-
-            PlanoDTO planoDTO = new PlanoDTO(tipoPlano.name(), diasRestantes);
-            info.put(emailUsuario, planoDTO);
-        }, () -> info.put(emailUsuario, new PlanoDTO("NENHUM", 0)));
-
-        return info;
+    public PlanoDTO planoUsuarioLogado(String emailUsuario) {
+        return usuarioRepository.findByEmail(emailUsuario)
+                .map(usuario -> {
+                    TipoPlano tipoPlano = usuario.getTipoPlano();
+                    LocalDate dataExpiracao = usuario.getDataExpiracaoPlano();
+                    long diasRestantes = dataExpiracao != null
+                            ? ChronoUnit.DAYS.between(LocalDate.now(), dataExpiracao)
+                            : 0;
+                    diasRestantes = Math.max(diasRestantes, 0);
+                    return new PlanoDTO(tipoPlano.name(), diasRestantes);
+                })
+                .orElse(new PlanoDTO("NENHUM", 0));
     }
+
 
     // ------------------------- PRODUTOS ---------------------------------
 
