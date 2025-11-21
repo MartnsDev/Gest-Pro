@@ -4,10 +4,8 @@ import br.com.gestpro.gestpro_backend.api.dto.modules.produto.CriarProdutoDTO;
 import br.com.gestpro.gestpro_backend.api.dto.modules.produto.ProdutoResponseDTO;
 import br.com.gestpro.gestpro_backend.domain.model.auth.Usuario;
 import br.com.gestpro.gestpro_backend.domain.model.modules.produto.Produto;
-import br.com.gestpro.gestpro_backend.domain.repository.auth.UsuarioRepository;
+import br.com.gestpro.gestpro_backend.domain.service.authService.UserAuthenticatedService;
 import br.com.gestpro.gestpro_backend.domain.service.modulesService.produto.ProdutoServiceInterface;
-import br.com.gestpro.gestpro_backend.infra.exception.ApiException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,23 +17,18 @@ import java.util.List;
 public class ProdutoController {
 
     private final ProdutoServiceInterface produtoService;
-    private final UsuarioRepository usuarioRepository;
+    private final UserAuthenticatedService userAuthenticatedService;
 
-    public ProdutoController(ProdutoServiceInterface produtoService, UsuarioRepository usuarioRepository) {
+    public ProdutoController(ProdutoServiceInterface produtoService,
+                             UserAuthenticatedService userAuthenticatedService) {
         this.produtoService = produtoService;
-        this.usuarioRepository = usuarioRepository;
+        this.userAuthenticatedService = userAuthenticatedService;
     }
 
-    // ✅ Criar produto (vinculado ao usuário)
     @PostMapping("/criar")
     public ResponseEntity<ProdutoResponseDTO> criarProduto(@RequestBody CriarProdutoDTO dto) {
-
-        Usuario usuario = usuarioRepository.findById(dto.getUsuarioId())
-                .orElseThrow(() -> new ApiException(
-                        "Usuário não encontrado",
-                        HttpStatus.BAD_REQUEST,
-                        "/api/produtos/criar"
-                ));
+        // Busca o usuário diretamente como entidade
+        Usuario usuario = userAuthenticatedService.buscarUsuarioPorId(dto.getUsuarioId());
 
         Produto produto = new Produto();
         produto.setNome(dto.getNome());
@@ -43,13 +36,14 @@ public class ProdutoController {
         produto.setQuantidadeEstoque(dto.getQuantidadeEstoque());
         produto.setQuantidade(dto.getQuantidade());
         produto.setAtivo(dto.getAtivo());
-        produto.setUsuario(usuario);
+        produto.setUsuario(usuario); // agora é a entidade correta
         produto.setDataCriacao(LocalDateTime.now());
 
         Produto novoProduto = produtoService.salvar(produto);
 
         return ResponseEntity.ok(new ProdutoResponseDTO(novoProduto));
     }
+
 
     // ✅ Listar produtos apenas de um usuário
     @GetMapping("/usuario/{usuarioId}")
@@ -58,14 +52,14 @@ public class ProdutoController {
         return ResponseEntity.ok(produtos);
     }
 
-    // ⚠️ Endpoint global — use apenas para administração
+    //  Endpoint global — use apenas para administração
     @GetMapping
     public ResponseEntity<List<Produto>> listarProdutos() {
         List<Produto> produtos = produtoService.listarTodos();
         return ResponseEntity.ok(produtos);
     }
 
-    // ✅ Buscar produto por ID
+    // Buscar produto por ID
     @GetMapping("/{id}")
     public ResponseEntity<Produto> buscarProdutoPorId(@PathVariable Long id) {
         Produto produto = produtoService.buscarPorId(id);

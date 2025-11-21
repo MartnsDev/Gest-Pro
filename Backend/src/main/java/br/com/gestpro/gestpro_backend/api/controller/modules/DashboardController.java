@@ -29,40 +29,23 @@ public class DashboardController {
         String emailUsuario = getEmailUsuario(authentication);
         System.out.println("🔹 Dashboard: iniciando para " + emailUsuario);
 
-        try {
-            Long totalVendas = dashboardService.totalVendasHoje(emailUsuario);
-            System.out.println("✅ totalVendasHoje: " + totalVendas);
+        Long totalVendas = dashboardService.totalVendasHoje(emailUsuario);
+        Long produtosEstoque = dashboardService.produtosEmEstoque(emailUsuario);
+        Long produtosZerados = dashboardService.produtosZerados(emailUsuario);
+        Long clientesAtivos = dashboardService.clientesAtivos(emailUsuario);
+        Long vendasSemana = dashboardService.vendasSemana(emailUsuario);
+        String plano = dashboardService.planoUsuarioLogado(emailUsuario);
 
-            Long produtosEstoque = dashboardService.produtosEmEstoque(emailUsuario);
-            System.out.println("✅ produtosEmEstoque: " + produtosEstoque);
+        List<String> alertas = Stream.concat(
+                dashboardService.alertasProdutosZerados(emailUsuario).stream(),
+                dashboardService.alertasVendasSemana(emailUsuario).stream()
+        ).toList();
 
-            Long produtosZerados = dashboardService.produtosZerados(emailUsuario);
-            System.out.println("✅ produtosZerados: " + produtosZerados);
+        DashboardVisaoGeralResponse response = new DashboardVisaoGeralResponse(
+                totalVendas, produtosEstoque, produtosZerados, clientesAtivos, vendasSemana, plano, alertas
+        );
 
-            Long clientesAtivos = dashboardService.clientesAtivos(emailUsuario);
-            System.out.println("✅ clientesAtivos: " + clientesAtivos);
-
-            Long vendasSemana = dashboardService.vendasSemana(emailUsuario);
-            System.out.println("✅ vendasSemana: " + vendasSemana);
-
-            String plano = dashboardService.planoUsuarioLogado(emailUsuario);
-            System.out.println("✅ planoUsuarioLogado: " + plano);
-
-            List<String> alertas = Stream.concat(
-                    dashboardService.alertasProdutosZerados(emailUsuario).stream(),
-                    dashboardService.alertasVendasSemana(emailUsuario).stream()
-            ).toList();
-
-            DashboardVisaoGeralResponse response = new DashboardVisaoGeralResponse(
-                    totalVendas, produtosEstoque, produtosZerados, clientesAtivos, vendasSemana, plano, alertas
-            );
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
-        }
+        return ResponseEntity.ok(response);
     }
 
 
@@ -89,7 +72,7 @@ public class DashboardController {
         return ResponseEntity.ok(result);
     }
 
-    // ------------------ MÉTODO AUXILIAR ------------------
+    // ------------------ MÉTODOS AUXILIAR ------------------
 
     private String getEmailUsuario(Authentication authentication) {
         return authentication.getName();

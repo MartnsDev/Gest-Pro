@@ -63,4 +63,15 @@ public class UserAuthenticatedService {
 
         return ResponseEntity.ok(dadosUsuario);
     }
+
+    public Usuario buscarUsuarioPorId(Long id) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("ID do usuário inválido.");
+        }
+
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+    }
+
+
 }
