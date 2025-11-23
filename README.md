@@ -75,10 +75,6 @@ Implementar notificações em tempo real
 Suporte a múltiplas lojas
 ```
 
-## Documentação Swagger
----
-![Documentaçãp Swagger](https://github.com/MartnsDev/Gest-Pro/blob/2ced41f10df3341faa91cdcd0596061cfdcbc920/Img/Documenta%C3%A7%C3%A3o-Swagger.png)
-
 📜 Licença
 ```
 Este projeto não pode ser copiado, reproduzido ou utilizado sem autorização do autor.
@@ -86,6 +82,10 @@ Todos os direitos reservados a Matheus Martins (MartnsDev).
 ```
 
 Feito com 💚 por Matheus Martins [Linkedin](https://www.linkedin.com/in/matheusmartnsdev/)
+
+## Documentação Swagger
+---
+![Documentaçãp Swagger](https://github.com/MartnsDev/Gest-Pro/blob/2ced41f10df3341faa91cdcd0596061cfdcbc920/Img/Documenta%C3%A7%C3%A3o-Swagger.png)
 
 Cadastro
 ---
