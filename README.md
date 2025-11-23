@@ -42,7 +42,7 @@ Login
 
 Dashboard
 ---
-![GestPro - Dashboard](https://github.com/MartnsDev/GestPro/blob/c5c9a65498392bcf967d656b2d120c502a20fb96/gestpro.png)
+![GestPro - Dashboard](https://github.com/MartnsDev/Gest-Pro/blob/c7f08fcf4571fefae78d8af88cb5fca656c48328/Img/Gest-Pro_Dashboard.png)
 
 
 🔐 Funcionalidades Principais
