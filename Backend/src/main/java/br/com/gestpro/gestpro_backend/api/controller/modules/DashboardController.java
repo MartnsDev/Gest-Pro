@@ -24,14 +24,14 @@ public class DashboardController {
     @GetMapping("/visao-geral")
     public ResponseEntity<DashboardVisaoGeralResponse> getVisaoGeral(Authentication authentication) {
         String emailUsuario = getEmailUsuario(authentication);
-        System.out.println("🔹 Dashboard: iniciando para " + emailUsuario);
+        System.out.println("Dashboard: iniciando para " + emailUsuario);
 
         Long totalVendas = dashboardService.totalVendasHoje(emailUsuario);
         Long produtosEstoque = dashboardService.produtosEmEstoque(emailUsuario);
         Long produtosZerados = dashboardService.produtosZerados(emailUsuario);
         Long clientesAtivos = dashboardService.clientesAtivos(emailUsuario);
         Long vendasSemana = dashboardService.vendasSemana(emailUsuario);
-        PlanoDTO planoUsuario = dashboardService.planoUsuarioLogado(emailUsuario); // <-- PlanoDTO direto
+        PlanoDTO planoUsuario = dashboardService.planoUsuarioLogado(emailUsuario);
 
         List<String> alertas = Stream.concat(
                 dashboardService.alertasProdutosZerados(emailUsuario).stream(),
