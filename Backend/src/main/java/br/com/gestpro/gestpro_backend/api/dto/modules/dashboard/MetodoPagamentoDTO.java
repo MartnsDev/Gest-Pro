@@ -1,15 +1,35 @@
 package br.com.gestpro.gestpro_backend.api.dto.modules.dashboard;
 
-import lombok.Data;
+import br.com.gestpro.gestpro_backend.domain.model.enums.FormaDePagamento;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MetodoPagamentoDTO {
     private String metodo;
-    private long quantidade;
+    private Long total;
 
-    public MetodoPagamentoDTO(String metodo, long quantidade) {
+    public MetodoPagamentoDTO() {
+    } // <- importantíssimo
+
+    // construtor usado por SELECT new ... (mantém)
+    public MetodoPagamentoDTO(FormaDePagamento forma, Long total) {
+        this.metodo = forma != null ? forma.name() : null;
+        this.total = total;
+    }
+
+    public String getMetodo() {
+        return metodo;
+    }
+
+    public void setMetodo(String metodo) {
         this.metodo = metodo;
-        this.quantidade = quantidade;
+    }
+
+    public Long getTotal() {
+        return total;
+    }
+
+    public void setTotal(Long total) {
+        this.total = total;
     }
 }
-

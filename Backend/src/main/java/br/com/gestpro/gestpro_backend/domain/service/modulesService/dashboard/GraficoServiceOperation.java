@@ -3,10 +3,10 @@ package br.com.gestpro.gestpro_backend.domain.service.modulesService.dashboard;
 import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.MetodoPagamentoDTO;
 import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.ProdutoVendasDTO;
 import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.VendasDiariasDTO;
-import br.com.gestpro.gestpro_backend.domain.model.enums.FormaDePagamento;
 import br.com.gestpro.gestpro_backend.domain.repository.auth.UsuarioRepository;
 import br.com.gestpro.gestpro_backend.domain.repository.modules.GraficoRepository;
 import br.com.gestpro.gestpro_backend.infra.exception.ApiException;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,38 +33,41 @@ public class GraficoServiceOperation {
     // ---------------------------- GRÁFICOS ---------------------------------------------
 
     /**
-     * Gráfico de pizza: total de vendas por método de pagamento (PIX, Cartão, Dinheiro...).
+     * Gráfico de pizza: total de vendas por método de pagamento.
+     * Cache por usuário (email). TTL configurado globalmente via RedisCacheConfig.
      */
+    @Cacheable(cacheNames = "grafico:pagamento", key = "#email", unless = "#result == null || #result.isEmpty()")
     @Transactional(readOnly = true)
     public List<MetodoPagamentoDTO> vendasPorMetodoPagamento(String email) {
         List<Object[]> raw = graficoRepository.countVendasPorFormaPagamentoRaw(email);
 
         return raw.stream()
-                .map(o -> new MetodoPagamentoDTO(
-                        ((FormaDePagamento) o[0]).name(),
-                        ((Number) o[1]).longValue()
-                ))
+                .map(o -> {
+                    var forma = (br.com.gestpro.gestpro_backend.domain.model.enums.FormaDePagamento) o[0];
+                    var total = ((Number) o[1]).longValue();
+                    return new MetodoPagamentoDTO(forma, total); // seu construtor aceita (FormaDePagamento, Long)
+                })
                 .toList();
     }
 
     /**
-     * Gráfico de barras: total de vendas por produto.
+     * Gráfico de barras: total de vendas por produto (top produtos ordenados).
+     * Cache por usuário.
      */
+    @Cacheable(cacheNames = "grafico:produto", key = "#email", unless = "#result == null || #result.isEmpty()")
     @Transactional(readOnly = true)
     public List<ProdutoVendasDTO> vendasPorProduto(String email) {
-        List<Object[]> raw = graficoRepository.countVendasPorProdutoRaw(email);
-
-        return raw.stream()
-                .map(o -> new ProdutoVendasDTO(
-                        (String) o[0],
-                        ((Number) o[1]).longValue()
-                ))
-                .toList();
+        // Repo já fornece ProdutoVendasDTO via constructor expression (nome, SUM(qtd))
+        List<ProdutoVendasDTO> raw = graficoRepository.countVendasPorProdutoDTO(email);
+        return raw;
     }
 
     /**
      * Gráfico de linha: vendas diárias da semana atual.
+     * Aqui usamos query nativa; mapeamos para DTO com nomes dos dias.
+     * Cache por usuário.
      */
+    @Cacheable(cacheNames = "grafico:diarias", key = "#email", unless = "#result == null || #result.isEmpty()")
     @Transactional(readOnly = true)
     public List<VendasDiariasDTO> vendasDiariasSemana(String email) {
         Long usuarioId = usuarioRepository.findByEmail(email)
@@ -81,22 +84,26 @@ public class GraficoServiceOperation {
 
         List<Object[]> raw = graficoRepository.countVendasDiariasRawPorUsuario(inicio, fim, usuarioId);
 
-        // Map: dia_da_semana (0=Domingo..6=Sábado) → total
+        // Map: dia_numero (1=Sunday..7=Saturday in MySQL DAYOFWEEK) → total
         Map<Integer, Double> vendasPorDia = raw.stream()
                 .collect(Collectors.toMap(
-                        o -> ((Number) o[0]).intValue(),
-                        o -> o[1] == null ? 0.0 : ((Number) o[1]).doubleValue()
+                        o -> ((Number) o[0]).intValue(),                    // dia_numero
+                        o -> o[2] == null ? 0.0 : ((Number) o[2]).doubleValue()
                 ));
 
-        String[] nomesDias = {"Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"};
+        // Nomes padronizados (usando index 1..7 conforme MySQL)
+        String[] nomesDias = {"", "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"};
 
+        // Converte para DTOs na ordem Segunda..Domingo (se preferir mostrar Segunda primeiro)
         List<VendasDiariasDTO> result = new ArrayList<>();
-        for (int dia = 0; dia <= 6; dia++) {
-            double total = vendasPorDia.getOrDefault(dia, 0.0);
-            result.add(new VendasDiariasDTO(nomesDias[dia], total));
+        // se quiser ordem Domingo→Sábado: for i=1..7
+        // geralmente prefiro Segunda→Domingo:
+        int[] ordem = {2, 3, 4, 5, 6, 7, 1}; // 2=segunda ... 1=domingo
+        for (int diaNumero : ordem) {
+            double total = vendasPorDia.getOrDefault(diaNumero, 0.0);
+            result.add(new VendasDiariasDTO(nomesDias[diaNumero], total));
         }
 
         return result;
     }
-
 }

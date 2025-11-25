@@ -1,16 +1,31 @@
 package br.com.gestpro.gestpro_backend.api.dto.modules.dashboard;
 
-import lombok.Data;
-
-@Data
 public class VendasDiariasDTO {
-    private String dia; // String ao invés de LocalDate
-    private double totalVendas;
+    private String dia;
+    private double total;
 
-    public VendasDiariasDTO(String dia, double totalVendas) {
+    public VendasDiariasDTO() {
+    } // <- obrigatório para Jackson
+
+    public VendasDiariasDTO(String dia, double total) {
         this.dia = dia;
-        this.totalVendas = totalVendas;
+        this.total = total;
     }
 
-    // getters e setters...
+    public String getDia() {
+        return dia;
+    }
+
+    public void setDia(String dia) {
+        this.dia = dia;
+    }
+
+    public double getTotal() {
+        return total;
+    }
+
+    public void setTotal(double total) {
+        this.total = total;
+    }
+
 }

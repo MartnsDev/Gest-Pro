@@ -1,13 +1,30 @@
 package br.com.gestpro.gestpro_backend.api.dto.modules.dashboard;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-
-@Data
-@AllArgsConstructor
 public class ProdutoVendasDTO {
-    private String nomeProduto;
-    private long quantidade;
+    private String nome;
+    private Long quantidade;
 
-    // getters e setters...
+    public ProdutoVendasDTO() {
+    }
+
+    public ProdutoVendasDTO(String nome, Long quantidade) {
+        this.nome = nome;
+        this.quantidade = quantidade;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public Long getQuantidade() {
+        return quantidade;
+    }
+
+    public void setQuantidade(Long quantidade) {
+        this.quantidade = quantidade;
+    }
 }

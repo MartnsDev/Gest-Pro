@@ -135,7 +135,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
 
 
     @Override
-    @Cacheable(cacheNames = "dashboard", key = "#email")
+    @Cacheable(cacheNames = "dashboard-v2", key = "#email")
     @Transactional(readOnly = true)
     public DashboardVisaoGeralResponse visaoGeral(String email) {
         // 1) obter os contadores via query agregada (uma única consulta)
