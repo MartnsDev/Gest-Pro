@@ -1,16 +1,16 @@
 package br.com.gestpro.gestpro_backend.domain.service.modulesService.dashboard;
 
-import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.MetodoPagamentoDTO;
-import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.PlanoDTO;
-import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.ProdutoVendasDTO;
-import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.VendasDiariasDTO;
+import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.*;
+import br.com.gestpro.gestpro_backend.domain.repository.auth.UsuarioRepository;
 import br.com.gestpro.gestpro_backend.domain.repository.modules.DashboardRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 @Service
 public class DashboardServiceImpl implements DashboardServiceInterface {
@@ -18,13 +18,16 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
     private final DashboardRepository dashboardRepository;
     private final GraficoServiceOperation graficoServiceOperation;
     private final VisaoGeralOperation visaoGeralOperation;
+    private final UsuarioRepository usuarioRepository; // <<-- injetado
 
     public DashboardServiceImpl(DashboardRepository dashboardRepository,
                                 GraficoServiceOperation graficoServiceOperation,
-                                VisaoGeralOperation visaoGeralOperation) {
+                                VisaoGeralOperation visaoGeralOperation,
+                                UsuarioRepository usuarioRepository) {
         this.dashboardRepository = dashboardRepository;
         this.graficoServiceOperation = graficoServiceOperation;
         this.visaoGeralOperation = visaoGeralOperation;
+        this.usuarioRepository = usuarioRepository;
     }
 
 
@@ -128,6 +131,50 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
     @Transactional
     public List<VendasDiariasDTO> vendasDiariasSemana(String email) {
         return graficoServiceOperation.vendasDiariasSemana(email);
+    }
+
+
+    @Override
+    @Cacheable(cacheNames = "dashboard", key = "#email")
+    @Transactional(readOnly = true)
+    public DashboardVisaoGeralResponse visaoGeral(String email) {
+        // 1) obter os contadores via query agregada (uma única consulta)
+        var p = dashboardRepository.findDashboardCountsByEmail(email);
+        Long vendasHoje = p != null ? p.getVendasHoje() : 0L;
+        Long produtosComEstoque = p != null ? p.getProdutosComEstoque() : 0L;
+        Long produtosSemEstoque = p != null ? p.getProdutosSemEstoque() : 0L;
+        Long clientesAtivos = p != null ? p.getClientesAtivos() : 0L;
+
+        // 2) calcular vendasSemana (usa o repositório já existente)
+        Long vendasSemana = visaoGeralOperation.vendasSemana(email);
+
+        // 3) carregar usuário APENAS UMA VEZ para construir o PlanoDTO
+        var usuarioOpt = usuarioRepository.findByEmail(email);
+        PlanoDTO plano = usuarioOpt
+                .map(u -> {
+                    var tipo = u.getTipoPlano() != null ? u.getTipoPlano().name() : "NENHUM";
+                    var dataExp = u.getDataExpiracaoPlano();
+                    long dias = dataExp != null ? java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), dataExp) : 0;
+                    dias = Math.max(dias, 0);
+                    return new PlanoDTO(tipo, dias);
+                })
+                .orElse(new PlanoDTO("NENHUM", 0));
+
+        // 4) alertas (estes podem fazer pequenas queries, mas são aceitáveis)
+        List<String> alertas = Stream.concat(
+                visaoGeralOperation.alertasProdutosZerados(email).stream(),
+                visaoGeralOperation.alertasVendasSemana(email).stream()
+        ).toList();
+
+        return new DashboardVisaoGeralResponse(
+                vendasHoje,
+                produtosComEstoque,
+                produtosSemEstoque,
+                clientesAtivos,
+                vendasSemana,
+                plano,
+                alertas
+        );
     }
 
 

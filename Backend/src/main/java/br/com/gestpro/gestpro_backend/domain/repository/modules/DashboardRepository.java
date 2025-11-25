@@ -4,38 +4,55 @@ import br.com.gestpro.gestpro_backend.domain.model.modules.venda.Venda;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 
+@Repository
 public interface DashboardRepository extends JpaRepository<Venda, Long> {
 
-    @Query("""
-                SELECT COUNT(v)
-                FROM Venda v
-                WHERE v.usuario.email = :email
-                  AND v.dataVenda = CURRENT_DATE
-            """)
+    @Query(value = "SELECT COUNT(v.id) " +
+            "FROM venda v " +
+            "JOIN usuarios u ON u.id = v.usuario_id " +
+            "WHERE u.email = :email AND DATE(v.data_venda) = CURRENT_DATE", nativeQuery = true)
     Long contarVendasHoje(@Param("email") String email);
 
-
-    @Query("SELECT COUNT(p) FROM Produto p WHERE p.usuario.email = :email AND p.quantidadeEstoque > 0")
+    @Query(value = "SELECT COUNT(p.id) " +
+            "FROM produto p " +
+            "JOIN usuarios u ON u.id = p.usuario_id " +
+            "WHERE u.email = :email AND p.quantidade_estoque > 0", nativeQuery = true)
     Long contarProdutosEmEstoque(@Param("email") String email);
 
-    @Query("SELECT COUNT(p) FROM Produto p WHERE p.usuario.email = :email AND p.quantidadeEstoque = 0")
+    @Query(value = "SELECT COUNT(p.id) " +
+            "FROM produto p " +
+            "JOIN usuarios u ON u.id = p.usuario_id " +
+            "WHERE u.email = :email AND p.quantidade_estoque = 0", nativeQuery = true)
     Long contarProdutosZerados(@Param("email") String email);
 
-    @Query("SELECT COUNT(c) FROM Cliente c WHERE c.usuario.email = :email AND c.ativo = true")
+    @Query(value = "SELECT COUNT(c.id) " +
+            "FROM clientes c " +
+            "JOIN usuarios u ON u.id = c.usuario_id " +
+            "WHERE u.email = :email AND c.ativo = 1", nativeQuery = true)
     Long contarClientesAtivos(@Param("email") String email);
 
-
-    @Query("""
-                SELECT COUNT(v)
-                FROM Venda v
-                WHERE v.usuario.email = :email
-                AND v.dataVenda BETWEEN :inicio AND :fim
-            """)
+    @Query(value = "SELECT COUNT(v.id) " +
+            "FROM venda v " +
+            "LEFT JOIN usuarios u ON u.id = v.usuario_id " +
+            "WHERE v.data_venda BETWEEN :inicio AND :fim AND u.email = :email", nativeQuery = true)
     Long contarVendasSemana(@Param("email") String email,
                             @Param("inicio") LocalDateTime inicio,
                             @Param("fim") LocalDateTime fim);
 
+    /**
+     * Query agregada que retorna a projection DashboardCountsProjection.
+     * Para MySQL: subselects sem FROM funcionam; se seu DB precisar, ajustamos.
+     */
+    @Query(value =
+            "SELECT " +
+                    "  (SELECT COUNT(v.id) FROM venda v JOIN usuarios u1 ON u1.id = v.usuario_id WHERE u1.email = :email AND DATE(v.data_venda) = CURRENT_DATE) AS vendasHoje, " +
+                    "  (SELECT COUNT(p.id) FROM produto p JOIN usuarios u2 ON u2.id = p.usuario_id WHERE u2.email = :email AND p.quantidade_estoque > 0) AS produtosComEstoque, " +
+                    "  (SELECT COUNT(p2.id) FROM produto p2 JOIN usuarios u3 ON u3.id = p2.usuario_id WHERE u3.email = :email AND p2.quantidade_estoque = 0) AS produtosSemEstoque, " +
+                    "  (SELECT COUNT(c.id) FROM clientes c JOIN usuarios u4 ON u4.id = c.usuario_id WHERE u4.email = :email AND c.ativo = 1) AS clientesAtivos",
+            nativeQuery = true)
+    DashboardCountsProjection findDashboardCountsByEmail(@Param("email") String email);
 }

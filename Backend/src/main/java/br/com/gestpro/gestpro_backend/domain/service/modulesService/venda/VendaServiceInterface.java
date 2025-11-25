@@ -11,5 +11,4 @@ public interface VendaServiceInterface {
     List<Venda> listarPorCaixa(Long idCaixa);
 
     Venda buscarPorId(Long id);
-
 }

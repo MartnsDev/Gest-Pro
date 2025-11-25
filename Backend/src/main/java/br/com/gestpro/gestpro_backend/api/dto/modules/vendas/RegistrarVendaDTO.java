@@ -2,11 +2,13 @@ package br.com.gestpro.gestpro_backend.api.dto.modules.vendas;
 
 import br.com.gestpro.gestpro_backend.domain.model.enums.FormaDePagamento;
 import jakarta.validation.constraints.*;
+import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+@Builder
 @Data
 public class RegistrarVendaDTO {
 
@@ -29,6 +31,7 @@ public class RegistrarVendaDTO {
 
     private String observacao;
 
+    @Builder
     @Data
     public static class ItemVendaDTO {
 

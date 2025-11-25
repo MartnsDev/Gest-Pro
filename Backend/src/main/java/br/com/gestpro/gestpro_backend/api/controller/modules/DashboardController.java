@@ -1,6 +1,9 @@
 package br.com.gestpro.gestpro_backend.api.controller.modules;
 
-import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.*;
+import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.DashboardVisaoGeralResponse;
+import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.MetodoPagamentoDTO;
+import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.ProdutoVendasDTO;
+import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.VendasDiariasDTO;
 import br.com.gestpro.gestpro_backend.domain.service.modulesService.dashboard.DashboardServiceInterface;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -9,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -24,24 +26,7 @@ public class DashboardController {
     @GetMapping("/visao-geral")
     public ResponseEntity<DashboardVisaoGeralResponse> getVisaoGeral(Authentication authentication) {
         String emailUsuario = getEmailUsuario(authentication);
-        System.out.println("Dashboard: iniciando para " + emailUsuario);
-
-        Long totalVendas = dashboardService.totalVendasHoje(emailUsuario);
-        Long produtosEstoque = dashboardService.produtosEmEstoque(emailUsuario);
-        Long produtosZerados = dashboardService.produtosZerados(emailUsuario);
-        Long clientesAtivos = dashboardService.clientesAtivos(emailUsuario);
-        Long vendasSemana = dashboardService.vendasSemana(emailUsuario);
-        PlanoDTO planoUsuario = dashboardService.planoUsuarioLogado(emailUsuario);
-
-        List<String> alertas = Stream.concat(
-                dashboardService.alertasProdutosZerados(emailUsuario).stream(),
-                dashboardService.alertasVendasSemana(emailUsuario).stream()
-        ).toList();
-
-        DashboardVisaoGeralResponse response = new DashboardVisaoGeralResponse(
-                totalVendas, produtosEstoque, produtosZerados, clientesAtivos, vendasSemana, planoUsuario, alertas
-        );
-
+        DashboardVisaoGeralResponse response = dashboardService.visaoGeral(emailUsuario);
         return ResponseEntity.ok(response);
     }
 
