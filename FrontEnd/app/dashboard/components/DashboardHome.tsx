@@ -28,9 +28,9 @@ function ClientOnly({ children }: ClientOnlyProps) {
   return <>{children}</>;
 }
 
-// ------------------ TIPAGENS ------------------
+// ------------------ TIPAGENS (ALINHADAS COM O BACKEND) ------------------
 interface DashboardHomeProps {
-  usuario: any;
+  usuario?: any;
 }
 
 interface Alert {
@@ -45,19 +45,20 @@ interface QuickAction {
   label: string;
   icon: React.ReactNode;
 }
-interface PlanoInfo {
+interface PlanoDTO {
   tipoPlano: string;
   diasRestantes: number;
 }
 
-interface DashboardData {
-  totalVendasHoje: number;
-  produtosEmEstoque: number;
-  produtosZerados: number;
-  clientesAtivos: number;
-  vendasSemana: number;
-  planoExperimental?: Record<string, PlanoInfo>;
-  alertas?: string[];
+// Response vindas do backend
+interface DashboardVisaoGeralResponse {
+  vendasHoje?: number; // long
+  produtosComEstoque?: number;
+  produtosSemEstoque?: number;
+  clientesAtivos?: number;
+  vendasSemana?: number;
+  planoUsuario?: PlanoDTO | null; // backend retorna PlanoDTO
+  alertas?: string[] | null;
 }
 
 interface MetodoPagamentoData {
@@ -86,77 +87,71 @@ export default function DashboardHome({ usuario }: DashboardHomeProps) {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const fetchData = async <T,>(url: string): Promise<T[]> => {
+        // helper genérico que devolve um objeto ou array; retorna null em erro
+        const fetchData = async <T,>(url: string): Promise<T | null> => {
           try {
             const res = await fetch(url, { credentials: "include" });
-            if (!res.ok) return [];
-            return await res.json();
+            if (!res.ok) return null;
+            return (await res.json()) as T;
           } catch {
-            return [];
+            return null;
           }
         };
 
-        // VISÃO GERAL
-        const res = await fetch(
-          "http://localhost:8080/api/dashboard/visao-geral",
-          { credentials: "include" },
-        );
-        const data: DashboardData = res.ok
-          ? await res.json()
-          : {
-              totalVendasHoje: 0,
-              produtosEmEstoque: 0,
-              produtosZerados: 0,
-              clientesAtivos: 0,
-              vendasSemana: 0,
-              planoExperimental: {},
-              alertas: [],
-            };
+        // VISÃO GERAL (objeto)
+        const visaoUrl = "http://localhost:8080/api/dashboard/visao-geral";
+        const visao = await fetchData<DashboardVisaoGeralResponse>(visaoUrl);
 
+        // garantir valores padrão
+        const vendasHoje = visao?.vendasHoje ?? 0;
+        const produtosComEstoque = visao?.produtosComEstoque ?? 0;
+        const produtosZerados = visao?.produtosSemEstoque ?? 0;
+        const clientesAtivos = visao?.clientesAtivos ?? 0;
+        const vendasSemana = visao?.vendasSemana ?? 0;
+        const planoUsuario = visao?.planoUsuario ?? null;
+        const alertasBackend = visao?.alertas ?? [];
+
+        // Cards (ajusta título/valor do jeito que preferir)
         setCards([
           {
-            title: "Total Vendas Hoje",
-            value: `R$ ${data.totalVendasHoje}`,
+            title: "Vendas Hoje",
+            // se for valor monetário mudar para formatação; aqui assumimos número
+            value: vendasHoje,
             icon: <CreditCard className="text-white" />,
           },
           {
             title: "Produtos em Estoque",
-            value: data.produtosEmEstoque,
+            value: produtosComEstoque,
             icon: <Package className="text-white" />,
           },
           {
-            title: "Clientes Ativos",
-            value: data.clientesAtivos,
+            title: "Produtos Zerados",
+            value: produtosZerados,
             icon: <Users className="text-white" />,
           },
           {
-            title: "Vendas Semanais",
-            value: data.vendasSemana,
+            title: "Vendas Semana",
+            value: vendasSemana,
             icon: <BarChart3 className="text-white" />,
           },
         ]);
 
-        // ALERTAS
+        // ALERTAS (concat backend + aviso de plano)
         const alertas: Alert[] = [];
-        data.alertas?.forEach((msg) => alertas.push({ message: msg }));
+        (alertasBackend || []).forEach((msg) => alertas.push({ message: msg }));
 
-        if (data.planoExperimental) {
-          Object.entries(data.planoExperimental)
-            .sort(
-              ([, a], [, b]) => (a.diasRestantes ?? 0) - (b.diasRestantes ?? 0),
-            )
-            .forEach(([, planoInfo]) => {
-              const dias = Number.isFinite(planoInfo.diasRestantes)
-                ? planoInfo.diasRestantes
-                : 0;
-              alertas.push({
-                message: `Plano ${planoInfo.tipoPlano}: ${dias} dia(s) restante(s)`,
-              });
-            });
+        if (planoUsuario) {
+          const dias = Number.isFinite(planoUsuario.diasRestantes)
+            ? planoUsuario.diasRestantes
+            : 0;
+          alertas.push({
+            message: `Plano ${planoUsuario.tipoPlano}: ${dias} dia(s) restante(s)`,
+          });
         }
+
         setAlerts(alertas);
 
-        // ATALHOS
+        // ATALHOS (estáticos)
         setQuickActions([
           { label: "Registrar Venda", icon: <ShoppingCart size={24} /> },
           { label: "Adicionar Produto", icon: <PlusCircle size={24} /> },
@@ -165,24 +160,25 @@ export default function DashboardHome({ usuario }: DashboardHomeProps) {
           { label: "Relatórios", icon: <FileText size={24} /> },
         ]);
 
-        // GRÁFICOS
-        setVendasMetodo(
-          await fetchData<MetodoPagamentoData>(
+        // GRÁFICOS (listas)
+        const metodos =
+          (await fetchData<MetodoPagamentoData[]>(
             "http://localhost:8080/api/dashboard/vendas/metodo-pagamento",
-          ),
-        );
-        setVendasProduto(
-          await fetchData<ProdutoVendasData>(
+          )) ?? [];
+        const produtos =
+          (await fetchData<ProdutoVendasData[]>(
             "http://localhost:8080/api/dashboard/vendas/produto",
-          ),
-        );
-        setVendasDiarias(
-          await fetchData<VendasDiariasData>(
+          )) ?? [];
+        const diarias =
+          (await fetchData<VendasDiariasData[]>(
             "http://localhost:8080/api/dashboard/vendas/diarias",
-          ),
-        );
+          )) ?? [];
+
+        setVendasMetodo(metodos);
+        setVendasProduto(produtos);
+        setVendasDiarias(diarias);
       } catch (err) {
-        console.error(err);
+        console.error("Erro ao buscar dashboard:", err);
       } finally {
         setLoading(false);
       }
