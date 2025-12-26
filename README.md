@@ -166,6 +166,7 @@ spring.main.lazy-initialization=false
 spring.redis.host=localhost
 spring.redis.port=6379
 spring.devtools.restart.enabled=false
+```
 Agora vamos configurar essas variáveis no sistema operacional.
 
 3 Configurando variáveis de ambiente no Windows
@@ -173,7 +174,7 @@ Opção 1 Usando o terminal (temporário)
 Abra o Prompt de Comando ou PowerShell e execute:
 
 powershell
-Copiar código
+```
 setx DB_URL "jdbc:mysql://localhost:3306/gestpro_db"
 setx DB_USERNAME "root"
 setx DB_PASSWORD "senha_do_banco"
