@@ -271,9 +271,12 @@ https://myaccount.google.com/security
 Ative a verificação em duas etapas na conta.
 
 Depois disso, entre em **Senhas de app**.
+![Criar projeto — Google Auth](Img/emailsender-1.png)
 
 Crie uma nova senha para o aplicativo.  
 Nome sugerido: Spring Boot Email
+
+![Criar projeto — Google Auth](Img/emailsender-2.png)
 
 O Google vai gerar uma senha parecida com:
 
