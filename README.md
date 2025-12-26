@@ -75,12 +75,26 @@ Implementar notificações em tempo real
 Suporte a múltiplas lojas
 ```
 
-# Como Baixar e executar o projeto
-Abra a pasta no terminal e digite 
-```
+# Como baixar e executar o projeto
+
+Este guia mostra como clonar o projeto e configurar corretamente as variáveis de ambiente **no Windows e no Linux**, para que o Spring Boot consiga iniciar sem erros.
+
+---
+
+## 1 Clonar o repositório
+
+Abra o terminal ou prompt de comando e execute:
+
+```bash
 git clone https://github.com/MartnsDev/Gest-Pro.git
 ```
-Após isso, abre o projeto e configure as variáveis de ambiente:
+
+Depois disso, entre na pasta do projeto e abra na sua IDE. Configuração das variáveis de ambiente
+O projeto utiliza variáveis de ambiente para segurança e organização, evitando dados sensíveis no código.
+
+No application.properties essas variáveis já estão referenciadas assim:
+
+properties
 ```
 # ===============================
 # BANCO DE DADOS
@@ -89,11 +103,13 @@ spring.datasource.url=${DB_URL}
 spring.datasource.username=${DB_USERNAME}
 spring.datasource.password=${DB_PASSWORD}
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
 # ===============================
 # SERVIDOR
 # ===============================
 server.port=${SERVER_PORT}
 app.base-url=${APP_BASE_URL}
+
 # ===============================
 # JPA / HIBERNATE
 # ===============================
@@ -101,22 +117,26 @@ spring.jpa.hibernate.ddl-auto=${JPA_HBM_DDL}
 spring.jpa.show-sql=${JPA_SHOW_SQL}
 spring.jpa.properties.hibernate.format_sql=${JPA_FORMAT_SQL}
 spring.jpa.open-in-view=${JPA_OPEN_IN_VIEW}
+
 # ===============================
 # Swagger
 # ===============================
 springdoc.api-docs.path=${SWAGGER_API_DOCS_PATH}
 springdoc.swagger-ui.path=${SWAGGER_UI_PATH}
+
 # ===============================
 # JWT
 # ===============================
 jwt.secret=${JWT_SECRET}
 app.jwt-expiration-ms=${JWT_EXPIRATION}
+
 # ===============================
 # BASIC AUTH (TESTES)
 # ===============================
 spring.security.user.name=${BASIC_AUTH_USER}
 spring.security.user.password=${BASIC_AUTH_PASSWORD}
 spring.security.user.roles=${BASIC_AUTH_ROLE}
+
 # ===============================
 # OAuth2 Google
 # ===============================
@@ -128,6 +148,7 @@ spring.security.oauth2.client.provider.google.authorization-uri=${GOOGLE_AUTH_UR
 spring.security.oauth2.client.provider.google.token-uri=${GOOGLE_TOKEN_URI}
 spring.security.oauth2.client.provider.google.user-info-uri=${GOOGLE_USERINFO_URI}
 spring.security.oauth2.client.provider.google.user-name-attribute=${GOOGLE_USERNAME_ATTR}
+
 # ===============================
 # Email Sender
 # ===============================
@@ -137,15 +158,142 @@ spring.mail.username=${MAIL_USERNAME}
 spring.mail.password=${MAIL_PASSWORD}
 spring.mail.properties.mail.smtp.auth=${MAIL_SMTP_AUTH}
 spring.mail.properties.mail.smtp.starttls.enable=${MAIL_SMTP_STARTTLS}
+
 # ===============================
 # Otimização
 # ===============================
 spring.main.lazy-initialization=false
-# Redis
 spring.redis.host=localhost
 spring.redis.port=6379
 spring.devtools.restart.enabled=false
+Agora vamos configurar essas variáveis no sistema operacional.
+
+3 Configurando variáveis de ambiente no Windows
+Opção 1 Usando o terminal (temporário)
+Abra o Prompt de Comando ou PowerShell e execute:
+
+powershell
+Copiar código
+setx DB_URL "jdbc:mysql://localhost:3306/gestpro_db"
+setx DB_USERNAME "root"
+setx DB_PASSWORD "senha_do_banco"
+
+setx SERVER_PORT "8080"
+setx APP_BASE_URL "http://localhost:8080"
+
+setx JPA_HBM_DDL "update"
+setx JPA_SHOW_SQL "true"
+setx JPA_FORMAT_SQL "true"
+setx JPA_OPEN_IN_VIEW "false"
+
+setx SWAGGER_API_DOCS_PATH "/v3/api-docs"
+setx SWAGGER_UI_PATH "/swagger-ui.html"
+
+setx JWT_SECRET "sua_chave_secreta_jwt"
+setx JWT_EXPIRATION "86400000"
+
+setx BASIC_AUTH_USER "admin"
+setx BASIC_AUTH_PASSWORD "admin"
+setx BASIC_AUTH_ROLE "ADMIN"
+
+setx GOOGLE_CLIENT_ID "seu_client_id"
+setx GOOGLE_CLIENT_SECRET "seu_client_secret"
+setx GOOGLE_SCOPE "openid,email,profile"
+setx GOOGLE_REDIRECT_URI "http://localhost:8080/login/oauth2/code/google"
+setx GOOGLE_AUTH_URI "https://accounts.google.com/o/oauth2/v2/auth"
+setx GOOGLE_TOKEN_URI "https://oauth2.googleapis.com/token"
+setx GOOGLE_USERINFO_URI "https://www.googleapis.com/oauth2/v3/userinfo"
+setx GOOGLE_USERNAME_ATTR "sub"
+
+setx MAIL_HOST "smtp.gmail.com"
+setx MAIL_PORT "587"
+setx MAIL_USERNAME "seu_email@gmail.com"
+setx MAIL_PASSWORD "senha_de_app"
+setx MAIL_SMTP_AUTH "true"
+setx MAIL_SMTP_STARTTLS "true"
 ```
+Após isso, feche e abra o terminal novamente, pois o Windows só aplica as variáveis em novas sessões.
+
+Opção 2 Variáveis permanentes pelo sistema
+Você também pode configurar pelo caminho:
+
+Painel de Controle
+Sistema
+Configurações avançadas do sistema
+Variáveis de ambiente
+
+Crie cada variável manualmente com o mesmo nome e valor acima.
+
+4 Configurando variáveis de ambiente no Linux
+No Linux, o mais comum é usar o .bashrc, .zshrc ou .profile.
+
+Abra o terminal e edite o arquivo:
+
+```
+nano ~/.bashrc
+```
+Ou, se usar zsh:
+```
+nano ~/.zshrc
+```
+Adicione no final do arquivo:
+```
+export DB_URL="jdbc:mysql://localhost:3306/gestpro_db"
+export DB_USERNAME="root"
+export DB_PASSWORD="senha_do_banco"
+
+export SERVER_PORT="8080"
+export APP_BASE_URL="http://localhost:8080"
+
+export JPA_HBM_DDL="update"
+export JPA_SHOW_SQL="true"
+export JPA_FORMAT_SQL="true"
+export JPA_OPEN_IN_VIEW="false"
+
+export SWAGGER_API_DOCS_PATH="/v3/api-docs"
+export SWAGGER_UI_PATH="/swagger-ui.html"
+
+export JWT_SECRET="sua_chave_secreta_jwt"
+export JWT_EXPIRATION="86400000"
+
+export BASIC_AUTH_USER="admin"
+export BASIC_AUTH_PASSWORD="admin"
+export BASIC_AUTH_ROLE="ADMIN"
+
+export GOOGLE_CLIENT_ID="seu_client_id"
+export GOOGLE_CLIENT_SECRET="seu_client_secret"
+export GOOGLE_SCOPE="openid,email,profile"
+export GOOGLE_REDIRECT_URI="http://localhost:8080/login/oauth2/code/google"
+export GOOGLE_AUTH_URI="https://accounts.google.com/o/oauth2/v2/auth"
+export GOOGLE_TOKEN_URI="https://oauth2.googleapis.com/token"
+export GOOGLE_USERINFO_URI="https://www.googleapis.com/oauth2/v3/userinfo"
+export GOOGLE_USERNAME_ATTR="sub"
+
+export MAIL_HOST="smtp.gmail.com"
+export MAIL_PORT="587"
+export MAIL_USERNAME="seu_email@gmail.com"
+export MAIL_PASSWORD="senha_de_app"
+export MAIL_SMTP_AUTH="true"
+export MAIL_SMTP_STARTTLS="true"
+```
+Depois salve e aplique:
+
+```
+source ~/.bashrc
+```
+5 Executando o projeto
+Após configurar as variáveis, execute o projeto normalmente:
+```
+./mvnw spring-boot:run
+```
+Ou pela IDE.
+
+Se tudo estiver correto, o Spring Boot iniciará sem erros de configuração.
+
+Observação importante
+Nunca versionar senhas, secrets, tokens ou credenciais no GitHub.
+Sempre use variáveis de ambiente, principalmente em produção.
+
 
 # Configuração OAuth2 com Google no Spring Boot
 
