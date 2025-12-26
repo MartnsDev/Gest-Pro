@@ -226,6 +226,59 @@ Adicione exatamente esta URL:
 http://localhost:8080/login/oauth2/code/google
 ```
 
+# Configuração de Envio de Email no Spring Boot
+
+Este guia explica como configurar envio de emails no Spring Boot usando SMTP.  
+Esse recurso é muito usado para cadastro de usuário, recuperação de senha, confirmação de conta e notificações do sistema.
+
+A ideia aqui é simples. Seu backend se conecta a um servidor de email e envia mensagens automaticamente.
+
+---
+
+## Pré requisitos
+
+Você precisa de um email que permita envio via SMTP.  
+O mais comum em projetos é usar Gmail ou um serviço como Outlook, Zoho ou um serviço profissional.
+
+Neste exemplo vou usar **Gmail**, pois é o mais comum em desenvolvimento.
+
+---
+
+## 1 Criar ou preparar um email para envio
+
+Use um email dedicado para o sistema, por exemplo:
+```
+gestpro.app@gmail.com  
+```
+Evite usar seu email pessoal.
+
+---
+
+## 2 Ativar senha de app no Gmail
+
+O Gmail não permite mais usar a senha normal da conta.
+
+Você precisa criar uma **senha de app**.
+
+Passo a passo:
+
+Acesse:
+```
+https://myaccount.google.com/security
+```
+Ative a verificação em duas etapas na conta.
+
+Depois disso, entre em **Senhas de app**.
+
+Crie uma nova senha para o aplicativo.  
+Nome sugerido: Spring Boot Email
+
+O Google vai gerar uma senha parecida com:
+
+```text
+abcd efgh ijkl mnop
+```
+
 ## Documentação Swagger
 ---
 ![Documentaçãp Swagger](https://github.com/MartnsDev/Gest-Pro/blob/2ced41f10df3341faa91cdcd0596061cfdcbc920/Img/Documenta%C3%A7%C3%A3o-Swagger.png)
