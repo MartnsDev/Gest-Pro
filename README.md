@@ -170,6 +170,8 @@ htps://console.cloud.google.com
 
 No topo da tela, clique em **Selecionar projeto** e depois em **Novo projeto**.
 
+![Criar projeto — Google Auth](Img/Create-project_googleAuth.png)
+
 Defina um nome, por exemplo:
 ```
 GestPro OAuth  
