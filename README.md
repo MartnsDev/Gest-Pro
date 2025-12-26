@@ -420,18 +420,26 @@ https://myaccount.google.com/security
 Ative a verificação em duas etapas na conta.
 
 Depois disso, entre em **Senhas de app**.
-![Criar projeto — Google Auth](Img/emailsender-1.png)
+![Criar projeto — EmailSender](Img/emailsender-1.png)
 
 Crie uma nova senha para o aplicativo.  
 Nome sugerido: Spring Boot Email
 
-![Criar projeto — Google Auth](Img/emailsender-2.png)
+![Criar projeto — EmailSender](Img/emailsender-2.png)
 
 O Google vai gerar uma senha parecida com:
 
 ```text
 abcd efgh ijkl mnop
 ```
+
+Após configurar tudo do EmailSender:
+
+Código de confirmação de conta: 
+![EmailSender — Código Confirmação](Img/Confirmar-email_gestpro.png)
+
+Codigo redefinir senha:
+![EmailSender — Código Mudar senha](Img/Mudar-senha-Gestpro.png)
 
 ## Documentação Swagger
 ---
