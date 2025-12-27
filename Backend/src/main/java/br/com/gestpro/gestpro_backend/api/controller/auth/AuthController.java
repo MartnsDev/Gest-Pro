@@ -34,9 +34,8 @@ public class AuthController {
         this.authService = authService;
     }
 
-    // ===============================
+
     // Cadastro manual
-    // ===============================
     @PostMapping(value = "/cadastro", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> cadastrarUsuario(@Valid @ModelAttribute CadastroRequestDTO request,
                                               BindingResult bindingResult) throws IOException {
@@ -63,9 +62,8 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("mensagem", "Cadastro realizado! Verifique seu e-mail para confirmar a conta."));
     }
 
-    // ===============================
+
     // Confirmar e-mail
-    // ===============================
     @GetMapping("/confirmar")
     public void confirmarEmail(@RequestParam String token, HttpServletResponse response) throws IOException {
         try {
@@ -77,9 +75,8 @@ public class AuthController {
         }
     }
 
-    // ===============================
+
     // Login manual
-    // ===============================
     @PostMapping("/login")
     @Transactional
     public ResponseEntity<LoginResponse> loginUsuario(@RequestBody LoginUsuarioDTO loginRequest) {

@@ -37,3 +37,7 @@ build/
 
 .metadata/
 .ESTRUTURA.md
+.env
+.env.*
+env.sh
+*.env.sh

@@ -45,14 +45,14 @@ public class ProdutoController {
     }
 
 
-    // ✅ Listar produtos apenas de um usuário
+    // Listar produtos apenas de um usuário
     @GetMapping("/usuario/{usuarioId}")
     public ResponseEntity<List<Produto>> listarProdutosPorUsuario(@PathVariable Long usuarioId) {
         List<Produto> produtos = produtoService.listarPorUsuario(usuarioId);
         return ResponseEntity.ok(produtos);
     }
 
-    //  Endpoint global — use apenas para administração
+    // Endpoint global — use apenas para administração
     @GetMapping
     public ResponseEntity<List<Produto>> listarProdutos() {
         List<Produto> produtos = produtoService.listarTodos();

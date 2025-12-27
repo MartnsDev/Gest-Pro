@@ -1,13 +1,15 @@
 package br.com.gestpro.gestpro_backend.infra.jwt;
 
 import br.com.gestpro.gestpro_backend.domain.model.auth.Usuario;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-
 
 import java.security.Key;
 import java.util.Date;
@@ -22,9 +24,8 @@ public class JwtService {
     @Value("${app.jwt-expiration-ms}")
     private long jwtExpirationMs;
 
-    // ===============================
+
     // GERAÇÃO DE TOKEN
-    // ===============================
     public String gerarToken(Usuario usuario) {
         return Jwts.builder()
                 .setSubject(usuario.getEmail())
@@ -38,9 +39,8 @@ public class JwtService {
                 .compact();
     }
 
-    // ===============================
+
     // EXTRAÇÃO DE INFORMAÇÕES
-    // ===============================
     public String getEmailFromToken(String token) {
         return extrairClaim(token, Claims::getSubject);
     }
@@ -62,9 +62,7 @@ public class JwtService {
         }
     }
 
-    // ===============================
     // VALIDAÇÃO
-    // ===============================
     public boolean validarToken(String token, UserDetails userDetails) {
         final String email = getEmailFromToken(token);
         return (email.equals(userDetails.getUsername()) && !estaExpirado(token));
@@ -79,9 +77,8 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // ===============================
+
     // VALIDAÇÃO SIMPLES
-    // ===============================
     public boolean isTokenValid(String token) {
         try {
             Jwts.parserBuilder()
