@@ -27,6 +27,11 @@ GestPro é uma solução completa para gestão comercial que oferece controle de
       <p align="center">Login com email/senha ou Google OAuth2</p>
     </td>
     <td width="50%">
+      <h3 align="center">Dashboard Principal</h3>
+      <img src="Img/Gest-Pro_Dashboard.png" alt="Dashboard" />
+      <p align="center">Visão geral do negócio</p>
+    </td>
+    <td width="50%">
       <h3 align="center">Cadastro de Usuário</h3>
       <img src="Img/gestpro-cadastro.png" alt="Tela de Cadastro" />
       <p align="center">Cadastro com validação de email</p>
@@ -38,11 +43,7 @@ GestPro é uma solução completa para gestão comercial que oferece controle de
       <img src="Img/gestpro-redefinir-senha.png" alt="Recuperar Senha" />
       <p align="center">Reset de senha via email</p>
     </td>
-    <td width="50%">
-      <h3 align="center">Dashboard Principal</h3>
-      <img src="Img/Gest-Pro_Dashboard.png" alt="Dashboard" />
-      <p align="center">Visão geral do negócio</p>
-    </td>
+  
   </tr>
 </table>
 
