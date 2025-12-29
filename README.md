@@ -43,7 +43,6 @@ GestPro é uma solução completa para gestão comercial que oferece controle de
       <img src="Img/gestpro-redefinir-senha.png" alt="Recuperar Senha" />
       <p align="center">Reset de senha via email</p>
     </td>
-  
   </tr>
 </table>
 
