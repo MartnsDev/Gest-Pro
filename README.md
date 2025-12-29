@@ -406,6 +406,8 @@ Adicione exatamente esta URL:
 http://localhost:8080/login/oauth2/code/google
 ```
 
+---
+
 # Configuração de Envio de Email no Spring Boot
 
 Este guia explica como configurar envio de emails no Spring Boot usando SMTP.  
