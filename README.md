@@ -322,7 +322,38 @@ GestPro OAuth
 ou  
 GP Dev Auth  
 ```
-Crie o projeto e selecione ele.
+Crie o projeto e selecione-o.
+
+## Configuração do Google Auth
+
+Após a criação do projeto, é necessário configurar o cliente de autenticação.
+
+### 1. Criar o cliente de autenticação (Auth Client)
+
+Crie um cliente de autenticação no Google Auth conforme mostrado abaixo:
+
+![Criar cliente — Google Auth](Img/Criar-um-cliente-auth.png)
+
+### 2. Criar o ID do cliente
+
+Após criar o cliente de autenticação, gere o **ID do cliente**, que será utilizado pela aplicação no processo de autenticação.
+
+![Criar ID do cliente — Google Auth](Img/Criar-id-cliente-Auth.png)
+
+### 3. Configurar variáveis de ambiente
+
+Com o **Client ID** e o **Client Secret** em mãos, configure as seguintes variáveis de ambiente:
+
+```
+GOOGLE_CLIENT_ID="seu_client_id"
+GOOGLE_CLIENT_SECRET="seu_client_secret"
+GOOGLE_SCOPE="openid,email,profile"
+GOOGLE_REDIRECT_URI="http://localhost:8080/login/oauth2/code/google"
+GOOGLE_AUTH_URI="https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URI="https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URI="https://www.googleapis.com/oauth2/v3/userinfo"
+GOOGLE_USERNAME_ATTR="sub"
+```
 
 ---
 
