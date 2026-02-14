@@ -7,10 +7,13 @@ import br.com.gestpro.gestpro_backend.domain.repository.auth.UsuarioRepository;
 import br.com.gestpro.gestpro_backend.domain.service.authService.jwtService.JwtTokenServiceInterface;
 import br.com.gestpro.gestpro_backend.domain.service.authService.planoService.VerificarPlanoOperation;
 import br.com.gestpro.gestpro_backend.infra.exception.ApiException;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
 
 @Component
 public class LoginManualOperation {
@@ -30,9 +33,10 @@ public class LoginManualOperation {
         this.jwtTokenService = jwtTokenService;
     }
 
-
     @Transactional
-    public LoginResponse execute(LoginUsuarioDTO loginRequest, String path) {
+    public LoginResponse execute(LoginUsuarioDTO loginRequest,
+                                 String path,
+                                 HttpServletResponse response) throws IOException {
 
         // 1. Busca usuário por email
         Usuario usuario = usuarioRepository.findByEmail(loginRequest.email())
@@ -55,10 +59,10 @@ public class LoginManualOperation {
             }
         }
 
-        // 5. Verifica plano EXPERIMENTAL ou ASSINANTE
-        verificarPlano.execute(usuario);
+        // 5. Verifica plano (pode redirecionar para /pagamento)
+        verificarPlano.execute(usuario, response);
 
-        // 6. Gera token JWT
+        // 6. Se não redirecionou, gera token
         String token = jwtTokenService.gerarToken(usuario);
 
         // 7. Retorna dados do usuário + token
@@ -70,5 +74,4 @@ public class LoginManualOperation {
                 usuario.getFoto()
         );
     }
-
 }

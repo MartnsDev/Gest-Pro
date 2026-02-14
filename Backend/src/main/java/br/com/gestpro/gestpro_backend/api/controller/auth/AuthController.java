@@ -77,15 +77,20 @@ public class AuthController {
 
 
     // Login manual
+    // Login manual
     @PostMapping("/login")
     @Transactional
-    public ResponseEntity<LoginResponse> loginUsuario(@RequestBody LoginUsuarioDTO loginRequest) {
+    public ResponseEntity<LoginResponse> loginUsuario(
+            @RequestBody LoginUsuarioDTO loginRequest,
+            HttpServletResponse response) throws IOException {
 
         LoginResponse loginResponse = authService.loginManual(
                 loginRequest.email(),
                 loginRequest.senha(),
-                "/auth/login"
+                "/auth/login",
+                response
         );
+
         // Cria cookie HttpOnly com token JWT
         ResponseCookie cookie = ResponseCookie.from("jwt_token", loginResponse.token())
                 .httpOnly(true)
@@ -108,5 +113,6 @@ public class AuthController {
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .body(safeResponse);
     }
+
 
 }

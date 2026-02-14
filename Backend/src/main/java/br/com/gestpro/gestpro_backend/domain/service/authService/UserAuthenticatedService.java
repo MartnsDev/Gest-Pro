@@ -3,6 +3,7 @@ package br.com.gestpro.gestpro_backend.domain.service.authService;
 import br.com.gestpro.gestpro_backend.domain.model.auth.Usuario;
 import br.com.gestpro.gestpro_backend.domain.repository.auth.UsuarioRepository;
 import br.com.gestpro.gestpro_backend.infra.jwt.JwtService;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -64,6 +65,9 @@ public class UserAuthenticatedService {
         return ResponseEntity.ok(dadosUsuario);
     }
 
+    @Cacheable(cacheNames = "usuario",
+            key = "#id"
+    )
     public Usuario buscarUsuarioPorId(Long id) {
         if (id == null || id <= 0) {
             throw new IllegalArgumentException("ID do usuário inválido.");

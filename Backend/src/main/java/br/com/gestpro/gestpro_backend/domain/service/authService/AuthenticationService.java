@@ -5,13 +5,14 @@ import br.com.gestpro.gestpro_backend.api.dto.auth.AuthDTO.LoginUsuarioDTO;
 import br.com.gestpro.gestpro_backend.domain.model.auth.Usuario;
 import br.com.gestpro.gestpro_backend.domain.service.authService.planoService.AtualizarPlanoOperation;
 import br.com.gestpro.gestpro_backend.infra.jwt.JwtService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
 @Service
-public class AuthenticationService implements IAuthenticationService{
+public class AuthenticationService implements IAuthenticationService {
 
     private final CadastroManualOperation cadastroManual;
     private final LoginManualOperation loginManual;
@@ -48,14 +49,17 @@ public class AuthenticationService implements IAuthenticationService{
     }
 
     @Override
-    public LoginResponse loginManual(String email, String senha, String path) {
+    public LoginResponse loginManual(String email, String senha, String path, HttpServletResponse response) throws IOException {
+
         LoginUsuarioDTO loginDTO = new LoginUsuarioDTO(email, senha);
-        return loginManual.execute(loginDTO, path);
+
+        return loginManual.execute(loginDTO, path, response);
     }
 
+
     @Override
-    public Usuario loginOrRegisterGoogle(String email, String nome, String foto) {
-        return loginGoogle.execute(email, nome, foto);
+    public Usuario loginOrRegisterGoogle(String email, String nome, String foto, HttpServletResponse response) throws IOException {
+        return loginGoogle.execute(email, nome, foto, response);
     }
 
     @Override

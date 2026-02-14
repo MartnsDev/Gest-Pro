@@ -8,16 +8,19 @@ export interface Usuario {
   nome: string;
   email: string;
   foto?: string;
-  tipoPlano: string; // "EXPERIMENTAL" ou "ASSINANTE"
-  statusAcesso?: string; // "ATIVO" ou "INATIVO"
+  tipoPlano: string;
+  statusAcesso?: "ATIVO" | "INATIVO";
+  expiracaoPlano?: string; // 👈 adiciona aqui
 }
 
 export interface LoginResponse {
-  token?: string; // cookie HttpOnly
+  token?: string;
   nome: string;
   email: string;
   tipoPlano: string;
   foto?: string;
+  statusAcesso?: "ATIVO" | "INATIVO";
+  expiracaoPlano?: string;
 }
 
 interface ErrorResponse {
@@ -36,30 +39,35 @@ export async function login(email: string, senha: string): Promise<Usuario> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, senha }),
-    credentials: "include", // importante para salvar cookie JWT
+    credentials: "include",
   });
 
-  const data: LoginResponse | ErrorResponse | null = await response
-    .json()
-    .catch(() => null);
+  const data:
+    | (LoginResponse & { expiracaoPlano?: string; statusAcesso?: string })
+    | ErrorResponse
+    | null = await response.json().catch(() => null);
+
   const dataSafe = (
     data && typeof data === "object" ? data : {}
   ) as ErrorResponse;
 
   if (!response.ok) {
-    const errorMsg =
-      dataSafe.erro ||
-      dataSafe.mensagem ||
-      "Falha no login. Confirme se o email está confirmado.";
+    const errorMsg = dataSafe.erro || dataSafe.mensagem || "Falha no login.";
     throw new Error(errorMsg);
   }
 
-  const loginData = data as LoginResponse;
+  const loginData = data as LoginResponse & {
+    expiracaoPlano?: string;
+    statusAcesso?: string;
+  };
+
   return {
-    nome: loginData.nome,
-    email: loginData.email,
-    foto: loginData.foto,
-    tipoPlano: loginData.tipoPlano,
+    nome: usuarioData.nome,
+    email: usuarioData.email,
+    foto: usuarioData.foto || "/placeholder-user.jpg",
+    tipoPlano: usuarioData.tipoPlano,
+    statusAcesso: usuarioData.statusAcesso,
+    expiracaoPlano: usuarioData.expiracaoPlano,
   };
 }
 
@@ -70,7 +78,7 @@ export async function cadastrar(
   nome: string,
   email: string,
   senha: string,
-  foto?: File
+  foto?: File,
 ): Promise<void> {
   const formData = new FormData();
   formData.append("nome", nome);

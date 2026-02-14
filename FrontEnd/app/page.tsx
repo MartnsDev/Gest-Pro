@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Mail, Lock, Check } from "lucide-react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { FormInput } from "@/components/auth/FormInput";
@@ -8,19 +9,41 @@ import { login, loginComGoogle } from "@/lib/api";
 import styles from "@/app/styles/auth.module.css";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [planoExpirado, setPlanoExpirado] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setPlanoExpirado(false);
 
     try {
-      await login(email, password); // cookie JWT HTTP-only já é setado pelo backend
-      window.location.href = "/dashboard"; // dashboard buscará usuário via cookie
+      const user = await login(email, password);
+
+      // 🔥 Se backend mandar INATIVO → redireciona
+      if (user.statusAcesso === "INATIVO") {
+        setPlanoExpirado(true);
+        router.push("/pagamento");
+        return;
+      }
+
+      // 🔥 Se vier data de expiração
+      if (user.expiracaoPlano) {
+        const expirado = new Date(user.expiracaoPlano) < new Date();
+        if (expirado) {
+          setPlanoExpirado(true);
+          router.push("/pagamento");
+          return;
+        }
+      }
+
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao fazer login.");
     } finally {
@@ -34,6 +57,20 @@ export default function LoginPage() {
       subtitle="Sua loja organizada, suas vendas garantidas"
     >
       {error && <div className={styles.errorMessage}>{error}</div>}
+
+      {planoExpirado && (
+        <div className={styles.errorMessage}>
+          Seu plano expirou.
+          <div style={{ marginTop: 12 }}>
+            <button
+              onClick={() => router.push("/pagamento")}
+              className={styles.btnPrimary}
+            >
+              Renovar Plano
+            </button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className={styles.authForm}>
         <FormInput
@@ -75,7 +112,6 @@ export default function LoginPage() {
           disabled={loading}
           className={styles.btnSecondary}
         >
-          {/* Ícone do Google */}
           <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
             <path
               fill="#4285F4"

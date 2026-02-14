@@ -1,16 +1,15 @@
 package br.com.gestpro.gestpro_backend.domain.service.modulesService.dashboard;
 
 import br.com.gestpro.gestpro_backend.api.dto.modules.dashboard.PlanoDTO;
-import br.com.gestpro.gestpro_backend.domain.model.enums.TipoPlano;
 import br.com.gestpro.gestpro_backend.domain.repository.auth.UsuarioRepository;
 import br.com.gestpro.gestpro_backend.domain.repository.modules.ProdutoRepository;
 import br.com.gestpro.gestpro_backend.domain.repository.modules.VendaRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -29,61 +28,60 @@ public class VisaoGeralOperation {
         this.usuarioRepository = usuarioRepository;
     }
 
-
+    @Cacheable(
+            cacheNames = "visao:vendas-semana",
+            key = "#email + ':' + T(java.time.LocalDate).now().with(T(java.time.DayOfWeek).MONDAY)"
+    )
     @Transactional(readOnly = true)
-    public Long vendasSemana(String emailUsuario) {
+    public Long vendasSemana(String email) {
         LocalDate hoje = LocalDate.now();
         LocalDate inicioSemana = hoje.with(DayOfWeek.MONDAY);
         LocalDate fimSemana = hoje.with(DayOfWeek.SUNDAY);
 
-        LocalDateTime inicio = inicioSemana.atStartOfDay();
-        LocalDateTime fim = fimSemana.atTime(23, 59, 59);
-
-        Long total = vendaRepository.countByDataVendaBetweenAndUsuarioEmail(inicio, fim, emailUsuario);
-        return total != null ? total : 0L;
+        return vendaRepository
+                .countByDataVendaBetweenAndUsuarioEmail(
+                        inicioSemana.atStartOfDay(),
+                        fimSemana.atTime(23, 59, 59),
+                        email
+                );
     }
 
-    // ------------------------- ALERTAS ---------------------------------
-
+    @Cacheable(cacheNames = "visao:estoque-zerado",
+            key = "#email"
+    )
     @Transactional(readOnly = true)
-    public List<String> alertasProdutosZerados(String emailUsuario) {
-        List<String> produtosZerados = produtoRepository.findByQuantidadeEstoqueAndUsuarioEmail(0, emailUsuario)
+    public List<String> alertasProdutosZerados(String email) {
+
+        List<String> alertas = produtoRepository
+                .findByQuantidadeEstoqueAndUsuarioEmail(0, email)
                 .stream()
                 .map(p -> "Produto " + p.getNome() + " está com estoque zerado!")
                 .limit(10)
                 .toList();
 
-        if (produtosZerados.isEmpty()) {
-            return List.of("Nenhum produto está com estoque zerado!");
-        }
-
-        return produtosZerados;
+        return alertas.isEmpty()
+                ? List.of("Nenhum produto está com estoque zerado!")
+                : alertas;
     }
 
     @Transactional(readOnly = true)
-    public List<String> alertasVendasSemana(String emailUsuario) {
-        if (vendasSemana(emailUsuario) < 50) {
-            return List.of("Vendas da semana abaixo do esperado");
-        }
-        return List.of();
+    public List<String> alertasVendasSemana(String email) {
+        return vendasSemana(email) < 50
+                ? List.of("Vendas da semana abaixo do esperado")
+                : List.of();
     }
 
+
     @Transactional(readOnly = true)
-    public PlanoDTO planoUsuarioLogado(String emailUsuario) {
-        return usuarioRepository.findByEmail(emailUsuario)
+    public PlanoDTO planoUsuarioLogado(String email) {
+        return usuarioRepository.findByEmail(email)
                 .map(usuario -> {
-                    TipoPlano tipoPlano = usuario.getTipoPlano();
-                    LocalDate dataExpiracao = usuario.getDataExpiracaoPlano();
-                    long diasRestantes = dataExpiracao != null
-                            ? ChronoUnit.DAYS.between(LocalDate.now(), dataExpiracao)
+                    long dias = usuario.getDataExpiracaoPlano() != null
+                            ? ChronoUnit.DAYS.between(LocalDate.now(), usuario.getDataExpiracaoPlano())
                             : 0;
-                    diasRestantes = Math.max(diasRestantes, 0);
-                    return new PlanoDTO(tipoPlano.name(), diasRestantes);
+                    return new PlanoDTO(usuario.getTipoPlano().name(), Math.max(dias, 0));
                 })
                 .orElse(new PlanoDTO("NENHUM", 0));
     }
-
-
 }
-
 

@@ -5,9 +5,11 @@ import br.com.gestpro.gestpro_backend.domain.model.enums.StatusAcesso;
 import br.com.gestpro.gestpro_backend.domain.model.enums.TipoPlano;
 import br.com.gestpro.gestpro_backend.domain.repository.auth.UsuarioRepository;
 import br.com.gestpro.gestpro_backend.domain.service.authService.planoService.VerificarPlanoOperation;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 
 @Service
@@ -23,7 +25,7 @@ public class LoginGoogleOperation {
     }
 
     @Transactional
-    public Usuario execute(String email, String nome, String foto) {
+    public Usuario execute(String email, String nome, String foto, HttpServletResponse response) throws IOException {
 
         return usuarioRepository.findByEmail(email)
                 .map(u -> {
@@ -43,7 +45,11 @@ public class LoginGoogleOperation {
                     }
 
                     // Verifica o plano e salva
-                    verificarPlano.execute(u);
+                    try {
+                        verificarPlano.execute(u, response);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
                     return usuarioRepository.save(u);
                 })
                 .orElseGet(() -> {

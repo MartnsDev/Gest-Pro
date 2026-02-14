@@ -38,7 +38,10 @@ public class GraficoServiceOperation {
      * Gráfico de pizza: total de vendas por método de pagamento.
      * Cache por usuário (email). TTL configurado globalmente via RedisCacheConfig.
      */
-    @Cacheable(cacheNames = "grafico:pagamento", key = "#email", unless = "#result == null || #result.isEmpty()")
+    @Cacheable(
+            cacheNames = "grafico:pagamento",
+            key = "#email.toLowerCase()"
+    )
     @Transactional(readOnly = true)
     public List<MetodoPagamentoDTO> vendasPorMetodoPagamento(String email) {
         List<Object[]> raw = graficoRepository.countVendasPorFormaPagamentoRaw(email);
@@ -56,7 +59,10 @@ public class GraficoServiceOperation {
      * Gráfico de barras: total de vendas por produto (top produtos ordenados).
      * Cache por usuário.
      */
-    @Cacheable(cacheNames = "grafico:produto", key = "#email", unless = "#result == null || #result.isEmpty()")
+    @Cacheable(
+            cacheNames = "grafico:produto",
+            key = "#email"
+    )
     @Transactional(readOnly = true)
     public List<ProdutoVendasDTO> vendasPorProduto(String email) {
         // Repo já fornece ProdutoVendasDTO via constructor expression (nome, SUM(qtd))
@@ -69,7 +75,10 @@ public class GraficoServiceOperation {
      * Aqui usamos query nativa; mapeamos para DTO com nomes dos dias.
      * Cache por usuário.
      */
-    @Cacheable(cacheNames = "grafico:diarias", key = "#email", unless = "#result == null || #result.isEmpty()")
+    @Cacheable(
+            cacheNames = "grafico:diarias",
+            key = "#email + ':' + T(java.time.LocalDate).now().with(T(java.time.DayOfWeek).MONDAY)"
+    )
     @Transactional(readOnly = true)
     public List<VendasDiariasDTO> vendasDiariasSemana(String email) {
         Long usuarioId = usuarioRepository.findByEmail(email)

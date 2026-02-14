@@ -4,10 +4,10 @@ import br.com.gestpro.gestpro_backend.domain.model.auth.Usuario;
 import br.com.gestpro.gestpro_backend.domain.model.enums.StatusAcesso;
 import br.com.gestpro.gestpro_backend.domain.model.enums.TipoPlano;
 import br.com.gestpro.gestpro_backend.domain.repository.auth.UsuarioRepository;
-import br.com.gestpro.gestpro_backend.infra.exception.ApiException;
-import org.springframework.http.HttpStatus;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -21,7 +21,7 @@ public class VerificarPlanoOperation {
         this.usuarioRepository = usuarioRepository;
     }
 
-    public void execute(Usuario usuario) {
+    public void execute(Usuario usuario, HttpServletResponse response) throws IOException {
         LocalDateTime agora = LocalDateTime.now();
         boolean precisaSalvar = false;
 
@@ -34,8 +34,7 @@ public class VerificarPlanoOperation {
                 LocalDateTime expiraExperimental = usuario.getDataPrimeiroLogin().plusDays(7);
                 if (agora.isAfter(expiraExperimental)) {
                     usuario.setStatusAcesso(StatusAcesso.INATIVO);
-                    precisaSalvar = true;
-                    salvarEExpirar(usuario, "Período experimental expirado. É necessário pagamento.");
+                    salvarEExpirar(usuario, response);
                     return;
                 }
             }
@@ -50,37 +49,26 @@ public class VerificarPlanoOperation {
                 LocalDateTime expiraAssinatura = usuario.getDataAssinaturaPlus().plusDays(30);
                 if (agora.isAfter(expiraAssinatura)) {
                     usuario.setStatusAcesso(StatusAcesso.INATIVO);
-                    precisaSalvar = true;
-                    salvarEExpirar(usuario, "Assinatura expirada. É necessário pagamento.");
+                    salvarEExpirar(usuario, response);
                     return;
                 }
             }
         }
-        if (usuario.getStatusAcesso() == StatusAcesso.INATIVO) {
-            throw new ApiException(
-                    "Usuário inativo. Redirecionar para pagamento.",
-                    HttpStatus.FORBIDDEN,
-                    "/pagamento"
-            );
-        }
-        // Salva apenas se alguma alteração foi feita
+
         if (precisaSalvar) {
             usuarioRepository.save(usuario);
         }
 
-        // ---------------------- Verifica status de acesso ----------------------
         if (usuario.getStatusAcesso() == StatusAcesso.INATIVO) {
-            throw new ApiException(
-                    "Usuário inativo. Redirecionar para pagamento.",
-                    HttpStatus.FORBIDDEN,
-                    "/pagamento"
-            );
+            salvarEExpirar(usuario, response);
         }
     }
 
-    /**
-     * Calcula os dias restantes do plano do usuário
-     */
+    private void salvarEExpirar(Usuario usuario, HttpServletResponse response) throws IOException {
+        usuarioRepository.save(usuario);
+        response.sendRedirect("http://localhost:3000/pagamento");
+    }
+
     public long calcularDiasRestantes(Usuario usuario) {
         LocalDate hoje = LocalDate.now();
         LocalDate dataExpiracao;
@@ -95,13 +83,5 @@ public class VerificarPlanoOperation {
 
         long diasRestantes = ChronoUnit.DAYS.between(hoje, dataExpiracao);
         return Math.max(diasRestantes, 0);
-    }
-
-    /**
-     * Método auxiliar para salvar o usuário e lançar exceção
-     */
-    private void salvarEExpirar(Usuario usuario, String mensagem) {
-        usuarioRepository.save(usuario);
-        throw new ApiException(mensagem, HttpStatus.FORBIDDEN, "/pagamento");
     }
 }

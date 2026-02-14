@@ -59,16 +59,17 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
 
 
     @Override
-    @Cacheable(cacheNames = "dashboard-v2", key = "#email")
     @Transactional(readOnly = true)
     public DashboardVisaoGeralResponse visaoGeral(String email) {
 
         var p = dashboardRepository.findDashboardCountsByEmail(email);
 
-        Long vendasHoje = p.getVendasHoje();
-        Long produtosComEstoque = p == null ? 0L : (p.getProdutosComEstoque() == null ? 0L : p.getProdutosComEstoque());
-        Long produtosSemEstoque = p.getProdutosSemEstoque();
-        Long clientesAtivos = p.getClientesAtivos();
+        // Garante conversão correta de Integer para Long
+        Long vendasHoje = safeLong(p == null ? null : p.getVendasHoje());
+        Long produtosComEstoque = safeLong(p == null ? null : p.getProdutosComEstoque());
+        Long produtosSemEstoque = safeLong(p == null ? null : p.getProdutosSemEstoque());
+        Long clientesAtivos = safeLong(p == null ? null : p.getClientesAtivos());
+
         Long vendasSemanais = visaoGeralOperation.vendasSemana(email);
         PlanoDTO planoUsuario = planoUsuarioLogado(email);
 
@@ -77,8 +78,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
                 visaoGeralOperation.alertasVendasSemana(email).stream()
         ).toList();
 
-
-        return new DashboardVisaoGeralResponse(
+        DashboardVisaoGeralResponse response = new DashboardVisaoGeralResponse(
                 vendasHoje,
                 produtosComEstoque,
                 produtosSemEstoque,
@@ -87,6 +87,16 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
                 planoUsuario,
                 alertas
         );
+
+        return response;
+    }
+
+    /**
+     * Converte qualquer Number para Long de forma segura
+     */
+    private Long safeLong(Number value) {
+        if (value == null) return 0L;
+        return value.longValue();
     }
 
 

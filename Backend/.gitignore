@@ -41,3 +41,10 @@ build/
 .env.*
 env.sh
 *.env.sh
+
+# Uploads (arquivos gerados em runtime)
+uploads/
+
+
+
+
