@@ -17,6 +17,9 @@ import {
   DollarSign,
 } from "lucide-react";
 
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // ------------------ COMPONENTE CLIENT ONLY ------------------
 interface ClientOnlyProps {
   children: ReactNode;
@@ -99,7 +102,7 @@ export default function DashboardHome({ usuario }: DashboardHomeProps) {
         };
 
         // VISÃO GERAL (objeto)
-        const visaoUrl = "http://localhost:8080/api/dashboard/visao-geral";
+        const visaoUrl = `${API_BASE_URL}/api/dashboard/visao-geral`;
         const visao = await fetchData<DashboardVisaoGeralResponse>(visaoUrl);
 
         // garantir valores padrão
@@ -163,15 +166,15 @@ export default function DashboardHome({ usuario }: DashboardHomeProps) {
         // GRÁFICOS (listas)
         const metodos =
           (await fetchData<MetodoPagamentoData[]>(
-            "http://localhost:8080/api/dashboard/vendas/metodo-pagamento",
+            `${API_BASE_URL}/dashboard/vendas/metodo-pagamento`,
           )) ?? [];
         const produtos =
           (await fetchData<ProdutoVendasData[]>(
-            "http://localhost:8080/api/dashboard/vendas/produto",
+            `${API_BASE_URL}/api/dashboard/vendas/produto`,
           )) ?? [];
         const diarias =
           (await fetchData<VendasDiariasData[]>(
-            "http://localhost:8080/api/dashboard/vendas/diarias",
+            `${API_BASE_URL}/api/dashboard/vendas/diarias`,
           )) ?? [];
 
         setVendasMetodo(metodos);
