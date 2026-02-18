@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import br.com.gestpro.gestpro_backend.api.controller.auth.AuthController;
 
 import java.io.IOException;
 import java.util.Map;
@@ -27,11 +28,17 @@ public class AuthController {
 
     private final AuthenticationService authService;
 
-    @Value("${app.base-url}")
-    private String baseUrl;
+    private final String URL_FRONTEND;
+    private final String baseUrl;
 
-    public AuthController(AuthenticationService authService) {
+    public AuthController(
+            AuthenticationService authService,
+            @Value("${app.frontend.url}") String urlFrontend,
+            @Value("${app.base-url}") String baseUrl
+    ) {
         this.authService = authService;
+        this.URL_FRONTEND = urlFrontend;
+        this.baseUrl = baseUrl;
     }
 
 
@@ -69,20 +76,16 @@ public class AuthController {
         try {
             boolean confirmado = authService.confirmarEmail(token);
             String status = confirmado ? "sucesso" : "erro";
-            response.sendRedirect("http://localhost:3000/confirmar-email?status=" + status);
+            response.sendRedirect(URL_FRONTEND + "/confirmar-email?status=" + status);
         } catch (ApiException e) {
-            response.sendRedirect("http://localhost:3000/confirmar-email?status=erro?motivo=usuario-confirmado-ou-token-expirado");
+            response.sendRedirect(URL_FRONTEND + "/confirmar-email?status=erro&motivo=usuario-confirmado-ou-token-expirado");
         }
     }
 
-
-    // Login manual
-    // Login manual
     @PostMapping("/login")
-    @Transactional
     public ResponseEntity<LoginResponse> loginUsuario(
             @RequestBody LoginUsuarioDTO loginRequest,
-            HttpServletResponse response) throws IOException {
+            HttpServletResponse response) {
 
         LoginResponse loginResponse = authService.loginManual(
                 loginRequest.email(),
@@ -91,28 +94,7 @@ public class AuthController {
                 response
         );
 
-        // Cria cookie HttpOnly com token JWT
-        ResponseCookie cookie = ResponseCookie.from("jwt_token", loginResponse.token())
-                .httpOnly(true)
-                .secure(false) // true se usar HTTPS
-                .path("/")
-                .maxAge(7 * 24 * 60 * 60)
-                .sameSite("Lax")
-                .build();
-
-        // Remove token do body para segurança
-        LoginResponse safeResponse = new LoginResponse(
-                null,
-                loginResponse.nome(),
-                loginResponse.email(),
-                loginResponse.tipoPlano(),
-                loginResponse.foto()
-        );
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(safeResponse);
+        return ResponseEntity.ok(loginResponse);
     }
-
-
 }
+

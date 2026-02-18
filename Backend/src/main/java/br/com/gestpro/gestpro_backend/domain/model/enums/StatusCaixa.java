@@ -4,3 +4,5 @@ public enum StatusCaixa {
     ABERTO,
     FECHADO
 }
+
+

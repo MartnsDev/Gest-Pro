@@ -45,11 +45,7 @@ public class LoginGoogleOperation {
                     }
 
                     // Verifica o plano e salva
-                    try {
-                        verificarPlano.execute(u, response);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    verificarPlano.execute(u);
                     return usuarioRepository.save(u);
                 })
                 .orElseGet(() -> {

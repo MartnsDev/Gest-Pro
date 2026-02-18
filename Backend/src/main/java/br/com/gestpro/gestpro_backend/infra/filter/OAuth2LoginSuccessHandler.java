@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 
@@ -17,9 +18,12 @@ import java.io.IOException;
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final GoogleAuthService googleAuthService;
+    private final String URL_FRONTEND;
 
-    public OAuth2LoginSuccessHandler(GoogleAuthService googleAuthService) {
+    public OAuth2LoginSuccessHandler(GoogleAuthService googleAuthService,
+                                     @Value("${app.frontend.url}") String URL_FRONTEND) {
         this.googleAuthService = googleAuthService;
+        this.URL_FRONTEND = URL_FRONTEND;
     }
 
     @Override
@@ -50,13 +54,14 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         response.addCookie(jwtCookie);
 
         // Redireciona de acordo com StatusAcesso
-        String redirectUrl;
-        if (usuario.getStatusAcesso() == StatusAcesso.ATIVO) {
-            redirectUrl = "http://localhost:3000/dashboard";
-        } else {
-            redirectUrl = "http://localhost:3000/pagamento";
-        }
+        String redirectUrl = usuario.getStatusAcesso() == StatusAcesso.ATIVO
+                ? URL_FRONTEND + "/dashboard"
+                : URL_FRONTEND + "/pagamento";
 
         response.sendRedirect(redirectUrl);
+    }
+
+    public String getFrontendUrl() {
+        return URL_FRONTEND;
     }
 }

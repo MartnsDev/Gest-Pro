@@ -34,6 +34,8 @@ interface ErrorResponse {
  * Login com email e senha
  * Salva cookie JWT HTTP-only no backend
  */
+// services/auth.ts
+
 export async function login(email: string, senha: string): Promise<Usuario> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
@@ -42,32 +44,24 @@ export async function login(email: string, senha: string): Promise<Usuario> {
     credentials: "include",
   });
 
-  const data:
-    | (LoginResponse & { expiracaoPlano?: string; statusAcesso?: string })
-    | ErrorResponse
-    | null = await response.json().catch(() => null);
+  if (response.status === 403) {
+    throw new Error("PLANO_INATIVO");
+  }
 
-  const dataSafe = (
-    data && typeof data === "object" ? data : {}
-  ) as ErrorResponse;
+  const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const errorMsg = dataSafe.erro || dataSafe.mensagem || "Falha no login.";
+    const errorMsg = data?.erro || data?.mensagem || "Falha no login.";
     throw new Error(errorMsg);
   }
 
-  const loginData = data as LoginResponse & {
-    expiracaoPlano?: string;
-    statusAcesso?: string;
-  };
-
   return {
-    nome: usuarioData.nome,
-    email: usuarioData.email,
-    foto: usuarioData.foto || "/placeholder-user.jpg",
-    tipoPlano: usuarioData.tipoPlano,
-    statusAcesso: usuarioData.statusAcesso,
-    expiracaoPlano: usuarioData.expiracaoPlano,
+    nome: data.nome,
+    email: data.email,
+    foto: data.foto || "/placeholder-user.jpg",
+    tipoPlano: data.tipoPlano,
+    statusAcesso: data.statusAcesso,
+    expiracaoPlano: data.expiracaoPlano,
   };
 }
 
@@ -134,6 +128,11 @@ export async function getUsuario(): Promise<Usuario> {
     const errorMsg =
       dataSafe.erro || dataSafe.mensagem || "Erro ao obter usuário";
     throw new Error(errorMsg);
+  }
+
+  if (response.status === 403) {
+    window.location.href = "/pagamento";
+    throw new Error("Plano inativo");
   }
 
   const usuarioData = data as Usuario;

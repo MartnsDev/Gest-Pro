@@ -24,27 +24,14 @@ export default function LoginPage() {
     setPlanoExpirado(false);
 
     try {
-      const user = await login(email, password);
-
-      // 🔥 Se backend mandar INATIVO → redireciona
-      if (user.statusAcesso === "INATIVO") {
+      await login(email, password);
+      router.push("/dashboard");
+    } catch (err) {
+      if (err instanceof Error && err.message === "PLANO_INATIVO") {
         setPlanoExpirado(true);
-        router.push("/pagamento");
         return;
       }
 
-      // 🔥 Se vier data de expiração
-      if (user.expiracaoPlano) {
-        const expirado = new Date(user.expiracaoPlano) < new Date();
-        if (expirado) {
-          setPlanoExpirado(true);
-          router.push("/pagamento");
-          return;
-        }
-      }
-
-      router.push("/dashboard");
-    } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao fazer login.");
     } finally {
       setLoading(false);
@@ -58,16 +45,30 @@ export default function LoginPage() {
     >
       {error && <div className={styles.errorMessage}>{error}</div>}
 
+      {/* Modal de plano expirado */}
       {planoExpirado && (
-        <div className={styles.errorMessage}>
-          Seu plano expirou.
-          <div style={{ marginTop: 12 }}>
-            <button
-              onClick={() => router.push("/pagamento")}
-              className={styles.btnPrimary}
-            >
-              Renovar Plano
-            </button>
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalBox}>
+            <h2 className={styles.modalTitle}>Seu plano expirou</h2>
+            <p className={styles.modalText}>
+              Para continuar usando a plataforma, é necessário renovar seu
+              plano.
+            </p>
+
+            <div className={styles.modalActions}>
+              <button
+                className={styles.btnPrimary}
+                onClick={() => router.push("/pagamento")}
+              >
+                Renovar plano
+              </button>
+              <button
+                className={styles.btnSecondary}
+                onClick={() => setPlanoExpirado(false)}
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}

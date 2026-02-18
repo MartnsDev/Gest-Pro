@@ -49,12 +49,14 @@ public class AuthenticationService implements IAuthenticationService {
     }
 
     @Override
-    public LoginResponse loginManual(String email, String senha, String path, HttpServletResponse response) throws IOException {
-
-        LoginUsuarioDTO loginDTO = new LoginUsuarioDTO(email, senha);
-
-        return loginManual.execute(loginDTO, path, response);
+    public LoginResponse loginManual(String email,
+                                     String senha,
+                                     String path,
+                                     HttpServletResponse response) {
+        LoginUsuarioDTO dto = new LoginUsuarioDTO(email, senha);
+        return loginManual.execute(dto, path, response);
     }
+
 
 
     @Override

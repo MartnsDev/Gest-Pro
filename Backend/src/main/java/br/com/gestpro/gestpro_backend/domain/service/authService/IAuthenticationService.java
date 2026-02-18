@@ -16,7 +16,10 @@ public interface IAuthenticationService {
     boolean confirmarEmail(String token);
 
     //Login Manual Operation
-    LoginResponse loginManual(String email, String senha, String path, HttpServletResponse response) throws IOException;
+    LoginResponse loginManual(String email,
+                              String senha,
+                              String path,
+                              HttpServletResponse response);
 
     //Login Google Operation
     Usuario loginOrRegisterGoogle(String email, String nome, String foto, HttpServletResponse response) throws IOException;

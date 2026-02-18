@@ -4,8 +4,11 @@ import br.com.gestpro.gestpro_backend.domain.model.auth.Usuario;
 import br.com.gestpro.gestpro_backend.domain.model.enums.StatusAcesso;
 import br.com.gestpro.gestpro_backend.domain.model.enums.TipoPlano;
 import br.com.gestpro.gestpro_backend.domain.repository.auth.UsuarioRepository;
+import br.com.gestpro.gestpro_backend.infra.exception.ApiException;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -21,20 +24,24 @@ public class VerificarPlanoOperation {
         this.usuarioRepository = usuarioRepository;
     }
 
-    public void execute(Usuario usuario, HttpServletResponse response) throws IOException {
+    public void execute(Usuario usuario) {
+
         LocalDateTime agora = LocalDateTime.now();
         boolean precisaSalvar = false;
 
         // ---------------------- Plano Experimental ----------------------
         if (usuario.getTipoPlano() == TipoPlano.EXPERIMENTAL) {
+
             if (usuario.getDataPrimeiroLogin() == null) {
                 usuario.setDataPrimeiroLogin(agora);
                 precisaSalvar = true;
             } else {
-                LocalDateTime expiraExperimental = usuario.getDataPrimeiroLogin().plusDays(7);
+                LocalDateTime expiraExperimental =
+                        usuario.getDataPrimeiroLogin().plusDays(7);
+
                 if (agora.isAfter(expiraExperimental)) {
                     usuario.setStatusAcesso(StatusAcesso.INATIVO);
-                    salvarEExpirar(usuario, response);
+                    salvarEExpirar(usuario);
                     return;
                 }
             }
@@ -42,14 +49,17 @@ public class VerificarPlanoOperation {
 
         // ---------------------- Plano Assinante ----------------------
         if (usuario.getTipoPlano() == TipoPlano.ASSINANTE) {
+
             if (usuario.getDataAssinaturaPlus() == null) {
                 usuario.setDataAssinaturaPlus(agora);
                 precisaSalvar = true;
             } else {
-                LocalDateTime expiraAssinatura = usuario.getDataAssinaturaPlus().plusDays(30);
+                LocalDateTime expiraAssinatura =
+                        usuario.getDataAssinaturaPlus().plusDays(30);
+
                 if (agora.isAfter(expiraAssinatura)) {
                     usuario.setStatusAcesso(StatusAcesso.INATIVO);
-                    salvarEExpirar(usuario, response);
+                    salvarEExpirar(usuario);
                     return;
                 }
             }
@@ -60,28 +70,39 @@ public class VerificarPlanoOperation {
         }
 
         if (usuario.getStatusAcesso() == StatusAcesso.INATIVO) {
-            salvarEExpirar(usuario, response);
+            salvarEExpirar(usuario);
         }
     }
 
-    private void salvarEExpirar(Usuario usuario, HttpServletResponse response) throws IOException {
+    private void salvarEExpirar(Usuario usuario) {
         usuarioRepository.save(usuario);
-        response.sendRedirect("http://localhost:3000/pagamento");
+        throw new ApiException(
+                "PLANO_EXPIRADO",
+                HttpStatus.FORBIDDEN,
+                "/auth/login"
+        );
     }
 
     public long calcularDiasRestantes(Usuario usuario) {
+
         LocalDate hoje = LocalDate.now();
         LocalDate dataExpiracao;
 
         if (usuario.getTipoPlano() == TipoPlano.EXPERIMENTAL) {
-            dataExpiracao = usuario.getDataPrimeiroLogin().toLocalDate().plusDays(7);
+            dataExpiracao =
+                    usuario.getDataPrimeiroLogin().toLocalDate().plusDays(7);
+
         } else if (usuario.getTipoPlano() == TipoPlano.ASSINANTE) {
-            dataExpiracao = usuario.getDataAssinaturaPlus().toLocalDate().plusDays(30);
+            dataExpiracao =
+                    usuario.getDataAssinaturaPlus().toLocalDate().plusDays(30);
+
         } else {
             return 0;
         }
 
-        long diasRestantes = ChronoUnit.DAYS.between(hoje, dataExpiracao);
+        long diasRestantes =
+                ChronoUnit.DAYS.between(hoje, dataExpiracao);
+
         return Math.max(diasRestantes, 0);
     }
 }
