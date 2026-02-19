@@ -23,7 +23,7 @@ Desenvolvi o GestPro como uma solução completa para gestão comercial, impleme
   <tr>
     <td width="50%">
       <h3 align="center">Tela de Login</h3>
-      <img src="Img/gestpro-login.png" alt="Tela de Login" />
+      <img src="Img/Gestpro-Landing-Inicio.jpeg" alt="Tela de Login" />
       <p align="center">Login com email/senha ou Google OAuth2</p>
     </td>
     <td width="50%">
