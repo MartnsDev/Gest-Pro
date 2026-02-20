@@ -5,7 +5,6 @@ import {
   Check,
   X,
   ArrowRight,
-  Zap,
   TrendingUp,
   Users,
   BarChart2,
@@ -19,11 +18,13 @@ import {
   Clock,
   HeartHandshake,
   Menu,
+  Camera,
+  Eye,
+  EyeOff,
 } from "lucide-react";
-import { AuthLayout } from "@/components/auth/AuthLayout";
-import { FormInput } from "@/components/auth/FormInput";
-import styles from "@/app/styles/auth.module.css";
+import { login, cadastrar } from "@/lib/api";
 import s from "@/app/styles/landing.module.css";
+import a from "@/app/styles/auth.module.css";
 
 /* ─── Google Icon ─────────────────────────────────────────────────────────── */
 function GoogleIcon() {
@@ -55,7 +56,7 @@ function GoogleIcon() {
   );
 }
 
-/* ─── SVG Illustration ────────────────────────────────────────────────────── */
+/* ─── SVG Illustration ─────────────────────────────────────────────────────── */
 function StoreIllustration() {
   return (
     <svg
@@ -99,7 +100,7 @@ function StoreIllustration() {
         height="47"
         rx="4"
         fill="#3b82f6"
-        opacity="0.75"
+        opacity=".75"
       />
       <rect
         x="359"
@@ -108,41 +109,11 @@ function StoreIllustration() {
         height="47"
         rx="4"
         fill="#3b82f6"
-        opacity="0.75"
+        opacity=".75"
       />
       <rect x="341" y="315" width="42" height="50" rx="4" fill="#0d213d" />
       <circle cx="375" cy="342" r="3" fill="#60a5fa" />
       <path d="M268 202 Q278 162 364 162 Q450 162 460 202 Z" fill="#10b981" />
-      <path
-        d="M288 202 Q293 167 364 167"
-        stroke="white"
-        strokeWidth="1.5"
-        opacity="0.4"
-      />
-      <path
-        d="M314 202 Q319 165 364 164"
-        stroke="white"
-        strokeWidth="1.5"
-        opacity="0.4"
-      />
-      <path
-        d="M392 202 Q388 166 364 164"
-        stroke="white"
-        strokeWidth="1.5"
-        opacity="0.4"
-      />
-      <path
-        d="M416 202 Q412 168 364 167"
-        stroke="white"
-        strokeWidth="1.5"
-        opacity="0.4"
-      />
-      <path
-        d="M440 202 Q436 170 364 169"
-        stroke="white"
-        strokeWidth="1.5"
-        opacity="0.4"
-      />
       <rect x="38" y="66" width="82" height="72" rx="13" fill="#0f766e" />
       <path
         d="M54 88 L57 107 L96 107 L99 88"
@@ -188,11 +159,8 @@ function StoreIllustration() {
         fontWeight="700"
         fontFamily="'Sora',system-ui"
       >
-        {"+24% vendas"}
+        +24% vendas
       </text>
-      <circle cx="484" cy="145" r="4.5" fill="#10b981" opacity="0.45" />
-      <circle cx="499" cy="124" r="3" fill="#3b82f6" opacity="0.45" />
-      <circle cx="472" cy="115" r="2" fill="#10b981" opacity="0.32" />
       <defs>
         <linearGradient id="b1" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#3b82f6" />
@@ -215,170 +183,35 @@ function StoreIllustration() {
   );
 }
 
-/* ─── Dados ───────────────────────────────────────────────────────────────── */
-const features = [
-  {
-    icon: <Package size={22} />,
-    bg: "linear-gradient(135deg, #d1fae5, #a7f3d0)",
-    color: "#059669",
-    title: "Estoque Inteligente",
-    desc: "Alertas automaticos de ruptura, movimentacao em tempo real e controle de validade.",
-  },
-  {
-    icon: <ShoppingCart size={22} />,
-    bg: "linear-gradient(135deg, #dbeafe, #bfdbfe)",
-    color: "#2563eb",
-    title: "PDV Completo",
-    desc: "Vendas rapidas, troco automatico, multiplas formas de pagamento e cupom fiscal.",
-  },
-  {
-    icon: <BarChart2 size={22} />,
-    bg: "linear-gradient(135deg, #ccfbf1, #99f6e4)",
-    color: "#0d9488",
-    title: "Dashboard em Tempo Real",
-    desc: "Veja faturamento, ticket medio e produtos mais vendidos num unico painel.",
-  },
-  {
-    icon: <Users size={22} />,
-    bg: "linear-gradient(135deg, #fef3c7, #fde68a)",
-    color: "#d97706",
-    title: "CRM de Clientes",
-    desc: "Historico de compras, perfil de consumo e acoes de fidelizacao integradas.",
-  },
-  {
-    icon: <FileText size={22} />,
-    bg: "linear-gradient(135deg, #ede9fe, #ddd6fe)",
-    color: "#7c3aed",
-    title: "Notas Fiscais (NF-e)",
-    desc: "Emita NF-e e NFC-e diretamente pelo sistema, sem precisar de outro software.",
-  },
-  {
-    icon: <Shield size={22} />,
-    bg: "linear-gradient(135deg, #fce7f3, #fbcfe8)",
-    color: "#db2777",
-    title: "Seguranca Bancaria",
-    desc: "Criptografia ponta a ponta, backups diarios automaticos e controle de acesso por perfil.",
-  },
-];
-
-const impactItems = [
-  {
-    icon: <Clock size={22} />,
-    title: "Economize 15h por semana",
-    desc: "Automatize tarefas manuais como controle de estoque, fechamento de caixa e emissao de notas.",
-  },
-  {
-    icon: <TrendingUp size={22} />,
-    title: "Aumente seu faturamento em 24%",
-    desc: "Lojistas que usam o GestPro reportam aumento medio de 24% nas vendas nos primeiros 90 dias.",
-  },
-  {
-    icon: <HeartHandshake size={22} />,
-    title: "Suporte que resolve de verdade",
-    desc: "Time 100% brasileiro, disponivel por chat e WhatsApp. Tempo medio de resposta: 3 minutos.",
-  },
-];
-
-const pricingPlans = [
-  {
-    name: "Basico",
-    desc: "Ideal para quem esta comecando e quer organizar a loja.",
-    price: "29,90",
-    period: "mes",
-    save: null,
-    popular: false,
-    features: [
-      { text: "Controle de estoque", enabled: true },
-      { text: "PDV simplificado", enabled: true },
-      { text: "Ate 500 produtos", enabled: true },
-      { text: "1 usuario", enabled: true },
-      { text: "Relatorios basicos", enabled: true },
-      { text: "Suporte por email", enabled: true },
-      { text: "NF-e e NFC-e", enabled: false },
-      { text: "CRM de clientes", enabled: false },
-    ],
-    btnLabel: "Comecar gratis",
-  },
-  {
-    name: "Pro",
-    desc: "Para lojas em crescimento que precisam de mais controle.",
-    price: "49,90",
-    period: "mes",
-    save: "Mais popular",
-    popular: true,
-    features: [
-      { text: "Tudo do Basico", enabled: true },
-      { text: "Produtos ilimitados", enabled: true },
-      { text: "Ate 5 usuarios", enabled: true },
-      { text: "NF-e e NFC-e", enabled: true },
-      { text: "CRM de clientes", enabled: true },
-      { text: "Dashboards avancados", enabled: true },
-      { text: "Suporte prioritario", enabled: true },
-      { text: "Integracoes (iFood, Shopee)", enabled: false },
-    ],
-    btnLabel: "Comecar gratis",
-  },
-  {
-    name: "Premium",
-    desc: "Para operacoes maiores com multiplas lojas e equipes.",
-    price: "89,90",
-    period: "mes",
-    save: "Economize 40%/ano",
-    popular: false,
-    features: [
-      { text: "Tudo do Pro", enabled: true },
-      { text: "Usuarios ilimitados", enabled: true },
-      { text: "Multi-lojas", enabled: true },
-      { text: "Integracoes completas", enabled: true },
-      { text: "API personalizada", enabled: true },
-      { text: "Relatorios customizados", enabled: true },
-      { text: "Gerente de conta dedicado", enabled: true },
-      { text: "Suporte 24/7 WhatsApp", enabled: true },
-    ],
-    btnLabel: "Falar com vendas",
-  },
-];
-
-const navItems = [
-  { label: "Funcionalidades", target: "features" },
-  { label: "Diferenciais", target: "impact" },
-  { label: "Precos", target: "pricing" },
-  { label: "Contato", target: "cta" },
-];
-
-/* ─── Scroll reveal hook ──────────────────────────────────────────────────── */
-function useScrollReveal() {
+/* ─── Scroll Reveal ────────────────────────────────────────────────────────── */
+function useReveal() {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
           setVisible(true);
-          observer.unobserve(el);
+          obs.unobserve(el);
         }
       },
-      { threshold: 0.15 },
+      { threshold: 0.12 },
     );
-    observer.observe(el);
-    return () => observer.disconnect();
+    obs.observe(el);
+    return () => obs.disconnect();
   }, []);
-
   return { ref, className: `${s.reveal} ${visible ? s.revealVisible : ""}` };
 }
-
-/* ─── RevealSection wrapper ───────────────────────────────────────────────── */
-function RevealSection({
+function Reveal({
   children,
   delay = 0,
 }: {
   children: React.ReactNode;
   delay?: number;
 }) {
-  const { ref, className } = useScrollReveal();
+  const { ref, className } = useReveal();
   return (
     <div
       ref={ref}
@@ -390,25 +223,537 @@ function RevealSection({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   PAGE
-═══════════════════════════════════════════════════════════════════════════ */
-export default function LandingPage() {
+/* ─── FormInput ─────────────────────────────────────────────────────────────── */
+function FormInput({
+  icon: Icon,
+  rightSlot,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  icon: React.ElementType;
+  rightSlot?: React.ReactNode;
+}) {
+  return (
+    <div className={a.inputWrap}>
+      <span className={a.inputIcon}>
+        <Icon size={17} />
+      </span>
+      <input
+        className={`${a.input} ${rightSlot ? a.inputWithRight : ""}`}
+        {...props}
+      />
+      {rightSlot && <span className={a.inputRight}>{rightSlot}</span>}
+    </div>
+  );
+}
+
+/* ─── EyeBtn ─────────────────────────────────────────────────────────────────── */
+function EyeBtn({ show, toggle }: { show: boolean; toggle: () => void }) {
+  return (
+    <button type="button" className={a.eyeBtn} onClick={toggle}>
+      {show ? <EyeOff size={16} /> : <Eye size={16} />}
+    </button>
+  );
+}
+
+/* ─── PhotoUpload ────────────────────────────────────────────────────────────── */
+function PhotoUpload({
+  preview,
+  onChange,
+  onRemove,
+}: {
+  preview: string | null;
+  onChange: (f: File) => void;
+  onRemove: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className={a.photoArea}>
+      <div className={a.photoCircle} onClick={() => ref.current?.click()}>
+        {preview ? (
+          <>
+            <img src={preview} alt="Foto" className={a.photoPreview} />
+            <div className={a.photoOverlay}>
+              <Camera size={20} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={a.photoPlaceholder}>
+              <Camera size={24} style={{ color: "#cbd5e1" }} />
+              <span className={a.photoPlaceholderText}>
+                Foto de
+                <br />
+                perfil
+              </span>
+            </div>
+            <div className={a.photoOverlay}>
+              <Camera size={20} />
+            </div>
+          </>
+        )}
+        <input
+          ref={ref}
+          type="file"
+          accept="image/*"
+          className={a.photoInput}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onChange(f);
+          }}
+        />
+      </div>
+      {preview ? (
+        <button type="button" className={a.photoRemove} onClick={onRemove}>
+          Remover foto
+        </button>
+      ) : (
+        <span className={a.photoLabel}>
+          Clique para adicionar foto (opcional)
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ─── Modal ──────────────────────────────────────────────────────────────────── */
+function Modal({
+  type,
+  onClose,
+  onSwitch,
+}: {
+  type: "login" | "register";
+  onClose: () => void;
+  onSwitch: (t: "login" | "register") => void;
+}) {
   /* login */
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [pass, setPass] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  /* register */
+  const [nome, setNome] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPass, setRegPass] = useState("");
+  const [regConfirm, setRegConfirm] = useState("");
+  const [showRegPass, setShowRegPass] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  /* shared */
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const isLogin = type === "login";
 
-  /* register */
-  const [regName, setRegName] = useState("");
-  const [regEmail, setRegEmail] = useState("");
-  const [regPassword, setRegPassword] = useState("");
-  const [regLoading, setRegLoading] = useState(false);
-  const [regError, setRegError] = useState("");
-  const [regSuccess, setRegSuccess] = useState(false);
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
 
-  /* UI */
+  const handlePhotoChange = (file: File) => {
+    setFotoFile(file);
+    const r = new FileReader();
+    r.onloadend = () => setFotoPreview(r.result as string);
+    r.readAsDataURL(file);
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await login(email, pass);
+      window.location.href = "/dashboard";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Credenciais inválidas.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (regPass !== regConfirm) {
+      setError("As senhas não coincidem.");
+      return;
+    }
+    if (regPass.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    try {
+      await cadastrar(nome, regEmail, regPass, fotoFile || undefined);
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao criar conta.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className={a.modalOverlay}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className={a.modalCard}>
+        <div className={a.cardTopBar} />
+        <button className={a.modalClose} onClick={onClose} aria-label="Fechar">
+          <X size={15} />
+        </button>
+        <div className={a.modalBody}>
+          <div className={a.modalHeader}>
+            <div className={a.brand}>
+              <span className={a.brandDark}>Gest</span>
+              <span className={a.brandGreen}>Pro</span>
+            </div>
+            <h2 className={a.modalTitle}>
+              {isLogin ? "Bem-vindo de volta!" : "Crie sua conta grátis"}
+            </h2>
+            <p className={a.modalSubtitle}>
+              {isLogin
+                ? "Entre para acessar sua loja"
+                : "7 dias grátis · Sem cartão de crédito"}
+            </p>
+          </div>
+
+          {success ? (
+            <div className={a.successBox}>
+              <div className={`${a.successIcon} ${a.successIconGreen}`}>
+                <Check size={32} strokeWidth={3} style={{ color: "#059669" }} />
+              </div>
+              <p className={a.successTitle}>Conta criada!</p>
+              <p className={a.successDesc}>
+                Verifique seu e-mail para confirmar o cadastro.
+              </p>
+              <button
+                className={a.btnPrimary}
+                onClick={() => onSwitch("login")}
+              >
+                Fazer login <Check size={16} strokeWidth={3} />
+              </button>
+            </div>
+          ) : (
+            <>
+              {error && <div className={a.errorBox}>{error}</div>}
+              {isLogin ? (
+                <form onSubmit={handleLogin} className={a.form}>
+                  <FormInput
+                    icon={Mail}
+                    type="email"
+                    placeholder="E-mail"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                  <FormInput
+                    icon={Lock}
+                    type={showPass ? "text" : "password"}
+                    placeholder="Senha"
+                    value={pass}
+                    onChange={(e) => setPass(e.target.value)}
+                    required
+                    disabled={loading}
+                    rightSlot={
+                      <EyeBtn
+                        show={showPass}
+                        toggle={() => setShowPass((v) => !v)}
+                      />
+                    }
+                  />
+                  <a href="/esqueceu-senha" className={a.forgotLink}>
+                    Esqueceu a senha?
+                  </a>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={a.btnPrimary}
+                  >
+                    {loading ? (
+                      <>
+                        <span className={a.spinner} /> Entrando...
+                      </>
+                    ) : (
+                      "Entrar"
+                    )}
+                  </button>
+                  <button type="button" className={a.btnGoogle}>
+                    <GoogleIcon /> Entrar com Google
+                  </button>
+                  <p className={a.switchRow}>
+                    Não tem conta?{" "}
+                    <button
+                      type="button"
+                      className={a.linkBtn}
+                      onClick={() => onSwitch("register")}
+                    >
+                      Cadastre-se
+                    </button>
+                  </p>
+                </form>
+              ) : (
+                <form onSubmit={handleRegister} className={a.form}>
+                  <PhotoUpload
+                    preview={fotoPreview}
+                    onChange={handlePhotoChange}
+                    onRemove={() => {
+                      setFotoFile(null);
+                      setFotoPreview(null);
+                    }}
+                  />
+                  <FormInput
+                    icon={User}
+                    type="text"
+                    placeholder="Nome completo"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                  <FormInput
+                    icon={Mail}
+                    type="email"
+                    placeholder="E-mail"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                  <FormInput
+                    icon={Lock}
+                    type={showRegPass ? "text" : "password"}
+                    placeholder="Senha (mín. 6 caracteres)"
+                    value={regPass}
+                    onChange={(e) => setRegPass(e.target.value)}
+                    required
+                    disabled={loading}
+                    rightSlot={
+                      <EyeBtn
+                        show={showRegPass}
+                        toggle={() => setShowRegPass((v) => !v)}
+                      />
+                    }
+                  />
+                  <FormInput
+                    icon={Lock}
+                    type={showConfirm ? "text" : "password"}
+                    placeholder="Confirmar snha"
+                    value={regConfirm}
+                    onChange={(e) => setRegConfirm(e.target.value)}
+                    required
+                    disabled={loading}
+                    rightSlot={
+                      <EyeBtn
+                        show={showConfirm}
+                        toggle={() => setShowConfirm((v) => !v)}
+                      />
+                    }
+                  />
+                  {regConfirm && (
+                    <div
+                      className={`${a.matchRow} ${regPass === regConfirm ? a.matchOk : a.matchErr}`}
+                    >
+                      {regPass === regConfirm ? (
+                        <>
+                          <Check size={12} strokeWidth={3} /> Senhas coincidem
+                        </>
+                      ) : (
+                        <>
+                          <X size={12} strokeWidth={3} /> Senhas não coincidem
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={a.btnPrimary}
+                  >
+                    {loading ? (
+                      <>
+                        <span className={a.spinner} /> Criando conta...
+                      </>
+                    ) : (
+                      "Criar minha conta"
+                    )}
+                  </button>
+                  <button type="button" className={a.btnGoogle}>
+                    <GoogleIcon /> Cadastrar com Google
+                  </button>
+                  <p className={a.switchRow}>
+                    Já tem conta?{" "}
+                    <button
+                      type="button"
+                      className={a.linkBtn}
+                      onClick={() => onSwitch("login")}
+                    >
+                      Entrar
+                    </button>
+                  </p>
+                </form>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Data ───────────────────────────────────────────────────────────────────── */
+const features = [
+  {
+    icon: <Package size={22} />,
+    bg: "linear-gradient(135deg,#d1fae5,#a7f3d0)",
+    color: "#059669",
+    title: "Estoque Inteligente",
+    desc: "Alertas automáticos de ruptura, movimentação em tempo real e controle de validade.",
+  },
+  {
+    icon: <ShoppingCart size={22} />,
+    bg: "linear-gradient(135deg,#dbeafe,#bfdbfe)",
+    color: "#2563eb",
+    title: "PDV Completo",
+    desc: "Vendas rápidas, troco automático, múltiplas formas de pagamento e cupom fiscal.",
+  },
+  {
+    icon: <BarChart2 size={22} />,
+    bg: "linear-gradient(135deg,#ccfbf1,#99f6e4)",
+    color: "#0d9488",
+    title: "Dashboard em Tempo Real",
+    desc: "Veja faturamento, ticket médio e produtos mais vendidos num único painel.",
+  },
+  {
+    icon: <Users size={22} />,
+    bg: "linear-gradient(135deg,#fef3c7,#fde68a)",
+    color: "#d97706",
+    title: "CRM de Clientes",
+    desc: "Histórico de compras, perfil de consumo e ações de fidelização integradas.",
+  },
+  {
+    icon: <FileText size={22} />,
+    bg: "linear-gradient(135deg,#ede9fe,#ddd6fe)",
+    color: "#7c3aed",
+    title: "Notas Fiscais (NF-e)",
+    desc: "Emita NF-e e NFC-e diretamente pelo sistema, sem precisar de outro software.",
+  },
+  {
+    icon: <Shield size={22} />,
+    bg: "linear-gradient(135deg,#fce7f3,#fbcfe8)",
+    color: "#db2777",
+    title: "Segurança Bancária",
+    desc: "Criptografia ponta a ponta, backups diários automáticos e controle por perfil.",
+  },
+];
+const impactItems = [
+  {
+    icon: <Clock size={22} />,
+    title: "Economize 15h por semana",
+    desc: "Automatize tarefas manuais como controle de estoque, fechamento de caixa e emissão de notas.",
+  },
+  {
+    icon: <TrendingUp size={22} />,
+    title: "Aumente seu faturamento em 24%",
+    desc: "Lojistas que usam o GestPro reportam aumento médio de 24% nas vendas nos primeiros 90 dias.",
+  },
+  {
+    icon: <HeartHandshake size={22} />,
+    title: "Suporte que resolve de verdade",
+    desc: "Time 100% brasileiro, disponível por chat e WhatsApp. Tempo médio de resposta: 3 minutos.",
+  },
+];
+const pricingPlans = [
+  {
+    name: "Grátis",
+    price: "0,00",
+    period: "7 dias",
+    popular: false,
+    save: null,
+    btnLabel: "Testar grátis",
+    features: [
+      { text: "Controle de estoque", ok: true },
+      { text: "PDV simplificado", ok: true },
+      { text: "Até 500 produtos", ok: true },
+      { text: "1 usuário", ok: true },
+      { text: "Relatórios básicos", ok: true },
+      { text: "Suporte por e-mail", ok: true },
+      { text: "NF-e e NFC-e", ok: false },
+      { text: "CRM de clientes", ok: false },
+    ],
+  },
+  {
+    name: "Básico",
+    price: "29,90",
+    period: "mês",
+    popular: false,
+    save: null,
+    btnLabel: "Assinar plano",
+    features: [
+      { text: "Controle de estoque", ok: true },
+      { text: "PDV simplificado", ok: true },
+      { text: "Até 500 produtos", ok: true },
+      { text: "1 usuário", ok: true },
+      { text: "Relatórios básicos", ok: true },
+      { text: "Suporte por e-mail", ok: true },
+      { text: "NF-e e NFC-e", ok: false },
+      { text: "CRM de clientes", ok: false },
+    ],
+  },
+  {
+    name: "Pro",
+    price: "49,90",
+    period: "mês",
+    popular: true,
+    save: "Mais popular",
+    btnLabel: "Assinar Pro",
+    features: [
+      { text: "Tudo do Básico", ok: true },
+      { text: "Produtos ilimitados", ok: true },
+      { text: "Até 5 usuários", ok: true },
+      { text: "NF-e e NFC-e", ok: true },
+      { text: "CRM de clientes", ok: true },
+      { text: "Dashboards avançados", ok: true },
+      { text: "Suporte prioritário", ok: true },
+      { text: "Integrações (iFood, Shopee)", ok: false },
+    ],
+  },
+  {
+    name: "Premium",
+    price: "89,90",
+    period: "mês",
+    popular: false,
+    save: "Economize 40% no anual",
+    btnLabel: "Falar com vendas",
+    features: [
+      { text: "Tudo do Pro", ok: true },
+      { text: "Usuários ilimitados", ok: true },
+      { text: "Multi-lojas", ok: true },
+      { text: "Integrações completas", ok: true },
+      { text: "API personalizada", ok: true },
+      { text: "Relatórios customizados", ok: true },
+      { text: "Gerente de conta dedicado", ok: true },
+      { text: "Suporte 24/7 via WhatsApp", ok: true },
+    ],
+  },
+];
+const navItems = [
+  { label: "Funcionalidades", target: "features" },
+  { label: "Diferenciais", target: "impact" },
+  { label: "Preços", target: "pricing" },
+  { label: "Contato", target: "cta" },
+];
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PAGE
+════════════════════════════════════════════════════════════════════════════ */
+export default function LandingPage() {
   const [modal, setModal] = useState<"login" | "register" | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -418,7 +763,6 @@ export default function LandingPage() {
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
-
   useEffect(() => {
     document.body.style.overflow = modal ? "hidden" : "";
     return () => {
@@ -426,50 +770,20 @@ export default function LandingPage() {
     };
   }, [modal]);
 
-  /* ─── Scroll to section ─── */
-  const scrollToSection = useCallback((id: string) => {
+  const scrollTo = useCallback((id: string) => {
     setMobileOpen(false);
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .getElementById(id)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      await new Promise((r) => setTimeout(r, 1200));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao fazer login.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setRegLoading(true);
-    setRegError("");
-    try {
-      await new Promise((r) => setTimeout(r, 1200));
-      setRegSuccess(true);
-    } catch (err) {
-      setRegError(err instanceof Error ? err.message : "Erro ao criar conta.");
-    } finally {
-      setRegLoading(false);
-    }
-  };
-
-  const openModal = (m: "login" | "register") => {
+  const open = (m: "login" | "register") => {
     setModal(m);
-    setError("");
-    setRegError("");
-    setRegSuccess(false);
+    setMobileOpen(false);
   };
 
   return (
     <div className={s.page}>
-      {/* ════════════════════ NAVBAR ════════════════════ */}
+      {/* NAVBAR */}
       <nav className={`${s.navbar} ${scrolled ? s.navbarScrolled : ""}`}>
         <div className={s.navInner}>
           <div className={s.logo}>
@@ -511,37 +825,29 @@ export default function LandingPage() {
                 strokeLinecap="round"
               />
             </svg>
-            <span>
-              <span className={s.logoDark}>Gest</span>
-              <span className={s.logoGreen}>Pro</span>
-            </span>
+            <span className={s.logoDark}>Gest</span>
+            <span className={s.logoGreen}>Pro</span>
           </div>
-
-          {/* Nav Links desktop */}
           <div className={s.navLinks}>
-            {navItems.map((item) => (
+            {navItems.map((n) => (
               <button
-                key={item.target}
+                key={n.target}
                 className={s.navLink}
-                onClick={() => scrollToSection(item.target)}
+                onClick={() => scrollTo(n.target)}
               >
-                {item.label}
+                {n.label}
               </button>
             ))}
           </div>
-
           <div className={s.navActions}>
-            <button
-              className={s.navBtnSecondary}
-              onClick={() => openModal("login")}
-            >
+            <button className={s.navBtnSecondary} onClick={() => open("login")}>
               Entrar
             </button>
             <button
               className={s.navBtnPrimary}
-              onClick={() => openModal("register")}
+              onClick={() => open("register")}
             >
-              Comecar gratis <ArrowRight size={14} />
+              Começar grátis <ArrowRight size={14} />
             </button>
             <button
               className={s.mobileMenuBtn}
@@ -556,40 +862,34 @@ export default function LandingPage() {
 
       {/* Mobile menu */}
       <div className={`${s.mobileMenu} ${mobileOpen ? s.mobileMenuOpen : ""}`}>
-        {navItems.map((item) => (
+        {navItems.map((n) => (
           <button
-            key={item.target}
+            key={n.target}
             className={s.mobileMenuLink}
-            onClick={() => scrollToSection(item.target)}
+            onClick={() => scrollTo(n.target)}
           >
-            {item.label}
+            {n.label}
           </button>
         ))}
         <div className={s.mobileMenuActions}>
           <button
             className={s.navBtnSecondary}
             style={{ width: "100%", justifyContent: "center" }}
-            onClick={() => {
-              setMobileOpen(false);
-              openModal("login");
-            }}
+            onClick={() => open("login")}
           >
             Entrar
           </button>
           <button
             className={s.navBtnPrimary}
             style={{ width: "100%", justifyContent: "center" }}
-            onClick={() => {
-              setMobileOpen(false);
-              openModal("register");
-            }}
+            onClick={() => open("register")}
           >
-            Comecar gratis <ArrowRight size={14} />
+            Começar grátis <ArrowRight size={14} />
           </button>
         </div>
       </div>
 
-      {/* ════════════════════ HERO ════════════════════ */}
+      {/* HERO */}
       <section className={s.heroSection} id="hero">
         <div className={s.heroGrid}>
           <div className={s.heroLeft}>
@@ -597,80 +897,68 @@ export default function LandingPage() {
               <StoreIllustration />
             </div>
           </div>
-
           <div className={s.heroRight}>
             <span className={s.badge}>
-              <span className={s.badgeDot} />
-              {"7 dias gratis \u2014 sem cartao de credito"}
+              <span className={s.badgeDot} />7 dias grátis — sem cartão de
+              crédito
             </span>
-
             <h1 className={s.heroTitle}>
               Sua loja no controle.
               <br />
               <span className={s.heroHighlight}>Suas vendas nas alturas.</span>
             </h1>
-
             <p className={s.heroSubtitle}>
-              {"Mais de "}
-              <strong style={{ color: "#34d399" }}>2.400 lojistas</strong>
-              {
-                " ja organizam estoque, vendas e clientes com o GestPro \u2014 e faturam mais todo mes. Comece hoje, sem burocracia."
-              }
+              Mais de{" "}
+              <strong style={{ color: "#34d399" }}>2.400 lojistas</strong> já
+              organizam estoque, vendas e clientes com o GestPro — e faturam
+              mais todo mês.
             </p>
-
             <div className={s.socialRow}>
               <div className={s.avatarStack}>
-                {["#10b981", "#3b82f6", "#f59e0b", "#ec4899"].map((c, i) => (
-                  <div
-                    key={i}
-                    className={s.avatarBubble}
-                    style={{ background: c, marginLeft: i ? "-10px" : 0 }}
-                  >
-                    {["M", "A", "R", "C"][i]}
-                  </div>
-                ))}
+                {(["#10b981", "#3b82f6", "#f59e0b", "#ec4899"] as const).map(
+                  (c, i) => (
+                    <div
+                      key={i}
+                      className={s.avatarBubble}
+                      style={{ background: c, marginLeft: i ? "-10px" : 0 }}
+                    >
+                      {["M", "A", "R", "C"][i]}
+                    </div>
+                  ),
+                )}
               </div>
               <p className={s.socialText}>
-                <strong>{"+2.400"}</strong> {"lojistas ativos \u2014 4,9/5"}
+                <strong>+2.400</strong> lojistas ativos — 4,9/5
               </p>
             </div>
-
             <div className={s.heroCta}>
               <button
                 className={s.ctaBtnPrimary}
-                onClick={() => openModal("register")}
+                onClick={() => open("register")}
               >
-                Testar 7 dias gratis
-                <ArrowRight size={16} />
+                Testar 7 dias grátis <ArrowRight size={16} />
               </button>
-              <button
-                className={s.ctaBtnGhost}
-                onClick={() => openModal("login")}
-              >
-                Ja tenho conta
+              <button className={s.ctaBtnGhost} onClick={() => open("login")}>
+                Já tenho conta
               </button>
             </div>
-
             <div className={s.heroGuarantees}>
               {[
-                "Sem cartao de credito",
+                "Sem cartão de crédito",
                 "Cancele quando quiser",
-                "Suporte em portugues",
+                "Suporte em português",
               ].map((t) => (
                 <span key={t} className={s.guaranteeItem}>
-                  <Check size={12} strokeWidth={3} />
-                  {t}
+                  <Check size={12} strokeWidth={3} /> {t}
                 </span>
               ))}
             </div>
           </div>
         </div>
-
         <svg
           className={s.wave}
           viewBox="0 0 1440 72"
           fill="none"
-          xmlns="http://www.w3.org/2000/svg"
           preserveAspectRatio="none"
         >
           <path
@@ -680,15 +968,15 @@ export default function LandingPage() {
         </svg>
       </section>
 
-      {/* ════════════════════ TRUST BAR ════════════════════ */}
-      <RevealSection>
+      {/* TRUST BAR */}
+      <Reveal>
         <div className={s.trustBar}>
           <div className={s.trustInner}>
             {[
               { val: "2.400+", label: "Lojas ativas" },
               { val: "R$ 18M+", label: "Em vendas gerenciadas" },
               { val: "99,9%", label: "Uptime garantido" },
-              { val: "4,9/5", label: "Avaliacao dos clientes" },
+              { val: "4,9/5", label: "Avaliação dos clientes" },
             ].map((t) => (
               <div key={t.label} className={s.trustItem}>
                 <span className={s.trustVal}>{t.val}</span>
@@ -697,12 +985,12 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </RevealSection>
+      </Reveal>
 
-      {/* ════════════════════ FEATURES ════════════════════ */}
+      {/* FEATURES */}
       <section className={s.featuresSection} id="features">
         <div className={s.sectionInner}>
-          <RevealSection>
+          <Reveal>
             <div className={s.sectionHead}>
               <span className={s.sectionEyebrow}>Funcionalidades</span>
               <h2 className={s.sectionTitle}>Tudo para sua loja crescer</h2>
@@ -711,10 +999,10 @@ export default function LandingPage() {
                 com varejo.
               </p>
             </div>
-          </RevealSection>
+          </Reveal>
           <div className={s.featureGrid}>
             {features.map((f, i) => (
-              <RevealSection key={f.title} delay={i * 80}>
+              <Reveal key={f.title} delay={i * 80}>
                 <div className={s.featureCard}>
                   <div
                     className={s.featureIconWrap}
@@ -725,157 +1013,144 @@ export default function LandingPage() {
                   <h3 className={s.featureTitle}>{f.title}</h3>
                   <p className={s.featureDesc}>{f.desc}</p>
                 </div>
-              </RevealSection>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ════════════════════ IMPACT / DIFERENCIAIS ════════════════════ */}
+      {/* IMPACT */}
       <section className={s.impactSection} id="impact">
-        <RevealSection>
-          <div
-            className={s.sectionHead}
-            style={{ maxWidth: 1160, margin: "0 auto 48px" }}
-          >
-            <span className={s.sectionEyebrow}>Diferenciais</span>
-            <h2 className={s.sectionTitle}>
-              Por que lojistas escolhem o GestPro?
-            </h2>
-            <p className={s.sectionSub}>
-              Resultados reais de quem ja usa o sistema no dia a dia.
-            </p>
+        <div className={s.sectionInner}>
+          <Reveal>
+            <div className={s.sectionHead}>
+              <span className={s.sectionEyebrow}>Diferenciais</span>
+              <h2 className={s.sectionTitle}>
+                Por que lojistas escolhem o GestPro?
+              </h2>
+              <p className={s.sectionSub}>
+                Resultados reais de quem já usa o sistema no dia a dia.
+              </p>
+            </div>
+          </Reveal>
+          <div className={s.impactGrid}>
+            {impactItems.map((item, i) => (
+              <Reveal key={item.title} delay={i * 100}>
+                <div className={s.impactCard}>
+                  <div className={s.impactIcon}>{item.icon}</div>
+                  <h3 className={s.impactTitle}>{item.title}</h3>
+                  <p className={s.impactDesc}>{item.desc}</p>
+                </div>
+              </Reveal>
+            ))}
           </div>
-        </RevealSection>
-        <div className={s.impactGrid}>
-          {impactItems.map((item, i) => (
-            <RevealSection key={item.title} delay={i * 100}>
-              <div className={s.impactCard}>
-                <div className={s.impactIcon}>{item.icon}</div>
-                <h3 className={s.impactTitle}>{item.title}</h3>
-                <p className={s.impactDesc}>{item.desc}</p>
-              </div>
-            </RevealSection>
-          ))}
         </div>
       </section>
 
-      {/* ════════════════════ PRICING ════════════════════ */}
+      {/* PRICING */}
       <section className={s.pricingSection} id="pricing">
         <div className={s.sectionInner}>
-          <RevealSection>
+          <Reveal>
             <div className={s.sectionHead}>
-              <span className={s.sectionEyebrow}>Precos</span>
+              <span className={s.sectionEyebrow}>Preços</span>
               <h2 className={s.sectionTitle}>
                 Escolha o plano ideal para sua loja
               </h2>
               <p className={s.sectionSub}>
-                {"Comece com "}
-                <strong>7 dias gratis</strong>
-                {". Sem cartao. Cancele quando quiser."}
+                Comece com <strong>7 dias grátis</strong>. Sem cartão. Cancele
+                quando quiser.
               </p>
             </div>
-          </RevealSection>
-
+          </Reveal>
           <div className={s.pricingGrid}>
             {pricingPlans.map((plan, i) => (
-              <RevealSection key={plan.name} delay={i * 120}>
+              <Reveal key={plan.name} delay={i * 110}>
                 <div
                   className={`${s.pricingCard} ${plan.popular ? s.pricingCardPopular : ""}`}
                 >
                   {plan.popular && (
                     <div className={s.popularBadge}>Mais Popular</div>
                   )}
-
                   <p className={s.pricingName}>{plan.name}</p>
-                  <p className={s.pricingDesc}>{plan.desc}</p>
-
                   <div className={s.pricingPriceRow}>
                     <span className={s.pricingCurrency}>R$</span>
                     <span className={s.pricingAmount}>{plan.price}</span>
                     <span className={s.pricingPeriod}>/{plan.period}</span>
                   </div>
-
                   {plan.save ? (
                     <span className={s.pricingSave}>{plan.save}</span>
                   ) : (
                     <div className={s.pricingNosave} />
                   )}
-
                   <hr className={s.pricingDivider} />
-
                   <ul className={s.pricingFeaturesList}>
                     {plan.features.map((f) => (
                       <li
                         key={f.text}
-                        className={`${s.pricingFeatureItem} ${!f.enabled ? s.pricingFeatureDisabled : ""}`}
+                        className={`${s.pricingFeatureItem} ${!f.ok ? s.pricingFeatureDisabled : ""}`}
                       >
                         <span className={s.pricingFeatureIcon}>
-                          {f.enabled ? (
-                            <Check size={12} strokeWidth={3} />
+                          {f.ok ? (
+                            <Check size={11} strokeWidth={3} />
                           ) : (
-                            <X size={12} strokeWidth={3} />
+                            <X size={11} strokeWidth={3} />
                           )}
                         </span>
                         {f.text}
                       </li>
                     ))}
                   </ul>
-
                   <button
                     className={
                       plan.popular ? s.pricingBtnPrimary : s.pricingBtn
                     }
-                    onClick={() => openModal("register")}
+                    onClick={() => open("register")}
                   >
-                    {plan.btnLabel}
-                    <ArrowRight size={14} />
+                    {plan.btnLabel} <ArrowRight size={14} />
                   </button>
                   <p className={s.pricingNote}>
-                    {"Sem cartao \u00B7 Cancele quando quiser"}
+                    Sem cartão · Cancele quando quiser
                   </p>
                 </div>
-              </RevealSection>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ════════════════════ CTA FINAL ════════════════════ */}
+      {/* CTA */}
       <section className={s.ctaSection} id="cta">
-        <RevealSection>
+        <Reveal>
           <div className={s.ctaContent}>
             <span className={s.ctaEyebrow}>Pronto para crescer?</span>
             <h2 className={s.ctaTitle}>
               Pare de perder vendas por falta de controle.
             </h2>
             <p className={s.ctaSub}>
-              Cada dia sem um sistema de gestao e dinheiro deixado na mesa.
+              Cada dia sem um sistema de gestão é dinheiro deixado na mesa.
               Comece agora em menos de 2 minutos.
             </p>
             <button
               className={s.ctaBtnPrimary}
-              onClick={() => openModal("register")}
+              onClick={() => open("register")}
             >
-              {"Comecar gratis agora"}
-              <ArrowRight size={16} />
+              Começar grátis agora <ArrowRight size={16} />
             </button>
             <div
               className={s.heroGuarantees}
-              style={{ justifyContent: "center", marginTop: 8 }}
+              style={{ justifyContent: "center", marginTop: 4 }}
             >
-              {["7 dias gratis", "Sem cartao", "Suporte 24/7"].map((t) => (
+              {["7 dias grátis", "Sem cartão", "Suporte 24/7"].map((t) => (
                 <span key={t} className={s.guaranteeItemDark}>
-                  <Check size={12} strokeWidth={3} />
-                  {t}
+                  <Check size={12} strokeWidth={3} /> {t}
                 </span>
               ))}
             </div>
           </div>
-        </RevealSection>
+        </Reveal>
       </section>
 
-      {/* ════════════════════ FOOTER ════════════════════ */}
+      {/* FOOTER */}
       <footer className={s.footer}>
         <div className={s.footerInner}>
           <div className={s.footerLogo}>
@@ -885,216 +1160,36 @@ export default function LandingPage() {
           <nav className={s.footerLinks}>
             {[
               { label: "Funcionalidades", target: "features" },
-              { label: "Precos", target: "pricing" },
+              { label: "Preços", target: "pricing" },
               { label: "Contato", target: "cta" },
             ].map((l) => (
               <button
                 key={l.label}
                 className={s.footerLink}
-                onClick={() => scrollToSection(l.target)}
+                onClick={() => scrollTo(l.target)}
               >
                 {l.label}
               </button>
             ))}
             <a href="#" className={s.footerLink}>
-              Politica de Privacidade
+              Política de Privacidade
             </a>
             <a href="#" className={s.footerLink}>
               Termos de Uso
             </a>
           </nav>
           <p className={s.footerCopy}>
-            {"\u00A9"} {new Date().getFullYear()} GestPro. Todos os direitos
-            reservados.
+            © {new Date().getFullYear()} GestPro. Todos os direitos reservados.
           </p>
         </div>
       </footer>
 
-      {/* ════════════════════ MODAL ════════════════════ */}
       {modal && (
-        <div
-          className={s.modalOverlay}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setModal(null);
-          }}
-        >
-          <div className={s.modalCard}>
-            <button
-              className={s.modalClose}
-              onClick={() => setModal(null)}
-              aria-label="Fechar"
-            >
-              <X size={16} />
-            </button>
-
-            <AuthLayout
-              title={
-                modal === "login"
-                  ? "GARANTA 7 DIAS GRATIS!"
-                  : "CRIE SUA CONTA GRATIS!"
-              }
-              subtitle={
-                modal === "login"
-                  ? "Sua loja organizada, suas vendas garantidas"
-                  : "Comece gratis, sem cartao de credito"
-              }
-            >
-              {/* LOGIN */}
-              {modal === "login" && (
-                <>
-                  {error && <div className={styles.errorMessage}>{error}</div>}
-                  <form onSubmit={handleLogin} className={styles.authForm}>
-                    <FormInput
-                      type="email"
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      icon={Mail}
-                      required
-                      disabled={loading}
-                    />
-                    <FormInput
-                      type="password"
-                      placeholder="Senha"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      icon={Lock}
-                      required
-                      disabled={loading}
-                    />
-                    <div style={{ textAlign: "right" }}>
-                      <a
-                        href="#"
-                        style={{
-                          fontSize: "12.5px",
-                          color: "#94a3b8",
-                          textDecoration: "none",
-                        }}
-                      >
-                        Esqueceu a senha?
-                      </a>
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className={styles.btnPrimary}
-                    >
-                      {loading ? "Entrando..." : "Entrar"}{" "}
-                      <Check size={20} strokeWidth={3} />
-                    </button>
-                    <button type="button" className={styles.btnSecondary}>
-                      <GoogleIcon /> Login com Google
-                    </button>
-                    <div style={{ textAlign: "center", marginTop: 16 }}>
-                      <p style={{ fontSize: "13px", color: "#64748b" }}>
-                        {"Nao tem uma conta? "}
-                        <button
-                          type="button"
-                          onClick={() => openModal("register")}
-                          className={styles.authLink}
-                        >
-                          Cadastre-se
-                        </button>
-                      </p>
-                    </div>
-                  </form>
-                </>
-              )}
-
-              {/* REGISTER */}
-              {modal === "register" && (
-                <>
-                  {regSuccess ? (
-                    <div className={s.successBox}>
-                      <div className={s.successCircle}>
-                        <Check
-                          size={32}
-                          strokeWidth={3}
-                          style={{ color: "#059669" }}
-                        />
-                      </div>
-                      <p className={s.successTitle}>
-                        Conta criada com sucesso!
-                      </p>
-                      <p className={s.successDesc}>
-                        Verifique seu e-mail para confirmar o cadastro.
-                      </p>
-                      <button
-                        className={styles.btnPrimary}
-                        onClick={() => openModal("login")}
-                      >
-                        Fazer login <Check size={16} strokeWidth={3} />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {regError && (
-                        <div className={styles.errorMessage}>{regError}</div>
-                      )}
-                      <form
-                        onSubmit={handleRegister}
-                        className={styles.authForm}
-                      >
-                        <FormInput
-                          type="text"
-                          placeholder="Nome completo"
-                          value={regName}
-                          onChange={(e) => setRegName(e.target.value)}
-                          icon={User}
-                          required
-                          disabled={regLoading}
-                        />
-                        <FormInput
-                          type="email"
-                          placeholder="Email"
-                          value={regEmail}
-                          onChange={(e) => setRegEmail(e.target.value)}
-                          icon={Mail}
-                          required
-                          disabled={regLoading}
-                        />
-                        <FormInput
-                          type="password"
-                          placeholder="Senha (min. 6 caracteres)"
-                          value={regPassword}
-                          onChange={(e) => setRegPassword(e.target.value)}
-                          icon={Lock}
-                          required
-                          disabled={regLoading}
-                        />
-                        <button
-                          type="submit"
-                          disabled={regLoading}
-                          className={styles.btnPrimary}
-                        >
-                          {regLoading
-                            ? "Criando conta..."
-                            : "Criar minha conta"}{" "}
-                          <Check size={20} strokeWidth={3} />
-                        </button>
-                        <button type="button" className={styles.btnSecondary}>
-                          <GoogleIcon /> Cadastrar com Google
-                        </button>
-                        <div style={{ textAlign: "center", marginTop: 16 }}>
-                          <p style={{ fontSize: "13px", color: "#64748b" }}>
-                            {"Ja tem uma conta? "}
-                            <button
-                              type="button"
-                              onClick={() => openModal("login")}
-                              className={styles.authLink}
-                            >
-                              Entrar
-                            </button>
-                          </p>
-                        </div>
-                      </form>
-                    </>
-                  )}
-                </>
-              )}
-            </AuthLayout>
-          </div>
-        </div>
+        <Modal
+          type={modal}
+          onClose={() => setModal(null)}
+          onSwitch={(t) => setModal(t)}
+        />
       )}
     </div>
   );

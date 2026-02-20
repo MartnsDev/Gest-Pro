@@ -1,9 +1,84 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Image from "next/image";
-import { Mail, Lock, Check, ArrowLeft, KeyRound, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import {
+  Mail,
+  Lock,
+  Check,
+  ArrowLeft,
+  KeyRound,
+  X,
+  RefreshCw,
+} from "lucide-react";
+import a from "@/app/styles/auth.module.css";
+
+const BACKEND_URL = "http://localhost:8080/api/auth";
+
+function Toast({
+  msg,
+  type,
+  onClose,
+}: {
+  msg: string;
+  type: "success" | "error";
+  onClose: () => void;
+}) {
+  return (
+    <div className={a.toastWrap}>
+      <div
+        className={`${a.toast} ${type === "error" ? a.toastError : a.toastSuccess}`}
+      >
+        {type === "success" ? (
+          <Check size={16} strokeWidth={3} />
+        ) : (
+          <X size={16} strokeWidth={3} />
+        )}
+        <span>{msg}</span>
+        <button className={a.toastClose} onClick={onClose} aria-label="Fechar">
+          <X size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function StepIndicator({ current }: { current: 1 | 2 }) {
+  return (
+    <div className={a.stepRow}>
+      <div
+        className={`${a.stepConnector} ${current >= 2 ? a.stepConnectorActive : ""}`}
+      />
+      {([1, 2] as const).map((n) => (
+        <div key={n} className={a.stepItem}>
+          <div
+            className={`${a.stepCircle} ${current >= n ? a.stepCircleActive : ""}`}
+          >
+            {current > n ? <Check size={13} strokeWidth={3} /> : n}
+          </div>
+          <span
+            className={`${a.stepLabel} ${current >= n ? a.stepLabelActive : ""}`}
+          >
+            {n === 1 ? "E-mail" : "Nova senha"}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FormInput({
+  icon: Icon,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { icon: React.ElementType }) {
+  return (
+    <div className={a.inputWrap}>
+      <span className={a.inputIcon}>
+        <Icon size={17} />
+      </span>
+      <input className={a.input} {...props} />
+    </div>
+  );
+}
 
 export default function EsqueceuSenhaPage() {
   const [step, setStep] = useState<1 | 2>(1);
@@ -12,52 +87,50 @@ export default function EsqueceuSenhaPage() {
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [timer, setTimer] = useState(0);
-  const [toastMsg, setToastMsg] = useState(""); // mensagem do toast
-  const [toastType, setToastType] = useState<"success" | "error">("success");
-
-  const BACKEND_URL = "http://localhost:8080/api/auth";
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{
+    msg: string;
+    type: "success" | "error";
+  } | null>(null);
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
-    setToastMsg(msg);
-    setToastType(type);
-    setTimeout(() => setToastMsg(""), 3500); // some em 3.5s
-  };
-
-  const handleEnviarCodigo = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    try {
-      const response = await fetch(`${BACKEND_URL}/esqueceu-senha`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      if (response.ok) {
-        setStep(2);
-        setTimer(60);
-        showToast("Código enviado para seu email!", "success");
-      } else if (response.status === 404) {
-        showToast(
-          "Email não encontrado. Verifique e tente novamente.",
-          "error"
-        );
-      } else {
-        showToast(
-          "Erro ao enviar código. Tente novamente mais tarde.",
-          "error"
-        );
-      }
-    } catch (error) {
-      console.error("Erro ao enviar código:", error);
-      showToast("Erro ao conectar com o servidor.", "error");
-    }
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
   };
 
   useEffect(() => {
     if (timer <= 0) return;
-    const interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
-    return () => clearInterval(interval);
+    const id = setInterval(() => setTimer((p) => p - 1), 1000);
+    return () => clearInterval(id);
   }, [timer]);
+
+  const handleEnviarCodigo = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/esqueceu-senha`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        setStep(2);
+        setTimer(60);
+        showToast("Código enviado para o seu e-mail!", "success");
+      } else if (res.status === 404) {
+        showToast(
+          "E-mail não encontrado. Verifique e tente novamente.",
+          "error",
+        );
+      } else {
+        showToast("Erro ao enviar código. Tente novamente.", "error");
+      }
+    } catch {
+      showToast("Erro ao conectar com o servidor.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRedefinirSenha = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,185 +138,172 @@ export default function EsqueceuSenhaPage() {
       showToast("As senhas não coincidem!", "error");
       return;
     }
-
+    if (novaSenha.length < 6) {
+      showToast("A senha deve ter pelo menos 6 caracteres.", "error");
+      return;
+    }
+    setLoading(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/redefinir-senha`, {
+      const res = await fetch(`${BACKEND_URL}/redefinir-senha`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, codigo, novaSenha }),
       });
-
-      if (response.ok) {
+      if (res.ok) {
         showToast("Senha redefinida com sucesso!", "success");
-        setTimeout(() => (window.location.href = "/"), 1500);
-      } else if (response.status === 400) {
+        setTimeout(() => (window.location.href = "/"), 1800);
+      } else if (res.status === 400) {
         showToast("Código inválido ou expirado. Tente novamente.", "error");
       } else {
-        showToast(
-          "Erro ao redefinir senha. Tente novamente mais tarde.",
-          "error"
-        );
+        showToast("Erro ao redefinir senha. Tente novamente.", "error");
       }
-    } catch (error) {
-      console.error("Erro ao redefinir senha:", error);
+    } catch {
       showToast("Erro ao conectar com o servidor.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden bg-gradient-to-r from-[#0f2847] via-[#1a4d5c] to-[#16a085] flex flex-col">
-      {/* Toast centralizado */}
-      {toastMsg && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <div
-            className={`flex items-center gap-3 p-5 rounded-2xl shadow-lg pointer-events-auto transition-all duration-300
-            ${
-              toastType === "success"
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            }`}
-          >
-            <Check className="w-6 h-6" />
-            <span className="text-sm md:text-base">{toastMsg}</span>
-            <Button onClick={() => setToastMsg("")} className="ml-2">
-              <X className="w-5 h-5 text-gray-500 hover:text-gray-700" />
-            </Button>
-          </div>
-        </div>
+    <div className={a.authPage}>
+      <div className={a.blob1} />
+      <div className={a.blob2} />
+      {toast && (
+        <Toast
+          msg={toast.msg}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
 
-      {/* Cabeçalho */}
-      <div className="w-full text-center pt-8 md:pt-12 z-20">
-        <h1 className="text-white text-xl md:text-2xl lg:text-3xl font-bold tracking-wider px-4">
-          {step === 1 ? "RECUPERAR SENHA" : "REDEFINIR SENHA"}
-        </h1>
-      </div>
-
-      {/* Container Principal */}
-      <div
-        className={`flex-1 flex items-center justify-center px-4 md:px-8 ${
-          toastMsg ? "pointer-events-none filter blur-sm" : ""
-        }`}
-      >
-        <div className="bg-white rounded-2xl md:rounded-3xl shadow-2xl p-6 md:p-8 lg:p-10 w-full max-w-[440px]">
-          <a
-            href="/"
-            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 text-sm"
-          >
-            <ArrowLeft className="w-4 h-4" /> Voltar para login
+      <div className={a.card}>
+        <div className={a.cardTopBar} />
+        <div className={a.cardBody}>
+          <a href="/" className={a.backLink}>
+            <ArrowLeft size={15} /> Voltar para login
           </a>
 
-          <div className="flex items-center justify-center mb-6 md:mb-8">
-            <Image
-              src="/logo-gestpro.png"
-              alt="GestPro"
-              width={180}
-              height={54}
-              className="object-contain w-40 md:w-48 lg:w-52 h-auto"
-            />
+          <div className={a.cardBrandBlock}>
+            <div className={a.brand}>
+              <span className={a.brandDark}>Gest</span>
+              <span className={a.brandGreen}>Pro</span>
+            </div>
+            <p className={a.cardTagline}>
+              {step === 1 ? "Recuperar senha" : "Redefinir senha"}
+            </p>
           </div>
 
+          <StepIndicator current={step} />
+
           {step === 1 && (
-            <form onSubmit={handleEnviarCodigo} className="space-y-4">
-              <p className="text-sm text-gray-600 text-center mb-4">
-                Digite seu email para receber o código de recuperação
+            <form onSubmit={handleEnviarCodigo} className={a.form}>
+              <p className={a.hint}>
+                Digite seu e-mail e enviaremos um código de verificação.
               </p>
-
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent text-gray-700 placeholder:text-gray-400 text-sm md:text-base"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-[#10b981] hover:bg-[#059669] text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#10b981]/30 text-sm md:text-base"
-              >
-                Enviar Código <Check className="w-5 h-5" strokeWidth={3} />
+              <FormInput
+                icon={Mail}
+                type="email"
+                placeholder="E-mail cadastrado"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+              <button type="submit" disabled={loading} className={a.btnPrimary}>
+                {loading ? (
+                  <>
+                    <span className={a.spinner} /> Enviando...
+                  </>
+                ) : (
+                  <>
+                    Enviar código <Check size={17} strokeWidth={3} />
+                  </>
+                )}
               </button>
             </form>
           )}
 
           {step === 2 && (
-            <form onSubmit={handleRedefinirSenha} className="space-y-4">
-              <p className="text-sm text-gray-600 text-center mb-4">
-                Digite o código enviado para <strong>{email}</strong> e sua nova
-                senha
+            <form onSubmit={handleRedefinirSenha} className={a.form}>
+              <p className={a.hint}>
+                Código enviado para <strong>{email}</strong>. Insira o código e
+                crie sua nova senha.
               </p>
 
-              <div className="relative">
-                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Código de verificação"
-                  value={codigo}
-                  onChange={(e) => setCodigo(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent text-gray-700 placeholder:text-gray-400 text-sm md:text-base"
-                  required
-                />
-              </div>
+              <FormInput
+                icon={KeyRound}
+                type="text"
+                placeholder="Código de verificação"
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value)}
+                maxLength={8}
+                required
+                disabled={loading}
+              />
+              <FormInput
+                icon={Lock}
+                type="password"
+                placeholder="Nova senha (mín. 6 caracteres)"
+                value={novaSenha}
+                onChange={(e) => setNovaSenha(e.target.value)}
+                required
+                disabled={loading}
+              />
+              <FormInput
+                icon={Lock}
+                type="password"
+                placeholder="Confirmar nova senha"
+                value={confirmarSenha}
+                onChange={(e) => setConfirmarSenha(e.target.value)}
+                required
+                disabled={loading}
+              />
 
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="password"
-                  placeholder="Nova senha"
-                  value={novaSenha}
-                  onChange={(e) => setNovaSenha(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent text-gray-700 placeholder:text-gray-400 text-sm md:text-base"
-                  required
-                />
-              </div>
+              {confirmarSenha && (
+                <div
+                  className={`${a.matchRow} ${novaSenha === confirmarSenha ? a.matchOk : a.matchErr}`}
+                >
+                  {novaSenha === confirmarSenha ? (
+                    <>
+                      <Check size={12} strokeWidth={3} /> Senhas coincidem
+                    </>
+                  ) : (
+                    <>
+                      <X size={12} strokeWidth={3} /> Senhas não coincidem
+                    </>
+                  )}
+                </div>
+              )}
 
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="password"
-                  placeholder="Confirmar nova senha"
-                  value={confirmarSenha}
-                  onChange={(e) => setConfirmarSenha(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent text-gray-700 placeholder:text-gray-400 text-sm md:text-base"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-[#10b981] hover:bg-[#059669] text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#10b981]/30 text-sm md:text-base"
-              >
-                Redefinir Senha <Check className="w-5 h-5" strokeWidth={3} />
+              <button type="submit" disabled={loading} className={a.btnPrimary}>
+                {loading ? (
+                  <>
+                    <span className={a.spinner} /> Redefinindo...
+                  </>
+                ) : (
+                  <>
+                    Redefinir senha <Check size={17} strokeWidth={3} />
+                  </>
+                )}
               </button>
 
               <button
                 type="button"
                 onClick={() => handleEnviarCodigo()}
-                disabled={timer > 0}
-                className={`w-full text-[#10b981] font-medium text-sm ${
-                  timer > 0
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:text-[#059669]"
-                }`}
+                disabled={timer > 0 || loading}
+                className={a.resendBtn}
               >
-                {timer > 0
-                  ? `Reenviar em ${timer}s`
-                  : "Não recebeu o código? Reenviar"}
+                <RefreshCw size={14} />
+                {timer > 0 ? `Reenviar em ${timer}s` : "Reenviar código"}
               </button>
             </form>
           )}
         </div>
       </div>
 
-      <div className="w-full text-center pb-8 md:pb-12 z-20">
-        <p className="text-white text-base md:text-lg lg:text-xl font-medium px-4">
-          Sua loja organizada, suas vendas garantidas
-        </p>
-      </div>
+      <p className={a.pageFooter}>
+        Sua loja organizada, suas vendas garantidas
+      </p>
     </div>
   );
 }

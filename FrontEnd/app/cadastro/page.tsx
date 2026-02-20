@@ -49,7 +49,7 @@ export default function CadastroPage() {
       setShowModal(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Erro ao realizar cadastro"
+        err instanceof Error ? err.message : "Erro ao realizar cadastro",
       );
     } finally {
       setLoading(false);
