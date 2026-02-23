@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import LoginPage from "./auth/login/page";
+import CadastroPage from "./auth/cadastro/page";
+
 import {
   Check,
   X,
@@ -9,20 +12,13 @@ import {
   Users,
   BarChart2,
   FileText,
-  Mail,
-  Lock,
-  User,
   Package,
   ShoppingCart,
   Shield,
   Clock,
   HeartHandshake,
   Menu,
-  Camera,
-  Eye,
-  EyeOff,
 } from "lucide-react";
-import { login, cadastrar } from "@/lib/api";
 import s from "@/app/styles/landing.module.css";
 import a from "@/app/styles/auth.module.css";
 
@@ -223,98 +219,6 @@ function Reveal({
   );
 }
 
-/* ─── FormInput ─────────────────────────────────────────────────────────────── */
-function FormInput({
-  icon: Icon,
-  rightSlot,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & {
-  icon: React.ElementType;
-  rightSlot?: React.ReactNode;
-}) {
-  return (
-    <div className={a.inputWrap}>
-      <span className={a.inputIcon}>
-        <Icon size={17} />
-      </span>
-      <input
-        className={`${a.input} ${rightSlot ? a.inputWithRight : ""}`}
-        {...props}
-      />
-      {rightSlot && <span className={a.inputRight}>{rightSlot}</span>}
-    </div>
-  );
-}
-
-/* ─── EyeBtn ─────────────────────────────────────────────────────────────────── */
-function EyeBtn({ show, toggle }: { show: boolean; toggle: () => void }) {
-  return (
-    <button type="button" className={a.eyeBtn} onClick={toggle}>
-      {show ? <EyeOff size={16} /> : <Eye size={16} />}
-    </button>
-  );
-}
-
-/* ─── PhotoUpload ────────────────────────────────────────────────────────────── */
-function PhotoUpload({
-  preview,
-  onChange,
-  onRemove,
-}: {
-  preview: string | null;
-  onChange: (f: File) => void;
-  onRemove: () => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  return (
-    <div className={a.photoArea}>
-      <div className={a.photoCircle} onClick={() => ref.current?.click()}>
-        {preview ? (
-          <>
-            <img src={preview} alt="Foto" className={a.photoPreview} />
-            <div className={a.photoOverlay}>
-              <Camera size={20} />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={a.photoPlaceholder}>
-              <Camera size={24} style={{ color: "#cbd5e1" }} />
-              <span className={a.photoPlaceholderText}>
-                Foto de
-                <br />
-                perfil
-              </span>
-            </div>
-            <div className={a.photoOverlay}>
-              <Camera size={20} />
-            </div>
-          </>
-        )}
-        <input
-          ref={ref}
-          type="file"
-          accept="image/*"
-          className={a.photoInput}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) onChange(f);
-          }}
-        />
-      </div>
-      {preview ? (
-        <button type="button" className={a.photoRemove} onClick={onRemove}>
-          Remover foto
-        </button>
-      ) : (
-        <span className={a.photoLabel}>
-          Clique para adicionar foto (opcional)
-        </span>
-      )}
-    </div>
-  );
-}
-
 /* ─── Modal ──────────────────────────────────────────────────────────────────── */
 function Modal({
   type,
@@ -325,23 +229,7 @@ function Modal({
   onClose: () => void;
   onSwitch: (t: "login" | "register") => void;
 }) {
-  /* login */
-  const [email, setEmail] = useState("");
-  const [pass, setPass] = useState("");
-  const [showPass, setShowPass] = useState(false);
-  /* register */
-  const [nome, setNome] = useState("");
-  const [regEmail, setRegEmail] = useState("");
-  const [regPass, setRegPass] = useState("");
-  const [regConfirm, setRegConfirm] = useState("");
-  const [showRegPass, setShowRegPass] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [fotoFile, setFotoFile] = useState<File | null>(null);
-  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   /* shared */
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
   const isLogin = type === "login";
 
   useEffect(() => {
@@ -352,49 +240,6 @@ function Modal({
     return () => window.removeEventListener("keydown", fn);
   }, [onClose]);
 
-  const handlePhotoChange = (file: File) => {
-    setFotoFile(file);
-    const r = new FileReader();
-    r.onloadend = () => setFotoPreview(r.result as string);
-    r.readAsDataURL(file);
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await login(email, pass);
-      window.location.href = "/dashboard";
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Credenciais inválidas.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (regPass !== regConfirm) {
-      setError("As senhas não coincidem.");
-      return;
-    }
-    if (regPass.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
-    setError("");
-    setLoading(true);
-    try {
-      await cadastrar(nome, regEmail, regPass, fotoFile || undefined);
-      setSuccess(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao criar conta.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div
       className={a.modalOverlay}
@@ -403,205 +248,12 @@ function Modal({
       }}
     >
       <div className={a.modalCard}>
-        <div className={a.cardTopBar} />
         <button className={a.modalClose} onClick={onClose} aria-label="Fechar">
           <X size={15} />
         </button>
-        <div className={a.modalBody}>
-          <div className={a.modalHeader}>
-            <div className={a.brand}>
-              <span className={a.brandDark}>Gest</span>
-              <span className={a.brandGreen}>Pro</span>
-            </div>
-            <h2 className={a.modalTitle}>
-              {isLogin ? "Bem-vindo de volta!" : "Crie sua conta grátis"}
-            </h2>
-            <p className={a.modalSubtitle}>
-              {isLogin
-                ? "Entre para acessar sua loja"
-                : "7 dias grátis · Sem cartão de crédito"}
-            </p>
-          </div>
 
-          {success ? (
-            <div className={a.successBox}>
-              <div className={`${a.successIcon} ${a.successIconGreen}`}>
-                <Check size={32} strokeWidth={3} style={{ color: "#059669" }} />
-              </div>
-              <p className={a.successTitle}>Conta criada!</p>
-              <p className={a.successDesc}>
-                Verifique seu e-mail para confirmar o cadastro.
-              </p>
-              <button
-                className={a.btnPrimary}
-                onClick={() => onSwitch("login")}
-              >
-                Fazer login <Check size={16} strokeWidth={3} />
-              </button>
-            </div>
-          ) : (
-            <>
-              {error && <div className={a.errorBox}>{error}</div>}
-              {isLogin ? (
-                <form onSubmit={handleLogin} className={a.form}>
-                  <FormInput
-                    icon={Mail}
-                    type="email"
-                    placeholder="E-mail"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                  <FormInput
-                    icon={Lock}
-                    type={showPass ? "text" : "password"}
-                    placeholder="Senha"
-                    value={pass}
-                    onChange={(e) => setPass(e.target.value)}
-                    required
-                    disabled={loading}
-                    rightSlot={
-                      <EyeBtn
-                        show={showPass}
-                        toggle={() => setShowPass((v) => !v)}
-                      />
-                    }
-                  />
-                  <a href="/esqueceu-senha" className={a.forgotLink}>
-                    Esqueceu a senha?
-                  </a>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={a.btnPrimary}
-                  >
-                    {loading ? (
-                      <>
-                        <span className={a.spinner} /> Entrando...
-                      </>
-                    ) : (
-                      "Entrar"
-                    )}
-                  </button>
-                  <button type="button" className={a.btnGoogle}>
-                    <GoogleIcon /> Entrar com Google
-                  </button>
-                  <p className={a.switchRow}>
-                    Não tem conta?{" "}
-                    <button
-                      type="button"
-                      className={a.linkBtn}
-                      onClick={() => onSwitch("register")}
-                    >
-                      Cadastre-se
-                    </button>
-                  </p>
-                </form>
-              ) : (
-                <form onSubmit={handleRegister} className={a.form}>
-                  <PhotoUpload
-                    preview={fotoPreview}
-                    onChange={handlePhotoChange}
-                    onRemove={() => {
-                      setFotoFile(null);
-                      setFotoPreview(null);
-                    }}
-                  />
-                  <FormInput
-                    icon={User}
-                    type="text"
-                    placeholder="Nome completo"
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                  <FormInput
-                    icon={Mail}
-                    type="email"
-                    placeholder="E-mail"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                  <FormInput
-                    icon={Lock}
-                    type={showRegPass ? "text" : "password"}
-                    placeholder="Senha (mín. 6 caracteres)"
-                    value={regPass}
-                    onChange={(e) => setRegPass(e.target.value)}
-                    required
-                    disabled={loading}
-                    rightSlot={
-                      <EyeBtn
-                        show={showRegPass}
-                        toggle={() => setShowRegPass((v) => !v)}
-                      />
-                    }
-                  />
-                  <FormInput
-                    icon={Lock}
-                    type={showConfirm ? "text" : "password"}
-                    placeholder="Confirmar snha"
-                    value={regConfirm}
-                    onChange={(e) => setRegConfirm(e.target.value)}
-                    required
-                    disabled={loading}
-                    rightSlot={
-                      <EyeBtn
-                        show={showConfirm}
-                        toggle={() => setShowConfirm((v) => !v)}
-                      />
-                    }
-                  />
-                  {regConfirm && (
-                    <div
-                      className={`${a.matchRow} ${regPass === regConfirm ? a.matchOk : a.matchErr}`}
-                    >
-                      {regPass === regConfirm ? (
-                        <>
-                          <Check size={12} strokeWidth={3} /> Senhas coincidem
-                        </>
-                      ) : (
-                        <>
-                          <X size={12} strokeWidth={3} /> Senhas não coincidem
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={a.btnPrimary}
-                  >
-                    {loading ? (
-                      <>
-                        <span className={a.spinner} /> Criando conta...
-                      </>
-                    ) : (
-                      "Criar minha conta"
-                    )}
-                  </button>
-                  <button type="button" className={a.btnGoogle}>
-                    <GoogleIcon /> Cadastrar com Google
-                  </button>
-                  <p className={a.switchRow}>
-                    Já tem conta?{" "}
-                    <button
-                      type="button"
-                      className={a.linkBtn}
-                      onClick={() => onSwitch("login")}
-                    >
-                      Entrar
-                    </button>
-                  </p>
-                </form>
-              )}
-            </>
-          )}
-        </div>
+        {/* Escolhe qual componente renderizar */}
+        {isLogin ? <LoginPage /> : <CadastroPage />}
       </div>
     </div>
   );
@@ -654,14 +306,14 @@ const features = [
 ];
 const impactItems = [
   {
-    icon: <Clock size={22} />,
-    title: "Economize 15h por semana",
-    desc: "Automatize tarefas manuais como controle de estoque, fechamento de caixa e emissão de notas.",
-  },
-  {
     icon: <TrendingUp size={22} />,
     title: "Aumente seu faturamento em 24%",
     desc: "Lojistas que usam o GestPro reportam aumento médio de 24% nas vendas nos primeiros 90 dias.",
+  },
+  {
+    icon: <Clock size={22} />,
+    title: "Economize 15h por semana",
+    desc: "Automatize tarefas manuais como controle de estoque, fechamento de caixa e emissão de notas.",
   },
   {
     icon: <HeartHandshake size={22} />,
@@ -669,80 +321,84 @@ const impactItems = [
     desc: "Time 100% brasileiro, disponível por chat e WhatsApp. Tempo médio de resposta: 3 minutos.",
   },
 ];
+
 const pricingPlans = [
   {
-    name: "Grátis",
+    name: "Teste Gratuito",
     price: "0,00",
     period: "7 dias",
     popular: false,
-    save: null,
-    btnLabel: "Testar grátis",
+    btnLabel: "Começar agora",
     features: [
+      { text: "1 empresa", ok: true },
+      { text: "1 loja", ok: true },
+      { text: "Produtos ilimitados", ok: true },
+      { text: "PDV completo", ok: true },
       { text: "Controle de estoque", ok: true },
-      { text: "PDV simplificado", ok: true },
-      { text: "Até 500 produtos", ok: true },
-      { text: "1 usuário", ok: true },
-      { text: "Relatórios básicos", ok: true },
-      { text: "Suporte por e-mail", ok: true },
+      { text: "Comprovante de venda", ok: true },
+      { text: "Financeiro básico", ok: true },
       { text: "NF-e e NFC-e", ok: false },
-      { text: "CRM de clientes", ok: false },
+      { text: "Relatórios avançados", ok: false },
+      { text: "Multi-lojas", ok: false },
     ],
   },
   {
     name: "Básico",
-    price: "29,90",
+    price: "39,90",
     period: "mês",
     popular: false,
-    save: null,
-    btnLabel: "Assinar plano",
+    btnLabel: "Assinar Básico",
     features: [
+      { text: "1 empresa", ok: true },
+      { text: "Até 2 lojas", ok: true },
+      { text: "Até 500 Produtos", ok: true },
+      { text: "PDV completo", ok: true },
       { text: "Controle de estoque", ok: true },
-      { text: "PDV simplificado", ok: true },
-      { text: "Até 500 produtos", ok: true },
-      { text: "1 usuário", ok: true },
-      { text: "Relatórios básicos", ok: true },
-      { text: "Suporte por e-mail", ok: true },
-      { text: "NF-e e NFC-e", ok: false },
-      { text: "CRM de clientes", ok: false },
+      { text: "Financeiro completo", ok: true },
+      { text: "Relatórios padrão", ok: true },
+      { text: "NF-e e NFC-e (limitado)", ok: true },
+      { text: "Multi-lojas avançado", ok: false },
+      { text: "API e integrações", ok: false },
     ],
   },
   {
     name: "Pro",
-    price: "49,90",
+    price: "69,90",
     period: "mês",
     popular: true,
-    save: "Mais popular",
     btnLabel: "Assinar Pro",
     features: [
-      { text: "Tudo do Básico", ok: true },
-      { text: "Produtos ilimitados", ok: true },
-      { text: "Até 5 usuários", ok: true },
-      { text: "NF-e e NFC-e", ok: true },
-      { text: "CRM de clientes", ok: true },
+      { text: "Empresas ilimitadas", ok: true },
+      { text: "Multi-lojas", ok: true },
+      { text: "PDV completo", ok: true },
+      { text: "Estoque avançado", ok: true },
+      { text: "Financeiro completo", ok: true },
+      { text: "NF-e e NFC-e ilimitado", ok: true },
       { text: "Dashboards avançados", ok: true },
+      { text: "CRM de clientes", ok: true },
       { text: "Suporte prioritário", ok: true },
-      { text: "Integrações (iFood, Shopee)", ok: false },
+      { text: "API pública", ok: false },
     ],
   },
   {
     name: "Premium",
-    price: "89,90",
+    price: "129,90",
     period: "mês",
     popular: false,
-    save: "Economize 40% no anual",
     btnLabel: "Falar com vendas",
     features: [
       { text: "Tudo do Pro", ok: true },
-      { text: "Usuários ilimitados", ok: true },
-      { text: "Multi-lojas", ok: true },
-      { text: "Integrações completas", ok: true },
-      { text: "API personalizada", ok: true },
+      { text: "API completa", ok: true },
+      { text: "Integrações personalizadas", ok: true },
       { text: "Relatórios customizados", ok: true },
-      { text: "Gerente de conta dedicado", ok: true },
-      { text: "Suporte 24/7 via WhatsApp", ok: true },
+      { text: "Usuários ilimitados", ok: true },
+      { text: "SLA dedicado", ok: true },
+      { text: "Suporte 24/7", ok: true },
+      { text: "Onboarding assistido", ok: true },
     ],
   },
 ];
+
 const navItems = [
   { label: "Funcionalidades", target: "features" },
   { label: "Diferenciais", target: "impact" },
