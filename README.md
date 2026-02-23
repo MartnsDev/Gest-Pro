@@ -1,6 +1,6 @@
 # GestPro
 
-> **Simples para usar. Forte por dentro.**
+> **Simples para usar. Em Desenvolvimento**
 
 [![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-17+-orange.svg)](https://openjdk.org/)
