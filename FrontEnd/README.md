@@ -54,23 +54,7 @@ Acesse o app em:
 ```
 👉 http://localhost:3000
 ```
-📁 Estrutura de Pastas
-```
-frontend/
-├── app/                     # Páginas (App Router)
-│   ├── page.tsx            # Tela de Login
-│   ├── cadastro/           # Página de Cadastro
-│   ├── dashboard/          # Painel principal
-│   └── esqueceu-senha/     # Recuperação de senha
-├── components/              # Componentes reutilizáveis
-│   ├── auth/               # Formulários de autenticação
-│   └── ui/                 # Componentes do shadcn/ui
-├── lib/                     # Funções utilitárias
-│   ├── api.ts              # Comunicação com o backend
-│   └── auth.ts             # Funções de autenticação JWT
-├── public/                  # Arquivos estáticos
-└── styles/                  # Estilos globais e customizados
-```
+
 
 🎨 Design System
 ```
