@@ -127,6 +127,7 @@ O diferencial está na **simplicidade com estrutura sólida por trás.**
 - **Tailwind CSS** para estilização responsiva
 - **shadcn/ui** como biblioteca de componentes
 - **Lucide Icons**
+- **Chart.js**
 
 ### Backend
 - **Java 17+** com **Spring Boot 3.x**
@@ -136,6 +137,10 @@ O diferencial está na **simplicidade com estrutura sólida por trás.**
 - **Redis** para caching e otimização de performance
 - **Maven** para gerenciamento de dependências
 - **Swagger/OpenAPI 3.0** para documentação da API
+- **Node.js 18+**
+- **Redis** (opcional para desenvolvimento local)
+- **Maven**
+- **Docker** (Subir projeto de forma mais facil, subir o redis também)
 
 ---
 
@@ -151,15 +156,6 @@ GestPro/
 
 ---
 
-## Como Rodar o Projeto
-
-### Pré-requisitos
-
-- **Java 17+**
-- **Node.js 18+**
-- **MySQL 8+**
-- **Redis** (opcional para desenvolvimento local)
-- **Maven** (já incluído no projeto via wrapper)
 
 ## Documentação da API
 
