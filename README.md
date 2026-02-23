@@ -223,7 +223,7 @@ Este projeto é de minha autoria e não pode ser copiado, reproduzido ou utiliza
 Desenvolvedor apaixonado por criar soluções que realmente funcionam na prática. A GestPro nasceu da vontade de aprender construindo algo útil.
 
 - LinkedIn: [@matheusmartnsdev](https://www.linkedin.com/in/matheusmartnsdev/)
-- GitHub: [@MartnsDev](https://github.com/MartnsDev)
+- Intagram: [@gestpro.app](https://www.instagram.com/gestpro.app/)
 
 ---
 
