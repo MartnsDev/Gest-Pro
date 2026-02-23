@@ -1,23 +1,83 @@
 # GestPro
 
-Sistema completo de gestão para mercados e lojas que desenvolvi utilizando Next.js 14+ no frontend e Spring Boot 3 no backend.
+> **Simples para usar. Forte por dentro.**
 
 [![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-17+-orange.svg)](https://openjdk.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14+-black.svg)](https://nextjs.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
 
-## 📋 Sobre o Projeto
+---
 
-Desenvolvi o GestPro como uma solução completa para gestão comercial, implementando funcionalidades essenciais como controle de produtos, estoque, vendas, clientes e relatórios, tudo através de uma interface moderna e intuitiva.
+## O que é a GestPro?
 
-### O que implementei
+A GestPro é um **sistema de gestão online** criado para ajudar pequenos negócios a organizarem estoque, vendas e informações estratégicas em um único lugar.
 
-- **Sistema de autenticação completo**: Criei login com email/senha e integração com OAuth2 do Google
-- **Gestão de usuários**: Implementei cadastro, recuperação de senha e confirmação por email
-- **Controle de acesso**: Desenvolvi sistema de planos (EXPERIMENTAL/ASSINANTE) e gerenciamento de status de usuário
-- **Dashboard interativo**: Construí uma visão geral com atalhos rápidos para as principais funcionalidades
-- **Módulo comercial**: Desenvolvi a gestão completa de produtos, estoque, vendas e clientes
-- **Sistema de relatórios**: Implementei análises e indicadores de performance
+Ela nasce com um objetivo simples: **transformar desorganização em controle.**
 
-## 📸 Interface do Sistema
+Nada de planilhas confusas. Nada de anotações soltas. Nada de decisões baseadas em "acho que".
+
+---
+
+## Para quem é?
+
+A GestPro foi pensada principalmente para:
+
+- 🏪 Pequenos comércios e lojas físicas
+- 🧾 Negócios que precisam de caixa e emissão de notas
+- 📦 Empreendedores que querem controle real de estoque
+- 🚀 Quem quer sair das planilhas sem complicação
+
+Não é um ERP complexo cheio de funções desnecessárias.  
+É uma solução **enxuta, prática e focada no que realmente importa**.
+
+---
+
+## Qual problema ela resolve?
+
+Muitos pequenos negócios enfrentam dificuldades como:
+
+| Problema | Consequência |
+|---|---|
+| Falta de controle de estoque | Ruptura ou excesso sem perceber |
+| Vendas não registradas corretamente | Perda de receita e histórico |
+| Dificuldade para saber o lucro real | Decisões no escuro |
+| Dependência de planilhas complicadas | Retrabalho e erros frequentes |
+| Falta de visão sobre crescimento | Estagnação sem estratégia |
+
+**A GestPro resolve esses problemas centralizando as informações e oferecendo uma visão clara do negócio.**
+
+---
+
+## O que a GestPro faz?
+
+### 🖥️ Frente de Caixa
+Sistema de PDV (Ponto de Venda) pensado para o dia a dia do comércio. Rápido, intuitivo e funcional como um caixa de mercado — só que muito melhor e mais fácil de usar.
+
+- Registro de vendas ágil
+- Múltiplas formas de pagamento
+- Abertura e fechamento de caixa
+- Emissão de notas e comprovantes
+
+### 📦 Controle de Estoque
+- Cadastro completo de produtos
+- Movimentações de entrada e saída
+- Alertas de estoque baixo
+- Histórico de movimentações
+
+### 👥 Gestão de Clientes
+- Cadastro e histórico de clientes
+- Consulta de compras anteriores
+
+### 📊 Relatórios e Dashboards
+- Visão geral do desempenho do negócio
+- Relatórios de vendas e lucratividade
+- Indicadores de performance em tempo real
+- Dados reais para decisões mais seguras
+
+---
+
+## Interface do Sistema
 
 <table>
   <tr>
@@ -46,47 +106,60 @@ Desenvolvi o GestPro como uma solução completa para gestão comercial, impleme
   </tr>
 </table>
 
-## 🚀 Tecnologias que Utilizei
+---
+
+## Diferencial da GestPro
+
+O diferencial está na **simplicidade com estrutura sólida por trás.**
+
+- Interface moderna e intuitiva
+- Experiência focada em clareza e agilidade
+- Desenvolvida com preocupação real com performance, segurança e escalabilidade
+- Funciona online — acesse de qualquer lugar, a qualquer hora
+
+---
+
+## Tecnologias
 
 ### Frontend
-Construí a interface do usuário utilizando:
 - **Next.js 14+** com App Router
 - **TypeScript** para tipagem estática
 - **Tailwind CSS** para estilização responsiva
 - **shadcn/ui** como biblioteca de componentes
-- **Lucide Icons** para ícones
+- **Lucide Icons**
 
 ### Backend
-Desenvolvi a API e regras de negócio com:
-- **Java 17+**
-- **Spring Boot 3.x**
-- **Spring Security** implementando autenticação JWT
-- **OAuth2** para integração com login do Google
-- **MySQL 8+** como banco de dados
-- **Redis** para sistema de caching
+- **Java 17+** com **Spring Boot 3.x**
+- **Spring Security** com autenticação **JWT**
+- **OAuth2** para login com Google
+- **MySQL 8+** como banco de dados relacional
+- **Redis** para caching e otimização de performance
 - **Maven** para gerenciamento de dependências
-- **Swagger** para documentação automática da API
+- **Swagger/OpenAPI 3.0** para documentação da API
 
-## 📂 Como Organizei o Projeto
+---
+
+## Estrutura do Projeto
 
 ```
 GestPro/
 ├── frontend/          # Interface do usuário (Next.js)
 ├── backend/           # API e lógica de negócio (Spring Boot)
-├── Img/               # Imagens utilizadas neste README
+├── Img/               # Imagens do README
 └── README.md
 ```
 
-## 🚀 Como Rodar o Projeto
+---
+
+## Como Rodar o Projeto
 
 ### Pré-requisitos
 
-Para rodar o projeto, você vai precisar de:
 - **Java 17+**
 - **Node.js 18+**
 - **MySQL 8+**
-- **Redis** (opcional, para caching)
-- **Maven** (já incluído no projeto)
+- **Redis** (opcional para desenvolvimento local)
+- **Maven** (já incluído no projeto via wrapper)
 
 ### Instalação Rápida
 
@@ -110,20 +183,19 @@ npm install
 npm run dev
 ```
 
-**Depois de iniciar, acesse:**
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8080`
-- Documentação Swagger: `http://localhost:8080/swagger-ui.html`
+Após iniciar, acesse:
+- **Frontend:** `http://localhost:3000`
+- **API Backend:** `http://localhost:8080`
+- **Swagger Docs:** `http://localhost:8080/swagger-ui.html`
 
 ---
 
-## ⚙️ Como Configurei as Variáveis de Ambiente
+## Variáveis de Ambiente
 
-Optei por usar variáveis de ambiente para manter as configurações sensíveis fora do código. **Importante: nunca faça commit de credenciais no código.**
+> ⚠️ **Nunca faça commit de credenciais no código.**
 
-### Configuração no Windows
+### Windows (PowerShell)
 
-Se você estiver no Windows, use o PowerShell para definir as variáveis:
 ```powershell
 # Database
 setx DB_URL "jdbc:mysql://localhost:3306/gestpro_db"
@@ -153,7 +225,7 @@ setx BASIC_AUTH_USER "admin"
 setx BASIC_AUTH_PASSWORD "admin"
 setx BASIC_AUTH_ROLE "ADMIN"
 
-# OAuth2 Google (ver seção OAuth2)
+# OAuth2 Google
 setx GOOGLE_CLIENT_ID "seu_client_id"
 setx GOOGLE_CLIENT_SECRET "seu_client_secret"
 setx GOOGLE_SCOPE "openid,email,profile"
@@ -163,7 +235,7 @@ setx GOOGLE_TOKEN_URI "https://oauth2.googleapis.com/token"
 setx GOOGLE_USERINFO_URI "https://www.googleapis.com/oauth2/v3/userinfo"
 setx GOOGLE_USERNAME_ATTR "sub"
 
-# Email (ver seção Email)
+# Email
 setx MAIL_HOST "smtp.gmail.com"
 setx MAIL_PORT "587"
 setx MAIL_USERNAME "seu_email@gmail.com"
@@ -172,50 +244,31 @@ setx MAIL_SMTP_AUTH "true"
 setx MAIL_SMTP_STARTTLS "true"
 ```
 
-**Observação:** Feche e reabra o terminal para aplicar as variáveis.
+> Feche e reabra o terminal para aplicar as variáveis.
 
----
-
-### Configuração no Linux/macOS
-
-Se você usa Linux ou macOS, edite o arquivo de configuração do shell:
+### Linux/macOS
 
 ```bash
-nano ~/.bashrc  # ou ~/.zshrc se usar zsh
-```
+# Edite o arquivo de configuração do shell
+nano ~/.bashrc  # ou ~/.zshrc
 
-Adicione as seguintes variáveis:
-
-```bash
-# Database
+# Adicione as variáveis:
 export DB_URL="jdbc:mysql://localhost:3306/gestpro_db"
 export DB_USERNAME="root"
 export DB_PASSWORD="sua_senha"
-
-# Server
 export SERVER_PORT="8080"
 export APP_BASE_URL="http://localhost:8080"
-
-# JPA/Hibernate
 export JPA_HBM_DDL="update"
 export JPA_SHOW_SQL="true"
 export JPA_FORMAT_SQL="true"
 export JPA_OPEN_IN_VIEW="false"
-
-# Swagger
 export SWAGGER_API_DOCS_PATH="/v3/api-docs"
 export SWAGGER_UI_PATH="/swagger-ui.html"
-
-# JWT
 export JWT_SECRET="sua_chave_secreta_jwt_minimo_256_bits"
 export JWT_EXPIRATION="86400000"
-
-# Basic Auth
 export BASIC_AUTH_USER="admin"
 export BASIC_AUTH_PASSWORD="admin"
 export BASIC_AUTH_ROLE="ADMIN"
-
-# OAuth2 Google
 export GOOGLE_CLIENT_ID="seu_client_id"
 export GOOGLE_CLIENT_SECRET="seu_client_secret"
 export GOOGLE_SCOPE="openid,email,profile"
@@ -224,61 +277,48 @@ export GOOGLE_AUTH_URI="https://accounts.google.com/o/oauth2/v2/auth"
 export GOOGLE_TOKEN_URI="https://oauth2.googleapis.com/token"
 export GOOGLE_USERINFO_URI="https://www.googleapis.com/oauth2/v3/userinfo"
 export GOOGLE_USERNAME_ATTR="sub"
-
-# Email
 export MAIL_HOST="smtp.gmail.com"
 export MAIL_PORT="587"
 export MAIL_USERNAME="seu_email@gmail.com"
 export MAIL_PASSWORD="senha_de_app_google"
 export MAIL_SMTP_AUTH="true"
 export MAIL_SMTP_STARTTLS="true"
-```
 
-Aplique as alterações:
-
-```bash
-source ~/.bashrc  # ou source ~/.zshrc
+# Aplique as alterações
+source ~/.bashrc
 ```
 
 ---
 
-## 🔐 Integrações que Implementei
+## Integrações
 
-### OAuth2 - Login com Google
+### OAuth2 — Login com Google
 
-Implementei a autenticação com Google seguindo estes passos:
+#### 1. Crie um projeto no Google Cloud Console
 
-#### 1. Criei um Projeto no Google Cloud Console
-
-Acessei o [Google Cloud Console](https://console.cloud.google.com) e criei um novo projeto:
+Acesse o [Google Cloud Console](https://console.cloud.google.com) e crie um novo projeto.
 
 <img src="Img/Create-project_googleAuth.png" alt="Criar Projeto Google" width="600"/>
 
-#### 2. Configurei a OAuth Consent Screen
+#### 2. Configure a OAuth Consent Screen
 
-- Acessei **APIs e serviços → Tela de consentimento OAuth**
-- Selecionei o tipo: **Externo**
-- Preenchi o nome do aplicativo e email de suporte
+Acesse **APIs e serviços → Tela de consentimento OAuth**, selecione **Externo** e preencha as informações básicas.
 
 <img src="Img/Criar-um-cliente-auth.png" alt="Configurar OAuth" width="600"/>
 
-#### 3. Criei as Credenciais OAuth 2.0
+#### 3. Crie as Credenciais OAuth 2.0
 
-- Naveguei até **Credenciais → Criar credenciais → ID do cliente OAuth**
-- Escolhi o tipo: **Aplicativo da Web**
+Navegue até **Credenciais → Criar credenciais → ID do cliente OAuth** e escolha **Aplicativo da Web**.
 
 <img src="Img/Criar-id-cliente-Auth.png" alt="Criar ID Cliente" width="600"/>
 
-#### 4. Adicionei a URI de Redirecionamento
+#### 4. Adicione a URI de Redirecionamento
 
-Configurei a seguinte URI autorizada:
 ```
 http://localhost:8080/login/oauth2/code/google
 ```
 
-#### 5. Copiei as Credenciais
-
-Após criar, copiei o **Client ID** e **Client Secret** e configurei nas variáveis de ambiente:
+#### 5. Configure as variáveis
 
 ```bash
 GOOGLE_CLIENT_ID="seu_client_id_aqui"
@@ -287,124 +327,103 @@ GOOGLE_CLIENT_SECRET="seu_client_secret_aqui"
 
 ---
 
-### Sistema de Envio de Email via SMTP
+### Envio de Email via SMTP (Gmail)
 
-Implementei o envio de emails utilizando Gmail para confirmação de cadastro e recuperação de senha.
+#### 1. Ative a Verificação em Duas Etapas
 
-#### 1. Ativei a Verificação em Duas Etapas
+Acesse [Google Account Security](https://myaccount.google.com/security) e ative a verificação em duas etapas.
 
-Primeiro, acessei [Google Account Security](https://myaccount.google.com/security) e ativei a verificação em duas etapas.
-
-#### 2. Gerei uma Senha de Aplicativo
+#### 2. Gere uma Senha de Aplicativo
 
 <img src="Img/emailsender-1.png" alt="App Passwords Menu" width="600"/>
 
-Acessei **Senhas de app** e criei uma nova senha:
+Acesse **Senhas de app** e crie uma nova senha.
 
 <img src="Img/emailsender-2.png" alt="Criar App Password" width="600"/>
 
-#### 3. Configurei as Variáveis de Ambiente
-
-Usei a senha gerada (16 caracteres) na variável `MAIL_PASSWORD`:
+#### 3. Configure a variável
 
 ```bash
 MAIL_USERNAME="seu_email@gmail.com"
-MAIL_PASSWORD="xxxx xxxx xxxx xxxx"  # Senha de app gerada
+MAIL_PASSWORD="xxxx xxxx xxxx xxxx"  # senha de app de 16 caracteres
 ```
 
-#### Emails que o Sistema Envia
+#### Emails que o sistema envia
 
-**Confirmação de Cadastro:**
+**Confirmação de cadastro** — código de 6 dígitos com validade de 10 minutos:
 
 <img src="Img/Confirmar-email_gestpro.png" alt="Email de Confirmação" width="500"/>
 
-Implementei o envio de um código de 6 dígitos com validade de 10 minutos para ativar a conta.
-
-**Recuperação de Senha:**
+**Recuperação de senha** — código temporário para redefinir com segurança:
 
 <img src="Img/Mudar-senha-Gestpro.png" alt="Email Redefinição de Senha" width="500"/>
 
-Criei um sistema de código temporário para redefinir a senha com segurança.
+---
 
-## 📚 Documentação da API que Criei
+## Documentação da API
 
-Implementei documentação interativa completa utilizando **Swagger/OpenAPI 3.0**.
+Documentação interativa completa via **Swagger/OpenAPI 3.0**, disponível após iniciar o backend:
 
-Para acessar após iniciar o backend:
 ```
 http://localhost:8080/swagger-ui.html
 ```
 
 <img src="Img/Documentação-Swagger.png" alt="Swagger UI" />
 
-### Endpoints que Implementei
+**Grupos de endpoints disponíveis:**
+- **Autenticação** — login, cadastro, confirmação de email
+- **Usuário** — perfil e atualização de dados
+- **Caixa** — abertura, fechamento e movimentações
+- **Produtos** — CRUD completo
+- **Estoque** — controle de movimentações
+- **Vendas** — registro e consulta
+- **Clientes** — gestão de cadastro
+- **Relatórios** — dashboards e analytics
 
-- **Autenticação**: Login, cadastro, confirmação de email
-- **Usuário**: Perfil, atualização de dados
-- **Produtos**: CRUD completo
-- **Estoque**: Controle de movimentações
-- **Vendas**: Registro e consulta
-- **Clientes**: Gestão de cadastro
-- **Relatórios**: Dashboards e analytics
+---
 
-## 🔒 Segurança que Implementei
+## Segurança
 
-Implementei diversas camadas de segurança no projeto:
-
-- **Autenticação JWT** com tokens de refresh
-- **OAuth2** para login social integrado
-- **Senhas criptografadas** utilizando BCrypt
+- **JWT** com tokens de refresh
+- **OAuth2** para login social
+- **BCrypt** para criptografia de senhas
 - **Validação de email obrigatória** para ativar contas
 - **Códigos de verificação** com tempo de expiração
-- **Proteção CSRF** para requisições
+- **Proteção CSRF**
 - **Rate limiting** para prevenir abuso da API
 
-## ⚠️ Pontos Importantes
+---
 
-Durante o desenvolvimento deste projeto, algumas decisões e boas práticas se mostraram essenciais para manter o sistema seguro, escalável e próximo de um ambiente real de produção:
+## Boas Práticas e Avisos
 
-- **Segurança em primeiro lugar**  
-  Nunca versionar credenciais, tokens, senhas ou secrets no repositório.  
-  Todas as informações sensíveis devem ser configuradas exclusivamente via variáveis de ambiente.
+- Nunca versione credenciais, tokens ou secrets no repositório — use sempre variáveis de ambiente.
+- Use uma chave JWT com no mínimo **256 bits**. Chaves fracas comprometem toda a aplicação.
+- Use um **email dedicado** para envios do sistema, nunca email pessoal em produção.
+- Em produção, desative `show-sql`, `ddl-auto=update` e logs detalhados.
+- **Redis é fortemente recomendado em produção** para caching, sessões e redução de carga no banco.
 
-- **JWT Secret forte**  
-  Utilize uma chave JWT com no mínimo **256 bits**.  
-  Chaves fracas comprometem toda a segurança da aplicação, independentemente do restante da arquitetura.
+---
 
-- **Email dedicado para o sistema**  
-  É altamente recomendado utilizar um email exclusivo para o envio de mensagens do sistema  
-  (confirmação de conta, redefinição de senha, notificações).  
-  Evite usar email pessoal, especialmente em ambientes de produção.
-
-- **Redis em produção**  
-  Embora opcional durante o desenvolvimento local, o uso de Redis é fortemente recomendado em produção  
-  para caching, controle de sessões, otimização de performance e redução de carga no banco de dados.
-
-- **Separação de responsabilidades**  
-  Frontend e backend foram desenvolvidos como aplicações independentes, permitindo escalabilidade,  
-  deploy separado e melhor organização do código.
-
-- **Ambiente de produção ≠ ambiente de desenvolvimento**  
-  Configurações como logs detalhados, `ddl-auto=update` e `show-sql=true` devem ser usadas apenas em desenvolvimento.  
-  Em produção, essas opções precisam ser revisadas para evitar riscos de segurança e impacto de performance.
-  
-
-## 📖 Links do Projeto
+## Links
 
 - [Código do Frontend](https://github.com/MartnsDev/Gest-Pro/tree/2ced41f10df3341faa91cdcd0596061cfdcbc920/FrontEnd)
 - [Código do Backend](https://github.com/MartnsDev/Gest-Pro/tree/2ced41f10df3341faa91cdcd0596061cfdcbc920/Backend)
 
-## 📝 Licença
+---
+
+## Licença
 
 Todos os direitos reservados © 2025 Matheus Martins (MartnsDev)
 
-Este projeto é de minha autoria e não pode ser copiado, reproduzido ou utilizado sem minha autorização expressa.
+Este projeto é de minha autoria e não pode ser copiado, reproduzido ou utilizado sem autorização expressa.
 
-## 👤 Sobre Mim
+---
+
+## Sobre o Autor
 
 **Matheus Martins**
 
-Sou desenvolvedor e criei este projeto para aprender e demonstrar minhas habilidades. Se quiser trocar uma ideia sobre o projeto ou tiver alguma sugestão, fique à vontade para entrar em contato!
+Desenvolvedor apaixonado por criar soluções que realmente funcionam na prática. A GestPro nasceu da vontade de aprender construindo algo útil.
 
 - LinkedIn: [@matheusmartnsdev](https://www.linkedin.com/in/matheusmartnsdev/)
 - GitHub: [@MartnsDev](https://github.com/MartnsDev)
