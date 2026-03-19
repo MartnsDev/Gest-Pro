@@ -2,8 +2,8 @@ package br.com.gestpro.auth.service;
 
 import br.com.gestpro.auth.EmailService;
 import br.com.gestpro.auth.MailTrapEmail;
-import br.com.gestpro.auth.StatusAcesso;
-import br.com.gestpro.auth.TipoPlano;
+import br.com.gestpro.plano.StatusAcesso;
+import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.infra.exception.ApiException;
@@ -81,7 +81,8 @@ public class CadastroManualOperation {
     }
 
 
-    // CRIAÇÃO
+
+   // Criar Novo Usuario
     private Usuario criarNovoUsuario(String nome, String email, String senha, MultipartFile foto) throws IOException {
 
         Usuario usuario = new Usuario();
@@ -93,13 +94,13 @@ public class CadastroManualOperation {
         usuario.setEmailConfirmado(false);
         usuario.setLoginGoogle(false);
         usuario.setDataCriacao(LocalDateTime.now());
+        usuario.setDataPrimeiroLogin(LocalDateTime.now());
 
         if (foto != null && !foto.isEmpty()) {
             usuario.setFotoUpload(uploadFotoOperation.salvarFoto(foto));
         }
 
         gerarTokenConfirmacao(usuario);
-
         return usuario;
     }
 

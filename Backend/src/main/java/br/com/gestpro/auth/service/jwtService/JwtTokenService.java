@@ -1,6 +1,5 @@
 package br.com.gestpro.auth.service.jwtService;
 
-
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.infra.jwt.JwtService;
 import org.springframework.stereotype.Service;
@@ -17,5 +16,10 @@ public class JwtTokenService implements JwtTokenServiceInterface {
     @Override
     public String gerarToken(Usuario usuario) {
         return jwtService.gerarToken(usuario);
+    }
+
+    @Override
+    public Long extrairId(String token) {
+        return jwtService.getUsuarioIdFromToken(token);
     }
 }

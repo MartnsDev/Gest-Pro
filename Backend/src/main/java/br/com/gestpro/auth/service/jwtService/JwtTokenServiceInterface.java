@@ -4,4 +4,5 @@ import br.com.gestpro.auth.model.Usuario;
 
 public interface JwtTokenServiceInterface {
     String gerarToken(Usuario usuario);
+    Long extrairId(String token); // Novo método na interface
 }

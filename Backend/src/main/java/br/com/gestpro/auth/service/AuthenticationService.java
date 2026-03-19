@@ -3,6 +3,7 @@ package br.com.gestpro.auth.service;
 import br.com.gestpro.auth.dto.AuthDTO.LoginResponse;
 import br.com.gestpro.auth.dto.AuthDTO.LoginUsuarioDTO;
 import br.com.gestpro.auth.model.Usuario;
+import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.plano.service.AtualizarPlanoOperation;
 import br.com.gestpro.infra.jwt.JwtService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -74,10 +75,9 @@ public class AuthenticationService implements IAuthenticationService {
         return uploadFotoOperation.salvarFoto(foto);
     }
 
-
     @Override
-    public Usuario atualizarPlano(String email, int duracaoDias) {
-        return atualizarPlanoOperation.atualizarPlano(email, duracaoDias);
+    public Usuario atualizarPlano(String email, TipoPlano tipo, int duracaoDias) {
+        return atualizarPlanoOperation.atualizarPlano(email, tipo, duracaoDias);
     }
 
 

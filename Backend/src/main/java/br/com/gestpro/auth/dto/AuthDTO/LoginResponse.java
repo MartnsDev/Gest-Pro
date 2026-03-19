@@ -1,6 +1,6 @@
 package br.com.gestpro.auth.dto.AuthDTO;
 
-import br.com.gestpro.auth.TipoPlano;
+import br.com.gestpro.plano.TipoPlano;
 
 public record LoginResponse(
         String token,

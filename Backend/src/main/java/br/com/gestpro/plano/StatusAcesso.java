@@ -1,4 +1,4 @@
-package br.com.gestpro.auth;
+package br.com.gestpro.plano;
 
 public enum StatusAcesso {
     ATIVO,

@@ -24,11 +24,10 @@ public class JwtService {
     @Value("${app.jwt-expiration-ms}")
     private long jwtExpirationMs;
 
-
-    // GERAÇÃO DE TOKEN
     public String gerarToken(Usuario usuario) {
         return Jwts.builder()
                 .setSubject(usuario.getEmail())
+                .claim("id", usuario.getId()) // ESSENCIAL para os Controllers
                 .claim("nome", usuario.getNome())
                 .claim("foto", usuario.getFoto())
                 .claim("tipoPlano", usuario.getTipoPlano().toString())
@@ -39,8 +38,12 @@ public class JwtService {
                 .compact();
     }
 
+    // EXTRAÇÃO DE ID (Usado no EmpresaController)
+    public Long getUsuarioIdFromToken(String token) {
+        Claims claims = extrairTodosClaims(token);
+        return claims.get("id", Long.class);
+    }
 
-    // EXTRAÇÃO DE INFORMAÇÕES
     public String getEmailFromToken(String token) {
         return extrairClaim(token, Claims::getSubject);
     }
@@ -62,7 +65,6 @@ public class JwtService {
         }
     }
 
-    // VALIDAÇÃO
     public boolean validarToken(String token, UserDetails userDetails) {
         final String email = getEmailFromToken(token);
         return (email.equals(userDetails.getUsername()) && !estaExpirado(token));
@@ -77,17 +79,15 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-
-    // VALIDAÇÃO SIMPLES
     public boolean isTokenValid(String token) {
         try {
             Jwts.parserBuilder()
                     .setSigningKey(getSigningKey())
                     .build()
                     .parseClaimsJws(token);
-            return true; // token válido
+            return true;
         } catch (JwtException | IllegalArgumentException e) {
-            return false; // token inválido ou expirado
+            return false;
         }
     }
 }

@@ -9,10 +9,10 @@ import br.com.gestpro.plano.service.VerificarPlanoOperation;
 import br.com.gestpro.infra.exception.ApiException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class LoginManualOperation {
@@ -37,41 +37,47 @@ public class LoginManualOperation {
                                  String path,
                                  HttpServletResponse response) {
 
-        // 1. Busca usuário
+        // 1. Busca usuário por e-mail
         Usuario usuario = usuarioRepository.findByEmail(loginRequest.email())
-                .orElseThrow(() ->
-                        new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, path));
+                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, path));
 
-        // 2. Verifica email confirmado
+        // 2. Bloqueia se o e-mail ainda não foi confirmado
         if (!usuario.isEmailConfirmado()) {
-            throw new ApiException("Email não confirmado", HttpStatus.BAD_REQUEST, path);
+            throw new ApiException("E-mail não confirmado. Verifique sua caixa de entrada.", HttpStatus.BAD_REQUEST, path);
         }
 
-        // 3. Valida senha
+        // 3. Validação de Senha / Conversão de conta Google
         if (usuario.isLoginGoogle()) {
+            // Se o usuário era apenas Google e agora definiu uma senha, desmarca a flag
             usuario.setSenha(passwordEncoder.encode(loginRequest.senha()));
             usuario.setLoginGoogle(false);
             usuarioRepository.save(usuario);
         } else if (!passwordEncoder.matches(loginRequest.senha(), usuario.getSenha())) {
-            throw new ApiException("Senha inválida", HttpStatus.UNAUTHORIZED, path);
+            throw new ApiException("Senha incorreta.", HttpStatus.UNAUTHORIZED, path);
         }
 
-        // 4. Verifica plano ANTES de gerar token
-        verificarPlano.execute(usuario);
+        // 4. Verificação de Expiração do Plano
+        // Usamos o try-catch para permitir o login mesmo se o plano venceu.
+        // O método 'validarAcessoTemporario' já atualizará o status no banco para INATIVO.
+        try {
+            verificarPlano.validarAcessoTemporario(usuario);
+        } catch (ApiException e) {
+            // Ignoramos a interrupção aqui. O usuário loga, mas o status dele no token/banco será INATIVO.
+            // Isso permite que o Frontend redirecione ele para a página de Planos/Pagamento.
+        }
 
-        // Se plano expirado, exceção já foi lançada aqui
-
-        // 5. Gera token
+        // 5. Geração do Token JWT
         String token = jwtTokenService.gerarToken(usuario);
 
+        // 6. Configuração do Cookie (Seguro e HttpOnly)
         Cookie jwtCookie = new Cookie("jwt_token", token);
         jwtCookie.setHttpOnly(true);
-        jwtCookie.setSecure(false);
+        jwtCookie.setSecure(false); // Em produção (HTTPS), altere para true
         jwtCookie.setPath("/");
-        jwtCookie.setMaxAge(7 * 24 * 60 * 60);
+        jwtCookie.setMaxAge(7 * 24 * 60 * 60); // 7 dias de validade
         response.addCookie(jwtCookie);
 
-        // 6. Retorna resposta
+        // 7. Resposta para o Frontend (Next.js)
         return new LoginResponse(
                 token,
                 usuario.getNome(),

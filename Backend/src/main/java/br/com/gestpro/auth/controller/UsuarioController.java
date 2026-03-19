@@ -57,26 +57,6 @@ public class UsuarioController {
     }
 
     // ===============================
-    // Atualizar Plano
-    // ===============================
-    @PostMapping("/api/pagamento")
-    public ResponseEntity<?> atualizarPlano(
-            @RequestParam String email,
-            @RequestParam int duracaoDias // recebe quantos dias o plano terá
-    ) {
-        // Atualiza o plano via service
-        Usuario usuarioAtualizado = authenticationService.atualizarPlano(email, duracaoDias);
-
-        // Retorna uma mensagem ou os dados atualizados do usuário
-        return ResponseEntity.ok().body(
-                Map.of(
-                        "mensagem", "Plano atualizado com sucesso!",
-                        "usuario", usuarioAtualizado
-                )
-        );
-    }
-
-    // ===============================
     // Logout
     // ===============================
     @PostMapping("/auth/logout")

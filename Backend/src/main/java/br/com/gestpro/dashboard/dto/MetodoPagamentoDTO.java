@@ -2,34 +2,21 @@ package br.com.gestpro.dashboard.dto;
 
 import br.com.gestpro.caixa.FormaDePagamento;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MetodoPagamentoDTO {
     private String metodo;
     private Long total;
 
-    public MetodoPagamentoDTO() {
-    } // <- importantíssimo
-
-    // construtor usado por SELECT new ... (mantém)
+    // Construtor customizado para queries JPQL (SELECT new ...)
     public MetodoPagamentoDTO(FormaDePagamento forma, Long total) {
-        this.metodo = forma != null ? forma.name() : null;
-        this.total = total;
-    }
-
-    public String getMetodo() {
-        return metodo;
-    }
-
-    public void setMetodo(String metodo) {
-        this.metodo = metodo;
-    }
-
-    public Long getTotal() {
-        return total;
-    }
-
-    public void setTotal(Long total) {
+        this.metodo = forma != null ? forma.name() : "OUTRO";
         this.total = total;
     }
 }

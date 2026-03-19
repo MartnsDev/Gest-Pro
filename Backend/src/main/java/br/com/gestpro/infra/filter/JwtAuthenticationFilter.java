@@ -1,7 +1,7 @@
 package br.com.gestpro.infra.filter;
 
 import br.com.gestpro.auth.model.UsuarioPrincipal;
-import br.com.gestpro.auth.StatusAcesso;
+import br.com.gestpro.plano.StatusAcesso;
 
 import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.infra.jwt.JwtService;

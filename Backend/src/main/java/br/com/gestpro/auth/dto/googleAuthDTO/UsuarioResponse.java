@@ -1,6 +1,6 @@
 package br.com.gestpro.auth.dto.googleAuthDTO;
 
-import br.com.gestpro.auth.StatusAcesso;
+import br.com.gestpro.plano.StatusAcesso;
 import lombok.Data;
 
 @Data

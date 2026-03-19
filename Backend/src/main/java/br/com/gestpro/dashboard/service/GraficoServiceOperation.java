@@ -7,6 +7,7 @@ import br.com.gestpro.caixa.FormaDePagamento;
 import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.analytics.repository.GraficoRepository;
 import br.com.gestpro.infra.exception.ApiException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,22 +22,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor // Mantém o padrão de injeção via construtor do Lombok
 public class GraficoServiceOperation {
 
     private final GraficoRepository graficoRepository;
     private final UsuarioRepository usuarioRepository;
 
-    public GraficoServiceOperation(GraficoRepository graficoRepository,
-                                   UsuarioRepository usuarioRepository) {
-        this.graficoRepository = graficoRepository;
-        this.usuarioRepository = usuarioRepository;
-    }
-
-    // ---------------------------- GRÁFICOS ---------------------------------------------
-
     /**
      * Gráfico de pizza: total de vendas por método de pagamento.
-     * Cache por usuário (email). TTL configurado globalmente via RedisCacheConfig.
      */
     @Cacheable(
             cacheNames = "grafico:pagamento",
@@ -48,69 +41,62 @@ public class GraficoServiceOperation {
 
         return raw.stream()
                 .map(o -> {
-                    var forma = (FormaDePagamento) o[0];
-                    var total = ((Number) o[1]).longValue();
-                    return new MetodoPagamentoDTO(forma, total); // seu construtor aceita (FormaDePagamento, Long)
+                    // Proteção contra valores nulos vindos do banco
+                    FormaDePagamento forma = (o[0] != null) ? (FormaDePagamento) o[0] : null;
+                    long total = (o[1] != null) ? ((Number) o[1]).longValue() : 0L;
+                    return new MetodoPagamentoDTO(forma, total);
                 })
                 .toList();
     }
 
     /**
-     * Gráfico de barras: total de vendas por produto (top produtos ordenados).
-     * Cache por usuário.
+     * Gráfico de barras: Top produtos ordenados.
      */
     @Cacheable(
             cacheNames = "grafico:produto",
-            key = "#email"
+            key = "#email.toLowerCase()"
     )
     @Transactional(readOnly = true)
     public List<ProdutoVendasDTO> vendasPorProduto(String email) {
-        // Repo já fornece ProdutoVendasDTO via constructor expression (nome, SUM(qtd))
-        List<ProdutoVendasDTO> response = graficoRepository.countVendasPorProdutoDTO(email);
-        return response;
+        return graficoRepository.countVendasPorProdutoDTO(email);
     }
 
     /**
-     * Gráfico de linha: vendas diárias da semana atual.
-     * Aqui usamos query nativa; mapeamos para DTO com nomes dos dias.
-     * Cache por usuário.
+     * Gráfico de linha: vendas diárias da semana atual (Segunda a Domingo).
      */
     @Cacheable(
             cacheNames = "grafico:diarias",
-            key = "#email + ':' + T(java.time.LocalDate).now().with(T(java.time.DayOfWeek).MONDAY)"
+            key = "#email.toLowerCase() + ':' + T(java.time.LocalDate).now().with(T(java.time.DayOfWeek).MONDAY)"
     )
     @Transactional(readOnly = true)
     public List<VendasDiariasDTO> vendasDiariasSemana(String email) {
+        // Busca o ID de forma segura e limpa
         Long usuarioId = usuarioRepository.findByEmail(email)
                 .map(u -> u.getId())
-                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.BAD_REQUEST,
-                        "api/dashboard/vendasDiariasSemana (exception)"));
+                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "dashboard/graficos"));
 
+        // Define o intervalo da semana (Segunda 00:00:00 até Domingo 23:59:59)
         LocalDate hoje = LocalDate.now();
-        LocalDate inicioSemana = hoje.with(DayOfWeek.MONDAY);
-        LocalDate fimSemana = hoje.with(DayOfWeek.SUNDAY);
-
-        LocalDateTime inicio = inicioSemana.atStartOfDay();
-        LocalDateTime fim = fimSemana.atTime(23, 59, 59);
+        LocalDateTime inicio = hoje.with(DayOfWeek.MONDAY).atStartOfDay();
+        LocalDateTime fim = hoje.with(DayOfWeek.SUNDAY).atTime(23, 59, 59);
 
         List<Object[]> raw = graficoRepository.countVendasDiariasRawPorUsuario(inicio, fim, usuarioId);
 
-        // Map: dia_numero (1=Sunday..7=Saturday in MySQL DAYOFWEEK) → total
+        // Mapeia os resultados: Dia do MySQL (1=Dom, 2=Seg...) -> Valor
         Map<Integer, Double> vendasPorDia = raw.stream()
                 .collect(Collectors.toMap(
-                        o -> ((Number) o[0]).intValue(),                    // dia_numero
-                        o -> o[2] == null ? 0.0 : ((Number) o[2]).doubleValue()
+                        o -> ((Number) o[0]).intValue(),
+                        o -> o[2] == null ? 0.0 : ((Number) o[2]).doubleValue(),
+                        (existente, novo) -> existente // Caso haja duplicatas inesperadas
                 ));
 
-        // Nomes padronizados (usando index 1..7 conforme MySQL)
         String[] nomesDias = {"", "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"};
 
-        // Converte para DTOs na ordem Segunda..Domingo (se preferir mostrar Segunda primeiro)
+        // Ordem cronológica iniciando na Segunda para o gráfico de linha ficar legível
+        int[] ordemExibicao = {2, 3, 4, 5, 6, 7, 1};
+
         List<VendasDiariasDTO> result = new ArrayList<>();
-        // se quiser ordem Domingo→Sábado: for i=1..7
-        // geralmente prefiro Segunda→Domingo:
-        int[] ordem = {2, 3, 4, 5, 6, 7, 1}; // 2=segunda ... 1=domingo
-        for (int diaNumero : ordem) {
+        for (int diaNumero : ordemExibicao) {
             double total = vendasPorDia.getOrDefault(diaNumero, 0.0);
             result.add(new VendasDiariasDTO(nomesDias[diaNumero], total));
         }

@@ -1,7 +1,7 @@
 package br.com.gestpro.infra.security;
 
 import br.com.gestpro.auth.model.Usuario;
-import br.com.gestpro.auth.TipoPlano;
+import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.auth.repository.UsuarioRepository;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;

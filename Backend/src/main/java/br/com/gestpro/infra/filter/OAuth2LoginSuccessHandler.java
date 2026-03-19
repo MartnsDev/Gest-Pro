@@ -1,7 +1,7 @@
 package br.com.gestpro.infra.filter;
 
 import br.com.gestpro.auth.model.Usuario;
-import br.com.gestpro.auth.StatusAcesso;
+import br.com.gestpro.plano.StatusAcesso;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;

@@ -27,4 +27,5 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Query("DELETE FROM Usuario u WHERE u.emailConfirmado = false AND u.senha IS NOT NULL AND u.dataCriacao < :limite")
     void deleteUsuariosNaoConfirmadosAntesDe(@Param("limite") LocalDateTime limite);
 
+    Optional<Usuario> findIdByEmail(String email);
 }

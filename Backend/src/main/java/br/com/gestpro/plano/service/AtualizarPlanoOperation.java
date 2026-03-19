@@ -1,8 +1,8 @@
 package br.com.gestpro.plano.service;
 
 import br.com.gestpro.auth.model.Usuario;
-import br.com.gestpro.auth.StatusAcesso;
-import br.com.gestpro.auth.TipoPlano;
+import br.com.gestpro.plano.StatusAcesso;
+import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.infra.exception.ApiException;
 import org.springframework.http.HttpStatus;
@@ -28,29 +28,16 @@ public class AtualizarPlanoOperation {
      * @return Usuario atualizado
      */
     @Transactional
-    public Usuario atualizarPlano(String email, int duracaoDias) {
+    public Usuario atualizarPlano(String email, TipoPlano novoTipo, int duracaoDias) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/api/pagamento"));
 
         LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime dataBase = (usuario.getDataAssinaturaPlus() == null || usuario.getDataAssinaturaPlus().isBefore(agora))
+                ? agora : usuario.getDataAssinaturaPlus();
 
-        // Calcula a data atual do fim do plano
-        LocalDateTime dataAtualExpiracao = usuario.getDataAssinaturaPlus();
-        if (dataAtualExpiracao == null || dataAtualExpiracao.isBefore(agora)) {
-            dataAtualExpiracao = agora;
-        }
-
-        if (usuario.getStatusAcesso() == StatusAcesso.INATIVO) {
-            throw new ApiException(
-                    "Usuário inativo. Redirecionar para pagamento.",
-                    HttpStatus.FORBIDDEN,
-                    "/pagamento"
-            );
-        }
-
-        // Soma os dias restantes aos dias do novo plano
-        usuario.setDataAssinaturaPlus(dataAtualExpiracao.plusDays(duracaoDias));
-        usuario.setTipoPlano(TipoPlano.ASSINANTE);
+        usuario.setDataAssinaturaPlus(dataBase.plusDays(duracaoDias));
+        usuario.setTipoPlano(novoTipo); // Agora seta BASICO, PRO ou PREMIUM
         usuario.setStatusAcesso(StatusAcesso.ATIVO);
 
         return usuarioRepository.save(usuario);

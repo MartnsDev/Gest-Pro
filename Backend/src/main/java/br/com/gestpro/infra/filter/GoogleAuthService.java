@@ -1,78 +1,74 @@
 package br.com.gestpro.infra.filter;
 
 import br.com.gestpro.auth.model.Usuario;
-import br.com.gestpro.auth.StatusAcesso;
-import br.com.gestpro.auth.TipoPlano;
 import br.com.gestpro.auth.repository.UsuarioRepository;
+import br.com.gestpro.plano.service.VerificarPlanoOperation;
 import br.com.gestpro.infra.jwt.JwtService;
+import br.com.gestpro.plano.StatusAcesso;
+import br.com.gestpro.plano.TipoPlano;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
 @Service
+@RequiredArgsConstructor // Usando Lombok para manter o padrão do projeto
 public class GoogleAuthService {
 
     private final UsuarioRepository usuarioRepository;
     private final JwtService jwtService;
-
-    public GoogleAuthService(UsuarioRepository usuarioRepository, JwtService jwtService) {
-        this.usuarioRepository = usuarioRepository;
-        this.jwtService = jwtService;
-    }
+    private final VerificarPlanoOperation verificarPlano;
 
     @Transactional
     public Usuario loginOrRegister(String email, String nome, String foto) {
         return usuarioRepository.findByEmail(email)
                 .map(u -> {
-                    // Atualiza apenas dados básicos
+                    // 1. Atualiza dados básicos do perfil vindo do Google
                     u.setNome(nome);
                     u.setFoto(foto);
 
-                    // Confirma email caso seja login via Google
+                    // 2. Garante confirmação de e-mail (Google é provedor confiável)
                     if (!u.isEmailConfirmado()) {
                         u.setEmailConfirmado(true);
-                        u.setTokenConfirmacao(null); // remove token antigo
+                        u.setTokenConfirmacao(null);
                     }
 
-                    // NÃO altera dataPrimeiroLogin se já existe
-                    // NÃO altera dataCriacao
+                    // 3. Marca como login Google caso tenha sido criado manualmente antes
+                    if (!u.isLoginGoogle()) {
+                        u.setLoginGoogle(true);
+                    }
 
-                    // Verificação do plano e status de acesso
-                    if (u.getTipoPlano() == TipoPlano.EXPERIMENTAL) {
-                        if (u.getDataPrimeiroLogin().plusDays(7).isBefore(LocalDateTime.now())) {
-                            u.setStatusAcesso(StatusAcesso.INATIVO);
-                        } else {
-                            u.setStatusAcesso(StatusAcesso.ATIVO);
-                        }
-                    } else if (u.getTipoPlano() == TipoPlano.ASSINANTE) {
-                        if (u.getDataAssinaturaPlus() != null &&
-                                u.getDataAssinaturaPlus().plusDays(30).isBefore(LocalDateTime.now())) {
-                            u.setStatusAcesso(StatusAcesso.INATIVO);
-                        } else {
-                            u.setStatusAcesso(StatusAcesso.ATIVO);
-                        }
+                    // 4. Delega a verificação do plano para o Operation especialista
+                    // Usamos try-catch para que a expiração do plano NÃO impeça o login,
+                    // mas o status 'INATIVO' seja persistido no banco.
+                    try {
+                        verificarPlano.validarAcessoTemporario(u);
+                    } catch (Exception e) {
+                        // O status já foi alterado para INATIVO dentro do validarAcessoTemporario
+                        // Deixamos o fluxo seguir para o usuário conseguir ver o Dashboard/Planos
                     }
 
                     return usuarioRepository.save(u);
                 })
                 .orElseGet(() -> {
-                    // Novo usuário (Google ou cadastro manual)
-                    Usuario novoUsuario = new Usuario();
-                    novoUsuario.setNome(nome);
-                    novoUsuario.setEmail(email);
-                    novoUsuario.setSenha(null); // login via Google não usa senha
-                    novoUsuario.setFoto(foto);
-                    novoUsuario.setTipoPlano(TipoPlano.EXPERIMENTAL);
-                    novoUsuario.setEmailConfirmado(true); // evita apagamento
-                    novoUsuario.setTokenConfirmacao(null);
+                    // 5. Fluxo para Novo Usuário via Google
+                    Usuario novo = new Usuario();
+                    novo.setNome(nome);
+                    novo.setEmail(email);
+                    novo.setSenha(null);
+                    novo.setFoto(foto);
+                    novo.setTipoPlano(TipoPlano.EXPERIMENTAL);
+                    novo.setEmailConfirmado(true);
+                    novo.setTokenConfirmacao(null);
+                    novo.setStatusAcesso(StatusAcesso.ATIVO);
+                    novo.setLoginGoogle(true);
 
                     LocalDateTime agora = LocalDateTime.now();
-                    novoUsuario.setDataCriacao(agora);
-                    novoUsuario.setDataPrimeiroLogin(agora);
-                    novoUsuario.setStatusAcesso(StatusAcesso.ATIVO);
+                    novo.setDataCriacao(agora);
+                    novo.setDataPrimeiroLogin(agora); // Início da contagem dos 7 dias
 
-                    return usuarioRepository.save(novoUsuario);
+                    return usuarioRepository.save(novo);
                 });
     }
 
