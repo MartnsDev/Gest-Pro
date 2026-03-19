@@ -23,7 +23,6 @@ public interface VendaRepository extends JpaRepository<Venda, Long> {
 
     List<Venda> findByCaixa(Caixa caixa);
 
-    Long countByDataVendaBetweenAndUsuarioEmail(LocalDateTime inicio, LocalDateTime fim, String emailUsuario);
 
 
     // MÉTODOS COM @QUERY (AGREGAÇÃO / JOIN)

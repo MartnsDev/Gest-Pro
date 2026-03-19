@@ -32,7 +32,8 @@ public class EmpresaService {
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
         // 2. Conta quantas empresas o dono já tem no banco
-        long totalEmpresasDono = empresaRepository.countByDonoId(dono.getId());
+        Object rawCount = empresaRepository.countByDonoId(dono.getId());
+        long totalEmpresasDono = rawCount instanceof Number n ? n.longValue() : 0L;
 
         // 3. VALIDAÇÃO CRÍTICA: O plano permite criar mais uma?
         // Se o limite estourar ou o plano vencer, o 'verificarPlano' lança a ApiException

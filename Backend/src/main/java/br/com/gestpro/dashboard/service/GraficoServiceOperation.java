@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor // Mantém o padrão de injeção via construtor do Lombok
+@RequiredArgsConstructor
 public class GraficoServiceOperation {
 
     private final GraficoRepository graficoRepository;
@@ -41,7 +41,6 @@ public class GraficoServiceOperation {
 
         return raw.stream()
                 .map(o -> {
-                    // Proteção contra valores nulos vindos do banco
                     FormaDePagamento forma = (o[0] != null) ? (FormaDePagamento) o[0] : null;
                     long total = (o[1] != null) ? ((Number) o[1]).longValue() : 0L;
                     return new MetodoPagamentoDTO(forma, total);
@@ -70,30 +69,26 @@ public class GraficoServiceOperation {
     )
     @Transactional(readOnly = true)
     public List<VendasDiariasDTO> vendasDiariasSemana(String email) {
-        // Busca o ID de forma segura e limpa
         Long usuarioId = usuarioRepository.findByEmail(email)
                 .map(u -> u.getId())
                 .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "dashboard/graficos"));
 
-        // Define o intervalo da semana (Segunda 00:00:00 até Domingo 23:59:59)
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje  = LocalDate.now();
         LocalDateTime inicio = hoje.with(DayOfWeek.MONDAY).atStartOfDay();
-        LocalDateTime fim = hoje.with(DayOfWeek.SUNDAY).atTime(23, 59, 59);
+        LocalDateTime fim    = hoje.with(DayOfWeek.SUNDAY).atTime(23, 59, 59);
 
         List<Object[]> raw = graficoRepository.countVendasDiariasRawPorUsuario(inicio, fim, usuarioId);
 
-        // Mapeia os resultados: Dia do MySQL (1=Dom, 2=Seg...) -> Valor
+        // Dia do MySQL: 1=Dom, 2=Seg, 3=Ter, 4=Qua, 5=Qui, 6=Sex, 7=Sáb
         Map<Integer, Double> vendasPorDia = raw.stream()
                 .collect(Collectors.toMap(
                         o -> ((Number) o[0]).intValue(),
                         o -> o[2] == null ? 0.0 : ((Number) o[2]).doubleValue(),
-                        (existente, novo) -> existente // Caso haja duplicatas inesperadas
+                        (existente, novo) -> existente
                 ));
 
-        String[] nomesDias = {"", "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"};
-
-        // Ordem cronológica iniciando na Segunda para o gráfico de linha ficar legível
-        int[] ordemExibicao = {2, 3, 4, 5, 6, 7, 1};
+        String[] nomesDias     = {"", "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"};
+        int[]    ordemExibicao = {2, 3, 4, 5, 6, 7, 1}; // Segunda → Domingo
 
         List<VendasDiariasDTO> result = new ArrayList<>();
         for (int diaNumero : ordemExibicao) {

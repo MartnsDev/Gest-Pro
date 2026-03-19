@@ -7,6 +7,7 @@ import br.com.gestpro.dashboard.dto.VendasDiariasDTO;
 import br.com.gestpro.dashboard.service.DashboardServiceInterface;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,7 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/dashboard")
+@RequestMapping("/api/v1/dashboard")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class DashboardController {
 
     private final DashboardServiceInterface dashboardService;
@@ -25,38 +27,28 @@ public class DashboardController {
 
     @GetMapping("/visao-geral")
     public ResponseEntity<DashboardVisaoGeralResponse> getVisaoGeral(Authentication authentication) {
-        String emailUsuario = getEmailUsuario(authentication);
-        DashboardVisaoGeralResponse response = dashboardService.visaoGeral(emailUsuario);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(dashboardService.visaoGeral(getEmail(authentication)));
     }
-
-
-    // ------------------ GRÁFICOS ------------------
 
     @GetMapping("/vendas/metodo-pagamento")
     public ResponseEntity<List<MetodoPagamentoDTO>> vendasPorMetodoPagamento(Authentication authentication) {
-        String emailUsuario = getEmailUsuario(authentication);
-        List<MetodoPagamentoDTO> result = dashboardService.vendasPorMetodoPagamento(emailUsuario);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(dashboardService.vendasPorMetodoPagamento(getEmail(authentication)));
     }
 
     @GetMapping("/vendas/produto")
     public ResponseEntity<List<ProdutoVendasDTO>> vendasPorProduto(Authentication authentication) {
-        String emailUsuario = getEmailUsuario(authentication);
-        List<ProdutoVendasDTO> result = dashboardService.vendasPorProduto(emailUsuario);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(dashboardService.vendasPorProduto(getEmail(authentication)));
     }
 
     @GetMapping("/vendas/diarias")
     public ResponseEntity<List<VendasDiariasDTO>> vendasDiariasSemana(Authentication authentication) {
-        String emailUsuario = getEmailUsuario(authentication);
-        List<VendasDiariasDTO> result = dashboardService.vendasDiariasSemana(emailUsuario);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(dashboardService.vendasDiariasSemana(getEmail(authentication)));
     }
 
-    // ------------------ MÉTODOS AUXILIAR ------------------
-
-    private String getEmailUsuario(Authentication authentication) {
+    private String getEmail(Authentication authentication) {
+        if (authentication == null) {
+            throw new RuntimeException("Usuário não autenticado");
+        }
         return authentication.getName();
     }
 }

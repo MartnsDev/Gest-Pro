@@ -3,6 +3,7 @@ package br.com.gestpro.dashboard.service;
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.dashboard.dto.PlanoDTO;
+import br.com.gestpro.dashboard.repository.DashboardRepository;
 import br.com.gestpro.empresa.repository.EmpresaRepository;
 import br.com.gestpro.plano.service.VerificarPlanoOperation;
 import br.com.gestpro.produto.repository.ProdutoRepository;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +28,7 @@ public class VisaoGeralOperation {
     private final UsuarioRepository usuarioRepository;
     private final EmpresaRepository empresaRepository;
     private final VerificarPlanoOperation verificarPlano;
+    private final DashboardRepository dashboardRepository;
 
     /**
      * Retorna o resumo do plano do usuário logado.
@@ -35,13 +38,13 @@ public class VisaoGeralOperation {
     public PlanoDTO planoUsuarioLogado(String email) {
         return usuarioRepository.findByEmail(email)
                 .map(usuario -> {
-                    // 1. Calcula dias restantes usando o serviço especialista
                     long diasRestantes = verificarPlano.calcularDiasRestantes(usuario);
 
-                    // 2. Busca o uso real de empresas no banco
-                    long empresasCriadas = empresaRepository.countByDonoId(usuario.getId());
+                    Object rawCount = empresaRepository.countByDonoId(usuario.getId());
+                    System.out.println(">>> TIPO DO COUNT: " + (rawCount == null ? "null" : rawCount.getClass().getName()));
+                    System.out.println(">>> VALOR DO COUNT: " + rawCount);
+                    long empresasCriadas = rawCount instanceof Number n ? n.longValue() : 0L;
 
-                    // 3. Monta o DTO com os dados do Enum (TipoPlano)
                     return new PlanoDTO(
                             usuario.getTipoPlano().name(),
                             diasRestantes,
@@ -60,17 +63,15 @@ public class VisaoGeralOperation {
             cacheNames = "visao:vendas-semana",
             key = "#email + ':' + T(java.time.LocalDate).now().with(T(java.time.DayOfWeek).MONDAY)"
     )
-    @Transactional(readOnly = true)
     public Long vendasSemana(String email) {
-        LocalDate hoje = LocalDate.now();
-        LocalDate inicioSemana = hoje.with(DayOfWeek.MONDAY);
-        LocalDate fimSemana = hoje.with(DayOfWeek.SUNDAY);
+        LocalDate hoje        = LocalDate.now();
+        LocalDateTime inicio  = hoje.with(DayOfWeek.MONDAY).atStartOfDay();
+        LocalDateTime fim     = hoje.with(DayOfWeek.SUNDAY).atTime(23, 59, 59);
 
-        return vendaRepository.countByDataVendaBetweenAndUsuarioEmail(
-                inicioSemana.atStartOfDay(),
-                fimSemana.atTime(23, 59, 59),
-                email
-        );
+        Object raw = dashboardRepository.contarVendasSemana(email, inicio, fim);
+        System.out.println(">>> vendasSemana TIPO: " + (raw == null ? "null" : raw.getClass().getName()));
+        System.out.println(">>> vendasSemana VALOR: " + raw);
+        return raw instanceof Number n ? n.longValue() : 0L;
     }
 
     /**

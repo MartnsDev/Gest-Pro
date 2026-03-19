@@ -11,12 +11,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MetodoPagamentoDTO {
+
     private String metodo;
     private Long total;
 
-    // Construtor customizado para queries JPQL (SELECT new ...)
+    // Construtor usado pela GraficoServiceOperation ao mapear Object[]
     public MetodoPagamentoDTO(FormaDePagamento forma, Long total) {
         this.metodo = forma != null ? forma.name() : "OUTRO";
-        this.total = total;
+        this.total  = total != null ? total : 0L;
     }
 }

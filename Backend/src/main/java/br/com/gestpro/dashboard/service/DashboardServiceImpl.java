@@ -2,10 +2,7 @@ package br.com.gestpro.dashboard.service;
 
 import br.com.gestpro.dashboard.dto.*;
 import br.com.gestpro.dashboard.repository.DashboardRepository;
-import br.com.gestpro.infra.exception.ApiException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,23 +10,20 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Service
-@RequiredArgsConstructor // Limpeza total: substitui o construtor manual
+@RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardServiceInterface {
 
     private final DashboardRepository dashboardRepository;
     private final GraficoServiceOperation graficoServiceOperation;
     private final VisaoGeralOperation visaoGeralOperation;
 
-    /**
-     * Retorna o resumo do plano, prazos e limites de uso.
-     */
     @Override
     @Transactional(readOnly = true)
     public PlanoDTO planoUsuarioLogado(String email) {
         return visaoGeralOperation.planoUsuarioLogado(email);
     }
 
-    // --- GRÁFICOS (Delegando para o especialista GraficoServiceOperation) ---
+    // --- GRÁFICOS ---
 
     @Override
     @Transactional(readOnly = true)
@@ -49,41 +43,39 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         return graficoServiceOperation.vendasDiariasSemana(email);
     }
 
-    // --- VISÃO GERAL (Cards Superiores e Alertas) ---
+    // --- VISÃO GERAL ---
 
     @Override
     @Transactional(readOnly = true)
     public DashboardVisaoGeralResponse visaoGeral(String email) {
-        // 1. Busca contagens agregadas via Projection (Vendas hoje, Estoque, Clientes)
-        var p = dashboardRepository.findDashboardCountsByEmail(email);
+        // Query nativa retorna List<Object[]>. Cada Object dentro do array pode ser
+        // Integer, Long ou String dependendo do driver/versão do MySQL — o construtor
+        // de DashboardVisaoGeralResponse lida com isso via safeParse().
+        List<Object[]> rows = dashboardRepository.findDashboardCountsRaw(email);
 
-        // 2. Busca informações do plano e limites (X de Y empresas)
-        PlanoDTO planoUsuario = visaoGeralOperation.planoUsuarioLogado(email);
+        Object vHoje = 0, pCom = 0, pSem = 0, cAtivos = 0;
 
-        // 3. Busca métricas semanais para o card de performance
-        Long vendasSemanais = visaoGeralOperation.vendasSemana(email);
+        if (rows != null && !rows.isEmpty()) {
+            Object[] row = rows.get(0);
+            if (row.length >= 4) {
+                vHoje   = row[0];
+                pCom    = row[1];
+                pSem    = row[2];
+                cAtivos = row[3];
+            }
+        }
 
-        // 4. Consolida alertas de estoque e performance comercial
+        PlanoDTO planoUsuario    = visaoGeralOperation.planoUsuarioLogado(email);
+        Long vendasSemanais      = visaoGeralOperation.vendasSemana(email);
+
         List<String> alertas = Stream.concat(
                 visaoGeralOperation.alertasProdutosZerados(email).stream(),
                 visaoGeralOperation.alertasVendasSemana(email).stream()
         ).toList();
 
         return new DashboardVisaoGeralResponse(
-                safeLong(p == null ? null : p.getVendasHoje()),
-                safeLong(p == null ? null : p.getProdutosComEstoque()),
-                safeLong(p == null ? null : p.getProdutosSemEstoque()),
-                safeLong(p == null ? null : p.getClientesAtivos()),
-                vendasSemanais,
-                planoUsuario,
-                alertas
+                vHoje, pCom, pSem, cAtivos,
+                vendasSemanais, planoUsuario, alertas
         );
-    }
-
-    /**
-     * Utilitário para evitar NullPointer ao converter counts do banco.
-     */
-    private Long safeLong(Number value) {
-        return value == null ? 0L : value.longValue();
     }
 }

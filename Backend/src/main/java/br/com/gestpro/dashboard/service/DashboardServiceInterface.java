@@ -15,5 +15,4 @@ public interface DashboardServiceInterface {
     List<VendasDiariasDTO> vendasDiariasSemana(String email);
 
     DashboardVisaoGeralResponse visaoGeral(String email);
-
 }
