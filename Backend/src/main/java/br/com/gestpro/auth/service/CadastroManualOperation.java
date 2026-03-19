@@ -1,10 +1,11 @@
 package br.com.gestpro.auth.service;
 
-import br.com.gestpro.auth.model.Usuario;
+import br.com.gestpro.auth.EmailService;
+import br.com.gestpro.auth.MailTrapEmail;
 import br.com.gestpro.auth.StatusAcesso;
 import br.com.gestpro.auth.TipoPlano;
+import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
-import br.com.gestpro.auth.EmailService;
 import br.com.gestpro.infra.exception.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,46 +25,46 @@ public class CadastroManualOperation {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final UploadFotoOperation uploadFotoOperation;
+    private final MailTrapEmail mailTrapEmail;
 
     public CadastroManualOperation(UsuarioRepository usuarioRepository,
                                    EmailService emailService,
                                    PasswordEncoder passwordEncoder,
-                                   UploadFotoOperation uploadFotoOperation) {
+                                   UploadFotoOperation uploadFotoOperation, MailTrapEmail mailTrapEmail) {
         this.usuarioRepository = usuarioRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.uploadFotoOperation = uploadFotoOperation;
+        this.mailTrapEmail = mailTrapEmail;
     }
 
     @Transactional
-    public Usuario execute(String nome, String email, String senha, MultipartFile foto, String baseUrl, String path) throws IOException {
+    public Usuario execute(String nome, String email, String senha,
+                           MultipartFile foto, String baseUrl, String path) throws IOException {
 
-        validarCampos(email, senha, path);
 
         Optional<Usuario> existenteOpt = usuarioRepository.findByEmail(email);
 
         if (existenteOpt.isPresent()) {
             Usuario existente = existenteOpt.get();
 
-            // 1️⃣ Verifica se foi cadastrado via Google
+            //  Conta criada via Google → converter para manual
             if (existente.isLoginGoogle()) {
-                throw new ApiException(
-                        "Este e-mail já foi utilizado em um cadastro via Google. Faça login com o Google para continuar.",
-                        HttpStatus.BAD_REQUEST,
-                        path
-                );
+                atualizarUsuarioGoogleExistente(existente, nome, senha, foto);
+                usuarioRepository.save(existente);
+                enviarEmailConfirmacao(existente, baseUrl);
+                return existente;
             }
 
-            // 2️⃣ Verifica se ainda aguarda confirmação
+            //  Já existe mas não confirmou → reenviar email
             if (!existente.isEmailConfirmado()) {
-                throw new ApiException(
-                        "E-mail já cadastrado, mas ainda aguarda confirmação. Verifique sua caixa de entrada.",
-                        HttpStatus.BAD_REQUEST,
-                        path
-                );
+                renovarTokenConfirmacao(existente);
+                usuarioRepository.save(existente);
+                enviarEmailConfirmacao(existente, baseUrl);
+                return existente;
             }
 
-            // 3️⃣ E-mail já confirmado manualmente
+            //  Já existe e está ativo
             throw new ApiException(
                     "E-mail já cadastrado.",
                     HttpStatus.BAD_REQUEST,
@@ -71,28 +72,18 @@ public class CadastroManualOperation {
             );
         }
 
-
-        // 4️⃣ Novo cadastro
+        //  Novo cadastro
         Usuario usuario = criarNovoUsuario(nome, email, senha, foto);
         usuarioRepository.save(usuario);
-
         enviarEmailConfirmacao(usuario, baseUrl);
+
         return usuario;
     }
 
 
-    // Métodos auxiliares
-    private void validarCampos(String email, String senha, String path) {
-        if (email == null || email.isBlank()) {
-            throw new ApiException("O e-mail é obrigatório.", HttpStatus.BAD_REQUEST, path);
-        }
-
-        if (senha == null || senha.length() < 6) {
-            throw new ApiException("A senha deve ter pelo menos 6 caracteres.", HttpStatus.BAD_REQUEST, path);
-        }
-    }
-
+    // CRIAÇÃO
     private Usuario criarNovoUsuario(String nome, String email, String senha, MultipartFile foto) throws IOException {
+
         Usuario usuario = new Usuario();
         usuario.setNome(nome);
         usuario.setEmail(email);
@@ -107,26 +98,56 @@ public class CadastroManualOperation {
             usuario.setFotoUpload(uploadFotoOperation.salvarFoto(foto));
         }
 
-        usuario.setTokenConfirmacao(UUID.randomUUID().toString());
-        usuario.setDataEnvioConfirmacao(LocalDateTime.now());
+        gerarTokenConfirmacao(usuario);
 
         return usuario;
     }
 
-    private void atualizarUsuarioGoogleExistente(Usuario usuario, String nome, String senha, MultipartFile foto) throws IOException {
+    // ATUALIZA GOOGLE → MANUAL
+    private void atualizarUsuarioGoogleExistente(Usuario usuario,
+                                                 String nome,
+                                                 String senha,
+                                                 MultipartFile foto) throws IOException {
         usuario.setSenha(passwordEncoder.encode(senha));
         usuario.setLoginGoogle(false);
         usuario.setEmailConfirmado(false);
 
-        if (nome != null && !nome.isBlank()) usuario.setNome(nome);
-        if (foto != null && !foto.isEmpty()) usuario.setFotoUpload(uploadFotoOperation.salvarFoto(foto));
+        if (nome != null && !nome.isBlank()) {
+            usuario.setNome(nome);
+        }
 
+        if (foto != null && !foto.isEmpty()) {
+            usuario.setFotoUpload(uploadFotoOperation.salvarFoto(foto));
+        }
+
+        gerarTokenConfirmacao(usuario);
+    }
+
+    // TOKEN
+    private void gerarTokenConfirmacao(Usuario usuario) {
         usuario.setTokenConfirmacao(UUID.randomUUID().toString());
         usuario.setDataEnvioConfirmacao(LocalDateTime.now());
     }
 
+    private void renovarTokenConfirmacao(Usuario usuario) {
+        gerarTokenConfirmacao(usuario);
+    }
+
+    // EMAIL
     private void enviarEmailConfirmacao(Usuario usuario, String baseUrl) {
-        String linkConfirmacao = baseUrl + "/auth/confirmar?token=" + usuario.getTokenConfirmacao();
-        emailService.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
+
+        try {
+            String linkConfirmacao = baseUrl + "/auth/confirmar?token=" + usuario.getTokenConfirmacao();
+            // Produção
+            // emailService.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
+            // Testes
+            mailTrapEmail.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
+        } catch (Exception e) {
+            throw new ApiException(
+                    "Erro ao enviar e-mail de confirmação.",
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "/auth/cadastro"
+            );
+        }
     }
 }

@@ -21,4 +21,5 @@ public class UserAuthenticatedController {
     ) {
         return userAuthenticatedService.getUsuarioPorToken(token);
     }
+
 }

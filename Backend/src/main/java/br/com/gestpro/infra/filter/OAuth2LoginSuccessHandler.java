@@ -2,7 +2,7 @@ package br.com.gestpro.infra.filter;
 
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.StatusAcesso;
-import br.com.gestpro.infra.util.backups.GoogleAuthService;
+
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

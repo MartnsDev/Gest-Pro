@@ -1,8 +1,9 @@
 package br.com.gestpro.auth;
 
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,88 +18,168 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
-    /**
-     * Envia um email simples
-     * @param to Destinatário
-     * @param subject Assunto
-     * @param body Corpo da mensagem
-     */
+    // ================= TEMPLATE BASE =================
+    private String templateBase(String titulo, String conteudo) {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, sans-serif;">
+
+                <div style="max-width:600px; margin:40px auto; background:#ffffff; border-radius:12px; padding:30px; box-shadow:0 4px 15px rgba(0,0,0,0.08);">
+
+                    <h2 style="text-align:center; color:#333; margin-bottom:20px;">
+                        %s
+                    </h2>
+
+                    %s
+
+                    <hr style="margin:30px 0; border:none; border-top:1px solid #eee;">
+
+                    <p style="color:#999; font-size:12px;">
+                        Este é um e-mail automático. Não responda.
+                    </p>
+
+                    <p style="text-align:center; color:#bbb; font-size:12px; margin-top:10px;">
+                        © 2026 GestPro
+                    </p>
+
+                </div>
+
+            </body>
+            </html>
+        """.formatted(titulo, conteudo);
+    }
+
+    // ================= EMAIL GENÉRICO =================
     public void enviarEmail(String to, String nomeUsuario, String subject, String body) {
+
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(to);
-            message.setSubject(subject);
+            String nome = (nomeUsuario != null && !nomeUsuario.isBlank()) ? nomeUsuario : "usuário";
 
-            String mensagemCustomizada = "Olá " + nomeUsuario + ",\n\n"
-                    + body + "\n\n"
-                    + "Atenciosamente,\n"
-                    + "Equipe GestPro";
+            String conteudo = """
+                <p style="color:#555; font-size:16px;">
+                    Olá, <strong>%s</strong>!
+                </p>
 
-            message.setText(mensagemCustomizada);
-            message.setFrom("gestprosuporte@gmail.com");
-            mailSender.send(message);
+                <p style="color:#555; font-size:15px;">
+                    %s
+                </p>
 
-            System.out.println("Email enviado para: " + to);
+                <p style="margin-top:20px; font-size:13px; color:#777;">
+                    Se precisar de ajuda, entre em contato: suporte@gestpro.com
+                </p>
+            """.formatted(nome, body);
+
+            enviarHtml(to, subject, templateBase("📩 GestPro", conteudo));
+
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Erro ao enviar email: " + e.getMessage());
         }
     }
 
+    // ================= CONFIRMAÇÃO =================
     public void enviarConfirmacao(String emailDestino, String linkConfirmacao) {
-        String assunto = "Confirme seu e-mail - GestPro";
-        String mensagem = """
-                Olá!
 
-                Obrigado por se cadastrar no GestPro.
-                Clique no link abaixo para confirmar seu e-mail e ativar sua conta:
+        String conteudo = """
+            <p style="color:#555; font-size:16px;">
+                Obrigado por se cadastrar no <strong>GestPro</strong>!
+            </p>
 
-                """ + linkConfirmacao + """
+            <p style="color:#555;">
+                Clique no botão abaixo para ativar sua conta:
+            </p>
 
-                Se você não criou uma conta, ignore este e-mail.
-                """;
+            <div style="text-align:center; margin:30px 0;">
+                <a href="%s" style="
+                    background:linear-gradient(135deg, #4CAF50, #2e7d32);
+                    color:white;
+                    padding:14px 24px;
+                    text-decoration:none;
+                    border-radius:8px;
+                    font-weight:bold;
+                    display:inline-block;
+                ">
+                    ✔ Confirmar Conta
+                </a>
+            </div>
 
-        SimpleMailMessage email = new SimpleMailMessage();
-        email.setFrom(remetente);
-        email.setTo(emailDestino);
-        email.setSubject(assunto);
-        email.setText(mensagem);
+            <p style="font-size:13px; color:#777;">
+                Ou copie o link abaixo:
+            </p>
 
-        mailSender.send(email);
+            <p style="word-break:break-all; font-size:12px; color:#555;">
+                %s
+            </p>
+        """.formatted(linkConfirmacao, linkConfirmacao);
+
+        enviarHtml(emailDestino, "Confirme seu e-mail - GestPro",
+                templateBase("🚀 Bem-vindo ao GestPro", conteudo));
     }
 
+    // ================= CÓDIGO =================
     public void enviarCodigoConfirmacao(String emailDestino, String nomeUsuario, String codigo) {
-        String assunto = "Código de Confirmação - GestPro";
-        String mensagem = """
-            Olá %s,
 
-            Seu código de confirmação é: %s
+        String nome = (nomeUsuario != null && !nomeUsuario.isBlank()) ? nomeUsuario : "usuário";
 
-            Ele expira em 10 minutos.
-            Se você não solicitou, ignore este e-mail.
+        String conteudo = """
+            <p style="color:#555;">
+                Olá, <strong>%s</strong>!
+            </p>
 
-            Atenciosamente,
-            Equipe GestPro
-            """.formatted(nomeUsuario != null ? nomeUsuario : "", codigo);
+            <p style="color:#555;">
+                Use o código abaixo para confirmar sua ação:
+            </p>
 
-        SimpleMailMessage email = new SimpleMailMessage();
-        email.setFrom(remetente);
-        email.setTo(emailDestino);
-        email.setSubject(assunto);
-        email.setText(mensagem);
+            <div style="text-align:center; margin:30px 0;">
+                <span style="
+                    font-size:28px;
+                    font-weight:bold;
+                    letter-spacing:5px;
+                    background:#f1f1f1;
+                    padding:12px 20px;
+                    border-radius:8px;
+                    display:inline-block;
+                ">
+                    %s
+                </span>
+            </div>
 
-        mailSender.send(email);
+            <p style="font-size:13px; color:#777;">
+                ⏱ Expira em 10 minutos.
+            </p>
+
+            <p style="font-size:13px; color:#999;">
+                Nunca compartilhe este código com ninguém.
+            </p>
+        """.formatted(nome, codigo);
+
+        enviarHtml(emailDestino, "Código de Confirmação - GestPro",
+                templateBase("🔐 Verificação de Segurança", conteudo));
     }
 
-    /**
-     * Gera um código aleatório de 6 dígitos
-     * @return String com código
-     */
+    // ================= ENVIO CENTRAL =================
+    private void enviarHtml(String to, String subject, String html) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom("GestPro <" + remetente + ">");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(html, true);
+
+            mailSender.send(message);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Erro ao enviar email: " + e.getMessage());
+        }
+    }
+
+    // ================= GERAR CÓDIGO =================
     public String gerarCodigo() {
         int codigo = 100000 + (int)(Math.random() * 900000);
         return String.valueOf(codigo);
     }
-
-
 }
-

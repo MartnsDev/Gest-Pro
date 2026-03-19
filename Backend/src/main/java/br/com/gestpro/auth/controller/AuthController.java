@@ -24,8 +24,7 @@ public class AuthController {
 
     private final AuthenticationService authService;
 
-    private final String URL_FRONTEND;
-    private final String baseUrl;
+    private final String URL_FRONTEND, baseUrl;
 
     public AuthController(
             AuthenticationService authService,
