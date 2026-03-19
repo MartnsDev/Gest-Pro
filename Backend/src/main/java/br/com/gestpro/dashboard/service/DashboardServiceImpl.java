@@ -48,34 +48,43 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
     @Override
     @Transactional(readOnly = true)
     public DashboardVisaoGeralResponse visaoGeral(String email) {
-        // Query nativa retorna List<Object[]>. Cada Object dentro do array pode ser
-        // Integer, Long ou String dependendo do driver/versão do MySQL — o construtor
-        // de DashboardVisaoGeralResponse lida com isso via safeParse().
-        List<Object[]> rows = dashboardRepository.findDashboardCountsRaw(email);
-
-        Object vHoje = 0, pCom = 0, pSem = 0, cAtivos = 0;
-
-        if (rows != null && !rows.isEmpty()) {
-            Object[] row = rows.get(0);
-            if (row.length >= 4) {
-                vHoje   = row[0];
-                pCom    = row[1];
-                pSem    = row[2];
-                cAtivos = row[3];
+        try {
+            List<Object[]> rows = dashboardRepository.findDashboardCountsRaw(email);
+            Object vHoje = 0, pCom = 0, pSem = 0, cAtivos = 0;
+            if (rows != null && !rows.isEmpty()) {
+                Object[] row = rows.get(0);
+                if (row.length >= 4) {
+                    System.out.println(">>> row[0] tipo: " + (row[0] == null ? "null" : row[0].getClass().getName()) + " valor: " + row[0]);
+                    System.out.println(">>> row[1] tipo: " + (row[1] == null ? "null" : row[1].getClass().getName()) + " valor: " + row[1]);
+                    System.out.println(">>> row[2] tipo: " + (row[2] == null ? "null" : row[2].getClass().getName()) + " valor: " + row[2]);
+                    System.out.println(">>> row[3] tipo: " + (row[3] == null ? "null" : row[3].getClass().getName()) + " valor: " + row[3]);
+                    vHoje   = row[0];
+                    pCom    = row[1];
+                    pSem    = row[2];
+                    cAtivos = row[3];
+                }
             }
+
+            PlanoDTO planoUsuario = visaoGeralOperation.planoUsuarioLogado(email);
+            System.out.println(">>> planoUsuario OK");
+
+            Long vendasSemanais = visaoGeralOperation.vendasSemana(email);
+            System.out.println(">>> vendasSemanais OK: " + vendasSemanais);
+
+            List<String> alertas = Stream.concat(
+                    visaoGeralOperation.alertasProdutosZerados(email).stream(),
+                    visaoGeralOperation.alertasVendasSemana(email).stream()
+            ).toList();
+            System.out.println(">>> alertas OK");
+
+            return new DashboardVisaoGeralResponse(
+                    vHoje, pCom, pSem, cAtivos,
+                    vendasSemanais, planoUsuario, alertas
+            );
+        } catch (Exception e) {
+            System.out.println(">>> ERRO EM visaoGeral: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-
-        PlanoDTO planoUsuario    = visaoGeralOperation.planoUsuarioLogado(email);
-        Long vendasSemanais      = visaoGeralOperation.vendasSemana(email);
-
-        List<String> alertas = Stream.concat(
-                visaoGeralOperation.alertasProdutosZerados(email).stream(),
-                visaoGeralOperation.alertasVendasSemana(email).stream()
-        ).toList();
-
-        return new DashboardVisaoGeralResponse(
-                vHoje, pCom, pSem, cAtivos,
-                vendasSemanais, planoUsuario, alertas
-        );
     }
 }

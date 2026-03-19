@@ -30,7 +30,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             "JOIN usuarios u ON u.id = v.usuario_id " +
             "WHERE v.data_venda BETWEEN :inicio AND :fim AND u.email = :email",
             nativeQuery = true)
-    Long contarVendasSemana(@Param("email") String email,
-                            @Param("inicio") LocalDateTime inicio,
-                            @Param("fim") LocalDateTime fim);
+    Object contarVendasSemana(@Param("email") String email,
+                              @Param("inicio") LocalDateTime inicio,
+                              @Param("fim") LocalDateTime fim);
 }

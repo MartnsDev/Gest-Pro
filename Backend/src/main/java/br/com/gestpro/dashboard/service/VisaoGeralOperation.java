@@ -56,13 +56,7 @@ public class VisaoGeralOperation {
                 .orElse(new PlanoDTO("NENHUM", 0, 0, 0, "INATIVO"));
     }
 
-    /**
-     * Cache de vendas semanais. Chave composta pelo e-mail e a data da segunda-feira atual.
-     */
-    @Cacheable(
-            cacheNames = "visao:vendas-semana",
-            key = "#email + ':' + T(java.time.LocalDate).now().with(T(java.time.DayOfWeek).MONDAY)"
-    )
+    @Transactional(readOnly = true)
     public Long vendasSemana(String email) {
         LocalDate hoje        = LocalDate.now();
         LocalDateTime inicio  = hoje.with(DayOfWeek.MONDAY).atStartOfDay();

@@ -41,7 +41,12 @@ public class GraficoServiceOperation {
 
         return raw.stream()
                 .map(o -> {
-                    FormaDePagamento forma = (o[0] != null) ? (FormaDePagamento) o[0] : null;
+                    FormaDePagamento forma = null;
+                    if (o[0] instanceof FormaDePagamento f) {
+                        forma = f;
+                    } else if (o[0] instanceof String s) {
+                        forma = FormaDePagamento.valueOf(s);
+                    }
                     long total = (o[1] != null) ? ((Number) o[1]).longValue() : 0L;
                     return new MetodoPagamentoDTO(forma, total);
                 })
