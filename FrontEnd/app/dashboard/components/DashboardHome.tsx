@@ -1,301 +1,357 @@
 "use client";
 
 import { useEffect, useState, ReactNode } from "react";
-import { Card } from "@/components/ui-dashboard/Card";
-import { BarChart } from "./graphs/BarChart";
-import { PieChart } from "./graphs/PieChart";
 import {
-  BarChart3,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
+import {
   CreditCard,
   Package,
   Users,
+  BarChart3,
   AlertCircle,
-  PlusCircle,
-  FileText,
   ShoppingCart,
-  User,
+  PlusCircle,
   DollarSign,
+  User,
+  FileText,
+  TrendingUp,
 } from "lucide-react";
+import { StatsCard } from "@/components/dashboard/StatsCard";
+import { dashboardService } from "@/lib/services/dashboard";
+import type {
+  VisaoGeral,
+  MetodoPagamentoData,
+  ProdutoVendasData,
+  VendasDiariasData,
+} from "@/lib/services/dashboard";
+import type { Usuario } from "@/lib/api";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const CHART_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444"];
 
-// ------------------ COMPONENTE CLIENT ONLY ------------------
-interface ClientOnlyProps {
-  children: ReactNode;
-}
-function ClientOnly({ children }: ClientOnlyProps) {
-  const [hasMounted, setHasMounted] = useState(false);
-  useEffect(() => setHasMounted(true), []);
-  if (!hasMounted) return null;
+function ClientOnly({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
   return <>{children}</>;
 }
 
-// ------------------ TIPAGENS (ALINHADAS COM O BACKEND) ------------------
+function SectionCard({
+  title,
+  children,
+  fullWidth,
+}: {
+  title: string;
+  children: ReactNode;
+  fullWidth?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        background: "var(--surface-elevated)",
+        border: "1px solid var(--border)",
+        borderRadius: 12,
+        padding: "20px",
+        gridColumn: fullWidth ? "1 / -1" : undefined,
+      }}
+    >
+      <p
+        style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: "var(--foreground-muted)",
+          marginBottom: 16,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
 interface DashboardHomeProps {
-  usuario?: any;
+  usuario?: Usuario;
 }
 
-interface Alert {
-  message: string;
-}
-interface CardData {
-  title: string | number;
-  value: string | number;
-  icon: React.ReactNode;
-}
-interface QuickAction {
-  label: string;
-  icon: React.ReactNode;
-}
-interface PlanoDTO {
-  tipoPlano: string;
-  diasRestantes: number;
-}
-
-// Response vindas do backend
-interface DashboardVisaoGeralResponse {
-  vendasHoje?: number; // long
-  produtosComEstoque?: number;
-  produtosSemEstoque?: number;
-  clientesAtivos?: number;
-  vendasSemana?: number;
-  planoUsuario?: PlanoDTO | null; // backend retorna PlanoDTO
-  alertas?: string[] | null;
-}
-
-interface MetodoPagamentoData {
-  metodo: string;
-  total: number;
-}
-interface ProdutoVendasData {
-  nome: string;
-  total: number;
-}
-interface VendasDiariasData {
-  dia: string;
-  total: number;
-}
-
-// ------------------ COMPONENTE DASHBOARD ------------------
 export default function DashboardHome({ usuario }: DashboardHomeProps) {
-  const [cards, setCards] = useState<CardData[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [quickActions, setQuickActions] = useState<QuickAction[]>([]);
+  const [visao, setVisao] = useState<VisaoGeral | null>(null);
   const [vendasMetodo, setVendasMetodo] = useState<MetodoPagamentoData[]>([]);
   const [vendasProduto, setVendasProduto] = useState<ProdutoVendasData[]>([]);
   const [vendasDiarias, setVendasDiarias] = useState<VendasDiariasData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        // helper genérico que devolve um objeto ou array; retorna null em erro
-        const fetchData = async <T,>(url: string): Promise<T | null> => {
-          try {
-            const res = await fetch(url, { credentials: "include" });
-            if (!res.ok) return null;
-            return (await res.json()) as T;
-          } catch {
-            return null;
-          }
-        };
+    const load = async () => {
+      const [v, metodo, produto, diarias] = await Promise.allSettled([
+        dashboardService.visaoGeral(),
+        dashboardService.vendasPorMetodo(),
+        dashboardService.vendasPorProduto(),
+        dashboardService.vendasDiarias(),
+      ]);
 
-        // VISÃO GERAL (objeto)
-        const visaoUrl = `${API_BASE_URL}/api/dashboard/visao-geral`;
-        const visao = await fetchData<DashboardVisaoGeralResponse>(visaoUrl);
+      if (v.status === "fulfilled") setVisao(v.value);
+      if (metodo.status === "fulfilled") setVendasMetodo(metodo.value ?? []);
+      if (produto.status === "fulfilled") setVendasProduto(produto.value ?? []);
+      if (diarias.status === "fulfilled") setVendasDiarias(diarias.value ?? []);
 
-        // garantir valores padrão
-        const vendasHoje = visao?.vendasHoje ?? 0;
-        const produtosComEstoque = visao?.produtosComEstoque ?? 0;
-        const produtosZerados = visao?.produtosSemEstoque ?? 0;
-        const clientesAtivos = visao?.clientesAtivos ?? 0;
-        const vendasSemana = visao?.vendasSemana ?? 0;
-        const planoUsuario = visao?.planoUsuario ?? null;
-        const alertasBackend = visao?.alertas ?? [];
-
-        // Cards (ajusta título/valor do jeito que preferir)
-        setCards([
-          {
-            title: "Vendas Hoje",
-            // se for valor monetário mudar para formatação; aqui assumimos número
-            value: vendasHoje,
-            icon: <CreditCard className="text-white" />,
-          },
-          {
-            title: "Produtos em Estoque",
-            value: produtosComEstoque,
-            icon: <Package className="text-white" />,
-          },
-          {
-            title: "Produtos Zerados",
-            value: produtosZerados,
-            icon: <Users className="text-white" />,
-          },
-          {
-            title: "Vendas Semana",
-            value: vendasSemana,
-            icon: <BarChart3 className="text-white" />,
-          },
-        ]);
-
-        // ALERTAS (concat backend + aviso de plano)
-        const alertas: Alert[] = [];
-        (alertasBackend || []).forEach((msg) => alertas.push({ message: msg }));
-
-        if (planoUsuario) {
-          const dias = Number.isFinite(planoUsuario.diasRestantes)
-            ? planoUsuario.diasRestantes
-            : 0;
-          alertas.push({
-            message: `Plano ${planoUsuario.tipoPlano}: ${dias} dia(s) restante(s)`,
-          });
-        }
-
-        setAlerts(alertas);
-
-        // ATALHOS (estáticos)
-        setQuickActions([
-          { label: "Registrar Venda", icon: <ShoppingCart size={24} /> },
-          { label: "Adicionar Produto", icon: <PlusCircle size={24} /> },
-          { label: "Abrir Caixa", icon: <DollarSign size={24} /> },
-          { label: "Clientes", icon: <User size={24} /> },
-          { label: "Relatórios", icon: <FileText size={24} /> },
-        ]);
-
-        // GRÁFICOS (listas)
-        const metodos =
-          (await fetchData<MetodoPagamentoData[]>(
-            `${API_BASE_URL}/dashboard/vendas/metodo-pagamento`,
-          )) ?? [];
-        const produtos =
-          (await fetchData<ProdutoVendasData[]>(
-            `${API_BASE_URL}/api/dashboard/vendas/produto`,
-          )) ?? [];
-        const diarias =
-          (await fetchData<VendasDiariasData[]>(
-            `${API_BASE_URL}/api/dashboard/vendas/diarias`,
-          )) ?? [];
-
-        setVendasMetodo(metodos);
-        setVendasProduto(produtos);
-        setVendasDiarias(diarias);
-      } catch (err) {
-        console.error("Erro ao buscar dashboard:", err);
-      } finally {
-        setLoading(false);
-      }
+      setLoading(false);
     };
-
-    fetchDashboard();
+    load();
   }, []);
+
+  const primeiroNome = usuario?.nome?.split(" ")[0] ?? "usuário";
+
+  const today = new Date().toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  const statsCards = [
+    {
+      title: "Vendas Hoje",
+      value: loading ? "—" : (visao?.vendasHoje ?? 0).toString(),
+      icon: <CreditCard size={16} />,
+      accent: "primary" as const,
+    },
+    {
+      title: "Em Estoque",
+      value: loading ? "—" : (visao?.produtosComEstoque ?? 0).toString(),
+      icon: <Package size={16} />,
+      accent: "secondary" as const,
+    },
+    {
+      title: "Zerados",
+      value: loading ? "—" : (visao?.produtosSemEstoque ?? 0).toString(),
+      icon: <TrendingUp size={16} />,
+      accent: "destructive" as const,
+    },
+    {
+      title: "Clientes Ativos",
+      value: loading ? "—" : (visao?.clientesAtivos ?? 0).toString(),
+      icon: <Users size={16} />,
+      accent: "warning" as const,
+    },
+    {
+      title: "Vendas na Semana",
+      value: loading ? "—" : (visao?.vendasSemana ?? 0).toString(),
+      icon: <BarChart3 size={16} />,
+      accent: "primary" as const,
+    },
+  ];
+
+  const alertas: string[] = [
+    ...(visao?.alertas ?? []),
+    ...(visao?.planoUsuario
+      ? [
+          `Plano ${visao.planoUsuario.tipoPlano}: ${visao.planoUsuario.diasRestantes} dia(s) restante(s)`,
+        ]
+      : []),
+  ];
+
+  const quickActions = [
+    { label: "Nova Venda", icon: <ShoppingCart size={20} /> },
+    { label: "Produto", icon: <PlusCircle size={20} /> },
+    { label: "Caixa", icon: <DollarSign size={20} /> },
+    { label: "Clientes", icon: <User size={20} /> },
+    { label: "Relatórios", icon: <FileText size={20} /> },
+  ];
 
   return (
     <ClientOnly>
-      {loading ? (
-        <div className="text-white p-6 text-center">
-          Carregando dashboard...
+      <div style={{ padding: "28px 28px 40px", display: "flex", flexDirection: "column", gap: 24 }}>
+        {/* Saudação */}
+        <div className="animate-fade-in">
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
+            Olá, {primeiroNome}!
+          </h1>
+          <p style={{ fontSize: 13, color: "var(--foreground-muted)", textTransform: "capitalize" }}>
+            {today}
+          </p>
         </div>
-      ) : (
-        <div className="p-6 space-y-6">
-          <h2 className="text-2xl font-bold text-white">Visão Geral</h2>
 
-          {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {cards.map((card, idx) => (
-              <Card
-                key={idx}
-                title={card.title}
-                value={card.value}
-                icon={card.icon}
-                className="bg-[rgba(31,41,55,0.7)]"
-              />
-            ))}
-          </div>
+        {/* Stats Cards */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+            gap: 16,
+          }}
+        >
+          {statsCards.map((card, i) => (
+            <StatsCard key={i} {...card} loading={loading} />
+          ))}
+        </div>
 
-          {/* Alertas */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {alerts.map((alert, idx) => (
+        {/* Alertas */}
+        {alertas.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {alertas.map((msg, i) => (
               <div
-                key={idx}
-                className="bg-blue-900/30 hover:bg-blue-900/50 text-white p-3 rounded-lg shadow flex items-center gap-3 transition transform hover:scale-105"
+                key={i}
+                className="animate-fade-in"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "10px 14px",
+                  background: "var(--warning-muted)",
+                  border: "1px solid rgba(245,158,11,0.2)",
+                  borderRadius: 8,
+                  color: "var(--warning)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                }}
               >
-                <AlertCircle size={20} className="flex-shrink-0" />
-                <span className="font-medium text-sm">{alert.message}</span>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                {msg}
               </div>
             ))}
           </div>
+        )}
 
-          {/* Atalhos */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-4">
-            {quickActions.map((action, idx) => (
+        {/* Charts Row */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+          }}
+          className="animate-fade-in"
+        >
+          {/* Bar Chart - Vendas Diárias */}
+          <SectionCard title="Vendas Diárias da Semana" fullWidth={vendasDiarias.length === 0}>
+            {vendasDiarias.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={vendasDiarias} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="dia" tick={{ fill: "var(--foreground-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "var(--foreground-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 12 }}
+                    cursor={{ fill: "rgba(16,185,129,0.06)" }}
+                  />
+                  <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} name="Vendas (R$)" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>
+                Sem dados para exibir
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Pie Chart - Métodos de Pagamento */}
+          <SectionCard title="Formas de Pagamento">
+            {vendasMetodo.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={vendasMetodo}
+                    dataKey="total"
+                    nameKey="metodo"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={75}
+                    paddingAngle={3}
+                  >
+                    {vendasMetodo.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 12 }}
+                  />
+                  <Legend
+                    formatter={(v) => (
+                      <span style={{ color: "var(--foreground-muted)", fontSize: 12 }}>{v}</span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>
+                Sem dados para exibir
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Bar Chart - Top Produtos */}
+          <SectionCard title="Produtos Mais Vendidos" fullWidth>
+            {vendasProduto.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={vendasProduto} layout="vertical" margin={{ top: 4, right: 24, left: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" tick={{ fill: "var(--foreground-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="nome" tick={{ fill: "var(--foreground-muted)", fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
+                  <Tooltip
+                    contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 12 }}
+                    cursor={{ fill: "rgba(59,130,246,0.06)" }}
+                  />
+                  <Bar dataKey="total" fill="var(--secondary)" radius={[0, 4, 4, 0]} name="Quantidade" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>
+                Sem dados para exibir
+              </div>
+            )}
+          </SectionCard>
+        </div>
+
+        {/* Ações Rápidas */}
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Ações Rápidas
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {quickActions.map((action, i) => (
               <button
-                key={idx}
-                className="bg-blue-900/30 hover:bg-blue-900/50 text-white p-3 rounded-lg flex flex-col items-center justify-center transition"
-                onClick={() => console.log(`Ação: ${action.label}`)}
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 16px",
+                  background: "var(--surface-elevated)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  color: "var(--foreground)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--primary)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--primary)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--foreground)";
+                }}
               >
                 {action.icon}
-                <span className="text-xs mt-1 font-semibold">
-                  {action.label}
-                </span>
+                {action.label}
               </button>
             ))}
           </div>
-
-          {/* Gráficos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-            <div className="bg-gray-800/60 text-white p-4 rounded shadow">
-              <p className="font-medium mb-2">Vendas por método de pagamento</p>
-              {vendasMetodo.length > 0 ? (
-                <div className="h-40">
-                  <PieChart
-                    labels={vendasMetodo.map((v) => v.metodo)}
-                    data={vendasMetodo.map((v) => v.total)}
-                  />
-                </div>
-              ) : (
-                <div className="h-40 flex items-center justify-center text-gray-400">
-                  Sem dados para exibir
-                </div>
-              )}
-            </div>
-
-            <div className="bg-gray-800/60 text-white p-4 rounded shadow">
-              <p className="font-medium mb-2">Vendas por produto</p>
-              {vendasProduto.length > 0 ? (
-                <div className="h-40">
-                  <BarChart
-                    labels={vendasProduto.map((v) => v.nome)}
-                    data={vendasProduto.map((v) => v.total)}
-                    label="Quantidade Vendida"
-                  />
-                </div>
-              ) : (
-                <div className="h-40 flex items-center justify-center text-gray-400">
-                  Sem dados para exibir
-                </div>
-              )}
-            </div>
-
-            <div className="bg-gray-800/60 text-white p-4 rounded shadow md:col-span-2">
-              <p className="font-medium mb-2">Vendas diárias da semana</p>
-              {vendasDiarias.length > 0 ? (
-                <div className="h-40">
-                  <BarChart
-                    labels={vendasDiarias.map((v) => v.dia)}
-                    data={vendasDiarias.map((v) => v.total)}
-                    label="Vendas R$"
-                  />
-                </div>
-              ) : (
-                <div className="h-40 flex items-center justify-center text-gray-400">
-                  Sem dados para exibir
-                </div>
-              )}
-            </div>
-          </div>
         </div>
-      )}
+      </div>
     </ClientOnly>
   );
 }

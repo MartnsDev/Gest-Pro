@@ -1,19 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Home,
-  Package,
-  Warehouse,
-  CreditCard,
-  Users,
-  BarChart3,
-  Settings,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { getUsuario, logout, type Usuario } from "@/lib/api";
-import { removeToken } from "@/lib/auth";
-import styles from "@/app/styles/dashboard.module.css";
+import { getUsuario, type Usuario } from "@/lib/api";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { Header } from "@/components/dashboard/Header";
 
 import DashboardHome from "./components/DashboardHome";
 import Produtos from "./components/Produtos";
@@ -23,56 +13,97 @@ import Clientes from "./components/Clientes";
 import Relatorios from "./components/Relatorios";
 import Configuracoes from "./components/Configuracoes";
 
+type Section =
+  | "dashboard"
+  | "produtos"
+  | "estoque"
+  | "vendas"
+  | "clientes"
+  | "relatorios"
+  | "configuracoes";
+
+function LoadingScreen() {
+  return (
+    <div
+      style={{
+        minHeight: "100dvh",
+        background: "var(--background)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 8,
+        }}
+      >
+        <img src="/favicon.png" alt="GestPro" width={32} height={32} />
+        <span
+          style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)" }}
+        >
+          Gest<span style={{ color: "var(--primary)" }}>Pro</span>
+        </span>
+      </div>
+      <div
+        style={{
+          width: 200,
+          height: 3,
+          background: "var(--surface-elevated)",
+          borderRadius: 999,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: "40%",
+            background: "var(--primary)",
+            borderRadius: 999,
+            animation: "shimmer 1.2s ease-in-out infinite",
+            backgroundImage:
+              "linear-gradient(90deg, var(--primary) 0%, #34d399 50%, var(--primary) 100%)",
+            backgroundSize: "200% 100%",
+          }}
+        />
+      </div>
+      <span
+        style={{ fontSize: 13, color: "var(--foreground-muted)" }}
+      >
+        Carregando...
+      </span>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<
-    | "dashboard"
-    | "produtos"
-    | "estoque"
-    | "vendas"
-    | "clientes"
-    | "relatorios"
-    | "configuracoes"
-  >("dashboard");
+  const [activeSection, setActiveSection] = useState<Section>("dashboard");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    async function loadUsuario() {
-      try {
-        const data = await getUsuario();
+    getUsuario()
+      .then((data) => {
         if (!data) {
           window.location.href = "/";
           return;
         }
         setUsuario(data);
-      } catch {
+      })
+      .catch(() => {
         window.location.href = "/";
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadUsuario();
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch {}
-    removeToken();
-    window.location.href = "/";
-  };
-
-  if (loading)
-    return <div className={styles.loadingContainer}>Carregando...</div>;
-
+  if (loading) return <LoadingScreen />;
   if (!usuario) return null;
-
-  const iniciais = usuario.nome
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 
   const renderSection = () => {
     switch (activeSection) {
@@ -96,90 +127,42 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className={styles.dashboardContainer}>
-      {/* Header */}
-      <header className={styles.dashboardHeader}>
-        <div className={styles.headerBrand}>
-          <div className={styles.headerLogo}>
-            <img src="/favicon.png" alt="GestPro" width={40} height={40} />
-          </div>
-          <span className={styles.headerTitle}>GestPro</span>
-        </div>
-        <div className={styles.headerUser}>
-          <span className={styles.headerUserName}>
-            Olá, {usuario.nome.split(" ")[0]}!
-          </span>
-          {usuario.foto ? (
-            <img
-              src={usuario.foto}
-              alt={usuario.nome}
-              className={styles.headerUserAvatar}
-            />
-          ) : (
-            <div className={styles.headerUserInitials}>{iniciais}</div>
-          )}
-          <Button
-            onClick={handleLogout}
-            variant="ghost"
-            className="text-white hover:text-gray-300 hover:bg-[#1a3a52]"
-          >
-            Sair
-          </Button>
-        </div>
-      </header>
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100dvh",
+        background: "var(--background)",
+        overflow: "hidden",
+      }}
+    >
+      <Sidebar
+        active={activeSection}
+        onNavigate={setActiveSection}
+        collapsed={sidebarCollapsed}
+        onCollapse={setSidebarCollapsed}
+      />
 
-      {/* Sidebar e Main Content */}
-      <div className={styles.dashboardLayout}>
-        {/* Sidebar */}
-        <aside className={styles.sidebar}>
-          <nav className={styles.sidebarNav}>
-            <button
-              onClick={() => setActiveSection("dashboard")}
-              className={styles.sidebarNavItem}
-            >
-              <Home /> <span>Dashboard</span>
-            </button>
-            <button
-              onClick={() => setActiveSection("produtos")}
-              className={styles.sidebarNavItem}
-            >
-              <Package /> <span>Produtos</span>
-            </button>
-            <button
-              onClick={() => setActiveSection("estoque")}
-              className={styles.sidebarNavItem}
-            >
-              <Warehouse /> <span>Estoque</span>
-            </button>
-            <button
-              onClick={() => setActiveSection("vendas")}
-              className={styles.sidebarNavItem}
-            >
-              <CreditCard /> <span>Vendas</span>
-            </button>
-            <button
-              onClick={() => setActiveSection("clientes")}
-              className={styles.sidebarNavItem}
-            >
-              <Users /> <span>Clientes</span>
-            </button>
-            <button
-              onClick={() => setActiveSection("relatorios")}
-              className={styles.sidebarNavItem}
-            >
-              <BarChart3 /> <span>Relatórios</span>
-            </button>
-            <button
-              onClick={() => setActiveSection("configuracoes")}
-              className={styles.sidebarNavItem}
-            >
-              <Settings /> <span>Configurações</span>
-            </button>
-          </nav>
-        </aside>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          overflow: "hidden",
+        }}
+      >
+        <Header usuario={usuario} section={activeSection} />
 
-        {/* Main Content */}
-        <main className={styles.mainContent}>{renderSection()}</main>
+        <main
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            background: "var(--background)",
+          }}
+        >
+          {renderSection()}
+        </main>
       </div>
     </div>
   );
