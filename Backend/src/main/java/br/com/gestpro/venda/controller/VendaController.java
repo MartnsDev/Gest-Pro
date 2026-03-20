@@ -4,13 +4,15 @@ import br.com.gestpro.venda.dto.RegistrarVendaDTO;
 import br.com.gestpro.venda.dto.VendaResponseDTO;
 import br.com.gestpro.venda.model.Venda;
 import br.com.gestpro.venda.service.VendaServiceInterface;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/vendas")
+@RequestMapping("/api/v1/vendas")
 public class VendaController {
 
     private final VendaServiceInterface vendaService;
@@ -20,9 +22,12 @@ public class VendaController {
     }
 
     @PostMapping("/registrar")
-    public ResponseEntity<VendaResponseDTO> registrarVenda(@RequestBody RegistrarVendaDTO dto) {
+    public ResponseEntity<VendaResponseDTO> registrarVenda(
+            @RequestBody RegistrarVendaDTO dto,
+            Authentication authentication) {
+        dto.setEmailUsuario(authentication.getName());
         Venda venda = vendaService.registrarVenda(dto);
-        return ResponseEntity.ok(new VendaResponseDTO(venda));
+        return ResponseEntity.status(HttpStatus.CREATED).body(new VendaResponseDTO(venda));
     }
 
     @GetMapping("/caixa/{idCaixa}")
@@ -36,7 +41,6 @@ public class VendaController {
 
     @GetMapping("/{id}")
     public ResponseEntity<VendaResponseDTO> buscarPorId(@PathVariable Long id) {
-        Venda venda = vendaService.buscarPorId(id);
-        return ResponseEntity.ok(new VendaResponseDTO(venda));
+        return ResponseEntity.ok(new VendaResponseDTO(vendaService.buscarPorId(id)));
     }
 }

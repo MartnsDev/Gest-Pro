@@ -19,14 +19,14 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
      */
     @Query(value =
             "SELECT " +
-                    " CAST((SELECT COUNT(*) FROM venda v JOIN usuarios u1 ON u1.id = v.usuario_id WHERE u1.email = :email AND DATE(v.data_venda) = CURRENT_DATE) AS CHAR), " +
+                    " CAST((SELECT COALESCE(SUM(v.valor_final), 0) FROM venda v JOIN usuarios u1 ON u1.id = v.usuario_id WHERE u1.email = :email AND DATE(CONVERT_TZ(v.data_venda, '+00:00', '-03:00')) = CURDATE()) AS CHAR), " +
                     " CAST((SELECT COUNT(*) FROM produto p JOIN usuarios u2 ON u2.id = p.usuario_id WHERE u2.email = :email AND p.quantidade_estoque > 0) AS CHAR), " +
                     " CAST((SELECT COUNT(*) FROM produto p2 JOIN usuarios u3 ON u3.id = p2.usuario_id WHERE u3.email = :email AND p2.quantidade_estoque = 0) AS CHAR), " +
                     " CAST((SELECT COUNT(*) FROM clientes c JOIN usuarios u4 ON u4.id = c.usuario_id WHERE u4.email = :email AND c.ativo = 1) AS CHAR)",
             nativeQuery = true)
     List<Object[]> findDashboardCountsRaw(@Param("email") String email);
 
-    @Query(value = "SELECT COUNT(v.id) FROM venda v " +
+    @Query(value = "SELECT COALESCE(SUM(v.valor_final), 0) FROM venda v " +
             "JOIN usuarios u ON u.id = v.usuario_id " +
             "WHERE v.data_venda BETWEEN :inicio AND :fim AND u.email = :email",
             nativeQuery = true)

@@ -2,67 +2,63 @@ package br.com.gestpro.produto.controller;
 
 import br.com.gestpro.produto.dto.CriarProdutoDTO;
 import br.com.gestpro.produto.dto.ProdutoResponseDTO;
-import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.produto.model.Produto;
-import br.com.gestpro.auth.service.UserAuthenticatedService;
 import br.com.gestpro.produto.service.ProdutoServiceInterface;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/produtos")
+@RequestMapping("/api/v1/produtos")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class ProdutoController {
 
     private final ProdutoServiceInterface produtoService;
-    private final UserAuthenticatedService userAuthenticatedService;
 
-    public ProdutoController(ProdutoServiceInterface produtoService,
-                             UserAuthenticatedService userAuthenticatedService) {
+    public ProdutoController(ProdutoServiceInterface produtoService) {
         this.produtoService = produtoService;
-        this.userAuthenticatedService = userAuthenticatedService;
     }
 
-    @PostMapping("/criar")
-    public ResponseEntity<ProdutoResponseDTO> criarProduto(@RequestBody CriarProdutoDTO dto) {
-        // Busca o usuário diretamente como entidade
-        Usuario usuario = userAuthenticatedService.buscarUsuarioPorId(dto.getUsuarioId());
-
-        Produto produto = new Produto();
-        produto.setNome(dto.getNome());
-        produto.setPreco(dto.getPreco());
-        produto.setQuantidadeEstoque(dto.getQuantidadeEstoque());
-        produto.setQuantidade(dto.getQuantidade());
-        produto.setAtivo(dto.getAtivo());
-        produto.setUsuario(usuario); // agora é a entidade correta
-        produto.setDataCriacao(LocalDateTime.now());
-
-        Produto novoProduto = produtoService.salvar(produto);
-
-        return ResponseEntity.ok(new ProdutoResponseDTO(novoProduto));
+    @PostMapping
+    public ResponseEntity<ProdutoResponseDTO> criar(
+            @RequestBody CriarProdutoDTO dto,
+            Authentication authentication) {
+        dto.setEmailUsuario(authentication.getName());
+        Produto produto = produtoService.criar(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ProdutoResponseDTO(produto));
     }
 
-
-    // Listar produtos apenas de um usuário
-    @GetMapping("/usuario/{usuarioId}")
-    public ResponseEntity<List<Produto>> listarProdutosPorUsuario(@PathVariable Long usuarioId) {
-        List<Produto> produtos = produtoService.listarPorUsuario(usuarioId);
-        return ResponseEntity.ok(produtos);
-    }
-
-    // Endpoint global — use apenas para administração
     @GetMapping
-    public ResponseEntity<List<Produto>> listarProdutos() {
-        List<Produto> produtos = produtoService.listarTodos();
+    public ResponseEntity<List<ProdutoResponseDTO>> listar(Authentication authentication) {
+        List<ProdutoResponseDTO> produtos = produtoService.listarPorEmail(authentication.getName())
+                .stream()
+                .map(ProdutoResponseDTO::new)
+                .toList();
         return ResponseEntity.ok(produtos);
     }
 
-    // Buscar produto por ID
     @GetMapping("/{id}")
-    public ResponseEntity<Produto> buscarProdutoPorId(@PathVariable Long id) {
-        Produto produto = produtoService.buscarPorId(id);
-        return ResponseEntity.ok(produto);
+    public ResponseEntity<ProdutoResponseDTO> buscarPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(new ProdutoResponseDTO(produtoService.buscarPorId(id)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProdutoResponseDTO> atualizar(
+            @PathVariable Long id,
+            @RequestBody CriarProdutoDTO dto,
+            Authentication authentication) {
+        dto.setEmailUsuario(authentication.getName());
+        return ResponseEntity.ok(new ProdutoResponseDTO(produtoService.atualizar(id, dto)));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluir(
+            @PathVariable Long id,
+            Authentication authentication) {
+        produtoService.excluir(id, authentication.getName());
+        return ResponseEntity.noContent().build();
     }
 }

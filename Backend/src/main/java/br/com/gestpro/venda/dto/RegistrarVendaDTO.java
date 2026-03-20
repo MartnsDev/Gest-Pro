@@ -2,17 +2,18 @@ package br.com.gestpro.venda.dto;
 
 import br.com.gestpro.caixa.FormaDePagamento;
 import jakarta.validation.constraints.*;
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-@Builder
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class RegistrarVendaDTO {
 
-    @NotBlank(message = "Email do usuário é obrigatório")
     private String emailUsuario;
 
     @NotNull(message = "ID do caixa é obrigatório")
@@ -31,8 +32,9 @@ public class RegistrarVendaDTO {
 
     private String observacao;
 
-    @Builder
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ItemVendaDTO {
 
         @NotNull(message = "Produto é obrigatório")

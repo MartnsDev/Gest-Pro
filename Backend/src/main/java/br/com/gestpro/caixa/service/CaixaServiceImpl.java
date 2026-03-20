@@ -28,18 +28,25 @@ public class CaixaServiceImpl implements CaixaServiceInterface {
     @Override
     @Transactional
     public CaixaResponse abrirCaixa(AbrirCaixaRequest req) {
-        Empresa empresa = empresaRepository.findById(req.getEmpresaId())
-                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/abrir"));
+        // 1. Busca o usuário pelo email do JWT
+        Usuario usuario = usuarioRepository.findByEmail(req.getEmailUsuario())
+                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/caixas/abrir"));
 
-        // Validação de Plano (Ex: Bloquear se já houver caixa aberto no plano limitado)
-        long abertos = caixaRepository.countByEmpresaIdAndStatus(empresa.getId(), StatusCaixa.ABERTO);
-        if (abertos > 0) {
-            throw new ApiException("Já existe um caixa aberto para esta empresa.", HttpStatus.BAD_REQUEST, "/abrir");
+        // 2. Busca a empresa e valida se pertence ao usuário
+        Empresa empresa = empresaRepository.findById(req.getEmpresaId())
+                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/caixas/abrir"));
+
+        if (!empresa.getDono().getId().equals(usuario.getId())) {
+            throw new ApiException("Esta empresa não pertence ao usuário logado", HttpStatus.FORBIDDEN, "/caixas/abrir");
         }
 
-        Usuario usuario = usuarioRepository.findById(req.getUsuarioId())
-                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/abrir"));
+        // 3. Valida se já existe caixa aberto para esta empresa
+        long abertos = caixaRepository.countByEmpresaIdAndStatus(empresa.getId(), StatusCaixa.ABERTO);
+        if (abertos > 0) {
+            throw new ApiException("Já existe um caixa aberto para esta empresa.", HttpStatus.BAD_REQUEST, "/caixas/abrir");
+        }
 
+        // 4. Cria e salva o caixa
         Caixa caixa = Caixa.builder()
                 .empresa(empresa)
                 .usuario(usuario)
@@ -59,10 +66,15 @@ public class CaixaServiceImpl implements CaixaServiceInterface {
     @Transactional
     public CaixaResponse fecharCaixa(FecharCaixaRequest req) {
         Caixa caixa = caixaRepository.findById(req.getCaixaId())
-                .orElseThrow(() -> new ApiException("Caixa não encontrado", HttpStatus.NOT_FOUND, "fechar-caixa"));
+                .orElseThrow(() -> new ApiException("Caixa não encontrado", HttpStatus.NOT_FOUND, "/caixas/fechar"));
+
+        // Valida se o caixa pertence ao usuário logado
+        if (!caixa.getUsuario().getEmail().equals(req.getEmailUsuario())) {
+            throw new ApiException("Você não tem permissão para fechar este caixa.", HttpStatus.FORBIDDEN, "/caixas/fechar");
+        }
 
         if (!caixa.getAberto()) {
-            throw new ApiException("Este caixa já está fechado.", HttpStatus.BAD_REQUEST, "/fechar-caixa");
+            throw new ApiException("Este caixa já está fechado.", HttpStatus.BAD_REQUEST, "/caixas/fechar");
         }
 
         caixa.recalcularTotalVendas();
@@ -70,16 +82,38 @@ public class CaixaServiceImpl implements CaixaServiceInterface {
         caixa.setDataFechamento(LocalDateTime.now());
         caixa.setAberto(false);
         caixa.setStatus(StatusCaixa.FECHADO);
-        caixa.setFechadoPor(req.getFechadoPor());
+        caixa.setFechadoPor(req.getEmailUsuario());
 
         return mapToResponse(caixaRepository.save(caixa));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public CaixaResponse obterResumo(Long caixaId) {
+    public CaixaResponse obterResumo(Long caixaId, String emailUsuario) {
         Caixa caixa = caixaRepository.findById(caixaId)
-                .orElseThrow(() -> new ApiException("Caixa não encontrado", HttpStatus.NOT_FOUND, "/{id}/resumo"));
+                .orElseThrow(() -> new ApiException("Caixa não encontrado", HttpStatus.NOT_FOUND, "/caixas/{id}/resumo"));
+
+        if (!caixa.getUsuario().getEmail().equals(emailUsuario)) {
+            throw new ApiException("Acesso negado a este caixa.", HttpStatus.FORBIDDEN, "/caixas/{id}/resumo");
+        }
+
+        caixa.recalcularTotalVendas();
+        return mapToResponse(caixa);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CaixaResponse buscarCaixaAberto(Long empresaId, String emailUsuario) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/caixas/aberto"));
+
+        if (!empresa.getDono().getEmail().equals(emailUsuario)) {
+            throw new ApiException("Esta empresa não pertence ao usuário logado", HttpStatus.FORBIDDEN, "/caixas/aberto");
+        }
+
+        Caixa caixa = caixaRepository.findFirstByEmpresaIdAndStatus(empresaId, StatusCaixa.ABERTO)
+                .orElseThrow(() -> new ApiException("Nenhum caixa aberto para esta empresa.", HttpStatus.NOT_FOUND, "/caixas/aberto"));
+
         caixa.recalcularTotalVendas();
         return mapToResponse(caixa);
     }

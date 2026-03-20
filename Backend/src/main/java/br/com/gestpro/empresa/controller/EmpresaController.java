@@ -3,42 +3,34 @@ package br.com.gestpro.empresa.controller;
 import br.com.gestpro.empresa.dto.CriarEmpresaRequest;
 import br.com.gestpro.empresa.dto.EmpresaResponse;
 import br.com.gestpro.empresa.service.EmpresaService;
-import br.com.gestpro.infra.jwt.JwtService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/empresas")
+@RequestMapping("/api/v1/empresas")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @RequiredArgsConstructor
 public class EmpresaController {
 
     private final EmpresaService empresaService;
-    private final JwtService jwtService;
 
     @PostMapping
     public ResponseEntity<EmpresaResponse> criar(
-            @RequestHeader("Authorization") String token,
-            @RequestBody @Valid CriarEmpresaRequest request) {
-
-        // Extrai o ID do usuário do token para garantir segurança
-        Long usuarioId = jwtService.getUsuarioIdFromToken(token.replace("Bearer ", ""));
-        request.setUsuarioId(usuarioId);
-
-        EmpresaResponse response = empresaService.criar(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            @RequestBody @Valid CriarEmpresaRequest request,
+            Authentication authentication) {
+        request.setEmailUsuario(authentication.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(empresaService.criar(request));
     }
 
     @GetMapping
-    public ResponseEntity<List<EmpresaResponse>> listar(@RequestHeader("Authorization") String token) {
-        Long usuarioId = jwtService.getUsuarioIdFromToken(token.replace("Bearer ", ""));
-
-        List<EmpresaResponse> empresas = empresaService.listarPorUsuario(usuarioId);
-        return ResponseEntity.ok(empresas);
+    public ResponseEntity<List<EmpresaResponse>> listar(Authentication authentication) {
+        return ResponseEntity.ok(empresaService.listarPorUsuario(authentication.getName()));
     }
 
     @GetMapping("/{id}")
@@ -49,14 +41,17 @@ public class EmpresaController {
     @PutMapping("/{id}")
     public ResponseEntity<EmpresaResponse> atualizar(
             @PathVariable Long id,
-            @RequestBody @Valid CriarEmpresaRequest request) {
-
+            @RequestBody @Valid CriarEmpresaRequest request,
+            Authentication authentication) {
+        request.setEmailUsuario(authentication.getName());
         return ResponseEntity.ok(empresaService.atualizar(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable Long id) {
-        empresaService.excluir(id);
+    public ResponseEntity<Void> excluir(
+            @PathVariable Long id,
+            Authentication authentication) {
+        empresaService.excluir(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 }

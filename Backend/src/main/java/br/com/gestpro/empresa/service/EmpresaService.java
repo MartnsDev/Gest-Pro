@@ -6,8 +6,8 @@ import br.com.gestpro.empresa.dto.CriarEmpresaRequest;
 import br.com.gestpro.empresa.dto.EmpresaResponse;
 import br.com.gestpro.empresa.model.Empresa;
 import br.com.gestpro.empresa.repository.EmpresaRepository;
-import br.com.gestpro.plano.service.VerificarPlanoOperation; // Importante!
 import br.com.gestpro.infra.exception.ApiException;
+import br.com.gestpro.plano.service.VerificarPlanoOperation;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,28 +23,24 @@ public class EmpresaService {
 
     private final EmpresaRepository empresaRepository;
     private final UsuarioRepository usuarioRepository;
-    private final VerificarPlanoOperation verificarPlano; // Substitui o PlanoRepository
+    private final VerificarPlanoOperation verificarPlano;
 
     @Transactional
     public EmpresaResponse criar(CriarEmpresaRequest req) {
-        // 1. Busca o dono
-        Usuario dono = usuarioRepository.findById(req.getUsuarioId())
-                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
+        Usuario dono = usuarioRepository.findByEmail(req.getEmailUsuario())
+                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
 
-        // 2. Conta quantas empresas o dono já tem no banco
         Object rawCount = empresaRepository.countByDonoId(dono.getId());
         long totalEmpresasDono = rawCount instanceof Number n ? n.longValue() : 0L;
 
-        // 3. VALIDAÇÃO CRÍTICA: O plano permite criar mais uma?
-        // Se o limite estourar ou o plano vencer, o 'verificarPlano' lança a ApiException
         verificarPlano.validarLimiteEmpresas(dono, totalEmpresasDono);
 
-        // 4. Cria a empresa associada ao dono
         Empresa empresa = new Empresa();
         empresa.setNomeFantasia(req.getNomeFantasia());
         empresa.setCnpj(req.getCnpj());
         empresa.setDono(dono);
         empresa.setAtiva(true);
+        empresa.setPlano(dono.getTipoPlano());
 
         return mapToResponse(empresaRepository.save(empresa));
     }
@@ -54,29 +50,46 @@ public class EmpresaService {
         Empresa empresa = empresaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada"));
 
+        // Valida se pertence ao usuário logado
+        if (!empresa.getDono().getEmail().equals(req.getEmailUsuario())) {
+            throw new ApiException("Você não tem permissão para editar esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
+        }
+
+        verificarPlano.validarAcessoTemporario(empresa.getDono());
+
         empresa.setNomeFantasia(req.getNomeFantasia());
         empresa.setCnpj(req.getCnpj());
-
-        // Se precisar validar algo na atualização, use o verificarPlano aqui também
-        verificarPlano.validarAcessoTemporario(empresa.getDono());
 
         return mapToResponse(empresaRepository.save(empresa));
     }
 
     @Transactional
-    public void excluir(Long id) {
-        if (!empresaRepository.existsById(id)) {
-            throw new EntityNotFoundException("Empresa não encontrada");
+    public void excluir(Long id, String emailUsuario) {
+        Empresa empresa = empresaRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada"));
+
+        if (!empresa.getDono().getEmail().equals(emailUsuario)) {
+            throw new ApiException("Você não tem permissão para excluir esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
         }
-        // Aqui você pode adicionar lógica para não deletar se houver vendas
+
         empresaRepository.deleteById(id);
     }
 
     @Transactional(readOnly = true)
-    public List<EmpresaResponse> listarPorUsuario(Long usuarioId) {
-        return empresaRepository.findByDonoId(usuarioId).stream()
+    public List<EmpresaResponse> listarPorUsuario(String emailUsuario) {
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
+
+        return empresaRepository.findByDonoId(usuario.getId()).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public EmpresaResponse buscarPorIdDto(Long id) {
+        Empresa empresa = empresaRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada com o ID: " + id));
+        return mapToResponse(empresa);
     }
 
     private EmpresaResponse mapToResponse(Empresa empresa) {
@@ -84,21 +97,8 @@ public class EmpresaService {
         res.setId(empresa.getId());
         res.setNomeFantasia(empresa.getNomeFantasia());
         res.setCnpj(empresa.getCnpj());
-
-        // Agora os dados do plano vêm direto do Dono (Usuario)
         res.setPlanoNome(empresa.getDono().getTipoPlano().name());
         res.setLimiteCaixas(empresa.getDono().getTipoPlano().getLimiteCaixasPorEmpresa());
         return res;
     }
-
-    @Transactional(readOnly = true)
-    public EmpresaResponse buscarPorIdDto(Long id) {
-        // 1. Busca a empresa ou lança 404
-        Empresa empresa = empresaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada com o ID: " + id));
-
-        // 2. Mapeia para o DTO usando o método auxiliar que já centraliza a lógica do plano
-        return mapToResponse(empresa);
-    }
-    
 }
