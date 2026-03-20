@@ -5,11 +5,13 @@ import {
   Home, Package, Warehouse, CreditCard,
   Users, BarChart3, Settings,
   DollarSign, Lock,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUsuario, logout, type Usuario } from "@/lib/api";
 import { removeToken } from "@/lib/auth";
 import styles from "@/app/styles/dashboard.module.css";
+
 
 import DashboardHome    from "./components/DashboardHome";
 import Produtos         from "./components/Produtos";
@@ -21,8 +23,9 @@ import Configuracoes    from "./components/Configuracoes";
 import GerenciarEmpresas from "./components/GerenciarEmpresas";
 import ModalCaixa       from "./components/Modalcaixa";
 import SeletorEmpresa   from "./components/Seletorempresa";
+import Planos from "./components/Plano";
 
-type Secao = "dashboard" | "produtos" | "estoque" | "vendas" | "clientes" | "relatorios" | "configuracoes" | "empresas";
+type Secao = "dashboard" | "produtos" | "estoque" | "vendas" | "clientes" | "relatorios" | "configuracoes" | "empresas" | "planos";
 
 interface Empresa  { id: number; nomeFantasia: string; cnpj: string; planoNome: string; limiteCaixas: number; }
 interface CaixaInfo { id: number; empresaId: number; empresaNome?: string; valorInicial: number; totalVendas: number; dataAbertura: string; status: "ABERTO" | "FECHADO"; }
@@ -103,6 +106,7 @@ export default function DashboardPage() {
       case "relatorios": return <Relatorios />;
       case "configuracoes": return <Configuracoes usuario={usuario} />;
       case "empresas":   return <GerenciarEmpresas />;
+      case "planos": return <Planos />;
       default:           return <DashboardHome usuario={usuario} />;
     }
   };
@@ -186,6 +190,7 @@ export default function DashboardPage() {
               { id: "relatorios",    label: "Relatórios",    icon: <BarChart3 /> },
               { id: "empresas",      label: "Empresas",      icon: <Settings /> },
               { id: "configuracoes", label: "Configurações", icon: <Settings /> },
+              { id: "planos", label: "Planos", icon: <Zap /> }
             ].map(item => (
               <button
                 key={item.id}
