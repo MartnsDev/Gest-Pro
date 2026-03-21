@@ -190,7 +190,7 @@ export default function DashboardPage() {
             {[
               { id: "dashboard",     label: "Dashboard",     icon: <Home /> },
               { id: "produtos",      label: "Produtos",      icon: <Package /> },
-              { id: "estoque",       label: "Estoque",       icon: <Warehouse /> },
+            /*{ id: "estoque",       label: "Estoque",       icon: <Warehouse /> },*/
               { id: "vendas",        label: "Vendas",        icon: <CreditCard /> },
               { id: "clientes",      label: "Clientes",      icon: <Users /> },
               { id: "relatorios",    label: "Relatórios",    icon: <BarChart3 /> },

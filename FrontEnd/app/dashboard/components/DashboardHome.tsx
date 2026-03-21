@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import type { Usuario } from "@/lib/api";
+import FormularioProduto from "./complementos/FormularioProduto"; 
+import type { ProdutoForm } from "./complementos/FormularioProduto";
 
 // ─── Tipos alinhados com DashboardVisaoGeralResponse ──────────────────────
 interface PlanoDTO {
@@ -98,6 +100,7 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
   const [vendasProduto, setVendasProduto] = useState<ProdutoVendasData[]>([]);
   const [vendasDiarias, setVendasDiarias] = useState<VendasDiariasData[]>([]);
   const [loading,       setLoading]       = useState(true);
+  const [isProdutosVisible, setIsProdutosVisible] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -139,16 +142,25 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
       : []),
   ];
 
-  const quickActions = [
-    { label: "Abrir Caixa",  icon: <DollarSign size={16} />,  href: "/dashboard/caixa" },
-    { label: "Nova Venda",   icon: <ShoppingBag size={16} />, href: "/dashboard/venda" },
-    { label: "Novo Produto", icon: <PlusCircle size={16} />,  href: "/dashboard/produtos/novo" },
-    { label: "Clientes",     icon: <User size={16} />,         href: "/dashboard/clientes" },
-    { label: "Relatórios",   icon: <FileText size={16} />,     href: "/dashboard/relatorios" },
-  ];
+const quickActions = [
+  { label: "Abrir Caixa",  icon: <DollarSign size={16} />,  href: "/dashboard/caixa" },
+  { label: "Nova Venda",   icon: <ShoppingBag size={16} />, href: "/dashboard/venda" },
+  
+  // ✅ Apenas dispara o estado aqui
+  { label: "Novo Produto", icon: <PlusCircle size={16} />,  onClick: () => setIsProdutosVisible(true) }, 
+  
+  { label: "Clientes",     icon: <User size={16} />,         href: "/dashboard/clientes" },
+  { label: "Relatórios",   icon: <FileText size={16} />,     href: "/dashboard/relatorios" },
+];
 
   return (
+    
     <ClientOnly>
+{/* 1. O Modal fica aqui no topo, "escondido" até o isProdutosVisible ser true */}
+    {isProdutosVisible && (
+      <FormularioProduto onClose={() => setIsProdutosVisible(false)} />
+    )}
+
       <div style={{ padding: "28px 28px 40px", display: "flex", flexDirection: "column", gap: 24 }}>
 
         {/* Saudação */}
@@ -185,30 +197,36 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
           </div>
         )}
 
-        {/* Ações Rápidas */}
-        <div>
-          <p style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".07em" }}>
-            Ações Rápidas
-          </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {quickActions.map((action, i) => (
-              <button key={i} onClick={() => router.push(action.href)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "9px 16px",
-                  background: "var(--surface-elevated)",
-                  border: "1px solid var(--border)", borderRadius: 8,
-                  color: "var(--foreground)", fontSize: 13, fontWeight: 500, cursor: "pointer",
-                  transition: "all .15s",
-                }}
-                onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "var(--primary)"; b.style.color = "var(--primary)"; }}
-                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "var(--border)"; b.style.color = "var(--foreground)"; }}
-              >
-                {action.icon}{action.label}
-              </button>
-            ))}
-          </div>
-        </div>
+       {/* Ações Rápidas */}
+<div>
+  <p style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".07em" }}>
+    Ações Rápidas
+  </p>
+  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+    {quickActions.map((action, i) => (
+      <button 
+        key={i} 
+        // Lógica corrigida: se tiver onClick (Novo Produto), executa. Se não, navega pelo href.
+        onClick={() => action.onClick ? action.onClick() : router.push(action.href!)}
+        style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "9px 16px",
+          background: "var(--surface-elevated)",
+          border: "1px solid var(--border)", borderRadius: 8,
+          color: "var(--foreground)", fontSize: 13, fontWeight: 500, cursor: "pointer",
+          transition: "all .15s",
+        }}
+        onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "var(--primary)"; b.style.color = "var(--primary)"; }}
+        onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "var(--border)"; b.style.color = "var(--foreground)"; }}
+      >
+        {action.icon}{action.label}
+      </button>
+    ))}
+  </div>
+</div>
+
+
+
 
         {/* Gráficos */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="animate-fade-in">
@@ -261,6 +279,9 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
             )}
           </SectionCard>
 
+
+          
+
           {/* Top Produtos */}
           <SectionCard title="Produtos Mais Vendidos" fullWidth>
             {vendasProduto.length > 0 ? (
@@ -283,7 +304,6 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
               </div>
             )}
           </SectionCard>
-
         </div>
       </div>
     </ClientOnly>
