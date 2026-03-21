@@ -10,12 +10,12 @@ import java.util.List;
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
     boolean existsByEmail(String email);
+    boolean existsByEmailAndEmpresaId(String email, Long empresaId);
 
     List<Cliente> findByAtivoTrue();
-
-    // Clientes ativos de um usuário específico
     List<Cliente> findByUsuarioEmailAndAtivoTrue(String email);
-
-    // Clientes de uma empresa específica
     List<Cliente> findByEmpresaIdAndAtivoTrue(Long empresaId);
+
+    // Busca por nome (contains, ignore case) dentro da empresa
+    List<Cliente> findByEmpresaIdAndAtivoTrueAndNomeContainingIgnoreCase(Long empresaId, String nome);
 }
