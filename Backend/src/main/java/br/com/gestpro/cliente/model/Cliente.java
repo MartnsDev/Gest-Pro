@@ -1,18 +1,14 @@
 package br.com.gestpro.cliente.model;
 
 import br.com.gestpro.auth.model.Usuario;
+import br.com.gestpro.empresa.model.Empresa;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @Table(name = "clientes")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
 public class Cliente {
 
     @Id
@@ -20,7 +16,6 @@ public class Cliente {
     private Long id;
 
     private String nome;
-
     private String email;
     private String telefone;
     private Boolean ativo = true;
@@ -29,4 +24,7 @@ public class Cliente {
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id")
+    private Empresa empresa;
 }

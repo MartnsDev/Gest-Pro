@@ -1,6 +1,7 @@
 package br.com.gestpro.produto.model;
 
 import br.com.gestpro.auth.model.Usuario;
+import br.com.gestpro.empresa.model.Empresa;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -30,16 +31,14 @@ public class Produto {
     private String descricao;
 
     @Column(length = 60)
-    private String unidade; // UN, KG, L, CX, PCT...
+    private String unidade;
 
     @Column(name = "codigo_barras", length = 60)
     private String codigoBarras;
 
-    /** Preço de venda */
     @Column(name = "preco", nullable = false, precision = 10, scale = 2)
     private BigDecimal preco;
 
-    /** Preço de custo */
     @Column(name = "preco_custo", precision = 10, scale = 2)
     private BigDecimal precoCusto;
 
@@ -50,7 +49,7 @@ public class Produto {
     private Integer estoqueMinimo = 0;
 
     @Transient
-    private Long quantidade; // apoio temporário, não persistido
+    private Long quantidade;
 
     @Column(name = "data_criacao", nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
@@ -61,6 +60,10 @@ public class Produto {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id")
+    private Empresa empresa;
 
     @PrePersist
     public void prePersist() {
@@ -79,13 +82,11 @@ public class Produto {
         this.quantidadeEstoque = q;
     }
 
-    /** Lucro unitário: preço venda - preço custo */
     public BigDecimal getLucroUnitario() {
         if (preco == null || precoCusto == null) return null;
         return preco.subtract(precoCusto).setScale(2, RoundingMode.HALF_UP);
     }
 
-    /** Margem de lucro em % sobre o preço de venda */
     public BigDecimal getMargemLucro() {
         if (preco == null || precoCusto == null || preco.compareTo(BigDecimal.ZERO) == 0) return null;
         return preco.subtract(precoCusto)

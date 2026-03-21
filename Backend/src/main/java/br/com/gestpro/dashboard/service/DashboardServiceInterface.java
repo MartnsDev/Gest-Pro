@@ -8,11 +8,11 @@ public interface DashboardServiceInterface {
 
     PlanoDTO planoUsuarioLogado(String email);
 
-    List<MetodoPagamentoDTO> vendasPorMetodoPagamento(String email);
+    List<MetodoPagamentoDTO> vendasPorMetodoPagamento(Long empresaId, String email);
 
-    List<ProdutoVendasDTO> vendasPorProduto(String email);
+    List<ProdutoVendasDTO> vendasPorProduto(Long empresaId, String email);
 
-    List<VendasDiariasDTO> vendasDiariasSemana(String email);
+    List<VendasDiariasDTO> vendasDiariasSemana(Long empresaId, String email);
 
-    DashboardVisaoGeralResponse visaoGeral(String email);
+    DashboardVisaoGeralResponse visaoGeral(Long empresaId, String email);
 }

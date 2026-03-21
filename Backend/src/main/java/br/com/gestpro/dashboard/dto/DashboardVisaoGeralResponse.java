@@ -11,9 +11,9 @@ import java.util.List;
 public class DashboardVisaoGeralResponse {
 
     private BigDecimal vendasHoje;
-    private Long       produtosComEstoque;
-    private Long       produtosSemEstoque;
-    private Long       clientesAtivos;
+    private Long produtosComEstoque;
+    private Long produtosSemEstoque;
+    private Long clientesAtivos;
 
     // Semana (Segunda a Domingo corrente)
     private BigDecimal vendasSemanais;

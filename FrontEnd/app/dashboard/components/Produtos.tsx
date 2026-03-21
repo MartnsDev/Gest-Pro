@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useEmpresa } from "../context/Empresacontext";
 import {
   PlusCircle, Search, Edit2, Trash2, X, Check,
-  Package, ChevronUp, ChevronDown, TrendingUp,
+  Package, ChevronUp, ChevronDown,
   AlertTriangle, Boxes, Tag, Barcode, Ruler,
   DollarSign, ShoppingCart, Minus, Plus,
 } from "lucide-react";
@@ -17,27 +18,19 @@ interface Produto {
   descricao?: string;
   unidade?: string;
   codigoBarras?: string;
-  preco: number;             // preço de venda
+  preco: number;
   precoCusto?: number;
   lucroUnitario?: number;
   margemLucro?: number;
   quantidadeEstoque: number;
   estoqueMinimo?: number;
   ativo: boolean;
-  dataCriacao?: string;
 }
 
 interface ProdutoForm {
-  nome: string;
-  categoria: string;
-  descricao: string;
-  unidade: string;
-  codigoBarras: string;
-  preco: string;
-  precoCusto: string;
-  quantidadeEstoque: string;
-  estoqueMinimo: string;
-  ativo: boolean;
+  nome: string; categoria: string; descricao: string; unidade: string;
+  codigoBarras: string; preco: string; precoCusto: string;
+  quantidadeEstoque: string; estoqueMinimo: string; ativo: boolean;
 }
 
 const FORM_VAZIO: ProdutoForm = {
@@ -64,62 +57,44 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
-/* ─── Estilos compartilhados ─────────────────────────────────────────────── */
+/* ─── Estilos ────────────────────────────────────────────────────────────── */
 const inp: React.CSSProperties = {
   width: "100%", padding: "9px 12px",
-  background: "var(--surface-overlay)",
-  border: "1px solid var(--border)",
-  borderRadius: 8, color: "var(--foreground)",
-  fontSize: 13, outline: "none",
+  background: "var(--surface-overlay)", border: "1px solid var(--border)",
+  borderRadius: 8, color: "var(--foreground)", fontSize: 13, outline: "none",
 };
-
 const btnPrimary: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: 6,
-  padding: "9px 16px", background: "var(--primary)",
-  border: "none", borderRadius: 8, color: "#fff",
-  fontSize: 13, fontWeight: 600, cursor: "pointer",
+  display: "flex", alignItems: "center", gap: 6, padding: "9px 16px",
+  background: "var(--primary)", border: "none", borderRadius: 8,
+  color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
 };
-
 const btnGhost: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: 6,
-  padding: "8px 12px", background: "transparent",
-  border: "1px solid var(--border)", borderRadius: 8,
-  color: "var(--foreground-muted)", fontSize: 13, cursor: "pointer",
+  display: "flex", alignItems: "center", gap: 6, padding: "8px 12px",
+  background: "transparent", border: "1px solid var(--border)",
+  borderRadius: 8, color: "var(--foreground-muted)", fontSize: 13, cursor: "pointer",
 };
 
-/* ─── Modal de Produto ───────────────────────────────────────────────────── */
-function ModalProduto({
-  produto, categorias, onSave, onClose, saving,
-}: {
-  produto?: Produto;
-  categorias: string[];
+/* ─── Modal Produto ──────────────────────────────────────────────────────── */
+function ModalProduto({ produto, categorias, onSave, onClose, saving }: {
+  produto?: Produto; categorias: string[];
   onSave: (f: ProdutoForm) => Promise<void>;
-  onClose: () => void;
-  saving: boolean;
+  onClose: () => void; saving: boolean;
 }) {
-  const [form, setForm] = useState<ProdutoForm>(
-    produto ? {
-      nome: produto.nome,
-      categoria: produto.categoria ?? "",
-      descricao: produto.descricao ?? "",
-      unidade: produto.unidade ?? "UN",
-      codigoBarras: produto.codigoBarras ?? "",
-      preco: String(produto.preco),
-      precoCusto: produto.precoCusto != null ? String(produto.precoCusto) : "",
-      quantidadeEstoque: String(produto.quantidadeEstoque),
-      estoqueMinimo: String(produto.estoqueMinimo ?? 0),
-      ativo: produto.ativo,
-    } : FORM_VAZIO
-  );
+  const [form, setForm] = useState<ProdutoForm>(produto ? {
+    nome: produto.nome, categoria: produto.categoria ?? "",
+    descricao: produto.descricao ?? "", unidade: produto.unidade ?? "UN",
+    codigoBarras: produto.codigoBarras ?? "", preco: String(produto.preco),
+    precoCusto: produto.precoCusto != null ? String(produto.precoCusto) : "",
+    quantidadeEstoque: String(produto.quantidadeEstoque),
+    estoqueMinimo: String(produto.estoqueMinimo ?? 0), ativo: produto.ativo,
+  } : FORM_VAZIO);
 
-  const set = (k: keyof ProdutoForm, v: string | boolean) =>
-    setForm(f => ({ ...f, [k]: v }));
+  const set = (k: keyof ProdutoForm, v: string | boolean) => setForm(f => ({ ...f, [k]: v }));
 
-  // Lucro calculado em tempo real
-  const precoNum  = parseFloat(form.preco.replace(",", ".")) || 0;
-  const custoNum  = parseFloat(form.precoCusto.replace(",", ".")) || 0;
-  const lucro     = precoNum > 0 && custoNum > 0 ? precoNum - custoNum : null;
-  const margem    = lucro != null && precoNum > 0 ? (lucro / precoNum) * 100 : null;
+  const precoNum = parseFloat(form.preco.replace(",", ".")) || 0;
+  const custoNum = parseFloat(form.precoCusto.replace(",", ".")) || 0;
+  const lucro    = precoNum > 0 && custoNum > 0 ? precoNum - custoNum : null;
+  const margem   = lucro != null && precoNum > 0 ? (lucro / precoNum) * 100 : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,90 +104,57 @@ function ModalProduto({
   };
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="animate-fade-in" style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 14, padding: 28, width: "100%", maxWidth: 560, maxHeight: "92vh", overflowY: "auto" }}>
-
-        {/* Header modal */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
-            {produto ? "Editar Produto" : "Novo Produto"}
-          </h2>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>{produto ? "Editar Produto" : "Novo Produto"}</h2>
           <button onClick={onClose} style={{ ...btnGhost, padding: 6, border: "none" }}><X size={16} /></button>
         </div>
-
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-
-          {/* Nome */}
           <div>
             <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>Nome *</label>
             <input style={inp} value={form.nome} onChange={e => set("nome", e.target.value)} placeholder="Ex: Coca-Cola 350ml" required />
           </div>
-
-          {/* Categoria + Unidade */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>
-                <Tag size={11} style={{ marginRight: 4 }} />Categoria
-              </label>
+              <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}><Tag size={11} style={{ marginRight: 4 }} />Categoria</label>
               <input style={inp} list="cats" value={form.categoria} onChange={e => set("categoria", e.target.value)} placeholder="Ex: Bebidas" />
               <datalist id="cats">{categorias.map(c => <option key={c} value={c} />)}</datalist>
             </div>
             <div>
-              <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>
-                <Ruler size={11} style={{ marginRight: 4 }} />Unidade
-              </label>
+              <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}><Ruler size={11} style={{ marginRight: 4 }} />Unidade</label>
               <select style={{ ...inp, cursor: "pointer" }} value={form.unidade} onChange={e => set("unidade", e.target.value)}>
                 {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
           </div>
-
-          {/* Código de barras */}
           <div>
-            <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>
-              <Barcode size={11} style={{ marginRight: 4 }} />Código de Barras
-            </label>
+            <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}><Barcode size={11} style={{ marginRight: 4 }} />Código de Barras</label>
             <input style={inp} value={form.codigoBarras} onChange={e => set("codigoBarras", e.target.value)} placeholder="EAN-13, EAN-8..." />
           </div>
-
-          {/* Preços */}
           <div>
             <p style={{ fontSize: 12, color: "var(--foreground-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Precificação</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>
-                  <ShoppingCart size={11} style={{ marginRight: 4 }} />Preço de Custo (R$)
-                </label>
+                <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}><ShoppingCart size={11} style={{ marginRight: 4 }} />Preço de Custo (R$)</label>
                 <input style={inp} type="number" step="0.01" min="0" value={form.precoCusto} onChange={e => set("precoCusto", e.target.value)} placeholder="0,00" />
               </div>
               <div>
-                <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>
-                  <DollarSign size={11} style={{ marginRight: 4 }} />Preço de Venda (R$) *
-                </label>
+                <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}><DollarSign size={11} style={{ marginRight: 4 }} />Preço de Venda (R$) *</label>
                 <input style={inp} type="number" step="0.01" min="0" value={form.preco} onChange={e => set("preco", e.target.value)} placeholder="0,00" required />
               </div>
             </div>
-
-            {/* Card de lucro em tempo real */}
             {lucro != null && (
               <div style={{ marginTop: 10, padding: "10px 14px", background: lucro >= 0 ? "var(--success-muted)" : "var(--destructive-muted)", border: `1px solid ${lucro >= 0 ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                 <span style={{ color: "var(--foreground-muted)" }}>Lucro unitário</span>
                 <div style={{ display: "flex", gap: 16 }}>
-                  <span style={{ fontWeight: 700, color: lucro >= 0 ? "var(--success)" : "var(--destructive)" }}>
-                    {fmt(lucro)}
-                  </span>
-                  {margem != null && (
-                    <span style={{ color: "var(--foreground-muted)" }}>({margem.toFixed(1)}%)</span>
-                  )}
+                  <span style={{ fontWeight: 700, color: lucro >= 0 ? "var(--success)" : "var(--destructive)" }}>{fmt(lucro)}</span>
+                  {margem != null && <span style={{ color: "var(--foreground-muted)" }}>({margem.toFixed(1)}%)</span>}
                 </div>
               </div>
             )}
           </div>
-
-          {/* Estoque */}
           <div>
             <p style={{ fontSize: 12, color: "var(--foreground-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Estoque</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -226,24 +168,18 @@ function ModalProduto({
               </div>
             </div>
           </div>
-
-          {/* Descrição */}
           <div>
             <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>Descrição</label>
             <textarea style={{ ...inp, resize: "vertical", minHeight: 68 }} value={form.descricao} onChange={e => set("descricao", e.target.value)} placeholder="Observações opcionais..." />
           </div>
-
-          {/* Ativo */}
           <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
             <input type="checkbox" checked={form.ativo} onChange={e => set("ativo", e.target.checked)} style={{ accentColor: "var(--primary)", width: 15, height: 15 }} />
             <span style={{ fontSize: 13, color: "var(--foreground-muted)" }}>Produto ativo</span>
           </label>
-
-          {/* Ações */}
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
             <button type="button" onClick={onClose} style={{ ...btnGhost, flex: 1, justifyContent: "center" }}>Cancelar</button>
             <button type="submit" disabled={saving} style={{ ...btnPrimary, flex: 2, justifyContent: "center", opacity: saving ? 0.7 : 1 }}>
-              {saving ? "Salvando..." : <><Check size={14} /> {produto ? "Salvar alterações" : "Cadastrar produto"}</>}
+              {saving ? "Salvando..." : <><Check size={14} />{produto ? "Salvar alterações" : "Cadastrar produto"}</>}
             </button>
           </div>
         </form>
@@ -252,15 +188,11 @@ function ModalProduto({
   );
 }
 
-/* ─── Modal Ajuste de Estoque ────────────────────────────────────────────── */
+/* ─── Modal Estoque ──────────────────────────────────────────────────────── */
 function ModalEstoque({ produto, onSave, onClose, saving }: {
-  produto: Produto;
-  onSave: (novoEstoque: number) => Promise<void>;
-  onClose: () => void;
-  saving: boolean;
+  produto: Produto; onSave: (n: number) => Promise<void>; onClose: () => void; saving: boolean;
 }) {
   const [qtd, setQtd] = useState(produto.quantidadeEstoque);
-
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
@@ -269,32 +201,22 @@ function ModalEstoque({ produto, onSave, onClose, saving }: {
           <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Ajustar Estoque</h2>
           <button onClick={onClose} style={{ ...btnGhost, padding: 6, border: "none" }}><X size={15} /></button>
         </div>
-
         <p style={{ fontSize: 13, color: "var(--foreground-muted)", marginBottom: 20 }}>{produto.nome}</p>
-
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 24 }}>
-          <button onClick={() => setQtd(q => Math.max(0, q - 1))} style={{ width: 40, height: 40, borderRadius: 10, background: "var(--surface-overlay)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--foreground)" }}>
-            <Minus size={16} />
-          </button>
-          <input type="number" min="0" value={qtd} onChange={e => setQtd(Math.max(0, parseInt(e.target.value) || 0))}
-            style={{ ...inp, width: 100, textAlign: "center", fontSize: 22, fontWeight: 700 }} />
-          <button onClick={() => setQtd(q => q + 1)} style={{ width: 40, height: 40, borderRadius: 10, background: "var(--primary-muted)", border: "1px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--primary)" }}>
-            <Plus size={16} />
-          </button>
+          <button onClick={() => setQtd(q => Math.max(0, q - 1))} style={{ width: 40, height: 40, borderRadius: 10, background: "var(--surface-overlay)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--foreground)" }}><Minus size={16} /></button>
+          <input type="number" min="0" value={qtd} onChange={e => setQtd(Math.max(0, parseInt(e.target.value) || 0))} style={{ ...inp, width: 100, textAlign: "center", fontSize: 22, fontWeight: 700 }} />
+          <button onClick={() => setQtd(q => q + 1)} style={{ width: 40, height: 40, borderRadius: 10, background: "var(--primary-muted)", border: "1px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--primary)" }}><Plus size={16} /></button>
         </div>
-
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--foreground-muted)", marginBottom: 20 }}>
           <span>Atual: {produto.quantidadeEstoque}</span>
           <span style={{ color: qtd > produto.quantidadeEstoque ? "var(--success)" : qtd < produto.quantidadeEstoque ? "var(--destructive)" : "var(--foreground-muted)" }}>
             Diferença: {qtd - produto.quantidadeEstoque >= 0 ? "+" : ""}{qtd - produto.quantidadeEstoque}
           </span>
         </div>
-
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{ ...btnGhost, flex: 1, justifyContent: "center" }}>Cancelar</button>
-          <button onClick={() => onSave(qtd)} disabled={saving || qtd === produto.quantidadeEstoque}
-            style={{ ...btnPrimary, flex: 2, justifyContent: "center", opacity: (saving || qtd === produto.quantidadeEstoque) ? 0.6 : 1 }}>
-            {saving ? "Salvando..." : <><Check size={14} /> Confirmar</>}
+          <button onClick={() => onSave(qtd)} disabled={saving || qtd === produto.quantidadeEstoque} style={{ ...btnPrimary, flex: 2, justifyContent: "center", opacity: (saving || qtd === produto.quantidadeEstoque) ? 0.6 : 1 }}>
+            {saving ? "Salvando..." : <><Check size={14} />Confirmar</>}
           </button>
         </div>
       </div>
@@ -307,27 +229,34 @@ type SortKey = "nome" | "categoria" | "preco" | "quantidadeEstoque" | "margemLuc
 type ModalState = { tipo: "produto"; produto?: Produto } | { tipo: "estoque"; produto: Produto } | null;
 
 export default function Produtos() {
-  const [produtos,    setProdutos]    = useState<Produto[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [saving,      setSaving]      = useState(false);
-  const [filtro,      setFiltro]      = useState("");
-  const [catFiltro,   setCatFiltro]   = useState("");
-  const [sortKey,     setSortKey]     = useState<SortKey>("nome");
-  const [sortAsc,     setSortAsc]     = useState(true);
-  const [modal,       setModal]       = useState<ModalState>(null);
-  const [deletingId,  setDeletingId]  = useState<number | null>(null);
+  // ✅ Pega empresa ativa do contexto global
+  const { empresaAtiva } = useEmpresa();
+
+  const [produtos,   setProdutos]   = useState<Produto[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [saving,     setSaving]     = useState(false);
+  const [filtro,     setFiltro]     = useState("");
+  const [catFiltro,  setCatFiltro]  = useState("");
+  const [sortKey,    setSortKey]    = useState<SortKey>("nome");
+  const [sortAsc,    setSortAsc]    = useState(true);
+  const [modal,      setModal]      = useState<ModalState>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const categorias = useMemo(() =>
     [...new Set(produtos.map(p => p.categoria).filter(Boolean) as string[])], [produtos]);
 
+  // ✅ Recarrega produtos quando empresa muda
   const carregar = async () => {
+    if (!empresaAtiva) return;
     setLoading(true);
-    try { setProdutos(await fetchAuth<Produto[]>("/api/v1/produtos")); }
-    catch { toast.error("Erro ao carregar produtos"); }
+    try {
+      // ✅ Filtra por empresaId
+      setProdutos(await fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaAtiva.id}`));
+    } catch { toast.error("Erro ao carregar produtos"); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { carregar(); }, []);
+  useEffect(() => { carregar(); }, [empresaAtiva?.id]);
 
   const handleSort = (k: SortKey) => {
     if (sortKey === k) setSortAsc(v => !v);
@@ -347,9 +276,12 @@ export default function Produtos() {
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
   const handleSalvar = async (form: ProdutoForm) => {
+    if (!empresaAtiva) { toast.error("Selecione uma empresa primeiro."); return; }
     setSaving(true);
     try {
+      // ✅ Envia empresaId no body
       const body = {
+        empresaId: empresaAtiva.id,
         nome: form.nome,
         categoria: form.categoria || null,
         descricao: form.descricao || null,
@@ -385,6 +317,7 @@ export default function Produtos() {
       const updated = await fetchAuth<Produto>(`/api/v1/produtos/${p.id}`, {
         method: "PUT",
         body: JSON.stringify({
+          empresaId: empresaAtiva?.id,
           nome: p.nome, categoria: p.categoria, descricao: p.descricao,
           unidade: p.unidade, codigoBarras: p.codigoBarras,
           preco: p.preco, precoCusto: p.precoCusto,
@@ -400,7 +333,7 @@ export default function Produtos() {
   };
 
   const handleExcluir = async (id: number) => {
-    if (!confirm("Excluir este produto? Esta ação não pode ser desfeita.")) return;
+    if (!confirm("Excluir este produto?")) return;
     setDeletingId(id);
     try {
       await fetchAuth(`/api/v1/produtos/${id}`, { method: "DELETE" });
@@ -413,27 +346,33 @@ export default function Produtos() {
   const Th = ({ k, label }: { k: SortKey; label: string }) => (
     <th onClick={() => handleSort(k)} style={{ padding: "10px 14px", fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", cursor: "pointer", textAlign: "left", background: "var(--surface)", whiteSpace: "nowrap", userSelect: "none" }}>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-        {label}
-        {sortKey === k && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+        {label}{sortKey === k && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
       </span>
     </th>
   );
 
+  // ── Sem empresa selecionada ────────────────────────────────────────────────
+  if (!empresaAtiva) return (
+    <div style={{ padding: 48, textAlign: "center", color: "var(--foreground-muted)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+      <Package size={40} color="var(--foreground-subtle)" />
+      <p style={{ fontSize: 14 }}>Selecione uma empresa no menu superior para ver os produtos.</p>
+    </div>
+  );
+
   return (
     <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}>
-
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Produtos</h2>
-          <p style={{ fontSize: 13, color: "var(--foreground-muted)", marginTop: 3 }}>{produtos.length} produto(s) cadastrado(s)</p>
+          <p style={{ fontSize: 13, color: "var(--foreground-muted)", marginTop: 3 }}>
+            {empresaAtiva.nomeFantasia} · {produtos.length} produto(s)
+          </p>
         </div>
         <button style={btnPrimary} onClick={() => setModal({ tipo: "produto" })}>
           <PlusCircle size={15} /> Novo Produto
         </button>
       </div>
 
-      {/* Filtros */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
           <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-subtle)" }} />
@@ -444,13 +383,10 @@ export default function Produtos() {
           {categorias.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         {(filtro || catFiltro) && (
-          <button style={btnGhost} onClick={() => { setFiltro(""); setCatFiltro(""); }}>
-            <X size={13} /> Limpar
-          </button>
+          <button style={btnGhost} onClick={() => { setFiltro(""); setCatFiltro(""); }}><X size={13} /> Limpar</button>
         )}
       </div>
 
-      {/* Tabela */}
       <div style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -466,104 +402,58 @@ export default function Produtos() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} style={{ padding: "12px 14px" }}>
-                        <div className="skeleton" style={{ height: 14, width: j === 0 ? "70%" : "50%", borderRadius: 6 }} />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : lista.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 48, color: "var(--foreground-subtle)" }}>
-                      <Package size={36} />
-                      <p style={{ fontSize: 14 }}>Nenhum produto encontrado</p>
-                    </div>
+              {loading ? Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>{Array.from({ length: 7 }).map((_, j) => (
+                  <td key={j} style={{ padding: "12px 14px" }}>
+                    <div className="skeleton" style={{ height: 14, width: j === 0 ? "70%" : "50%", borderRadius: 6 }} />
                   </td>
-                </tr>
-              ) : (
-                lista.map(p => {
-                  const baixo = p.estoqueMinimo != null && p.quantidadeEstoque <= p.estoqueMinimo && p.quantidadeEstoque > 0;
-                  const zerado = p.quantidadeEstoque === 0;
-                  return (
-                    <tr key={p.id} style={{ borderTop: "1px solid var(--border-subtle)" }}
-                      onMouseEnter={e => ((e.currentTarget as HTMLTableRowElement).style.background = "var(--surface-overlay)")}
-                      onMouseLeave={e => ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")}>
-
-                      {/* Nome + unidade */}
-                      <td style={{ padding: "12px 14px" }}>
-                        <p style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)", margin: 0 }}>{p.nome}</p>
-                        {p.unidade && <span style={{ fontSize: 11, color: "var(--foreground-subtle)" }}>{p.unidade}</span>}
-                      </td>
-
-                      {/* Categoria */}
-                      <td style={{ padding: "12px 14px" }}>
-                        {p.categoria && (
-                          <span style={{ fontSize: 12, padding: "3px 8px", background: "var(--secondary-muted)", color: "var(--secondary)", borderRadius: 999, fontWeight: 500 }}>
-                            {p.categoria}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Preço de venda */}
-                      <td style={{ padding: "12px 14px", fontSize: 14, color: "var(--foreground)", fontWeight: 500 }}>
-                        {fmt(p.preco)}
-                      </td>
-
-                      {/* Preço de custo */}
-                      <td style={{ padding: "12px 14px", fontSize: 13, color: "var(--foreground-muted)" }}>
-                        {p.precoCusto != null ? fmt(p.precoCusto) : <span style={{ color: "var(--foreground-subtle)" }}>—</span>}
-                      </td>
-
-                      {/* Margem */}
-                      <td style={{ padding: "12px 14px" }}>
-                        {p.margemLucro != null ? (
-                          <span style={{ fontSize: 13, fontWeight: 600, color: p.margemLucro >= 30 ? "var(--success)" : p.margemLucro >= 10 ? "var(--warning)" : "var(--destructive)" }}>
-                            {Number(p.margemLucro).toFixed(1)}%
-                          </span>
-                        ) : <span style={{ color: "var(--foreground-subtle)", fontSize: 13 }}>—</span>}
-                      </td>
-
-                      {/* Estoque */}
-                      <td style={{ padding: "12px 14px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: zerado ? "var(--destructive)" : baixo ? "var(--warning)" : "var(--success)" }}>
-                            {p.quantidadeEstoque}
-                          </span>
-                          {zerado && <AlertTriangle size={13} color="var(--destructive)" />}
-                          {baixo && !zerado && <AlertTriangle size={13} color="var(--warning)" />}
-                        </div>
-                      </td>
-
-                      {/* Ações */}
-                      <td style={{ padding: "12px 14px" }}>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button title="Ajustar estoque" onClick={() => setModal({ tipo: "estoque", produto: p })}
-                            style={{ ...btnGhost, padding: "6px 8px" }}>
-                            <Boxes size={14} />
-                          </button>
-                          <button title="Editar produto" onClick={() => setModal({ tipo: "produto", produto: p })}
-                            style={{ ...btnGhost, padding: "6px 8px" }}>
-                            <Edit2 size={14} />
-                          </button>
-                          <button title="Excluir produto" onClick={() => handleExcluir(p.id)} disabled={deletingId === p.id}
-                            style={{ ...btnGhost, padding: "6px 8px", borderColor: "rgba(239,68,68,0.3)", color: "var(--destructive)", opacity: deletingId === p.id ? 0.5 : 1 }}>
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                ))}</tr>
+              )) : lista.length === 0 ? (
+                <tr><td colSpan={7}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 48, color: "var(--foreground-subtle)" }}>
+                    <Package size={36} /><p style={{ fontSize: 14 }}>Nenhum produto encontrado</p>
+                  </div>
+                </td></tr>
+              ) : lista.map(p => {
+                const baixo  = p.estoqueMinimo != null && p.quantidadeEstoque <= p.estoqueMinimo && p.quantidadeEstoque > 0;
+                const zerado = p.quantidadeEstoque === 0;
+                return (
+                  <tr key={p.id} style={{ borderTop: "1px solid var(--border-subtle)" }}
+                    onMouseEnter={e => ((e.currentTarget as HTMLTableRowElement).style.background = "var(--surface-overlay)")}
+                    onMouseLeave={e => ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")}>
+                    <td style={{ padding: "12px 14px" }}>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)", margin: 0 }}>{p.nome}</p>
+                      {p.unidade && <span style={{ fontSize: 11, color: "var(--foreground-subtle)" }}>{p.unidade}</span>}
+                    </td>
+                    <td style={{ padding: "12px 14px" }}>
+                      {p.categoria && <span style={{ fontSize: 12, padding: "3px 8px", background: "var(--secondary-muted)", color: "var(--secondary)", borderRadius: 999, fontWeight: 500 }}>{p.categoria}</span>}
+                    </td>
+                    <td style={{ padding: "12px 14px", fontSize: 14, color: "var(--foreground)", fontWeight: 500 }}>{fmt(p.preco)}</td>
+                    <td style={{ padding: "12px 14px", fontSize: 13, color: "var(--foreground-muted)" }}>{p.precoCusto != null ? fmt(p.precoCusto) : <span style={{ color: "var(--foreground-subtle)" }}>—</span>}</td>
+                    <td style={{ padding: "12px 14px" }}>
+                      {p.margemLucro != null
+                        ? <span style={{ fontSize: 13, fontWeight: 600, color: p.margemLucro >= 30 ? "var(--success)" : p.margemLucro >= 10 ? "var(--warning)" : "var(--destructive)" }}>{Number(p.margemLucro).toFixed(1)}%</span>
+                        : <span style={{ color: "var(--foreground-subtle)", fontSize: 13 }}>—</span>}
+                    </td>
+                    <td style={{ padding: "12px 14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: zerado ? "var(--destructive)" : baixo ? "var(--warning)" : "var(--success)" }}>{p.quantidadeEstoque}</span>
+                        {(zerado || baixo) && <AlertTriangle size={13} color={zerado ? "var(--destructive)" : "var(--warning)"} />}
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px 14px" }}>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button title="Ajustar estoque" onClick={() => setModal({ tipo: "estoque", produto: p })} style={{ ...btnGhost, padding: "6px 8px" }}><Boxes size={14} /></button>
+                        <button title="Editar" onClick={() => setModal({ tipo: "produto", produto: p })} style={{ ...btnGhost, padding: "6px 8px" }}><Edit2 size={14} /></button>
+                        <button title="Excluir" onClick={() => handleExcluir(p.id)} disabled={deletingId === p.id} style={{ ...btnGhost, padding: "6px 8px", borderColor: "rgba(239,68,68,0.3)", color: "var(--destructive)", opacity: deletingId === p.id ? 0.5 : 1 }}><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-
         {!loading && lista.length > 0 && (
           <div style={{ padding: "9px 14px", borderTop: "1px solid var(--border)", fontSize: 12, color: "var(--foreground-muted)" }}>
             {lista.length} de {produtos.length} produto(s)
@@ -571,24 +461,8 @@ export default function Produtos() {
         )}
       </div>
 
-      {/* Modais */}
-      {modal?.tipo === "produto" && (
-        <ModalProduto
-          produto={modal.produto}
-          categorias={categorias}
-          onSave={handleSalvar}
-          onClose={() => setModal(null)}
-          saving={saving}
-        />
-      )}
-      {modal?.tipo === "estoque" && (
-        <ModalEstoque
-          produto={modal.produto}
-          onSave={handleEstoque}
-          onClose={() => setModal(null)}
-          saving={saving}
-        />
-      )}
+      {modal?.tipo === "produto" && <ModalProduto produto={modal.produto} categorias={categorias} onSave={handleSalvar} onClose={() => setModal(null)} saving={saving} />}
+      {modal?.tipo === "estoque" && <ModalEstoque produto={modal.produto} onSave={handleEstoque} onClose={() => setModal(null)} saving={saving} />}
     </div>
   );
 }

@@ -31,13 +31,18 @@ public class ProdutoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(new ProdutoResponseDTO(produto));
     }
 
+    /** Lista produtos de uma empresa específica */
     @GetMapping
-    public ResponseEntity<List<ProdutoResponseDTO>> listar(Authentication authentication) {
-        List<ProdutoResponseDTO> produtos = produtoService.listarPorEmail(authentication.getName())
-                .stream()
-                .map(ProdutoResponseDTO::new)
-                .toList();
-        return ResponseEntity.ok(produtos);
+    public ResponseEntity<List<ProdutoResponseDTO>> listar(
+            @RequestParam(required = false) Long empresaId,
+            Authentication authentication) {
+        List<Produto> produtos;
+        if (empresaId != null) {
+            produtos = produtoService.listarPorEmpresa(empresaId);
+        } else {
+            produtos = produtoService.listarPorEmail(authentication.getName());
+        }
+        return ResponseEntity.ok(produtos.stream().map(ProdutoResponseDTO::new).toList());
     }
 
     @GetMapping("/{id}")

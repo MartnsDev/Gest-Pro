@@ -2,6 +2,8 @@ package br.com.gestpro.produto.service;
 
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
+import br.com.gestpro.empresa.model.Empresa;
+import br.com.gestpro.empresa.repository.EmpresaRepository;
 import br.com.gestpro.infra.exception.ApiException;
 import br.com.gestpro.produto.dto.CriarProdutoDTO;
 import br.com.gestpro.produto.model.Produto;
@@ -15,12 +17,14 @@ import java.util.List;
 @Service
 public class ProdutoServiceImpl implements ProdutoServiceInterface {
 
-    private final ProdutoRepository produtoRepository;
-    private final UsuarioRepository usuarioRepository;
+    private final ProdutoRepository  produtoRepository;
+    private final UsuarioRepository  usuarioRepository;
+    private final EmpresaRepository  empresaRepository;
 
-    public ProdutoServiceImpl(ProdutoRepository repo, UsuarioRepository usuarioRepo) {
-        this.produtoRepository = repo;
-        this.usuarioRepository = usuarioRepo;
+    public ProdutoServiceImpl(ProdutoRepository pr, UsuarioRepository ur, EmpresaRepository er) {
+        this.produtoRepository = pr;
+        this.usuarioRepository = ur;
+        this.empresaRepository = er;
     }
 
     private Usuario buscarUsuario(String email) {
@@ -28,13 +32,19 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
                 .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos"));
     }
 
+    private Empresa buscarEmpresa(Long empresaId, String emailUsuario) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/api/v1/produtos"));
+        if (!empresa.getDono().getEmail().equals(emailUsuario))
+            throw new ApiException("Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/api/v1/produtos");
+        return empresa;
+    }
+
     private void preencherCampos(Produto produto, CriarProdutoDTO dto) {
         produto.setNome(dto.getNome());
         produto.setPreco(dto.getPreco());
         produto.setQuantidadeEstoque(dto.getQuantidadeEstoque());
         produto.setAtivo(dto.getAtivo() != null ? dto.getAtivo() : true);
-
-        // Campos novos — nullable
         produto.setCategoria(dto.getCategoria());
         produto.setDescricao(dto.getDescricao());
         produto.setUnidade(dto.getUnidade());
@@ -47,9 +57,11 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
     @Transactional
     public Produto criar(CriarProdutoDTO dto) {
         Usuario usuario = buscarUsuario(dto.getEmailUsuario());
+        Empresa empresa = buscarEmpresa(dto.getEmpresaId(), dto.getEmailUsuario());
         Produto produto = new Produto();
         preencherCampos(produto, dto);
         produto.setUsuario(usuario);
+        produto.setEmpresa(empresa);
         return produtoRepository.save(produto);
     }
 
@@ -58,11 +70,14 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
     public Produto atualizar(Long id, CriarProdutoDTO dto) {
         Produto produto = produtoRepository.findById(id)
                 .orElseThrow(() -> new ApiException("Produto não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos/" + id));
-
         if (!produto.getUsuario().getEmail().equals(dto.getEmailUsuario()))
             throw new ApiException("Sem permissão para editar este produto.", HttpStatus.FORBIDDEN, "/api/v1/produtos/" + id);
-
         preencherCampos(produto, dto);
+        // Permite mover produto de empresa se empresaId for enviado
+        if (dto.getEmpresaId() != null) {
+            Empresa empresa = buscarEmpresa(dto.getEmpresaId(), dto.getEmailUsuario());
+            produto.setEmpresa(empresa);
+        }
         return produtoRepository.save(produto);
     }
 
@@ -71,11 +86,17 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
     public void excluir(Long id, String emailUsuario) {
         Produto produto = produtoRepository.findById(id)
                 .orElseThrow(() -> new ApiException("Produto não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos/" + id));
-
         if (!produto.getUsuario().getEmail().equals(emailUsuario))
             throw new ApiException("Sem permissão para excluir este produto.", HttpStatus.FORBIDDEN, "/api/v1/produtos/" + id);
-
         produtoRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Produto> listarPorEmpresa(Long empresaId) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/api/v1/produtos"));
+        return produtoRepository.findByEmpresa(empresa);
     }
 
     @Override
@@ -91,20 +112,13 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
                 .orElseThrow(() -> new ApiException("Produto não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos/" + id));
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<Produto> listarTodos() {
-        return produtoRepository.findAll();
-    }
+    @Override @Transactional(readOnly = true)
+    public List<Produto> listarTodos() { return produtoRepository.findAll(); }
 
-    @Override
-    @Transactional
-    public Produto salvar(Produto produto) {
-        return produtoRepository.save(produto);
-    }
+    @Override @Transactional
+    public Produto salvar(Produto produto) { return produtoRepository.save(produto); }
 
-    @Override
-    @Transactional(readOnly = true)
+    @Override @Transactional(readOnly = true)
     public List<Produto> listarPorUsuario(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos"));

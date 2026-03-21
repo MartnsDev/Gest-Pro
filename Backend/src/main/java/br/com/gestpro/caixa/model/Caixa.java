@@ -63,9 +63,13 @@ public class Caixa {
     @Version
     private Long version;
 
+    /**
+     * Recalcula o total de vendas usando valorFinal (já com desconto aplicado).
+     * Antes usava getTotal() que era o bruto sem desconto.
+     */
     public void recalcularTotalVendas() {
         this.totalVendas = vendas.stream()
-                .map(v -> v.getTotal() != null ? v.getTotal() : BigDecimal.ZERO)
+                .map(v -> v.getValorFinal() != null ? v.getValorFinal() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

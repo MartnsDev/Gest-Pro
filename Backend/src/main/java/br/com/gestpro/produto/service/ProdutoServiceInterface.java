@@ -11,6 +11,7 @@ public interface ProdutoServiceInterface {
     void excluir(Long id, String emailUsuario);
     Produto buscarPorId(Long id);
     List<Produto> listarPorEmail(String email);
+    List<Produto> listarPorEmpresa(Long empresaId); // novo
     List<Produto> listarTodos();
     Produto salvar(Produto produto);
     List<Produto> listarPorUsuario(Long usuarioId);

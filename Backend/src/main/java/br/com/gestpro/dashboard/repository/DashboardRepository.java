@@ -12,81 +12,59 @@ import java.util.List;
 @Repository
 public interface DashboardRepository extends JpaRepository<Venda, Long> {
 
-    // ── Contadores principais ──────────────────────────────────────────────
-    // Usa DATE(data_venda) = CURDATE() direto — banco configurado em America/Sao_Paulo
+    // ── Contadores por empresa ─────────────────────────────────────────────
     @Query(value =
             "SELECT " +
-                    // vendas hoje — valor_final
                     " CAST((SELECT COALESCE(SUM(v.valor_final), 0) FROM venda v " +
-                    "       JOIN usuarios u1 ON u1.id = v.usuario_id " +
-                    "       WHERE u1.email = :email " +
-                    "       AND DATE(v.data_venda) = CURDATE()) AS CHAR), " +
-                    // produtos com estoque
+                    "       WHERE v.empresa_id = :empresaId AND DATE(v.data_venda) = CURDATE()) AS CHAR), " +
                     " CAST((SELECT COUNT(*) FROM produto p " +
-                    "       JOIN usuarios u2 ON u2.id = p.usuario_id " +
-                    "       WHERE u2.email = :email AND p.quantidade_estoque > 0) AS CHAR), " +
-                    // produtos sem estoque
+                    "       WHERE p.empresa_id = :empresaId AND p.quantidade_estoque > 0) AS CHAR), " +
                     " CAST((SELECT COUNT(*) FROM produto p2 " +
-                    "       JOIN usuarios u3 ON u3.id = p2.usuario_id " +
-                    "       WHERE u3.email = :email AND p2.quantidade_estoque = 0) AS CHAR), " +
-                    // clientes ativos
+                    "       WHERE p2.empresa_id = :empresaId AND p2.quantidade_estoque = 0) AS CHAR), " +
                     " CAST((SELECT COUNT(*) FROM clientes c " +
-                    "       JOIN usuarios u4 ON u4.id = c.usuario_id " +
-                    "       WHERE u4.email = :email AND c.ativo = 1) AS CHAR)",
+                    "       WHERE c.empresa_id = :empresaId AND c.ativo = 1) AS CHAR)",
             nativeQuery = true)
-    List<Object[]> findDashboardCountsRaw(@Param("email") String email);
+    List<Object[]> findDashboardCountsRaw(@Param("empresaId") Long empresaId);
 
-    // ── Vendas da semana (Segunda a Domingo corrente) ──────────────────────
+    // ── Vendas da semana por empresa ───────────────────────────────────────
     @Query(value =
             "SELECT COALESCE(SUM(v.valor_final), 0) FROM venda v " +
-                    "JOIN usuarios u ON u.id = v.usuario_id " +
-                    "WHERE u.email = :email " +
+                    "WHERE v.empresa_id = :empresaId " +
                     "AND v.data_venda >= :inicio AND v.data_venda <= :fim",
             nativeQuery = true)
     Object contarVendasSemana(
-            @Param("email") String email,
+            @Param("empresaId") Long empresaId,
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
     );
 
-    // ── Vendas do mês corrente ─────────────────────────────────────────────
+    // ── Vendas do mês por empresa ──────────────────────────────────────────
     @Query(value =
             "SELECT COALESCE(SUM(v.valor_final), 0) FROM venda v " +
-                    "JOIN usuarios u ON u.id = v.usuario_id " +
-                    "WHERE u.email = :email " +
+                    "WHERE v.empresa_id = :empresaId " +
                     "AND YEAR(v.data_venda) = YEAR(NOW()) " +
                     "AND MONTH(v.data_venda) = MONTH(NOW())",
             nativeQuery = true)
-    Object somaVendasMes(@Param("email") String email);
+    Object somaVendasMes(@Param("empresaId") Long empresaId);
 
-    // ── Lucro do dia ───────────────────────────────────────────────────────
-    // lucro = subtotal do item - (preco_custo do produto * quantidade)
-    // Se preco_custo for NULL, assume 0 (produto sem custo cadastrado)
+    // ── Lucro do dia por empresa ───────────────────────────────────────────
     @Query(value =
-            "SELECT COALESCE(SUM(" +
-                    "  iv.subtotal - (COALESCE(p.preco_custo, 0) * iv.quantidade)" +
-                    "), 0) " +
+            "SELECT COALESCE(SUM(iv.subtotal - (COALESCE(p.preco_custo, 0) * iv.quantidade)), 0) " +
                     "FROM item_venda iv " +
-                    "JOIN venda v   ON v.id  = iv.venda_id " +
-                    "JOIN produto p ON p.id  = iv.produto_id " +
-                    "JOIN usuarios u ON u.id = v.usuario_id " +
-                    "WHERE u.email = :email " +
-                    "AND DATE(v.data_venda) = CURDATE()",
+                    "JOIN venda v   ON v.id = iv.venda_id " +
+                    "JOIN produto p ON p.id = iv.produto_id " +
+                    "WHERE v.empresa_id = :empresaId AND DATE(v.data_venda) = CURDATE()",
             nativeQuery = true)
-    Object lucroDia(@Param("email") String email);
+    Object lucroDia(@Param("empresaId") Long empresaId);
 
-    // ── Lucro do mês ──────────────────────────────────────────────────────
+    // ── Lucro do mês por empresa ───────────────────────────────────────────
     @Query(value =
-            "SELECT COALESCE(SUM(" +
-                    "  iv.subtotal - (COALESCE(p.preco_custo, 0) * iv.quantidade)" +
-                    "), 0) " +
+            "SELECT COALESCE(SUM(iv.subtotal - (COALESCE(p.preco_custo, 0) * iv.quantidade)), 0) " +
                     "FROM item_venda iv " +
-                    "JOIN venda v   ON v.id  = iv.venda_id " +
-                    "JOIN produto p ON p.id  = iv.produto_id " +
-                    "JOIN usuarios u ON u.id = v.usuario_id " +
-                    "WHERE u.email = :email " +
-                    "AND YEAR(v.data_venda) = YEAR(NOW()) " +
-                    "AND MONTH(v.data_venda) = MONTH(NOW())",
+                    "JOIN venda v   ON v.id = iv.venda_id " +
+                    "JOIN produto p ON p.id = iv.produto_id " +
+                    "WHERE v.empresa_id = :empresaId " +
+                    "AND YEAR(v.data_venda) = YEAR(NOW()) AND MONTH(v.data_venda) = MONTH(NOW())",
             nativeQuery = true)
-    Object lucroMes(@Param("email") String email);
+    Object lucroMes(@Param("empresaId") Long empresaId);
 }

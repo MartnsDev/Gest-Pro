@@ -11,26 +11,21 @@ import java.math.BigDecimal;
 @Data
 public class CriarProdutoDTO {
 
-    // Preenchido pelo controller via JWT
-    private String emailUsuario;
+    private String emailUsuario; // preenchido pelo controller via JWT
+    private Long empresaId;      // obrigatório — qual empresa este produto pertence
 
     @NotBlank(message = "Nome é obrigatório")
     private String nome;
 
     private String categoria;
-
     private String descricao;
-
-    private String unidade; // UN, KG, L, CX...
-
+    private String unidade;
     private String codigoBarras;
 
-    /** Preço de venda — obrigatório */
     @NotNull(message = "Preço de venda é obrigatório")
     @DecimalMin(value = "0.0", message = "Preço não pode ser negativo")
     private BigDecimal preco;
 
-    /** Preço de custo — opcional */
     @DecimalMin(value = "0.0", message = "Preço de custo não pode ser negativo")
     private BigDecimal precoCusto;
 

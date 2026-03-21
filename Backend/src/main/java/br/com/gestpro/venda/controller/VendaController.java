@@ -7,6 +7,7 @@ import br.com.gestpro.venda.service.VendaServiceInterface;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class VendaController {
     }
 
     @GetMapping("/caixa/{idCaixa}")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<VendaResponseDTO>> listarPorCaixa(@PathVariable Long idCaixa) {
         List<VendaResponseDTO> vendas = vendaService.listarPorCaixa(idCaixa)
                 .stream()

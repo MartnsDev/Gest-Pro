@@ -2,7 +2,11 @@ package br.com.gestpro.dashboard.service;
 
 import br.com.gestpro.dashboard.dto.*;
 import br.com.gestpro.dashboard.repository.DashboardRepository;
+import br.com.gestpro.empresa.model.Empresa;
+import br.com.gestpro.empresa.repository.EmpresaRepository;
+import br.com.gestpro.infra.exception.ApiException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,9 +18,10 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardServiceInterface {
 
-    private final DashboardRepository    dashboardRepository;
+    private final DashboardRepository     dashboardRepository;
     private final GraficoServiceOperation graficoServiceOperation;
-    private final VisaoGeralOperation    visaoGeralOperation;
+    private final VisaoGeralOperation     visaoGeralOperation;
+    private final EmpresaRepository       empresaRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -24,29 +29,42 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         return visaoGeralOperation.planoUsuarioLogado(email);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<MetodoPagamentoDTO> vendasPorMetodoPagamento(String email) {
-        return graficoServiceOperation.vendasPorMetodoPagamento(email);
+    // ── Valida que a empresa pertence ao usuário ───────────────────────────
+    private Empresa validarEmpresa(Long empresaId, String email) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/api/v1/dashboard"));
+        if (!empresa.getDono().getEmail().equals(email))
+            throw new ApiException("Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/api/v1/dashboard");
+        return empresa;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ProdutoVendasDTO> vendasPorProduto(String email) {
-        return graficoServiceOperation.vendasPorProduto(email);
+    public List<MetodoPagamentoDTO> vendasPorMetodoPagamento(Long empresaId, String email) {
+        validarEmpresa(empresaId, email);
+        return graficoServiceOperation.vendasPorMetodoPagamento(empresaId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<VendasDiariasDTO> vendasDiariasSemana(String email) {
-        return graficoServiceOperation.vendasDiariasSemana(email);
+    public List<ProdutoVendasDTO> vendasPorProduto(Long empresaId, String email) {
+        validarEmpresa(empresaId, email);
+        return graficoServiceOperation.vendasPorProduto(empresaId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public DashboardVisaoGeralResponse visaoGeral(String email) {
-        // Counts da query nativa (vendasHoje, prodCom, prodSem, clientes)
-        List<Object[]> rows = dashboardRepository.findDashboardCountsRaw(email);
+    public List<VendasDiariasDTO> vendasDiariasSemana(Long empresaId, String email) {
+        validarEmpresa(empresaId, email);
+        return graficoServiceOperation.vendasDiariasSemana(empresaId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DashboardVisaoGeralResponse visaoGeral(Long empresaId, String email) {
+        validarEmpresa(empresaId, email);
+
+        List<Object[]> rows = dashboardRepository.findDashboardCountsRaw(empresaId);
         Object vHoje = 0, pCom = 0, pSem = 0, cAtivos = 0;
         if (rows != null && !rows.isEmpty()) {
             Object[] row = rows.get(0);
@@ -58,21 +76,22 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
             }
         }
 
-        PlanoDTO    plano         = visaoGeralOperation.planoUsuarioLogado(email);
-        BigDecimal  vendasSemana  = visaoGeralOperation.vendasSemana(email);
-        BigDecimal  vendasMes     = visaoGeralOperation.vendasMes(email);
-        BigDecimal  lucroDia      = visaoGeralOperation.lucroDia(email);
-        BigDecimal  lucroMes      = visaoGeralOperation.lucroMes(email);
+        PlanoDTO   plano        = visaoGeralOperation.planoUsuarioLogado(email);
+        BigDecimal vendasSemana = visaoGeralOperation.vendasSemana(empresaId);
+        BigDecimal vendasMes    = visaoGeralOperation.vendasMes(empresaId);
+        BigDecimal lucroDia     = visaoGeralOperation.lucroDia(empresaId);
+        BigDecimal lucroMes     = visaoGeralOperation.lucroMes(empresaId);
 
         List<String> alertas = Stream.concat(
-                visaoGeralOperation.alertasProdutosZerados(email).stream(),
-                visaoGeralOperation.alertasVendasSemana(email).stream()
+                visaoGeralOperation.alertasProdutosZerados(empresaId).stream(),
+                plano.getStatusAcesso().equals("INATIVO")
+                        ? Stream.of("Plano INATIVO — regularize para continuar.")
+                        : Stream.empty()
         ).toList();
 
         return new DashboardVisaoGeralResponse(
                 vHoje, pCom, pSem, cAtivos,
-                vendasSemana, vendasMes,
-                lucroDia, lucroMes,
+                vendasSemana, vendasMes, lucroDia, lucroMes,
                 plano, alertas
         );
     }
