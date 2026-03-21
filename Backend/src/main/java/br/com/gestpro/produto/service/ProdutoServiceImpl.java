@@ -18,25 +18,38 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
     private final ProdutoRepository produtoRepository;
     private final UsuarioRepository usuarioRepository;
 
-    public ProdutoServiceImpl(ProdutoRepository produtoRepository,
-                              UsuarioRepository usuarioRepository) {
-        this.produtoRepository = produtoRepository;
-        this.usuarioRepository = usuarioRepository;
+    public ProdutoServiceImpl(ProdutoRepository repo, UsuarioRepository usuarioRepo) {
+        this.produtoRepository = repo;
+        this.usuarioRepository = usuarioRepo;
+    }
+
+    private Usuario buscarUsuario(String email) {
+        return usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos"));
+    }
+
+    private void preencherCampos(Produto produto, CriarProdutoDTO dto) {
+        produto.setNome(dto.getNome());
+        produto.setPreco(dto.getPreco());
+        produto.setQuantidadeEstoque(dto.getQuantidadeEstoque());
+        produto.setAtivo(dto.getAtivo() != null ? dto.getAtivo() : true);
+
+        // Campos novos — nullable
+        produto.setCategoria(dto.getCategoria());
+        produto.setDescricao(dto.getDescricao());
+        produto.setUnidade(dto.getUnidade());
+        produto.setCodigoBarras(dto.getCodigoBarras());
+        produto.setPrecoCusto(dto.getPrecoCusto());
+        produto.setEstoqueMinimo(dto.getEstoqueMinimo() != null ? dto.getEstoqueMinimo() : 0);
     }
 
     @Override
     @Transactional
     public Produto criar(CriarProdutoDTO dto) {
-        Usuario usuario = usuarioRepository.findByEmail(dto.getEmailUsuario())
-                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos"));
-
+        Usuario usuario = buscarUsuario(dto.getEmailUsuario());
         Produto produto = new Produto();
-        produto.setNome(dto.getNome());
-        produto.setPreco(dto.getPreco());
-        produto.setQuantidadeEstoque(dto.getQuantidadeEstoque());
-        produto.setAtivo(dto.getAtivo() != null ? dto.getAtivo() : true);
+        preencherCampos(produto, dto);
         produto.setUsuario(usuario);
-
         return produtoRepository.save(produto);
     }
 
@@ -46,15 +59,10 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
         Produto produto = produtoRepository.findById(id)
                 .orElseThrow(() -> new ApiException("Produto não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos/" + id));
 
-        if (!produto.getUsuario().getEmail().equals(dto.getEmailUsuario())) {
-            throw new ApiException("Você não tem permissão para editar este produto.", HttpStatus.FORBIDDEN, "/api/v1/produtos/" + id);
-        }
+        if (!produto.getUsuario().getEmail().equals(dto.getEmailUsuario()))
+            throw new ApiException("Sem permissão para editar este produto.", HttpStatus.FORBIDDEN, "/api/v1/produtos/" + id);
 
-        produto.setNome(dto.getNome());
-        produto.setPreco(dto.getPreco());
-        produto.setQuantidadeEstoque(dto.getQuantidadeEstoque());
-        if (dto.getAtivo() != null) produto.setAtivo(dto.getAtivo());
-
+        preencherCampos(produto, dto);
         return produtoRepository.save(produto);
     }
 
@@ -64,9 +72,8 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
         Produto produto = produtoRepository.findById(id)
                 .orElseThrow(() -> new ApiException("Produto não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos/" + id));
 
-        if (!produto.getUsuario().getEmail().equals(emailUsuario)) {
-            throw new ApiException("Você não tem permissão para excluir este produto.", HttpStatus.FORBIDDEN, "/api/v1/produtos/" + id);
-        }
+        if (!produto.getUsuario().getEmail().equals(emailUsuario))
+            throw new ApiException("Sem permissão para excluir este produto.", HttpStatus.FORBIDDEN, "/api/v1/produtos/" + id);
 
         produtoRepository.deleteById(id);
     }
@@ -74,9 +81,7 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
     @Override
     @Transactional(readOnly = true)
     public List<Produto> listarPorEmail(String email) {
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos"));
-        return produtoRepository.findByUsuario(usuario);
+        return produtoRepository.findByUsuario(buscarUsuario(email));
     }
 
     @Override

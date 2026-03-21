@@ -5,14 +5,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "produto")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Produto {
 
@@ -24,18 +23,34 @@ public class Produto {
     @Column(nullable = false, length = 120)
     private String nome;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(length = 80)
+    private String categoria;
+
+    @Column(length = 500)
+    private String descricao;
+
+    @Column(length = 60)
+    private String unidade; // UN, KG, L, CX, PCT...
+
+    @Column(name = "codigo_barras", length = 60)
+    private String codigoBarras;
+
+    /** Preço de venda */
+    @Column(name = "preco", nullable = false, precision = 10, scale = 2)
     private BigDecimal preco;
+
+    /** Preço de custo */
+    @Column(name = "preco_custo", precision = 10, scale = 2)
+    private BigDecimal precoCusto;
 
     @Column(name = "quantidade_estoque", nullable = false)
     private Integer quantidadeEstoque;
 
-    /**
-     * Campo apenas de apoio, não persistido.
-     * Ideal quando o frontend envia JSON com uma quantidade temporária (ex: venda).
-     */
+    @Column(name = "estoque_minimo")
+    private Integer estoqueMinimo = 0;
+
     @Transient
-    private Long quantidade;
+    private Long quantidade; // apoio temporário, não persistido
 
     @Column(name = "data_criacao", nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
@@ -47,32 +62,35 @@ public class Produto {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-    // -------------------------------------
-    // MÉTODOS DE CICLO DE VIDA
-    // -------------------------------------
-
     @PrePersist
     public void prePersist() {
-        if (dataCriacao == null) {
-            dataCriacao = LocalDateTime.now();
-        }
+        if (dataCriacao == null) dataCriacao = LocalDateTime.now();
     }
 
-    // -------------------------------------
-    // VALIDAÇÕES DE DOMÍNIO
-    // -------------------------------------
-
     public void setPreco(BigDecimal preco) {
-        if (preco == null || preco.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Preço não pode ser nulo ou negativo");
-        }
+        if (preco == null || preco.compareTo(BigDecimal.ZERO) < 0)
+            throw new IllegalArgumentException("Preço de venda não pode ser negativo");
         this.preco = preco;
     }
 
-    public void setQuantidadeEstoque(Integer quantidadeEstoque) {
-        if (quantidadeEstoque == null || quantidadeEstoque < 0) {
-            throw new IllegalArgumentException("Estoque não pode ser nulo ou negativo");
-        }
-        this.quantidadeEstoque = quantidadeEstoque;
+    public void setQuantidadeEstoque(Integer q) {
+        if (q == null || q < 0)
+            throw new IllegalArgumentException("Estoque não pode ser negativo");
+        this.quantidadeEstoque = q;
+    }
+
+    /** Lucro unitário: preço venda - preço custo */
+    public BigDecimal getLucroUnitario() {
+        if (preco == null || precoCusto == null) return null;
+        return preco.subtract(precoCusto).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** Margem de lucro em % sobre o preço de venda */
+    public BigDecimal getMargemLucro() {
+        if (preco == null || precoCusto == null || preco.compareTo(BigDecimal.ZERO) == 0) return null;
+        return preco.subtract(precoCusto)
+                .divide(preco, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 }

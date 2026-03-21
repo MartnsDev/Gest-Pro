@@ -9,26 +9,35 @@ import java.math.BigDecimal;
 public class ProdutoResponseDTO {
     private Long id;
     private String nome;
-    private BigDecimal preco;
+    private String categoria;
+    private String descricao;
+    private String unidade;
+    private String codigoBarras;
+    private BigDecimal preco;           // preço de venda
+    private BigDecimal precoCusto;      // preço de custo
+    private BigDecimal lucroUnitario;   // calculado
+    private BigDecimal margemLucro;     // calculado em %
     private Integer quantidadeEstoque;
-    private Long quantidade;
+    private Integer estoqueMinimo;
     private Boolean ativo;
     private Long usuarioId;
     private String dataCriacao;
 
-    public ProdutoResponseDTO(Produto produto) {
-        this.id = produto.getId();
-        this.nome = produto.getNome();
-        this.preco = produto.getPreco();
-        this.quantidadeEstoque = produto.getQuantidadeEstoque();
-        this.quantidade = produto.getQuantidade();
-        this.ativo = produto.getAtivo();
-        this.usuarioId = produto.getUsuario().getId();
-        this.dataCriacao = produto.getDataCriacao() != null ? produto.getDataCriacao().toString() : null;
+    public ProdutoResponseDTO(Produto p) {
+        this.id                = p.getId();
+        this.nome              = p.getNome();
+        this.categoria         = p.getCategoria();
+        this.descricao         = p.getDescricao();
+        this.unidade           = p.getUnidade();
+        this.codigoBarras      = p.getCodigoBarras();
+        this.preco             = p.getPreco();
+        this.precoCusto        = p.getPrecoCusto();
+        this.lucroUnitario     = p.getLucroUnitario();
+        this.margemLucro       = p.getMargemLucro();
+        this.quantidadeEstoque = p.getQuantidadeEstoque();
+        this.estoqueMinimo     = p.getEstoqueMinimo();
+        this.ativo             = p.getAtivo();
+        this.usuarioId         = p.getUsuario().getId();
+        this.dataCriacao       = p.getDataCriacao() != null ? p.getDataCriacao().toString() : null;
     }
-
-    // getters e setters
 }
-
-
-
