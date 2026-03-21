@@ -6,6 +6,12 @@ import {
   Users, BarChart3, Settings,
   DollarSign, Lock,
   Zap,
+  ShoppingBag,
+  BusFront,
+  Network,
+  Building2,
+  Building,
+  Building2Icon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUsuario, logout, type Usuario } from "@/lib/api";
@@ -188,7 +194,7 @@ export default function DashboardPage() {
               { id: "vendas",        label: "Vendas",        icon: <CreditCard /> },
               { id: "clientes",      label: "Clientes",      icon: <Users /> },
               { id: "relatorios",    label: "Relatórios",    icon: <BarChart3 /> },
-              { id: "empresas",      label: "Empresas",      icon: <Settings /> },
+              { id: "empresas",      label: "Empresas",      icon: <Building2 /> },
               { id: "configuracoes", label: "Configurações", icon: <Settings /> },
               { id: "planos", label: "Planos", icon: <Zap /> }
             ].map(item => (

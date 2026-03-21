@@ -3,35 +3,18 @@
 import { useEffect, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import {
-  AlertCircle,
-  ShoppingBag,
-  PlusCircle,
-  DollarSign,
-  User,
-  FileText,
-  BarChart3,
-  Package,
-  Users,
-  CreditCard,
-  TrendingUp,
+  AlertCircle, ShoppingBag, PlusCircle, DollarSign,
+  User, FileText, BarChart3, Package, Users,
+  CreditCard, TrendingUp, TrendingDown, Calendar,
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import type { Usuario } from "@/lib/api";
 
-// ─── Tipos alinhados com o backend (/api/v1/dashboard/...) ─────────────────
+// ─── Tipos alinhados com DashboardVisaoGeralResponse ──────────────────────
 interface PlanoDTO {
   tipoPlano: string;
   diasRestantes: number;
@@ -45,41 +28,43 @@ interface VisaoGeral {
   produtosComEstoque: number;
   produtosSemEstoque: number;
   clientesAtivos: number;
-  vendasSemanais: number;        // backend retorna "vendasSemanais"
+  vendasSemanais: number;   // Segunda a Domingo corrente
+  vendasMes: number;        // mês corrente
+  lucroDia: number;         // lucro do dia
+  lucroMes: number;         // lucro do mês
   planoUsuario: PlanoDTO | null;
   alertas: string[];
 }
 
 interface MetodoPagamentoData { metodo: string; total: number; }
-interface ProdutoVendasData   { nome: string;   quantidade: number; } // "quantidade" não "total"
+interface ProdutoVendasData   { nome: string;   quantidade: number; }
 interface VendasDiariasData   { dia: string;    total: number; }
 
-// ─── Serviço local — aponta para /api/v1/ ──────────────────────────────────
+// ─── Fetch autenticado ─────────────────────────────────────────────────────
 async function fetchAuth<T>(path: string): Promise<T> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`, {
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-  });
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
+    { credentials: "include", headers: { "Content-Type": "application/json" } }
+  );
   if (!res.ok) {
     const err = await res.json().catch(() => null);
-    throw new Error(err?.mensagem ?? `Erro ${res.status} em ${path}`);
+    throw new Error(err?.mensagem ?? `Erro ${res.status}`);
   }
   return res.json();
 }
 
 const dashboardApi = {
-  visaoGeral:      () => fetchAuth<VisaoGeral>            ("/api/v1/dashboard/visao-geral"),
-  vendasPorMetodo: () => fetchAuth<MetodoPagamentoData[]> ("/api/v1/dashboard/vendas/metodo-pagamento"),
-  vendasPorProduto:() => fetchAuth<ProdutoVendasData[]>   ("/api/v1/dashboard/vendas/produto"),
-  vendasDiarias:   () => fetchAuth<VendasDiariasData[]>   ("/api/v1/dashboard/vendas/diarias"),
+  visaoGeral:       () => fetchAuth<VisaoGeral>            ("/api/v1/dashboard/visao-geral"),
+  vendasPorMetodo:  () => fetchAuth<MetodoPagamentoData[]> ("/api/v1/dashboard/vendas/metodo-pagamento"),
+  vendasPorProduto: () => fetchAuth<ProdutoVendasData[]>   ("/api/v1/dashboard/vendas/produto"),
+  vendasDiarias:    () => fetchAuth<VendasDiariasData[]>   ("/api/v1/dashboard/vendas/diarias"),
 };
 
-// ─── Cores dos gráficos ────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────
 const CHART_COLORS = ["#60a5fa", "#34d399", "#a78bfa", "#fb923c", "#f472b6"];
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
-const fmt = (v: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+const fmt = (v?: number | null) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 
 function ClientOnly({ children }: { children: ReactNode }) {
   const [ok, setOk] = useState(false);
@@ -92,16 +77,11 @@ function SectionCard({ title, children, fullWidth }: {
 }) {
   return (
     <div style={{
-      background: "var(--surface-elevated)",
-      border: "1px solid var(--border)",
-      borderRadius: 12,
-      padding: "20px",
+      background: "var(--surface-elevated)", border: "1px solid var(--border)",
+      borderRadius: 12, padding: 20,
       gridColumn: fullWidth ? "1 / -1" : undefined,
     }}>
-      <p style={{
-        fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)",
-        marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.07em",
-      }}>
+      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", marginBottom: 16, textTransform: "uppercase", letterSpacing: ".07em" }}>
         {title}
       </p>
       {children}
@@ -128,7 +108,7 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
         dashboardApi.vendasDiarias(),
       ]);
       if (v.status       === "fulfilled") setVisao(v.value);
-      if (metodo.status  === "fulfilled") setVendasMetodo(metodo.value  ?? []);
+      if (metodo.status  === "fulfilled") setVendasMetodo(metodo.value   ?? []);
       if (produto.status === "fulfilled") setVendasProduto(produto.value ?? []);
       if (diarias.status === "fulfilled") setVendasDiarias(diarias.value ?? []);
       setLoading(false);
@@ -140,16 +120,18 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 
-  // Cards de métricas
+  // ── Cards de métricas ─────────────────────────────────────────────────
   const statsCards = [
-    { title: "Vendas Hoje",    value: loading ? "—" : fmt(visao?.vendasHoje ?? 0),      icon: <CreditCard size={16} />,  accent: "primary"     as const },
-    { title: "Em Estoque",     value: loading ? "—" : String(visao?.produtosComEstoque ?? 0), icon: <Package size={16} />,     accent: "secondary"   as const },
-    { title: "Zerados",        value: loading ? "—" : String(visao?.produtosSemEstoque ?? 0), icon: <TrendingUp size={16} />,  accent: "destructive" as const },
-    { title: "Clientes Ativos",value: loading ? "—" : String(visao?.clientesAtivos ?? 0),    icon: <Users size={16} />,       accent: "warning"     as const },
-    { title: "Vendas Semana",  value: loading ? "—" : fmt(visao?.vendasSemanais ?? 0),  icon: <BarChart3 size={16} />,   accent: "primary"     as const },
+    { title: "Vendas Hoje",    value: loading ? "—" : fmt(visao?.vendasHoje),      icon: <CreditCard size={16} />,   accent: "primary"     as const },
+    { title: "Vendas Semana",  value: loading ? "—" : fmt(visao?.vendasSemanais),  icon: <BarChart3 size={16} />,    accent: "secondary"   as const },
+    { title: "Vendas Mês",     value: loading ? "—" : fmt(visao?.vendasMes),       icon: <Calendar size={16} />,     accent: "primary"     as const },
+    { title: "Lucro Hoje",     value: loading ? "—" : fmt(visao?.lucroDia),        icon: <TrendingUp size={16} />,   accent: "secondary"   as const },
+    { title: "Lucro Mês",      value: loading ? "—" : fmt(visao?.lucroMes),        icon: <TrendingUp size={16} />,   accent: "primary"     as const },
+    { title: "Em Estoque",     value: loading ? "—" : String(visao?.produtosComEstoque ?? 0), icon: <Package size={16} />, accent: "secondary" as const },
+    { title: "Zerados",        value: loading ? "—" : String(visao?.produtosSemEstoque ?? 0), icon: <TrendingDown size={16} />, accent: "destructive" as const },
+    { title: "Clientes",       value: loading ? "—" : String(visao?.clientesAtivos ?? 0),     icon: <Users size={16} />,   accent: "warning"     as const },
   ];
 
-  // Alertas + plano
   const alertas: string[] = [
     ...(visao?.alertas ?? []),
     ...(visao?.planoUsuario
@@ -157,7 +139,6 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
       : []),
   ];
 
-  // Ações rápidas com navegação
   const quickActions = [
     { label: "Abrir Caixa",  icon: <DollarSign size={16} />,  href: "/dashboard/caixa" },
     { label: "Nova Venda",   icon: <ShoppingBag size={16} />, href: "/dashboard/venda" },
@@ -175,13 +156,11 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
             Olá, {primeiroNome}! 👋
           </h1>
-          <p style={{ fontSize: 13, color: "var(--foreground-muted)", textTransform: "capitalize" }}>
-            {today}
-          </p>
+          <p style={{ fontSize: 13, color: "var(--foreground-muted)", textTransform: "capitalize" }}>{today}</p>
         </div>
 
-        {/* Stats Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 16 }}>
+        {/* Stats Cards — 4 por linha */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 14 }}>
           {statsCards.map((card, i) => (
             <StatsCard key={i} {...card} loading={loading} />
           ))}
@@ -196,8 +175,7 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
                 padding: "10px 14px",
                 background: "var(--warning-muted)",
                 border: "1px solid rgba(245,158,11,0.2)",
-                borderRadius: 8,
-                color: "var(--warning)",
+                borderRadius: 8, color: "var(--warning)",
                 fontSize: 13, fontWeight: 500,
               }}>
                 <AlertCircle size={16} style={{ flexShrink: 0 }} />
@@ -209,32 +187,22 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
 
         {/* Ações Rápidas */}
         <div>
-          <p style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".07em" }}>
             Ações Rápidas
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {quickActions.map((action, i) => (
-              <button key={i}
-                onClick={() => router.push(action.href)}
+              <button key={i} onClick={() => router.push(action.href)}
                 style={{
                   display: "flex", alignItems: "center", gap: 8,
                   padding: "9px 16px",
                   background: "var(--surface-elevated)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  color: "var(--foreground)",
-                  fontSize: 13, fontWeight: 500,
-                  cursor: "pointer",
+                  border: "1px solid var(--border)", borderRadius: 8,
+                  color: "var(--foreground)", fontSize: 13, fontWeight: 500, cursor: "pointer",
                   transition: "all .15s",
                 }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--primary)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "var(--primary)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "var(--foreground)";
-                }}
+                onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "var(--primary)"; b.style.color = "var(--primary)"; }}
+                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "var(--border)"; b.style.color = "var(--foreground)"; }}
               >
                 {action.icon}{action.label}
               </button>
@@ -245,8 +213,8 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
         {/* Gráficos */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="animate-fade-in">
 
-          {/* Vendas Diárias */}
-          <SectionCard title="Vendas Diárias da Semana">
+          {/* Vendas Diárias da Semana */}
+          <SectionCard title="Vendas Diárias da Semana (Seg–Dom)">
             {vendasDiarias.length > 0 ? (
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={vendasDiarias} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
@@ -268,7 +236,7 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
             )}
           </SectionCard>
 
-          {/* Métodos de Pagamento */}
+          {/* Formas de Pagamento */}
           <SectionCard title="Formas de Pagamento">
             {vendasMetodo.length > 0 ? (
               <ResponsiveContainer width="100%" height={200}>
@@ -293,7 +261,7 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
             )}
           </SectionCard>
 
-          {/* Top Produtos — largura total */}
+          {/* Top Produtos */}
           <SectionCard title="Produtos Mais Vendidos" fullWidth>
             {vendasProduto.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
@@ -306,7 +274,6 @@ export default function DashboardHome({ usuario }: { usuario?: Usuario }) {
                     cursor={{ fill: "rgba(52,211,153,0.06)" }}
                     formatter={(v: number) => [v, "unidades"]}
                   />
-                  {/* dataKey="quantidade" — campo correto do backend */}
                   <Bar dataKey="quantidade" fill={CHART_COLORS[1]} radius={[0, 4, 4, 0]} name="Quantidade" />
                 </BarChart>
               </ResponsiveContainer>

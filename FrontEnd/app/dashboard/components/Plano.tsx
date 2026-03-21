@@ -55,7 +55,7 @@ const PLANOS = [
     corMuted: "rgba(59,130,246,0.12)",
     features: [
       "1 empresa / loja",
-      "1 caixa por empresa",
+      "1 caixa",
       "Dashboard completo",
       "Relatórios básicos",
       "Suporte por e-mail",
@@ -72,8 +72,8 @@ const PLANOS = [
     cor: "#10b981",
     corMuted: "rgba(16,185,129,0.12)",
     features: [
-      "2 empresas / lojas",
-      "3 caixas por empresa",
+      "5 empresas / lojas",
+      "5 Caixa",
       "Dashboard avançado",
       "Relatórios completos",
       "Suporte prioritário",
@@ -327,8 +327,8 @@ export default function Planos() {
             <tbody>
               {[
                 { label: "Duração", values: ["7 dias", "30 dias", "30 dias", "30 dias"] },
-                { label: "Empresas", values: ["1", "1", "2", "Ilimitado"] },
-                { label: "Caixas / empresa", values: ["1", "1", "3", "Ilimitado"] },
+                { label: "Empresas", values: ["1", "1", "5", "Ilimitado"] },
+                { label: "Caixas ", values: ["1", "1", "5", "Ilimitado"] },
                 { label: "Relatórios",  values: ["Básico", "Básico", "Completo", "Avançado"] },
                 { label: "Suporte",     values: ["—", "E-mail", "Prioritário", "Dedicado 24h"] },
               ].map((row, i) => (
