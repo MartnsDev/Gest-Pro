@@ -49,18 +49,18 @@ Ele resolve um problema concreto: **a maioria dos pequenos comerciantes não tem
       <br/><sub><b>Landing Page & Login</b></sub>
     </td>
     <td align="center" width="50%">
-      <img src="Img/Gest-Pro_Dashboard.png" alt="Dashboard" />
+      <img src="Img/dashboard-gp-dark.png" alt="Dashboard" />
       <br/><sub><b>Dashboard com métricas em tempo real</b></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="Img/gestpro-cadastro.png" alt="Cadastro" />
-      <br/><sub><b>Cadastro com validação de email</b></sub>
+      <img src="Img/vendas-gp-dark.png" alt="Vendas" />
+      <br/><sub><b>Vendas PDV</b></sub>
     </td>
     <td align="center" width="50%">
-      <img src="Img/gestpro-redefinir-senha.png" alt="Redefinir Senha" />
-      <br/><sub><b>Reset de senha por código</b></sub>
+      <img src="Img/relatorios-gp-dark.png" alt="Relatórios" />
+      <br/><sub><b>Relatorio</b></sub>
     </td>
   </tr>
 </table>
