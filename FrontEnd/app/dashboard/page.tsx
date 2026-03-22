@@ -44,7 +44,7 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
 
   const renderSection = () => {
     switch (secao) {
-      case "dashboard":     return <DashboardHome usuario={usuario} />;
+      case "dashboard":     return <DashboardHome usuario={usuario} onNavegar={s => setSecao(s as any)} />;
       case "produtos":      return <Produtos />;
       case "estoque":       return <Estoque />;
       case "vendas":        return <Vendas />;
@@ -53,7 +53,7 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
       case "configuracoes": return <Configuracoes usuario={usuario} />;
       case "empresas":      return <GerenciarEmpresas />;
       case "planos":        return <Planos />;
-      default:              return <DashboardHome usuario={usuario} />;
+      default:              return <DashboardHome usuario={usuario} onNavegar={s => setSecao(s as any)} />;
     }
   };
 

@@ -6,8 +6,7 @@ import {
   Plus, X, Check, Search, ChevronDown, ChevronUp,
   AlertCircle, CreditCard, DollarSign, Smartphone,
   Receipt, Store, ChevronRight, BarChart3, CheckCircle2,
-  Trash2, Edit2, Ban,
-} from "lucide-react";
+  Trash2, Edit2, Ban,} from "lucide-react";
 import { toast } from "sonner";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
@@ -85,10 +84,131 @@ const inp: React.CSSProperties = { width: "100%", padding: "8px 11px", backgroun
 const btnP: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: "var(--primary)", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" };
 const btnG: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, padding: "7px 11px", background: "transparent", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground-muted)", fontSize: 12, cursor: "pointer" };
 
-/* ─── Sucesso pós-venda ──────────────────────────────────────────────────── */
-function TelaVendaSucesso({ venda, onFechar }: { venda: Venda; onFechar: () => void }) {
-  useEffect(() => { const t = setTimeout(onFechar, 5000); return () => clearTimeout(t); }, []);
+/* ─── Gerador de Cupom Não Fiscal ───────────────────────────────────────── */
+function gerarCupom(venda: Venda, nomeEmpresa: string) {
   const misto = venda.formaPagamento2 && venda.valorPagamento2;
+  const pagamento = misto
+    ? `${FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento}: ${fmt(venda.valorFinal - (venda.valorPagamento2 ?? 0))} + ${FORMA_LABEL[venda.formaPagamento2!] ?? venda.formaPagamento2}: ${fmt(venda.valorPagamento2)}`
+    : (FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento);
+
+  const itensHtml = venda.itens.map(item => `
+    <tr>
+      <td style="padding:3px 0;font-size:12px;color:#1a1a2e">${item.nomeProduto} × ${item.quantidade}</td>
+      <td style="padding:3px 0;font-size:12px;color:#1a1a2e;text-align:right;font-weight:600">${fmt(item.subtotal)}</td>
+    </tr>`).join("");
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Cupom #${venda.id} — ${nomeEmpresa}</title>
+<style>
+  @page { size: 80mm auto; margin: 4mm; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Courier New', Courier, monospace; background: #f5f5f5; display: flex; flex-direction: column; align-items: center; padding: 16px; }
+  .cupom { background: #fff; width: 80mm; padding: 12px 10px; border-radius: 4px; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
+  .center { text-align: center; }
+  .empresa { font-size: 16px; font-weight: 900; color: #1a1a2e; letter-spacing: .03em; }
+  .doc { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: .12em; margin: 3px 0 8px; }
+  .dash { border-top: 1px dashed #cbd5e1; margin: 8px 0; }
+  .row { display: flex; justify-content: space-between; font-size: 11px; color: #334155; padding: 2px 0; }
+  .total-row { display: flex; justify-content: space-between; font-size: 15px; font-weight: 900; color: #0f172a; padding: 4px 0; }
+  .green { color: #059669 !important; }
+  .red { color: #dc2626 !important; }
+  .footer { text-align: center; margin-top: 8px; font-size: 9px; color: #94a3b8; line-height: 1.5; }
+  .print-btn { margin: 16px 0 0; padding: 10px 24px; background: #10b981; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+</style></head><body>
+
+<div class="cupom">
+  <div class="center">
+    <div class="empresa">${nomeEmpresa}</div>
+    <div class="doc">Cupom Não Fiscal</div>
+  </div>
+  <div class="dash"></div>
+  <div class="row"><span>Nº da Venda:</span><span><b>#${venda.id}</b></span></div>
+  <div class="row"><span>Data/Hora:</span><span>${fmtData(venda.dataVenda)}</span></div>
+  ${venda.nomeCliente ? `<div class="row"><span>Cliente:</span><span>${venda.nomeCliente}</span></div>` : ""}
+  <div class="dash"></div>
+
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr>
+        <th style="font-size:9px;color:#64748b;text-align:left;padding:2px 0;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Produto</th>
+        <th style="font-size:9px;color:#64748b;text-align:right;padding:2px 0;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Valor</th>
+      </tr>
+    </thead>
+    <tbody>${itensHtml}</tbody>
+  </table>
+
+  <div class="dash"></div>
+  <div class="row"><span>Subtotal:</span><span>${fmt(venda.valorTotal)}</span></div>
+  ${venda.desconto > 0 ? `<div class="row red"><span>Desconto:</span><span>− ${fmt(venda.desconto)}</span></div>` : ""}
+  <div class="total-row"><span>TOTAL:</span><span class="green">${fmt(venda.valorFinal)}</span></div>
+  <div class="dash"></div>
+  <div class="row"><span>Pagamento:</span><span style="text-align:right;max-width:55%;font-weight:600">${pagamento}</span></div>
+  ${venda.valorRecebido && venda.valorRecebido > 0 ? `<div class="row"><span>Recebido:</span><span>${fmt(venda.valorRecebido)}</span></div>` : ""}
+  ${venda.troco && venda.troco > 0 ? `<div class="row green"><span>Troco:</span><span><b>${fmt(venda.troco)}</b></span></div>` : ""}
+  ${venda.observacao ? `<div class="dash"></div><div class="row"><span>Obs:</span><span>${venda.observacao}</span></div>` : ""}
+
+  <div class="dash"></div>
+  <div class="footer">
+    Obrigado pela preferência!<br>
+    Este documento não tem valor fiscal.<br>
+    Emitido via GestPro
+  </div>
+</div>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+
+<script>
+  window.onload = () => setTimeout(() => { window.focus(); window.print(); }, 400);
+</script>
+</body></html>`;
+
+  const janela = window.open("", "_blank", "width=500,height=700");
+  if (!janela) { alert("Permita pop-ups para imprimir o cupom."); return; }
+  janela.document.write(html);
+  janela.document.close();
+}
+
+/* ─── Sucesso pós-venda ──────────────────────────────────────────────────── */
+function TelaVendaSucesso({ venda, nomeEmpresa, onFechar }: {
+  venda: Venda; nomeEmpresa: string; onFechar: () => void;
+}) {
+  const [passo, setPasso] = useState<"sucesso" | "nota">("sucesso");
+  const misto = venda.formaPagamento2 && venda.valorPagamento2;
+
+  // Auto-fecha após 5s apenas no passo de sucesso
+  useEffect(() => {
+    if (passo !== "sucesso") return;
+    const t = setTimeout(() => setPasso("nota"), 5000);
+    return () => clearTimeout(t);
+  }, [passo]);
+
+  if (passo === "nota") return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 16 }}>
+      <div className="animate-fade-in" style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 20, padding: 36, textAlign: "center", maxWidth: 340, width: "100%" }}>
+        <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(59,130,246,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <Receipt size={28} color="#3b82f6" />
+        </div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--foreground)", margin: "0 0 8px" }}>Deseja o cupom?</h2>
+        <p style={{ fontSize: 13, color: "var(--foreground-muted)", marginBottom: 24 }}>
+          Imprimir cupom não fiscal da venda <strong style={{ color: "var(--foreground)" }}>#{venda.id}</strong>
+        </p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onFechar} style={{ flex: 1, padding: "11px 0", background: "transparent", border: "1px solid var(--border)", borderRadius: 10, color: "var(--foreground-muted)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+            Não
+          </button>
+          <button onClick={() => { gerarCupom(venda, nomeEmpresa); onFechar(); }}
+            style={{ flex: 2, padding: "11px 0", background: "#3b82f6", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Receipt size={16} /> Sim, imprimir
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 16 }}>
       <div className="animate-fade-in" style={{ background: "var(--surface-elevated)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 20, padding: 36, textAlign: "center", maxWidth: 360, width: "100%" }}>
@@ -98,7 +218,6 @@ function TelaVendaSucesso({ venda, onFechar }: { venda: Venda; onFechar: () => v
         <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: "0 0 6px" }}>Venda Concluída!</h2>
         <p style={{ fontSize: 30, fontWeight: 800, color: "var(--primary)", margin: "0 0 6px" }}>{fmt(venda.valorFinal)}</p>
 
-        {/* Pagamento */}
         <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
           <span style={{ fontSize: 12, padding: "3px 10px", background: "var(--primary-muted)", color: "var(--primary)", borderRadius: 99, fontWeight: 500 }}>
             {FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento}
@@ -111,7 +230,6 @@ function TelaVendaSucesso({ venda, onFechar }: { venda: Venda; onFechar: () => v
           )}
         </div>
 
-        {/* Troco */}
         {venda.troco != null && venda.troco > 0 && (
           <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 10, padding: "10px 16px", marginBottom: 10 }}>
             <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "0 0 2px" }}>Recebido: {fmt(venda.valorRecebido)}</p>
@@ -121,8 +239,10 @@ function TelaVendaSucesso({ venda, onFechar }: { venda: Venda; onFechar: () => v
 
         {venda.desconto > 0 && <p style={{ fontSize: 12, color: "var(--foreground-muted)", marginBottom: 8 }}>Desconto: {fmt(venda.desconto)}</p>}
         <p style={{ fontSize: 12, color: "var(--foreground-subtle)", marginBottom: 20 }}>Venda #{venda.id} · {venda.itens.length} item(s)</p>
-        <button onClick={onFechar} style={{ ...btnP, justifyContent: "center", width: "100%", padding: "11px 0" }}>Continuar</button>
-        <p style={{ fontSize: 11, color: "var(--foreground-subtle)", marginTop: 10 }}>Fecha em 5s</p>
+        <button onClick={() => setPasso("nota")} style={{ ...btnP, justifyContent: "center", width: "100%", padding: "11px 0" }}>
+          Continuar
+        </button>
+        <p style={{ fontSize: 11, color: "var(--foreground-subtle)", marginTop: 10 }}>Perguntará sobre o cupom em 5s</p>
       </div>
     </div>
   );
@@ -415,8 +535,8 @@ function ModalNovaVenda({ caixaId, empresaId, onClose, onSucesso }: {
 }
 
 /* ─── Detalhe + editar + cancelar venda ──────────────────────────────────── */
-function DetalheVenda({ venda, onClose, onAtualizado }: {
-  venda: Venda; onClose: () => void; onAtualizado: (v: Venda) => void;
+function DetalheVenda({ venda, nomeEmpresa, onClose, onAtualizado }: {
+  venda: Venda; nomeEmpresa: string; onClose: () => void; onAtualizado: (v: Venda) => void;
 }) {
   const [editandoObs,  setEditandoObs]  = useState(false);
   const [novaObs,      setNovaObs]      = useState(venda.observacao ?? "");
@@ -545,10 +665,24 @@ function DetalheVenda({ venda, onClose, onAtualizado }: {
               </div>
             </div>
           ) : (
-            <button onClick={() => setCancelando(true)} style={{ ...btnG, width: "100%", justifyContent: "center", borderColor: "rgba(239,68,68,0.3)", color: "var(--destructive)" }}>
-              <Trash2 size={13} /> Cancelar venda
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => gerarCupom(venda, nomeEmpresa)}
+                style={{ flex: 1, ...btnG, justifyContent: "center", borderColor: "rgba(59,130,246,0.4)", color: "#3b82f6" }}>
+                <Receipt size={13} /> Cupom
+              </button>
+              <button onClick={() => setCancelando(true)}
+                style={{ flex: 1, ...btnG, justifyContent: "center", borderColor: "rgba(239,68,68,0.3)", color: "var(--destructive)" }}>
+                <Trash2 size={13} /> Cancelar
+              </button>
+            </div>
           )
+        )}
+        {/* Cupom mesmo para venda cancelada */}
+        {venda.cancelada && (
+          <button onClick={() => gerarCupom(venda, nomeEmpresa)}
+            style={{ ...btnG, width: "100%", justifyContent: "center", borderColor: "rgba(59,130,246,0.3)", color: "#3b82f6", marginTop: 4 }}>
+            <Receipt size={13} /> Imprimir Cupom
+          </button>
         )}
       </div>
     </div>
@@ -556,8 +690,8 @@ function DetalheVenda({ venda, onClose, onAtualizado }: {
 }
 
 /* ─── CaixaCard ──────────────────────────────────────────────────────────── */
-function CaixaCard({ caixa, empresaId, onNovaVenda }: {
-  caixa: CaixaInfo; empresaId: number; onNovaVenda?: () => void;
+function CaixaCard({ caixa, empresaId, nomeEmpresa, onNovaVenda }: {
+  caixa: CaixaInfo; empresaId: number; nomeEmpresa: string; onNovaVenda?: () => void;
 }) {
   const [vendas,  setVendas]  = useState<Venda[]>([]);
   const [loading, setLoading] = useState(false);
@@ -717,7 +851,7 @@ function CaixaCard({ caixa, empresaId, onNovaVenda }: {
         </div>
       )}
 
-      {detalhe && <DetalheVenda venda={detalhe} onClose={() => setDetalhe(null)} onAtualizado={handleAtualizado} />}
+      {detalhe && <DetalheVenda venda={detalhe} nomeEmpresa={nomeEmpresa} onClose={() => setDetalhe(null)} onAtualizado={handleAtualizado} />}
     </div>
   );
 }
@@ -770,6 +904,7 @@ export default function Vendas() {
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {caixas.map(c => (
             <CaixaCard key={c.id} caixa={c} empresaId={empresaAtiva.id}
+              nomeEmpresa={empresaAtiva.nomeFantasia}
               onNovaVenda={caixaAtivo?.id === c.id ? () => setModalNova(true) : undefined} />
           ))}
         </div>
@@ -780,7 +915,7 @@ export default function Vendas() {
           onClose={() => setModalNova(false)}
           onSucesso={venda => { carregar(); setVendaSucesso(venda); }} />
       )}
-      {vendaSucesso && <TelaVendaSucesso venda={vendaSucesso} onFechar={() => setVendaSucesso(null)} />}
+      {vendaSucesso && <TelaVendaSucesso venda={vendaSucesso} nomeEmpresa={empresaAtiva.nomeFantasia} onFechar={() => setVendaSucesso(null)} />}
     </div>
   );
 }
