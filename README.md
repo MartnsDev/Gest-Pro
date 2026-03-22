@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Img/gestpro-logo.png" alt="GestPro Logo" width="80" />
+<img src="Img/gestpro-img.png" alt="GestPro Logo" width="80" />
 
 # GestPro
 
