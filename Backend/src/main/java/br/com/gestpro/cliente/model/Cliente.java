@@ -21,7 +21,16 @@ public class Cliente {
     private String cpf;
     private Boolean ativo = true;
 
-    @ManyToOne
+    // "CLIENTE" ou "FORNECEDOR" — default CLIENTE
+    @Column(name = "tipo", nullable = false)
+    private String tipo = "CLIENTE";
+
+    // Campos extra para fornecedor
+    private String cnpj;
+    private String contato;       // nome do contato
+    private String observacoes;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
 

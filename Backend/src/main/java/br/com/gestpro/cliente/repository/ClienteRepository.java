@@ -15,7 +15,5 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     List<Cliente> findByAtivoTrue();
     List<Cliente> findByUsuarioEmailAndAtivoTrue(String email);
     List<Cliente> findByEmpresaIdAndAtivoTrue(Long empresaId);
-
-    // Busca por nome (contains, ignore case) dentro da empresa
-    List<Cliente> findByEmpresaIdAndAtivoTrueAndNomeContainingIgnoreCase(Long empresaId, String nome);
+    List<Cliente> findByEmpresaIdAndAtivoTrueAndTipo(Long empresaId, String tipo);
 }

@@ -2,6 +2,8 @@ package br.com.gestpro.cliente.service;
 
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
+import br.com.gestpro.cliente.dto.ClienteDTO;
+import br.com.gestpro.cliente.dto.ClienteRequest;
 import br.com.gestpro.cliente.model.Cliente;
 import br.com.gestpro.cliente.repository.ClienteRepository;
 import br.com.gestpro.empresa.model.Empresa;
@@ -22,89 +24,121 @@ public class ClienteServiceImpl {
     private final UsuarioRepository usuarioRepository;
     private final EmpresaRepository empresaRepository;
 
-    private Empresa validarEmpresa(Long empresaId, String emailUsuario) {
-        Empresa empresa = empresaRepository.findById(empresaId)
+    private Empresa validarEmpresa(Long empresaId, String email) {
+        Empresa emp = empresaRepository.findById(empresaId)
                 .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/clientes"));
-        if (!empresa.getDono().getEmail().equals(emailUsuario))
+        if (!emp.getDono().getEmail().equals(email))
             throw new ApiException("Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/clientes");
-        return empresa;
+        return emp;
     }
 
     @Transactional
-    public Cliente criarCliente(Cliente cliente, String emailUsuario) {
-        Long empresaId = cliente.getEmpresa() != null ? cliente.getEmpresa().getId() : null;
+    public ClienteDTO criar(ClienteRequest req, String emailUsuario) {
+        if (req.getEmpresaId() == null)
+            throw new ApiException("empresaId é obrigatório", HttpStatus.BAD_REQUEST, "/clientes");
 
-        if (cliente.getEmail() != null && !cliente.getEmail().isBlank() && empresaId != null) {
-            if (clienteRepository.existsByEmailAndEmpresaId(cliente.getEmail(), empresaId))
-                throw new ApiException("Email já cadastrado nesta empresa!", HttpStatus.BAD_REQUEST, "/clientes/criar");
-        }
+        if (req.getEmail() != null && !req.getEmail().isBlank()
+                && clienteRepository.existsByEmailAndEmpresaId(req.getEmail(), req.getEmpresaId()))
+            throw new ApiException("Email já cadastrado nesta empresa!", HttpStatus.BAD_REQUEST, "/clientes");
 
         Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
-                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/clientes/criar"));
+                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/clientes"));
 
-        cliente.setUsuario(usuario);
-        cliente.setAtivo(true);
+        Empresa empresa = validarEmpresa(req.getEmpresaId(), emailUsuario);
 
-        if (empresaId != null) {
-            Empresa empresa = validarEmpresa(empresaId, emailUsuario);
-            cliente.setEmpresa(empresa);
-        }
+        Cliente c = new Cliente();
+        c.setNome(req.getNome());
+        c.setEmail(req.getEmail());
+        c.setTelefone(req.getTelefone());
+        c.setCpf(req.getCpf());
+        c.setCnpj(req.getCnpj());
+        c.setContato(req.getContato());
+        c.setObservacoes(req.getObservacoes());
+        c.setTipo(req.getTipo() != null ? req.getTipo().toUpperCase() : "CLIENTE");
+        c.setAtivo(true);
+        c.setUsuario(usuario);
+        c.setEmpresa(empresa);
 
-        return clienteRepository.save(cliente);
+        return new ClienteDTO(clienteRepository.save(c));
     }
 
     @Transactional
-    public Cliente atualizarCliente(Long id, Cliente dados, String emailUsuario) {
-        Cliente cliente = clienteRepository.findById(id)
+    public ClienteDTO atualizar(Long id, ClienteRequest req, String emailUsuario) {
+        Cliente c = clienteRepository.findById(id)
                 .orElseThrow(() -> new ApiException("Cliente não encontrado", HttpStatus.NOT_FOUND, "/clientes/" + id));
 
-        if (!cliente.getUsuario().getEmail().equals(emailUsuario))
+        if (!c.getUsuario().getEmail().equals(emailUsuario))
             throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, "/clientes/" + id);
 
-        if (dados.getNome()     != null) cliente.setNome(dados.getNome());
-        if (dados.getTelefone() != null) cliente.setTelefone(dados.getTelefone());
-        if (dados.getEmail()    != null) cliente.setEmail(dados.getEmail());
-        if (dados.getCpf()      != null) cliente.setCpf(dados.getCpf());
+        if (req.getNome()        != null) c.setNome(req.getNome());
+        if (req.getEmail()       != null) c.setEmail(req.getEmail());
+        if (req.getTelefone()    != null) c.setTelefone(req.getTelefone());
+        if (req.getCpf()         != null) c.setCpf(req.getCpf());
+        if (req.getCnpj()        != null) c.setCnpj(req.getCnpj());
+        if (req.getContato()     != null) c.setContato(req.getContato());
+        if (req.getObservacoes() != null) c.setObservacoes(req.getObservacoes());
+        if (req.getTipo()        != null) c.setTipo(req.getTipo().toUpperCase());
 
-        return clienteRepository.save(cliente);
+        return new ClienteDTO(clienteRepository.save(c));
     }
 
     @Transactional(readOnly = true)
-    public Cliente buscarPorId(Long id) {
-        return clienteRepository.findById(id)
-                .orElseThrow(() -> new ApiException("Cliente não encontrado", HttpStatus.NOT_FOUND, "/clientes/" + id));
+    public ClienteDTO buscarPorId(Long id) {
+        return new ClienteDTO(clienteRepository.findById(id)
+                .orElseThrow(() -> new ApiException("Não encontrado", HttpStatus.NOT_FOUND, "/clientes/" + id)));
     }
 
     @Transactional(readOnly = true)
-    public List<Cliente> listarPorEmpresa(Long empresaId) {
-        return clienteRepository.findByEmpresaIdAndAtivoTrue(empresaId);
+    public List<ClienteDTO> listarPorEmpresa(Long empresaId) {
+        return clienteRepository.findByEmpresaIdAndAtivoTrue(empresaId)
+                .stream().map(ClienteDTO::new).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<Cliente> listarClientesAtivos(String emailUsuario) {
-        return clienteRepository.findByUsuarioEmailAndAtivoTrue(emailUsuario);
+    public List<ClienteDTO> listarPorEmpresaETipo(Long empresaId, String tipo) {
+        return clienteRepository.findByEmpresaIdAndAtivoTrueAndTipo(empresaId, tipo.toUpperCase())
+                .stream().map(ClienteDTO::new).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<Cliente> listarClientesAtivos() {
-        return clienteRepository.findByAtivoTrue();
+    public List<ClienteDTO> listarAtivos(String emailUsuario) {
+        return clienteRepository.findByUsuarioEmailAndAtivoTrue(emailUsuario)
+                .stream().map(ClienteDTO::new).toList();
     }
 
     @Transactional
-    public void desativarCliente(Long id, String emailUsuario) {
-        Cliente cliente = clienteRepository.findById(id)
-                .orElseThrow(() -> new ApiException("Cliente não encontrado", HttpStatus.NOT_FOUND, "/clientes/" + id));
-        if (!cliente.getUsuario().getEmail().equals(emailUsuario))
+    public void desativar(Long id, String emailUsuario) {
+        Cliente c = clienteRepository.findById(id)
+                .orElseThrow(() -> new ApiException("Não encontrado", HttpStatus.NOT_FOUND, "/clientes/" + id));
+        if (!c.getUsuario().getEmail().equals(emailUsuario))
             throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, "/clientes/" + id);
-        cliente.setAtivo(false);
-        clienteRepository.save(cliente);
+        c.setAtivo(false);
+        clienteRepository.save(c);
     }
 
+    // legado sem auth
     @Transactional
     public void desativarCliente(Long id) {
-        Cliente cliente = clienteRepository.findById(id)
-                .orElseThrow(() -> new ApiException("Cliente não encontrado", HttpStatus.NOT_FOUND, "/clientes/" + id));
-        cliente.setAtivo(false);
-        clienteRepository.save(cliente);
+        clienteRepository.findById(id).ifPresent(c -> { c.setAtivo(false); clienteRepository.save(c); });
     }
+
+    // legados para compatibilidade
+    @Transactional
+    public ClienteDTO criarCliente(Cliente cliente, String emailUsuario) {
+        ClienteRequest req = new ClienteRequest();
+        req.setNome(cliente.getNome()); req.setEmail(cliente.getEmail());
+        req.setTelefone(cliente.getTelefone()); req.setCpf(cliente.getCpf());
+        req.setTipo(cliente.getTipo() != null ? cliente.getTipo() : "CLIENTE");
+        if (cliente.getEmpresa() != null) req.setEmpresaId(cliente.getEmpresa().getId());
+        return criar(req, emailUsuario);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClienteDTO> listarPorEmpresa2(Long empresaId) { return listarPorEmpresa(empresaId); }
+
+    @Transactional(readOnly = true)
+    public List<ClienteDTO> listarClientesAtivos(String email) { return listarAtivos(email); }
+
+    @Transactional(readOnly = true)
+    public List<Cliente> listarClientesAtivos() { return clienteRepository.findByAtivoTrue(); }
 }
