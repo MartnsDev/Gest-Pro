@@ -24,11 +24,19 @@ public class RegistrarVendaDTO {
     @NotEmpty(message = "Lista de itens não pode ser vazia")
     private List<ItemVendaDTO> itens;
 
+    // Pagamento principal (obrigatório)
     @NotNull(message = "Forma de pagamento é obrigatória")
     private FormaDePagamento formaPagamento;
 
+    // Pagamento misto: segunda forma + valor
+    private FormaDePagamento formaPagamento2;
+    private BigDecimal valorPagamento2; // quanto foi pago na segunda forma
+
+    // Valor recebido (para calcular troco no dinheiro)
+    private BigDecimal valorRecebido;
+
     @PositiveOrZero(message = "Desconto não pode ser negativo")
-    private BigDecimal desconto = BigDecimal.ZERO;
+    private BigDecimal desconto;
 
     private String observacao;
 
@@ -36,7 +44,6 @@ public class RegistrarVendaDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ItemVendaDTO {
-
         @NotNull(message = "Produto é obrigatório")
         private Long idProduto;
 

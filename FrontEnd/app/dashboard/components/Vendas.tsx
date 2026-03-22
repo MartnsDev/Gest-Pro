@@ -6,6 +6,7 @@ import {
   Plus, X, Check, Search, ChevronDown, ChevronUp,
   AlertCircle, CreditCard, DollarSign, Smartphone,
   Receipt, Store, ChevronRight, BarChart3, CheckCircle2,
+  Trash2, Edit2, Ban,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,41 +21,35 @@ interface ItemVendaDTO {
   quantidade: number; precoUnitario: number; subtotal: number;
 }
 interface Venda {
-  id: number; formaPagamento: string;
-  valorTotal: number; desconto: number; valorFinal: number;
+  id: number; formaPagamento: string; formaPagamento2?: string;
+  valorPagamento2?: number; valorTotal: number; desconto: number;
+  valorFinal: number; valorRecebido?: number; troco?: number;
   observacao?: string; dataVenda: string;
   itens: ItemVendaDTO[]; nomeCliente?: string;
+  cancelada?: boolean; motivoCancelamento?: string;
 }
 interface CaixaInfo {
   id: number; status: string; aberto: boolean;
   valorInicial: number; valorFinal?: number; totalVendas: number;
-  dataAbertura: string; dataFechamento?: string;
-  empresaId: number;
+  dataAbertura: string; dataFechamento?: string; empresaId: number;
 }
 type FormaPagamento = "PIX" | "DINHEIRO" | "CARTAO_DEBITO" | "CARTAO_CREDITO";
 
 const FORMAS: { value: FormaPagamento; label: string; icon: React.ReactNode }[] = [
-  { value: "PIX",            label: "Pix",     icon: <Smartphone size={15} /> },
-  { value: "DINHEIRO",       label: "Dinheiro", icon: <DollarSign size={15} /> },
-  { value: "CARTAO_DEBITO",  label: "Débito",   icon: <CreditCard size={15} /> },
-  { value: "CARTAO_CREDITO", label: "Crédito",  icon: <CreditCard size={15} /> },
+  { value: "PIX",            label: "Pix",     icon: <Smartphone size={14} /> },
+  { value: "DINHEIRO",       label: "Dinheiro", icon: <DollarSign size={14} /> },
+  { value: "CARTAO_DEBITO",  label: "Débito",   icon: <CreditCard size={14} /> },
+  { value: "CARTAO_CREDITO", label: "Crédito",  icon: <CreditCard size={14} /> },
 ];
 const FORMA_LABEL: Record<string, string> = {
   PIX: "Pix", DINHEIRO: "Dinheiro", CARTAO_DEBITO: "Débito", CARTAO_CREDITO: "Crédito",
 };
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?: number | null) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
-
 const fmtData = (s?: string) => {
   if (!s) return "—";
   try { return new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
-  catch { return s; }
-};
-const fmtDia = (s?: string) => {
-  if (!s) return "—";
-  try { return new Date(s).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); }
   catch { return s; }
 };
 
@@ -65,33 +60,64 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
-/* ─── Estilos ────────────────────────────────────────────────────────────── */
-const inp: React.CSSProperties = { width: "100%", padding: "9px 12px", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 13, outline: "none" };
+const inp: React.CSSProperties = { width: "100%", padding: "8px 11px", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 13, outline: "none" };
 const btnP: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: "var(--primary)", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" };
-const btnG: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "transparent", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground-muted)", fontSize: 13, cursor: "pointer" };
+const btnG: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, padding: "7px 11px", background: "transparent", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground-muted)", fontSize: 12, cursor: "pointer" };
 
-/* ─── Tela de sucesso pós-venda ──────────────────────────────────────────── */
+/* ─── Sucesso pós-venda ──────────────────────────────────────────────────── */
 function TelaVendaSucesso({ venda, onFechar }: { venda: Venda; onFechar: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onFechar, 4000);
-    return () => clearTimeout(t);
-  }, []);
-
+  useEffect(() => { const t = setTimeout(onFechar, 5000); return () => clearTimeout(t); }, []);
+  const misto = venda.formaPagamento2 && venda.valorPagamento2;
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 16 }}>
-      <div className="animate-fade-in" style={{ background: "var(--surface-elevated)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 20, padding: 40, textAlign: "center", maxWidth: 380, width: "100%" }}>
-        <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--success-muted)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-          <CheckCircle2 size={36} color="var(--primary)" />
+      <div className="animate-fade-in" style={{ background: "var(--surface-elevated)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 20, padding: 36, textAlign: "center", maxWidth: 360, width: "100%" }}>
+        <div style={{ width: 68, height: 68, borderRadius: "50%", background: "rgba(16,185,129,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <CheckCircle2 size={34} color="var(--primary)" />
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)", margin: "0 0 8px" }}>Venda Concluída!</h2>
-        <p style={{ fontSize: 32, fontWeight: 800, color: "var(--primary)", margin: "0 0 4px" }}>{fmt(venda.valorFinal)}</p>
-        {venda.desconto > 0 && <p style={{ fontSize: 13, color: "var(--foreground-muted)", margin: "0 0 16px" }}>Desconto aplicado: {fmt(venda.desconto)}</p>}
-        <p style={{ fontSize: 14, color: "var(--foreground-muted)", margin: "0 0 6px" }}>{venda.itens.length} item(s) · {FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento}</p>
-        <p style={{ fontSize: 12, color: "var(--foreground-subtle)", margin: "0 0 24px" }}>Venda #{venda.id} · {fmtData(venda.dataVenda)}</p>
-        <button onClick={onFechar} style={{ ...btnP, justifyContent: "center", width: "100%", padding: "11px 0" }}>
-          Continuar
-        </button>
-        <p style={{ fontSize: 11, color: "var(--foreground-subtle)", marginTop: 12 }}>Fecha automaticamente em 4s</p>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: "0 0 6px" }}>Venda Concluída!</h2>
+        <p style={{ fontSize: 30, fontWeight: 800, color: "var(--primary)", margin: "0 0 6px" }}>{fmt(venda.valorFinal)}</p>
+
+        {/* Pagamento */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, padding: "3px 10px", background: "var(--primary-muted)", color: "var(--primary)", borderRadius: 99, fontWeight: 500 }}>
+            {FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento}
+            {misto && `: ${fmt(venda.valorFinal - (venda.valorPagamento2 ?? 0))}`}
+          </span>
+          {misto && (
+            <span style={{ fontSize: 12, padding: "3px 10px", background: "var(--secondary-muted)", color: "var(--secondary)", borderRadius: 99, fontWeight: 500 }}>
+              {FORMA_LABEL[venda.formaPagamento2!] ?? venda.formaPagamento2}: {fmt(venda.valorPagamento2)}
+            </span>
+          )}
+        </div>
+
+        {/* Troco */}
+        {venda.troco != null && venda.troco > 0 && (
+          <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 10, padding: "10px 16px", marginBottom: 10 }}>
+            <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "0 0 2px" }}>Recebido: {fmt(venda.valorRecebido)}</p>
+            <p style={{ fontSize: 18, fontWeight: 700, color: "var(--primary)", margin: 0 }}>Troco: {fmt(venda.troco)}</p>
+          </div>
+        )}
+
+        {venda.desconto > 0 && <p style={{ fontSize: 12, color: "var(--foreground-muted)", marginBottom: 8 }}>Desconto: {fmt(venda.desconto)}</p>}
+        <p style={{ fontSize: 12, color: "var(--foreground-subtle)", marginBottom: 20 }}>Venda #{venda.id} · {venda.itens.length} item(s)</p>
+        <button onClick={onFechar} style={{ ...btnP, justifyContent: "center", width: "100%", padding: "11px 0" }}>Continuar</button>
+        <p style={{ fontSize: 11, color: "var(--foreground-subtle)", marginTop: 10 }}>Fecha em 5s</p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Seletor de forma de pagamento ─────────────────────────────────────── */
+function SeletorForma({ value, onChange, label }: { value: FormaPagamento; onChange: (v: FormaPagamento) => void; label?: string }) {
+  return (
+    <div>
+      {label && <p style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>{label}</p>}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+        {FORMAS.map(f => (
+          <button key={f.value} onClick={() => onChange(f.value)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 8px", background: value === f.value ? "var(--primary-muted)" : "var(--surface-overlay)", border: `1px solid ${value === f.value ? "var(--primary)" : "var(--border)"}`, borderRadius: 7, cursor: "pointer", color: value === f.value ? "var(--primary)" : "var(--foreground-muted)", fontSize: 11, fontWeight: value === f.value ? 600 : 400 }}>
+            {f.icon}{f.label}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -102,13 +128,17 @@ function ModalNovaVenda({ caixaId, empresaId, onClose, onSucesso }: {
   caixaId: number; empresaId: number;
   onClose: () => void; onSucesso: (v: Venda) => void;
 }) {
-  const [produtos,   setProdutos]   = useState<Produto[]>([]);
-  const [carrinho,   setCarrinho]   = useState<ItemCarrinho[]>([]);
-  const [busca,      setBusca]      = useState("");
-  const [forma,      setForma]      = useState<FormaPagamento>("PIX");
-  const [desconto,   setDesconto]   = useState("");
-  const [observacao, setObservacao] = useState("");
-  const [salvando,   setSalvando]   = useState(false);
+  const [produtos,    setProdutos]    = useState<Produto[]>([]);
+  const [carrinho,    setCarrinho]    = useState<ItemCarrinho[]>([]);
+  const [busca,       setBusca]       = useState("");
+  const [forma,       setForma]       = useState<FormaPagamento>("PIX");
+  const [misto,       setMisto]       = useState(false);
+  const [forma2,      setForma2]      = useState<FormaPagamento>("DINHEIRO");
+  const [valPag2,     setValPag2]     = useState("");
+  const [desconto,    setDesconto]    = useState("");
+  const [recebido,    setRecebido]    = useState("");
+  const [observacao,  setObservacao]  = useState("");
+  const [salvando,    setSalvando]    = useState(false);
 
   useEffect(() => {
     fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`).then(setProdutos).catch(() => toast.error("Erro ao carregar produtos"));
@@ -130,22 +160,40 @@ function ModalNovaVenda({ caixaId, empresaId, onClose, onSucesso }: {
     else setCarrinho(prev => prev.map(i => i.produto.id === id ? { ...i, quantidade: q } : i));
   };
 
-  const subtotal  = carrinho.reduce((s, i) => s + i.produto.preco * i.quantidade, 0);
-  const descontoN = Math.max(0, parseFloat(desconto.replace(",", ".")) || 0);
-  const total     = Math.max(subtotal - descontoN, 0);
+  const subtotal   = carrinho.reduce((s, i) => s + i.produto.preco * i.quantidade, 0);
+  const descontoN  = Math.max(0, parseFloat(desconto.replace(",", ".")) || 0);
+  const total      = Math.max(subtotal - descontoN, 0);
+  const recebidoN  = parseFloat(recebido.replace(",", ".")) || 0;
+  const valPag2N   = misto ? (parseFloat(valPag2.replace(",", ".")) || 0) : 0;
+  const valPag1    = misto ? Math.max(total - valPag2N, 0) : total;
+
+  // Verifica se alguma das formas é dinheiro (para mostrar troco)
+  const temDinheiro = forma === "DINHEIRO" || (misto && forma2 === "DINHEIRO");
+  // Valor em dinheiro nessa venda
+  const valorEmDinheiro = misto
+    ? (forma === "DINHEIRO" ? valPag1 : forma2 === "DINHEIRO" ? valPag2N : 0)
+    : total;
+  // Troco: quanto o cliente deu a mais no dinheiro
+  const troco = temDinheiro && recebidoN > 0 ? Math.max(recebidoN - valorEmDinheiro, 0) : null;
+  const falta = temDinheiro && recebidoN > 0 && recebidoN < valorEmDinheiro ? valorEmDinheiro - recebidoN : null;
 
   const registrar = async () => {
     if (!carrinho.length) { toast.error("Adicione pelo menos um produto."); return; }
+    if (misto && valPag2N <= 0) { toast.error("Informe o valor da segunda forma de pagamento."); return; }
+    if (misto && valPag2N >= total) { toast.error("O valor do segundo pagamento deve ser menor que o total."); return; }
     setSalvando(true);
     try {
-      const venda = await fetchAuth<Venda>("/api/v1/vendas/registrar", {
-        method: "POST",
-        body: JSON.stringify({
-          idCaixa: caixaId, formaPagamento: forma,
-          desconto: descontoN, observacao: observacao || null,
-          itens: carrinho.map(i => ({ idProduto: i.produto.id, quantidade: i.quantidade })),
-        }),
-      });
+      const body: any = {
+        idCaixa: caixaId, formaPagamento: forma,
+        desconto: descontoN,
+        observacao: observacao || null,
+        itens: carrinho.map(i => ({ idProduto: i.produto.id, quantidade: i.quantidade })),
+      };
+      if (misto) { body.formaPagamento2 = forma2; body.valorPagamento2 = valPag2N; }
+      // Envia valorRecebido sempre que dinheiro estiver envolvido e o cliente tiver informado
+      if (temDinheiro && recebidoN > 0) body.valorRecebido = recebidoN;
+
+      const venda = await fetchAuth<Venda>("/api/v1/vendas/registrar", { method: "POST", body: JSON.stringify(body) });
       onClose();
       onSucesso(venda);
     } catch (e: any) { toast.error(e.message); }
@@ -155,91 +203,186 @@ function ModalNovaVenda({ caixaId, empresaId, onClose, onSucesso }: {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="animate-fade-in" style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 14, width: "100%", maxWidth: 820, maxHeight: "92vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 22px", borderBottom: "1px solid var(--border)" }}>
+      <div className="animate-fade-in" style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 14, width: "100%", maxWidth: 840, maxHeight: "93vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
           <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Nova Venda — Caixa #{caixaId}</h2>
           <button onClick={onClose} style={{ ...btnG, padding: 6, border: "none" }}><X size={16} /></button>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", flex: 1, minHeight: 0, overflow: "hidden" }}>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 330px", flex: 1, minHeight: 0, overflow: "hidden" }}>
           {/* Produtos */}
           <div style={{ display: "flex", flexDirection: "column", borderRight: "1px solid var(--border)", overflow: "hidden" }}>
-            <div style={{ padding: "12px 18px", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)" }}>
               <div style={{ position: "relative" }}>
-                <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-subtle)" }} />
-                <input style={{ ...inp, paddingLeft: 32 }} placeholder="Buscar produto..." value={busca} onChange={e => setBusca(e.target.value)} autoFocus />
+                <Search size={12} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-subtle)" }} />
+                <input style={{ ...inp, paddingLeft: 28 }} placeholder="Buscar produto..." value={busca} onChange={e => setBusca(e.target.value)} autoFocus />
               </div>
             </div>
             <div style={{ overflowY: "auto", flex: 1 }}>
-              {filtrados.length === 0 ? (
-                <div style={{ padding: 32, textAlign: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>Nenhum produto disponível</div>
-              ) : filtrados.map(p => {
-                const nc = carrinho.find(i => i.produto.id === p.id);
-                return (
-                  <div key={p.id} onClick={() => addItem(p)}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 18px", cursor: "pointer", borderBottom: "1px solid var(--border-subtle)" }}
-                    onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "var(--surface-overlay)"}
-                    onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", margin: 0 }}>{p.nome}</p>
-                      <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: "2px 0 0" }}>Estoque: {p.quantidadeEstoque}{p.categoria ? ` · ${p.categoria}` : ""}</p>
+              {filtrados.length === 0
+                ? <div style={{ padding: 28, textAlign: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>Nenhum produto disponível</div>
+                : filtrados.map(p => {
+                  const nc = carrinho.find(i => i.produto.id === p.id);
+                  return (
+                    <div key={p.id} onClick={() => addItem(p)}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 16px", cursor: "pointer", borderBottom: "1px solid var(--border-subtle)" }}
+                      onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "var(--surface-overlay)"}
+                      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}>
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", margin: 0 }}>{p.nome}</p>
+                        <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: "1px 0 0" }}>Estoque: {p.quantidadeEstoque}{p.categoria ? ` · ${p.categoria}` : ""}</p>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>{fmt(p.preco)}</span>
+                        {nc && <span style={{ fontSize: 11, background: "var(--primary-muted)", color: "var(--primary)", padding: "2px 7px", borderRadius: 99, fontWeight: 600 }}>{nc.quantidade}×</span>}
+                        <Plus size={13} color="var(--foreground-muted)" />
+                      </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>{fmt(p.preco)}</span>
-                      {nc && <span style={{ fontSize: 11, background: "var(--primary-muted)", color: "var(--primary)", padding: "2px 8px", borderRadius: 99, fontWeight: 600 }}>{nc.quantidade}×</span>}
-                      <Plus size={14} color="var(--foreground-muted)" />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
-          {/* Carrinho */}
+
+          {/* Carrinho + pagamento */}
           <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 10 }}>Carrinho ({carrinho.length})</p>
+            <div style={{ flex: 1, overflowY: "auto", padding: "10px 13px" }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Carrinho ({carrinho.length})</p>
               {carrinho.length === 0
-                ? <div style={{ textAlign: "center", color: "var(--foreground-subtle)", fontSize: 13, padding: "20px 0" }}>Clique nos produtos para adicionar</div>
+                ? <div style={{ textAlign: "center", color: "var(--foreground-subtle)", fontSize: 12, padding: "16px 0" }}>Clique nos produtos</div>
                 : carrinho.map(item => (
-                  <div key={item.produto.id} style={{ marginBottom: 8, padding: "9px 10px", background: "var(--surface-overlay)", borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div key={item.produto.id} style={{ marginBottom: 7, padding: "8px 9px", background: "var(--surface-overlay)", borderRadius: 7, border: "1px solid var(--border-subtle)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
                       <p style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", margin: 0, flex: 1, paddingRight: 6 }}>{item.produto.nome}</p>
-                      <button onClick={() => setCarrinho(prev => prev.filter(i => i.produto.id !== item.produto.id))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-subtle)", padding: 0 }}><X size={12} /></button>
+                      <button onClick={() => setCarrinho(prev => prev.filter(i => i.produto.id !== item.produto.id))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-subtle)", padding: 0 }}><X size={11} /></button>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <button onClick={() => setQtd(item.produto.id, item.quantidade - 1)} style={{ width: 22, height: 22, borderRadius: 5, background: "var(--surface-elevated)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--foreground)", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                        <span style={{ fontSize: 13, fontWeight: 600, minWidth: 20, textAlign: "center" }}>{item.quantidade}</span>
-                        <button onClick={() => setQtd(item.produto.id, item.quantidade + 1)} disabled={item.quantidade >= item.produto.quantidadeEstoque} style={{ width: 22, height: 22, borderRadius: 5, background: "var(--primary-muted)", border: "1px solid rgba(16,185,129,0.3)", cursor: "pointer", color: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", opacity: item.quantidade >= item.produto.quantidadeEstoque ? 0.4 : 1 }}>+</button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <button onClick={() => setQtd(item.produto.id, item.quantidade - 1)} style={{ width: 20, height: 20, borderRadius: 5, background: "var(--surface-elevated)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--foreground)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>−</button>
+                        <span style={{ fontSize: 13, fontWeight: 600, minWidth: 18, textAlign: "center" }}>{item.quantidade}</span>
+                        <button onClick={() => setQtd(item.produto.id, item.quantidade + 1)} disabled={item.quantidade >= item.produto.quantidadeEstoque} style={{ width: 20, height: 20, borderRadius: 5, background: "var(--primary-muted)", border: "1px solid rgba(16,185,129,0.3)", cursor: "pointer", color: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, opacity: item.quantidade >= item.produto.quantidadeEstoque ? 0.4 : 1 }}>+</button>
                       </div>
                       <span style={{ fontSize: 13, fontWeight: 600 }}>{fmt(item.produto.preco * item.quantidade)}</span>
                     </div>
                   </div>
                 ))}
             </div>
-            <div style={{ padding: "12px 14px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-                {FORMAS.map(f => (
-                  <button key={f.value} onClick={() => setForma(f.value)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 8px", background: forma === f.value ? "var(--primary-muted)" : "var(--surface-overlay)", border: `1px solid ${forma === f.value ? "var(--primary)" : "var(--border)"}`, borderRadius: 7, cursor: "pointer", color: forma === f.value ? "var(--primary)" : "var(--foreground-muted)", fontSize: 11, fontWeight: forma === f.value ? 600 : 400 }}>
-                    {f.icon}{f.label}
-                  </button>
-                ))}
+
+            <div style={{ padding: "10px 13px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }}>
+
+              {/* ── Total a pagar ──────────────────────────────────── */}
+              <div style={{ background: "var(--surface-overlay)", borderRadius: 8, padding: "8px 11px", display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--foreground-muted)" }}><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
+                {descontoN > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--destructive)" }}><span>Desconto</span><span>− {fmt(descontoN)}</span></div>}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, color: "var(--primary)", paddingTop: 4, borderTop: "1px solid var(--border)" }}>
+                  <span>Total a pagar</span><span>{fmt(total)}</span>
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+
+              {/* ── Desconto ───────────────────────────────────────── */}
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", display: "block", marginBottom: 5 }}>Desconto R$</label>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", display: "block", marginBottom: 4 }}>Desconto R$</label>
                   <input style={inp} type="number" min="0" step="0.01" value={desconto} onChange={e => setDesconto(e.target.value)} placeholder="0,00" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", display: "block", marginBottom: 5 }}>Observação</label>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", display: "block", marginBottom: 4 }}>Observação</label>
                   <input style={inp} value={observacao} onChange={e => setObservacao(e.target.value)} placeholder="Opcional..." />
                 </div>
               </div>
-              <div style={{ background: "var(--surface-overlay)", borderRadius: 8, padding: "9px 11px", display: "flex", flexDirection: "column", gap: 5 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--foreground-muted)" }}><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
-                {descontoN > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--destructive)" }}><span>Desconto</span><span>− {fmt(descontoN)}</span></div>}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, color: "var(--primary)", paddingTop: 5, borderTop: "1px solid var(--border)" }}><span>Total</span><span>{fmt(total)}</span></div>
+
+              {/* ── Forma 1 ────────────────────────────────────────── */}
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", display: "block", marginBottom: 6 }}>
+                  {misto ? `1ª Forma — ${fmt(valPag1)}` : "Forma de Pagamento"}
+                </label>
+                <SeletorForma value={forma} onChange={f => setForma(f)} />
               </div>
-              <button onClick={registrar} disabled={salvando || !carrinho.length} style={{ ...btnP, justifyContent: "center", padding: "11px 0", opacity: (salvando || !carrinho.length) ? 0.6 : 1 }}>
+
+              {/* ── Toggle misto ───────────────────────────────────── */}
+              <button onClick={() => { setMisto(v => !v); setValPag2(""); setRecebido(""); }}
+                style={{ ...btnG, justifyContent: "center", fontSize: 11, background: misto ? "rgba(59,130,246,0.08)" : "transparent", borderColor: misto ? "#3b82f6" : "var(--border)", color: misto ? "#3b82f6" : "var(--foreground-muted)" }}>
+                {misto ? <><X size={11} />Remover 2ª forma</> : <><Plus size={11} />Dividir em 2 formas de pagamento</>}
+              </button>
+
+              {/* ── Forma 2 + valor ────────────────────────────────── */}
+              {misto && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px", background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 9 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: "#3b82f6", textTransform: "uppercase", letterSpacing: ".06em", margin: 0 }}>2ª Forma — quanto o cliente vai pagar nela?</label>
+                  <SeletorForma value={forma2} onChange={f => { setForma2(f); setRecebido(""); }} />
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", display: "block", marginBottom: 4 }}>
+                      Valor na 2ª forma (R$)
+                    </label>
+                    <input style={inp} type="number" min="0" step="0.01" value={valPag2}
+                      onChange={e => setValPag2(e.target.value)} placeholder="Ex: 5,00" autoFocus />
+                  </div>
+                  {/* Split visual */}
+                  {valPag2N > 0 && valPag2N < total && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                      {[
+                        { label: FORMA_LABEL[forma], valor: valPag1 },
+                        { label: FORMA_LABEL[forma2], valor: valPag2N },
+                      ].map(({ label, valor }) => (
+                        <div key={label} style={{ background: "var(--surface-overlay)", borderRadius: 7, padding: "7px 10px", textAlign: "center" }}>
+                          <p style={{ fontSize: 10, color: "var(--foreground-muted)", margin: "0 0 2px", fontWeight: 600 }}>{label}</p>
+                          <p style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>{fmt(valor)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {valPag2N >= total && valPag2N > 0 && (
+                    <p style={{ fontSize: 12, color: "var(--destructive)", margin: 0 }}>⚠ O valor da 2ª forma não pode ser maior ou igual ao total.</p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Troco / Falta (sempre que dinheiro envolvido) ──── */}
+              {temDinheiro && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em" }}>
+                    Quanto o cliente entregou em dinheiro?
+                    {misto && valorEmDinheiro > 0 && (
+                      <span style={{ fontWeight: 400, marginLeft: 5, textTransform: "none" }}>(esperado: {fmt(valorEmDinheiro)})</span>
+                    )}
+                  </label>
+                  <input style={inp} type="number" min="0" step="0.01" value={recebido}
+                    onChange={e => setRecebido(e.target.value)} placeholder={fmt(valorEmDinheiro)} />
+
+                  {/* Resultado */}
+                  {recebidoN > 0 && recebidoN >= valorEmDinheiro && troco !== null && troco > 0 && (
+                    <div style={{ padding: "10px 13px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: "0 0 1px" }}>Recebeu em dinheiro</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>{fmt(recebidoN)}</p>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: "0 0 1px" }}>Devolver de troco</p>
+                        <p style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)", margin: 0 }}>{fmt(troco)}</p>
+                      </div>
+                    </div>
+                  )}
+                  {recebidoN > 0 && recebidoN === valorEmDinheiro && (
+                    <div style={{ padding: "8px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>✓ Valor exato — sem troco</span>
+                    </div>
+                  )}
+                  {falta !== null && falta > 0 && (
+                    <div style={{ padding: "10px 13px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: "0 0 1px" }}>Recebeu em dinheiro</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>{fmt(recebidoN)}</p>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: "0 0 1px" }}>Ainda falta</p>
+                        <p style={{ fontSize: 18, fontWeight: 800, color: "var(--destructive)", margin: 0 }}>{fmt(falta)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button onClick={registrar} disabled={salvando || !carrinho.length}
+                style={{ ...btnP, justifyContent: "center", padding: "11px 0", opacity: (salvando || !carrinho.length) ? 0.6 : 1 }}>
                 {salvando ? "Registrando..." : <><Check size={14} />Confirmar · {fmt(total)}</>}
               </button>
             </div>
@@ -250,20 +393,58 @@ function ModalNovaVenda({ caixaId, empresaId, onClose, onSucesso }: {
   );
 }
 
-/* ─── Detalhe da Venda ───────────────────────────────────────────────────── */
-function DetalheVenda({ venda, onClose }: { venda: Venda; onClose: () => void }) {
+/* ─── Detalhe + editar + cancelar venda ──────────────────────────────────── */
+function DetalheVenda({ venda, onClose, onAtualizado }: {
+  venda: Venda; onClose: () => void; onAtualizado: (v: Venda) => void;
+}) {
+  const [editandoObs,  setEditandoObs]  = useState(false);
+  const [novaObs,      setNovaObs]      = useState(venda.observacao ?? "");
+  const [cancelando,   setCancelando]   = useState(false);
+  const [motivo,       setMotivo]       = useState("");
+  const [salvando,     setSalvando]     = useState(false);
+
+  const misto = venda.formaPagamento2 && venda.valorPagamento2;
+
+  const salvarObs = async () => {
+    setSalvando(true);
+    try {
+      const updated = await fetchAuth<Venda>(`/api/v1/vendas/${venda.id}/observacao`, { method: "PATCH", body: JSON.stringify({ observacao: novaObs }) });
+      onAtualizado(updated);
+      setEditandoObs(false);
+      toast.success("Observação salva!");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setSalvando(false); }
+  };
+
+  const confirmarCancelamento = async () => {
+    setSalvando(true);
+    try {
+      const updated = await fetchAuth<Venda>(`/api/v1/vendas/${venda.id}/cancelar`, { method: "POST", body: JSON.stringify({ motivo }) });
+      onAtualizado(updated);
+      setCancelando(false);
+      toast.success("Venda cancelada. Estoque devolvido.");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setSalvando(false); }
+  };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="animate-fade-in" style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 14, padding: 26, width: "100%", maxWidth: 420 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-          <div>
+      <div className="animate-fade-in" style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 14, padding: 24, width: "100%", maxWidth: 440 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Venda #{venda.id}</h2>
-            <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "3px 0 0" }}>{fmtData(venda.dataVenda)}</p>
+            {venda.cancelada && (
+              <span style={{ fontSize: 11, padding: "2px 8px", background: "rgba(239,68,68,0.1)", color: "var(--destructive)", borderRadius: 99, fontWeight: 600 }}>CANCELADA</span>
+            )}
           </div>
-          <button onClick={onClose} style={{ ...btnG, padding: 6, border: "none" }}><X size={16} /></button>
+          <button onClick={onClose} style={{ ...btnG, padding: 5, border: "none" }}><X size={16} /></button>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 14 }}>
+
+        <p style={{ fontSize: 11, color: "var(--foreground-muted)", marginBottom: 14 }}>{fmtData(venda.dataVenda)}</p>
+
+        {/* Itens */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
           {venda.itens.map((item, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
               <span style={{ color: "var(--foreground)" }}>{item.nomeProduto} <span style={{ color: "var(--foreground-muted)" }}>× {item.quantidade}</span></span>
@@ -271,74 +452,145 @@ function DetalheVenda({ venda, onClose }: { venda: Venda; onClose: () => void })
             </div>
           ))}
         </div>
-        <div style={{ background: "var(--surface-overlay)", borderRadius: 8, padding: "11px 13px", display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+
+        {/* Totais */}
+        <div style={{ background: "var(--surface-overlay)", borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 5, marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--foreground-muted)" }}><span>Subtotal</span><span>{fmt(venda.valorTotal)}</span></div>
           {venda.desconto > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--destructive)" }}><span>Desconto</span><span>− {fmt(venda.desconto)}</span></div>}
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, color: "var(--primary)", paddingTop: 6, borderTop: "1px solid var(--border)" }}><span>Total</span><span>{fmt(venda.valorFinal)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, color: "var(--primary)", paddingTop: 5, borderTop: "1px solid var(--border)" }}><span>Total</span><span>{fmt(venda.valorFinal)}</span></div>
         </div>
-        <div style={{ fontSize: 12, color: "var(--foreground-muted)" }}>
-          Pagamento: <strong style={{ color: "var(--foreground)" }}>{FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento}</strong>
-          {venda.nomeCliente && <> · Cliente: <strong style={{ color: "var(--foreground)" }}>{venda.nomeCliente}</strong></>}
+
+        {/* Pagamento */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          <span style={{ fontSize: 12, padding: "3px 9px", background: "var(--primary-muted)", color: "var(--primary)", borderRadius: 99, fontWeight: 500 }}>
+            {FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento}
+            {misto && `: ${fmt(venda.valorFinal - (venda.valorPagamento2 ?? 0))}`}
+          </span>
+          {misto && (
+            <span style={{ fontSize: 12, padding: "3px 9px", background: "var(--secondary-muted)", color: "var(--secondary)", borderRadius: 99, fontWeight: 500 }}>
+              {FORMA_LABEL[venda.formaPagamento2!] ?? venda.formaPagamento2}: {fmt(venda.valorPagamento2)}
+            </span>
+          )}
         </div>
-        {venda.observacao && <p style={{ fontSize: 12, color: "var(--foreground-muted)", marginTop: 8 }}>Obs: {venda.observacao}</p>}
+
+        {/* Troco */}
+        {venda.troco != null && venda.troco > 0 && (
+          <p style={{ fontSize: 12, color: "var(--foreground-muted)", marginBottom: 8 }}>
+            Recebido: {fmt(venda.valorRecebido)} · <strong style={{ color: "var(--primary)" }}>Troco: {fmt(venda.troco)}</strong>
+          </p>
+        )}
+
+        {venda.nomeCliente && <p style={{ fontSize: 12, color: "var(--foreground-muted)", marginBottom: 8 }}>Cliente: <strong>{venda.nomeCliente}</strong></p>}
+
+        {/* Motivo cancelamento */}
+        {venda.cancelada && venda.motivoCancelamento && (
+          <div style={{ padding: "8px 10px", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 7, marginBottom: 10, fontSize: 12, color: "var(--destructive)" }}>
+            Motivo: {venda.motivoCancelamento}
+          </div>
+        )}
+
+        {/* Observação */}
+        {!cancelando && (
+          <div style={{ marginBottom: 14 }}>
+            {editandoObs ? (
+              <div style={{ display: "flex", gap: 6 }}>
+                <input style={{ ...{ ...btnG, padding: "7px 10px" }, flex: 1, background: "var(--surface-overlay)", color: "var(--foreground)" }}
+                  value={novaObs} onChange={e => setNovaObs(e.target.value)} placeholder="Observação..." autoFocus />
+                <button onClick={salvarObs} disabled={salvando} style={{ ...btnP, padding: "7px 12px" }}><Check size={13} /></button>
+                <button onClick={() => setEditandoObs(false)} style={{ ...btnG, padding: "7px 10px" }}><X size={13} /></button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: 0, flex: 1 }}>{venda.observacao || <span style={{ fontStyle: "italic" }}>Sem observação</span>}</p>
+                {!venda.cancelada && <button onClick={() => setEditandoObs(true)} style={{ ...btnG, padding: "4px 8px" }}><Edit2 size={12} /></button>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Cancelar */}
+        {!venda.cancelada && !editandoObs && (
+          cancelando ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "12px", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 9 }}>
+              <p style={{ fontSize: 12, color: "var(--destructive)", fontWeight: 600, margin: 0 }}>Confirmar cancelamento?</p>
+              <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: 0 }}>O estoque será devolvido automaticamente.</p>
+              <input style={{ ...btnG, padding: "7px 10px", background: "var(--surface-overlay)", color: "var(--foreground)", width: "100%" }}
+                value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Motivo (opcional)..." />
+              <div style={{ display: "flex", gap: 7 }}>
+                <button onClick={() => setCancelando(false)} style={{ ...btnG, flex: 1, justifyContent: "center" }}>Voltar</button>
+                <button onClick={confirmarCancelamento} disabled={salvando} style={{ flex: 2, padding: "8px 0", background: "var(--destructive)", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: salvando ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <Ban size={13} /> Confirmar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setCancelando(true)} style={{ ...btnG, width: "100%", justifyContent: "center", borderColor: "rgba(239,68,68,0.3)", color: "var(--destructive)" }}>
+              <Trash2 size={13} /> Cancelar venda
+            </button>
+          )
+        )}
       </div>
     </div>
   );
 }
 
-/* ─── Card de Caixa com suas vendas ─────────────────────────────────────── */
+/* ─── CaixaCard ──────────────────────────────────────────────────────────── */
 function CaixaCard({ caixa, empresaId, onNovaVenda }: {
   caixa: CaixaInfo; empresaId: number; onNovaVenda?: () => void;
 }) {
-  const [vendas,    setVendas]    = useState<Venda[]>([]);
-  const [loading,   setLoading]   = useState(false);
-  const [aberto,    setAberto]    = useState(caixa.aberto); // começa aberto se for o ativo
-  const [detalhe,   setDetalhe]   = useState<Venda | null>(null);
-  const [filtro,    setFiltro]    = useState("");
+  const [vendas,  setVendas]  = useState<Venda[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [aberto,  setAberto]  = useState(caixa.aberto);
+  const [detalhe, setDetalhe] = useState<Venda | null>(null);
+  const [filtro,  setFiltro]  = useState("");
 
   useEffect(() => {
     setLoading(true);
     fetchAuth<Venda[]>(`/api/v1/vendas/caixa/${caixa.id}`)
-      .then(setVendas)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .then(setVendas).catch(() => {}).finally(() => setLoading(false));
   }, [caixa.id]);
 
-  // Resumo por forma de pagamento
   const resumoPagamento = useMemo(() => {
     const map: Record<string, number> = {};
-    vendas.forEach(v => {
+    vendas.filter(v => !v.cancelada).forEach(v => {
       const k = FORMA_LABEL[v.formaPagamento] ?? v.formaPagamento;
       map[k] = (map[k] ?? 0) + v.valorFinal;
+      if (v.formaPagamento2 && v.valorPagamento2) {
+        const k2 = FORMA_LABEL[v.formaPagamento2] ?? v.formaPagamento2;
+        map[k2] = (map[k2] ?? 0) + v.valorPagamento2;
+      }
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [vendas]);
 
   const vendasFiltradas = useMemo(() =>
-    vendas.filter(v =>
-      String(v.id).includes(filtro) ||
-      (FORMA_LABEL[v.formaPagamento] ?? v.formaPagamento).toLowerCase().includes(filtro.toLowerCase())
-    ).sort((a, b) => new Date(b.dataVenda).getTime() - new Date(a.dataVenda).getTime()),
+    vendas.filter(v => String(v.id).includes(filtro) || (FORMA_LABEL[v.formaPagamento] ?? v.formaPagamento).toLowerCase().includes(filtro.toLowerCase()))
+      .sort((a, b) => new Date(b.dataVenda).getTime() - new Date(a.dataVenda).getTime()),
     [vendas, filtro]);
 
-  const totalCaixa = vendas.reduce((s, v) => s + (v.valorFinal ?? 0), 0);
+  const totalCaixa = vendas.filter(v => !v.cancelada).reduce((s, v) => s + (v.valorFinal ?? 0), 0);
+  const canceladas = vendas.filter(v => v.cancelada).length;
+
+  const handleAtualizado = (updated: Venda) => {
+    setVendas(prev => prev.map(v => v.id === updated.id ? updated : v));
+    setDetalhe(updated);
+  };
 
   return (
     <div style={{ background: "var(--surface-elevated)", border: `1px solid ${caixa.aberto ? "rgba(16,185,129,0.3)" : "var(--border)"}`, borderRadius: 14, overflow: "hidden" }}>
-
-      {/* Header do caixa */}
-      <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
+      <div style={{ padding: "13px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
         onClick={() => setAberto(v => !v)}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 9, background: caixa.aberto ? "var(--primary-muted)" : "var(--surface-overlay)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Receipt size={16} color={caixa.aberto ? "var(--primary)" : "var(--foreground-muted)"} />
+        <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 8, background: caixa.aberto ? "var(--primary-muted)" : "var(--surface-overlay)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Receipt size={15} color={caixa.aberto ? "var(--primary)" : "var(--foreground-muted)"} />
           </div>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>Caixa #{caixa.id}</span>
-              <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: caixa.aberto ? "var(--primary-muted)" : "var(--surface-overlay)", color: caixa.aberto ? "var(--primary)" : "var(--foreground-muted)" }}>
+              <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 99, fontWeight: 600, background: caixa.aberto ? "var(--primary-muted)" : "var(--surface-overlay)", color: caixa.aberto ? "var(--primary)" : "var(--foreground-muted)" }}>
                 {caixa.aberto ? "● ABERTO" : "FECHADO"}
               </span>
+              {canceladas > 0 && <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 99, background: "rgba(239,68,68,0.1)", color: "var(--destructive)", fontWeight: 500 }}>{canceladas} cancelada(s)</span>}
             </div>
             <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: "2px 0 0" }}>
               Aberto em {fmtData(caixa.dataAbertura)}
@@ -346,49 +598,45 @@ function CaixaCard({ caixa, empresaId, onNovaVenda }: {
             </p>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ textAlign: "right" }}>
             <p style={{ fontSize: 16, fontWeight: 700, color: "var(--primary)", margin: 0 }}>{fmt(totalCaixa)}</p>
-            <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: 0 }}>{vendas.length} venda(s)</p>
+            <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: 0 }}>{vendas.filter(v => !v.cancelada).length} venda(s)</p>
           </div>
           {caixa.aberto && onNovaVenda && (
-            <button onClick={e => { e.stopPropagation(); onNovaVenda(); }} style={{ ...btnP, padding: "7px 12px", fontSize: 12 }}>
-              <Plus size={13} /> Nova
+            <button onClick={e => { e.stopPropagation(); onNovaVenda(); }} style={{ ...btnP, padding: "6px 11px", fontSize: 12 }}>
+              <Plus size={12} /> Nova
             </button>
           )}
-          {aberto ? <ChevronUp size={16} color="var(--foreground-muted)" /> : <ChevronDown size={16} color="var(--foreground-muted)" />}
+          {aberto ? <ChevronUp size={15} color="var(--foreground-muted)" /> : <ChevronDown size={15} color="var(--foreground-muted)" />}
         </div>
       </div>
 
-      {/* Conteúdo expandido */}
       {aberto && (
-        <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 16 }}>
-
-          {/* Resumo financeiro */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
+        <div style={{ padding: "13px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 9 }}>
             {[
               { label: "Saldo Inicial", value: fmt(caixa.valorInicial) },
               { label: "Total Vendas",  value: fmt(totalCaixa), destaque: true },
-              { label: "Ticket Médio",  value: vendas.length > 0 ? fmt(totalCaixa / vendas.length) : "—" },
+              { label: "Ticket Médio",  value: vendas.filter(v=>!v.cancelada).length > 0 ? fmt(totalCaixa / vendas.filter(v=>!v.cancelada).length) : "—" },
               ...(caixa.dataFechamento ? [{ label: "Saldo Final", value: fmt(caixa.valorFinal) }] : []),
             ].map((c, i) => (
-              <div key={i} style={{ background: "var(--surface-overlay)", borderRadius: 8, padding: "10px 12px" }}>
-                <p style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", margin: "0 0 4px" }}>{c.label}</p>
-                <p style={{ fontSize: 16, fontWeight: 700, color: (c as any).destaque ? "var(--primary)" : "var(--foreground)", margin: 0 }}>{c.value}</p>
+              <div key={i} style={{ background: "var(--surface-overlay)", borderRadius: 8, padding: "9px 11px" }}>
+                <p style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", margin: "0 0 3px" }}>{c.label}</p>
+                <p style={{ fontSize: 15, fontWeight: 700, color: (c as any).destaque ? "var(--primary)" : "var(--foreground)", margin: 0 }}>{c.value}</p>
               </div>
             ))}
           </div>
 
-          {/* Resumo por forma de pagamento */}
           {resumoPagamento.length > 0 && (
             <div>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
-                <BarChart3 size={12} /> Formas de Pagamento
+              <p style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 7, display: "flex", alignItems: "center", gap: 5 }}>
+                <BarChart3 size={11} /> Formas de Pagamento
               </p>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                 {resumoPagamento.map(([forma, valor]) => (
-                  <div key={forma} style={{ background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ fontSize: 11, color: "var(--foreground-muted)", fontWeight: 500 }}>{forma}</span>
+                  <div key={forma} style={{ background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 11px" }}>
+                    <span style={{ fontSize: 11, color: "var(--foreground-muted)", fontWeight: 500, display: "block" }}>{forma}</span>
                     <span style={{ fontSize: 14, fontWeight: 700, color: "var(--primary)" }}>{fmt(valor)}</span>
                   </div>
                 ))}
@@ -396,45 +644,50 @@ function CaixaCard({ caixa, empresaId, onNovaVenda }: {
             </div>
           )}
 
-          {/* Filtro */}
           {vendas.length > 0 && (
-            <div style={{ position: "relative", maxWidth: 300 }}>
-              <Search size={12} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-subtle)" }} />
-              <input style={{ ...inp, paddingLeft: 28, padding: "7px 10px 7px 28px", fontSize: 12 }} placeholder="Filtrar vendas..." value={filtro} onChange={e => setFiltro(e.target.value)} />
+            <div style={{ position: "relative", maxWidth: 280 }}>
+              <Search size={11} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-subtle)" }} />
+              <input style={{ ...inp, paddingLeft: 26, padding: "6px 9px 6px 26px", fontSize: 12 }} placeholder="Filtrar vendas..." value={filtro} onChange={e => setFiltro(e.target.value)} />
             </div>
           )}
 
-          {/* Lista de vendas */}
           {loading ? (
-            <div style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: 13, padding: 16 }}>Carregando vendas...</div>
+            <div style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: 13, padding: 14 }}>Carregando...</div>
           ) : vendasFiltradas.length === 0 ? (
-            <div style={{ textAlign: "center", color: "var(--foreground-subtle)", fontSize: 13, padding: 16 }}>
-              {vendas.length === 0 ? "Nenhuma venda neste caixa." : "Nenhuma venda encontrada."}
+            <div style={{ textAlign: "center", color: "var(--foreground-subtle)", fontSize: 13, padding: 14 }}>
+              {vendas.length === 0 ? "Nenhuma venda neste caixa." : "Sem resultados."}
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
               {vendasFiltradas.map(v => (
                 <div key={v.id} onClick={() => setDetalhe(v)}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "var(--surface-overlay)", borderRadius: 8, cursor: "pointer", border: "1px solid transparent", transition: "all .12s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "transparent"; }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground-muted)" }}>#{v.id}</span>
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 11px", background: v.cancelada ? "rgba(239,68,68,0.04)" : "var(--surface-overlay)", borderRadius: 8, cursor: "pointer", border: `1px solid ${v.cancelada ? "rgba(239,68,68,0.15)" : "transparent"}`, transition: "all .1s", opacity: v.cancelada ? 0.7 : 1 }}
+                  onMouseEnter={e => { if (!v.cancelada) (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)"; }}
+                  onMouseLeave={e => { if (!v.cancelada) (e.currentTarget as HTMLDivElement).style.borderColor = "transparent"; }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground-muted)" }}>#{v.id}</span>
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 12, padding: "2px 7px", background: "var(--primary-muted)", color: "var(--primary)", borderRadius: 99, fontWeight: 500 }}>
-                          {FORMA_LABEL[v.formaPagamento] ?? v.formaPagamento}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 11, padding: "1px 6px", background: v.cancelada ? "rgba(239,68,68,0.1)" : "var(--primary-muted)", color: v.cancelada ? "var(--destructive)" : "var(--primary)", borderRadius: 99, fontWeight: 500 }}>
+                          {v.cancelada ? "Cancelada" : (FORMA_LABEL[v.formaPagamento] ?? v.formaPagamento)}
                         </span>
+                        {v.formaPagamento2 && !v.cancelada && (
+                          <span style={{ fontSize: 11, padding: "1px 6px", background: "var(--secondary-muted)", color: "var(--secondary)", borderRadius: 99, fontWeight: 500 }}>
+                            + {FORMA_LABEL[v.formaPagamento2] ?? v.formaPagamento2}
+                          </span>
+                        )}
                         {v.desconto > 0 && <span style={{ fontSize: 11, color: "var(--destructive)" }}>− {fmt(v.desconto)}</span>}
                       </div>
-                      <p style={{ fontSize: 11, color: "var(--foreground-subtle)", margin: "3px 0 0" }}>
+                      <p style={{ fontSize: 11, color: "var(--foreground-subtle)", margin: "2px 0 0" }}>
                         {fmtData(v.dataVenda)} · {v.itens?.length ?? 0} item(s)
                       </p>
                     </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "var(--primary)" }}>{fmt(v.valorFinal)}</span>
-                    <ChevronRight size={14} color="var(--foreground-subtle)" />
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: v.cancelada ? "var(--foreground-subtle)" : "var(--primary)", textDecoration: v.cancelada ? "line-through" : "none" }}>
+                      {fmt(v.valorFinal)}
+                    </span>
+                    <ChevronRight size={13} color="var(--foreground-subtle)" />
                   </div>
                 </div>
               ))}
@@ -443,7 +696,7 @@ function CaixaCard({ caixa, empresaId, onNovaVenda }: {
         </div>
       )}
 
-      {detalhe && <DetalheVenda venda={detalhe} onClose={() => setDetalhe(null)} />}
+      {detalhe && <DetalheVenda venda={detalhe} onClose={() => setDetalhe(null)} onAtualizado={handleAtualizado} />}
     </div>
   );
 }
@@ -451,7 +704,6 @@ function CaixaCard({ caixa, empresaId, onNovaVenda }: {
 /* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Vendas() {
   const { empresaAtiva, caixaAtivo } = useEmpresa();
-
   const [caixas,       setCaixas]       = useState<CaixaInfo[]>([]);
   const [loading,      setLoading]      = useState(false);
   const [modalNova,    setModalNova]    = useState(false);
@@ -460,10 +712,8 @@ export default function Vendas() {
   const carregar = async () => {
     if (!empresaAtiva) return;
     setLoading(true);
-    try {
-      const data = await fetchAuth<CaixaInfo[]>(`/api/v1/caixas/empresa/${empresaAtiva.id}`);
-      setCaixas(data);
-    } catch { toast.error("Erro ao carregar caixas"); }
+    try { setCaixas(await fetchAuth<CaixaInfo[]>(`/api/v1/caixas/empresa/${empresaAtiva.id}`)); }
+    catch { toast.error("Erro ao carregar caixas"); }
     finally { setLoading(false); }
   };
 
@@ -478,63 +728,38 @@ export default function Vendas() {
 
   return (
     <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}>
-
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Vendas</h2>
           <p style={{ fontSize: 13, color: "var(--foreground-muted)", marginTop: 3 }}>{empresaAtiva.nomeFantasia} · {caixas.length} caixa(s)</p>
         </div>
-        {caixaAtivo && (
-          <button style={btnP} onClick={() => setModalNova(true)}>
-            <Plus size={15} /> Nova Venda
-          </button>
-        )}
-        {!caixaAtivo && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--warning-muted)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, fontSize: 13, color: "var(--warning)" }}>
-            <AlertCircle size={14} /> Abra o caixa para registrar vendas
-          </div>
-        )}
+        {caixaAtivo
+          ? <button style={btnP} onClick={() => setModalNova(true)}><Plus size={15} /> Nova Venda</button>
+          : <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--warning-muted)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, fontSize: 13, color: "var(--warning)" }}><AlertCircle size={14} /> Abra o caixa para registrar vendas</div>
+        }
       </div>
 
-      {/* Lista de caixas */}
       {loading ? (
         <div style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: 13, padding: 32 }}>Carregando...</div>
       ) : caixas.length === 0 ? (
         <div style={{ padding: 48, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, color: "var(--foreground-subtle)" }}>
-          <Receipt size={40} />
-          <p style={{ fontSize: 14 }}>Nenhum caixa encontrado para esta empresa.</p>
+          <Receipt size={40} /><p style={{ fontSize: 14 }}>Nenhum caixa encontrado.</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {caixas.map(c => (
-            <CaixaCard
-              key={c.id}
-              caixa={c}
-              empresaId={empresaAtiva.id}
-              onNovaVenda={caixaAtivo?.id === c.id ? () => setModalNova(true) : undefined}
-            />
+            <CaixaCard key={c.id} caixa={c} empresaId={empresaAtiva.id}
+              onNovaVenda={caixaAtivo?.id === c.id ? () => setModalNova(true) : undefined} />
           ))}
         </div>
       )}
 
-      {/* Modal nova venda */}
       {modalNova && caixaAtivo && (
-        <ModalNovaVenda
-          caixaId={caixaAtivo.id}
-          empresaId={empresaAtiva.id}
+        <ModalNovaVenda caixaId={caixaAtivo.id} empresaId={empresaAtiva.id}
           onClose={() => setModalNova(false)}
-          onSucesso={venda => { carregar(); setVendaSucesso(venda); }}
-        />
+          onSucesso={venda => { carregar(); setVendaSucesso(venda); }} />
       )}
-
-      {/* Tela de sucesso */}
-      {vendaSucesso && (
-        <TelaVendaSucesso
-          venda={vendaSucesso}
-          onFechar={() => setVendaSucesso(null)}
-        />
-      )}
+      {vendaSucesso && <TelaVendaSucesso venda={vendaSucesso} onFechar={() => setVendaSucesso(null)} />}
     </div>
   );
 }

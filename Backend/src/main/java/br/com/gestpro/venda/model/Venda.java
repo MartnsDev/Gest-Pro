@@ -46,25 +46,41 @@ public class Venda {
     @Column(nullable = false)
     private BigDecimal total = BigDecimal.ZERO;
 
+    @Column(nullable = false)
     private BigDecimal desconto = BigDecimal.ZERO;
 
+    @Column(nullable = false)
     private BigDecimal valorFinal = BigDecimal.ZERO;
+
+    @Column(name = "valor_recebido")
+    private BigDecimal valorRecebido;
+
+    @Column(name = "troco")
+    private BigDecimal troco;
 
     private String observacao;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "forma_pagamento")
     private FormaDePagamento formaPagamento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "forma_pagamento2")
+    private FormaDePagamento formaPagamento2;
+
+    @Column(name = "valor_pagamento2")
+    private BigDecimal valorPagamento2;
+
+    @Column(nullable = false)
+    private Boolean cancelada = false;
+
+    @Column(name = "data_cancelamento")
+    private LocalDateTime dataCancelamento;
+
+    @Column(name = "motivo_cancelamento")
+    private String motivoCancelamento;
 
     @CreationTimestamp
     @Column(name = "data_venda", nullable = false, updatable = false)
     private LocalDateTime dataVenda;
-
-    @PrePersist
-    @PreUpdate
-    public void calcularTotal() {
-        this.total = itens.stream()
-                .map(ItemVenda::getValorTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        this.valorFinal = total.subtract(desconto != null ? desconto : BigDecimal.ZERO).max(BigDecimal.ZERO);
-    }
 }

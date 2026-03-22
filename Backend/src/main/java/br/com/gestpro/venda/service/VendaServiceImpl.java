@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,7 +41,7 @@ public class VendaServiceImpl implements VendaServiceInterface {
     @Transactional
     public Venda registrarVenda(RegistrarVendaDTO dto) {
         if (dto.getItens() == null || dto.getItens().isEmpty())
-            throw new ApiException("Nenhum item enviado para a venda", HttpStatus.BAD_REQUEST, "/api/v1/vendas/registrar");
+            throw new ApiException("Nenhum item enviado", HttpStatus.BAD_REQUEST, "/api/v1/vendas/registrar");
 
         Usuario usuario = usuarioRepository.findByEmail(dto.getEmailUsuario())
                 .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/api/v1/vendas/registrar"));
@@ -49,7 +50,7 @@ public class VendaServiceImpl implements VendaServiceInterface {
                 .orElseThrow(() -> new ApiException("Caixa não encontrado", HttpStatus.NOT_FOUND, "/api/v1/vendas/registrar"));
 
         if (!caixa.getAberto())
-            throw new ApiException("O caixa selecionado está fechado.", HttpStatus.BAD_REQUEST, "/api/v1/vendas/registrar");
+            throw new ApiException("O caixa está fechado.", HttpStatus.BAD_REQUEST, "/api/v1/vendas/registrar");
 
         Cliente cliente = null;
         if (dto.getIdCliente() != null)
@@ -61,12 +62,11 @@ public class VendaServiceImpl implements VendaServiceInterface {
         venda.setCaixa(caixa);
         venda.setCliente(cliente);
         venda.setFormaPagamento(dto.getFormaPagamento());
+        venda.setFormaPagamento2(dto.getFormaPagamento2());
+        venda.setValorPagamento2(dto.getValorPagamento2());
         venda.setObservacao(dto.getObservacao());
-
-        // ✅ Vincula a empresa via caixa (caixa já tem empresa)
-        if (caixa.getEmpresa() != null) {
-            venda.setEmpresa(caixa.getEmpresa());
-        }
+        venda.setCancelada(false);
+        if (caixa.getEmpresa() != null) venda.setEmpresa(caixa.getEmpresa());
 
         List<ItemVenda> itens = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
@@ -75,47 +75,100 @@ public class VendaServiceImpl implements VendaServiceInterface {
             Produto produto = produtoRepository.findById(itemDTO.getIdProduto())
                     .orElseThrow(() -> new ApiException("Produto não encontrado: " + itemDTO.getIdProduto(), HttpStatus.NOT_FOUND, "/api/v1/vendas/registrar"));
 
-            int quantidade = itemDTO.getQuantidade() != null ? itemDTO.getQuantidade() : 1;
+            int qtd = itemDTO.getQuantidade() != null ? itemDTO.getQuantidade() : 1;
 
-            if (produto.getQuantidadeEstoque() < quantidade)
+            if (produto.getQuantidadeEstoque() < qtd)
                 throw new ApiException("Estoque insuficiente para: " + produto.getNome(), HttpStatus.BAD_REQUEST, "/api/v1/vendas/registrar");
 
-            produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() - quantidade);
+            produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() - qtd);
             produtoRepository.save(produto);
 
-            ItemVenda itemVenda = new ItemVenda();
-            itemVenda.setVenda(venda);
-            itemVenda.setProduto(produto);
-            itemVenda.setQuantidade(quantidade);
-            itemVenda.setPrecoUnitario(produto.getPreco());
-            itemVenda.calcularSubtotal();
+            ItemVenda iv = new ItemVenda();
+            iv.setVenda(venda);
+            iv.setProduto(produto);
+            iv.setQuantidade(qtd);
+            iv.setPrecoUnitario(produto.getPreco());
+            iv.calcularSubtotal();
 
-            total = total.add(itemVenda.getSubtotal());
-            itens.add(itemVenda);
+            total = total.add(iv.getSubtotal());
+            itens.add(iv);
         }
 
         venda.setItens(itens);
 
-        BigDecimal desconto = dto.getDesconto() != null ? dto.getDesconto() : BigDecimal.ZERO;
+        // ✅ Desconto normalizado — null nunca chega ao banco
+        BigDecimal desconto = dto.getDesconto() != null
+                ? dto.getDesconto().max(BigDecimal.ZERO)
+                : BigDecimal.ZERO;
+
         venda.setTotal(total);
+        venda.setDesconto(desconto);
         venda.setValorFinal(total.subtract(desconto).max(BigDecimal.ZERO));
+
+        // ✅ Troco para pagamento em dinheiro
+        if (dto.getValorRecebido() != null && dto.getValorRecebido().compareTo(BigDecimal.ZERO) > 0) {
+            venda.setValorRecebido(dto.getValorRecebido());
+            venda.setTroco(dto.getValorRecebido().subtract(venda.getValorFinal()).max(BigDecimal.ZERO));
+        }
 
         Venda salvo = vendaRepository.save(venda);
 
-        // Atualiza total do caixa
         BigDecimal novoTotal = caixa.getTotalVendas() != null
                 ? caixa.getTotalVendas().add(salvo.getValorFinal())
                 : salvo.getValorFinal();
         caixa.setTotalVendas(novoTotal);
         caixaRepository.save(caixa);
 
-        log.info("Venda registrada. vendaId={}, empresa={}, usuario={}, valorFinal={}",
-                salvo.getId(),
-                caixa.getEmpresa() != null ? caixa.getEmpresa().getNomeFantasia() : "N/A",
-                usuario.getEmail(),
-                salvo.getValorFinal());
+        log.info("Venda id={} registrada. empresa={}, valorFinal={}, desconto={}",
+                salvo.getId(), caixa.getEmpresa() != null ? caixa.getEmpresa().getNomeFantasia() : "N/A",
+                salvo.getValorFinal(), salvo.getDesconto());
 
         return salvo;
+    }
+
+    @Override
+    @Transactional
+    public Venda cancelarVenda(Long id, String motivo, String emailUsuario) {
+        Venda venda = vendaRepository.findById(id)
+                .orElseThrow(() -> new ApiException("Venda não encontrada", HttpStatus.NOT_FOUND, "/api/v1/vendas/" + id));
+
+        if (!venda.getUsuario().getEmail().equals(emailUsuario))
+            throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, "/api/v1/vendas/" + id);
+
+        if (Boolean.TRUE.equals(venda.getCancelada()))
+            throw new ApiException("Venda já cancelada.", HttpStatus.BAD_REQUEST, "/api/v1/vendas/" + id);
+
+        // Devolve estoque
+        venda.getItens().forEach(item -> {
+            Produto p = item.getProduto();
+            p.setQuantidadeEstoque(p.getQuantidadeEstoque() + item.getQuantidade());
+            produtoRepository.save(p);
+        });
+
+        // Deduz do total do caixa
+        Caixa caixa = venda.getCaixa();
+        if (caixa.getTotalVendas() != null)
+            caixa.setTotalVendas(caixa.getTotalVendas().subtract(venda.getValorFinal()).max(BigDecimal.ZERO));
+        caixaRepository.save(caixa);
+
+        venda.setCancelada(true);
+        venda.setDataCancelamento(LocalDateTime.now());
+        venda.setMotivoCancelamento(motivo);
+
+        return vendaRepository.save(venda);
+    }
+
+    @Override
+    @Transactional
+    public Venda editarObservacao(Long id, String observacao, String emailUsuario) {
+        Venda venda = vendaRepository.findById(id)
+                .orElseThrow(() -> new ApiException("Venda não encontrada", HttpStatus.NOT_FOUND, "/api/v1/vendas/" + id));
+
+        if (!venda.getUsuario().getEmail().equals(emailUsuario))
+            throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, "/api/v1/vendas/" + id);
+
+        venda.setObservacao(observacao);
+        return vendaRepository.save(venda);
     }
 
     @Override
@@ -125,6 +178,7 @@ public class VendaServiceImpl implements VendaServiceInterface {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Venda buscarPorId(Long id) {
         return vendaRepository.findById(id)
                 .orElseThrow(() -> new ApiException("Venda não encontrada", HttpStatus.NOT_FOUND, "/api/v1/vendas/"));
