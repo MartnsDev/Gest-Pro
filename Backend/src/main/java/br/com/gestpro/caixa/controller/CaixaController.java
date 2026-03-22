@@ -14,7 +14,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/caixas")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class CaixaController {
 
     private final CaixaServiceInterface caixaService;

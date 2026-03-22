@@ -47,10 +47,31 @@ const FORMA_LABEL: Record<string, string> = {
 
 const fmt = (v?: number | null) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
-const fmtData = (s?: string) => {
-  if (!s) return "—";
-  try { return new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
-  catch { return s; }
+
+// Parseia LocalDateTime do Java em qualquer formato:
+// string "2026-03-21T20:30:00", array [2026,3,21,20,30,0], ou null
+const parseDate = (s?: any): Date | null => {
+  if (!s) return null;
+  // Array: Java serializa LocalDateTime como [year, month, day, hour, min, sec]
+  if (Array.isArray(s)) {
+    const [y, mo, d, h = 0, mi = 0, sec = 0] = s;
+    return new Date(y, mo - 1, d, h, mi, sec);
+  }
+  if (typeof s !== "string") return null;
+  // String: normaliza e parseia
+  const norm = s.replace(" ", "T").replace(/\.\d+/, "");
+  const d = new Date(norm);
+  if (!isNaN(d.getTime())) return d;
+  // Fallback manual
+  const p = norm.match(/^(\d{4})-(\d{2})-(\d{2})T?(\d{2})?:?(\d{2})?:?(\d{2})?/);
+  if (p) return new Date(+p[1], +p[2]-1, +p[3], +(p[4]||0), +(p[5]||0), +(p[6]||0));
+  return null;
+};
+
+const fmtData = (s?: any) => {
+  const d = parseDate(s);
+  if (!d) return "—";
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
