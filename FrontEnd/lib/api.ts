@@ -7,10 +7,11 @@ export const API_BASE_URL =
 export interface Usuario {
   nome: string;
   email: string;
-  foto?: string;
+  foto?: string;        // foto do Google (URL completa)
+  fotoUpload?: string;  // foto de upload (path relativo: /uploads/fotos/uuid.jpg)
   tipoPlano: string;
   statusAcesso?: "ATIVO" | "INATIVO";
-  expiracaoPlano?: string; // 👈 adiciona aqui
+  expiracaoPlano?: string;
 }
 
 export interface LoginResponse {
@@ -19,6 +20,7 @@ export interface LoginResponse {
   email: string;
   tipoPlano: string;
   foto?: string;
+  fotoUpload?: string;
   statusAcesso?: "ATIVO" | "INATIVO";
   expiracaoPlano?: string;
 }
@@ -32,10 +34,7 @@ interface ErrorResponse {
 
 /**
  * Login com email e senha
- * Salva cookie JWT HTTP-only no backend
  */
-// services/auth.ts
-
 export async function login(email: string, senha: string): Promise<Usuario> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
@@ -56,12 +55,13 @@ export async function login(email: string, senha: string): Promise<Usuario> {
   }
 
   return {
-    nome: data.nome,
-    email: data.email,
-    foto: data.foto || "/placeholder-user.jpg",
-    tipoPlano: data.tipoPlano,
-    statusAcesso: data.statusAcesso,
-    expiracaoPlano: data.expiracaoPlano,
+    nome:          data.nome,
+    email:         data.email,
+    foto:          data.foto || undefined,
+    fotoUpload:    data.fotoUpload || undefined,
+    tipoPlano:     data.tipoPlano,
+    statusAcesso:  data.statusAcesso,
+    expiracaoPlano:data.expiracaoPlano,
   };
 }
 
@@ -83,18 +83,14 @@ export async function cadastrar(
   const response = await fetch(`${API_BASE_URL}/auth/cadastro`, {
     method: "POST",
     body: formData,
-    credentials: "include", // mantém cookie se backend enviar
+    credentials: "include",
   });
 
   const data: ErrorResponse | null = await response.json().catch(() => null);
-  const dataSafe = (
-    data && typeof data === "object" ? data : {}
-  ) as ErrorResponse;
+  const dataSafe = (data && typeof data === "object" ? data : {}) as ErrorResponse;
 
   if (!response.ok) {
-    const errorMsg =
-      dataSafe.erro || dataSafe.mensagem || "Erro ao cadastrar usuário";
-    throw new Error(errorMsg);
+    throw new Error(dataSafe.erro || dataSafe.mensagem || "Erro ao cadastrar usuário");
   }
 }
 
@@ -116,40 +112,31 @@ export async function getUsuario(): Promise<Usuario> {
     credentials: "include",
   });
 
-  const data: Usuario | ErrorResponse | null = await response
-    .json()
-    .catch(() => null);
-
-  const dataSafe = (
-    data && typeof data === "object" ? data : {}
-  ) as ErrorResponse;
-
-  if (!response.ok) {
-    const errorMsg =
-      dataSafe.erro || dataSafe.mensagem || "Erro ao obter usuário";
-    throw new Error(errorMsg);
-  }
-
   if (response.status === 403) {
     window.location.href = "/pagamento";
     throw new Error("Plano inativo");
   }
 
-  const usuarioData = data as Usuario;
+  const data: any = await response.json().catch(() => null);
+  const dataSafe = (data && typeof data === "object" ? data : {}) as ErrorResponse;
+
+  if (!response.ok) {
+    throw new Error(dataSafe.erro || dataSafe.mensagem || "Erro ao obter usuário");
+  }
 
   return {
-    nome: usuarioData.nome,
-    email: usuarioData.email,
-    // se não houver foto, usa a padrão
-    foto: usuarioData.foto || "/placeholder-user.jpg",
-    tipoPlano: usuarioData.tipoPlano,
-    statusAcesso: usuarioData.statusAcesso,
+    nome:          data.nome,
+    email:         data.email,
+    foto:          data.foto || undefined,        // foto Google (URL completa)
+    fotoUpload:    data.fotoUpload || undefined,  // foto de upload (path relativo)
+    tipoPlano:     data.tipoPlano,
+    statusAcesso:  data.statusAcesso,
+    expiracaoPlano:data.expiracaoPlano,
   };
 }
 
 /**
  * Login com Google
- * Redireciona para o backend OAuth2
  */
 export function loginComGoogle() {
   window.location.href = `${API_BASE_URL}/oauth2/authorization/google`;

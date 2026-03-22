@@ -118,7 +118,7 @@ export default function Planos() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAuth<{ planoUsuario: PlanoInfo }>("/api/v1/dashboard/visao-geral")
+    fetchAuth<{ planoUsuario: PlanoInfo }>("/api/v1/dashboard/vendas/plano-usuario")
       .then(d => setPlano(d.planoUsuario))
       .catch(() => {})
       .finally(() => setLoading(false));

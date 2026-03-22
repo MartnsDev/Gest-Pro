@@ -40,7 +40,20 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
   const [secao,      setSecao]      = useState<Secao>("dashboard");
   const [modalCaixa, setModalCaixa] = useState(false);
 
-  const iniciais = usuario.nome.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  // Foto e nome podem ser atualizados em Configurações sem recarregar a página
+  const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+  const resolverFoto = (url?: string | null) => {
+    if (!url) return null;
+    if (url.startsWith("http") || url.startsWith("blob:")) return url;
+    return `${API}${url}`;
+  };
+
+  const [fotoAtual, setFotoAtual] = useState<string | null>(
+    resolverFoto(usuario.fotoUpload ?? usuario.foto)
+  );
+  const [nomeAtual, setNomeAtual] = useState(usuario.nome);
+
+  const iniciais = nomeAtual.split(" ").map(n => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2);
 
   const handleLogout = async () => {
     try { await logout(); } catch {}
@@ -56,7 +69,7 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
       case "vendas":        return <Vendas />;
       case "clientes":      return <Clientes />;
       case "relatorios":    return <Relatorios />;
-      case "configuracoes": return <Configuracoes usuario={usuario} />;
+      case "configuracoes": return <Configuracoes usuario={usuario} onFotoAtualizada={url => setFotoAtual(resolverFoto(url))} onNomeAtualizado={nome => setNomeAtual(nome)} />;
       case "empresas":      return <GerenciarEmpresas />;
       case "planos":        return <Planos />;
       case "venda-rapida":  return <DashboardHome usuario={usuario} onNavegar={s => setSecao(s as any)} />;
@@ -104,9 +117,10 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
             {caixaAtivo ? `Caixa Aberto · ${empresaAtiva?.nomeFantasia ?? ""}` : "Abrir Caixa"}
           </button>
           <div className={styles.headerUser}>
-            <span className={styles.headerUserName}>{usuario.nome.split(" ")[0]}!</span>
-            {usuario.foto
-              ? <img src={usuario.foto} alt={usuario.nome} className={styles.headerUserAvatar} />
+            <span className={styles.headerUserName}>{nomeAtual.split(" ")[0]}!</span>
+            {fotoAtual
+              ? <img src={fotoAtual} alt={nomeAtual} className={styles.headerUserAvatar}
+                  onError={() => setFotoAtual(null)} />
               : <div className={styles.headerUserInitials}>{iniciais}</div>
             }
             <Button onClick={handleLogout} variant="ghost" className="text-white hover:text-gray-300 hover:bg-[#1a3a52]">
