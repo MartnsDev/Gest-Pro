@@ -14,6 +14,10 @@ import {
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { toast } from "sonner";
+import NovaVendaOverlay from "../acoesRapidas/NovaVenda";
+import NovoProdutoOverlay from "../acoesRapidas/NovoProduto";
+import NovoClienteOverlay from "../acoesRapidas/NovoCliente";
+import AbrirCaixaOverlay  from "../acoesRapidas/AbrirCaixa";
 import type { Usuario } from "@/lib/api";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
@@ -411,35 +415,147 @@ function ModalClienteRapido({ empresaId, onClose, onFeito }: { empresaId:number;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
-/* MODAL: RESUMO DE RELATÓRIO RÁPIDO                                           */
+/* MODAL: RESUMO DO DIA — busca relatório de hoje automaticamente              */
 /* ─────────────────────────────────────────────────────────────────────────── */
-function ModalRelatorioRapido({ empresaId, visao, onClose, onIrRelatorios }: {
-  empresaId:number; visao:VisaoGeral|null; onClose:()=>void; onIrRelatorios:()=>void;
+interface RelatorioHoje {
+  titulo:string; periodo:string; nomeEmpresa:string; geradoEm:string;
+  totalVendas:number; receitaTotal:number; lucroTotal:number;
+  totalDescontos:number; ticketMedio:number; maiorVenda:number; menorVenda:number;
+  cancelamentos:number; valorCancelado:number;
+  pagamentos:{ forma:string; qtd:number; total:number; percentual:number }[];
+  topProdutos:{ nome:string; quantidade:number; receita:number; lucro:number }[];
+}
+
+function ModalResumoDia({ empresaId, onClose, onIrRelatorios }: {
+  empresaId:number; onClose:()=>void; onIrRelatorios:()=>void;
 }) {
+  const [rel,     setRel]     = useState<RelatorioHoje|null>(null);
+  const [loading, setLoading] = useState(true);
+  const [erro,    setErro]    = useState("");
+
+  useEffect(()=>{
+    setLoading(true);
+    fetchQ<RelatorioHoje>(`/api/v1/relatorios/hoje?empresaId=${empresaId}`)
+      .then(setRel)
+      .catch(e=>setErro(e.message))
+      .finally(()=>setLoading(false));
+  },[empresaId]);
+
+  const CORES = ["#10b981","#3b82f6","#a78bfa","#f59e0b","#ef4444"];
+
   return (
     <Overlay onClose={onClose}>
-      <ModalBox title="Resumo do Dia" sub="Relatório rápido" onClose={onClose}>
-        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          {[
-            { l:"Vendas Hoje",    v:fmt(visao?.vendasHoje),    c:"var(--primary)" },
-            { l:"Lucro Hoje",     v:fmt(visao?.lucroDia),       c:"#3b82f6" },
-            { l:"Vendas Semana",  v:fmt(visao?.vendasSemanais), c:"var(--foreground)" },
-            { l:"Vendas Mês",     v:fmt(visao?.vendasMes),      c:"var(--foreground)" },
-            { l:"Lucro Mês",      v:fmt(visao?.lucroMes),       c:"#3b82f6" },
-            { l:"Em Estoque",     v:String(visao?.produtosComEstoque??0)+" produtos", c:"var(--foreground-muted)" },
-            { l:"Zerados",        v:String(visao?.produtosSemEstoque??0)+" produtos", c:((visao?.produtosSemEstoque??0)>0?"var(--destructive)":"var(--foreground-muted)") },
-            { l:"Clientes Ativos",v:String(visao?.clientesAtivos??0), c:"var(--foreground-muted)" },
-          ].map(r=>(
-            <div key={r.l} style={{ display:"flex", justifyContent:"space-between", padding:"8px 12px", background:"var(--surface-overlay)", borderRadius:8, fontSize:14 }}>
-              <span style={{ color:"var(--foreground-muted)" }}>{r.l}</span>
-              <span style={{ fontWeight:700, color:r.c }}>{r.v}</span>
-            </div>
-          ))}
-          <button onClick={()=>{ onIrRelatorios(); onClose(); }} style={{ ...btnP, marginTop:8 }}>
-            <FileText size={14}/> Ver Relatórios Completos
-          </button>
+      <div className="animate-fade-in" style={{ background:"var(--surface-elevated)", border:"1px solid var(--border)", borderRadius:14, width:"100%", maxWidth:560, maxHeight:"90vh", overflowY:"auto" }}>
+        {/* Header */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"16px 20px", borderBottom:"1px solid var(--border)" }}>
+          <div>
+            <h2 style={{ fontSize:16, fontWeight:700, color:"var(--foreground)", margin:0 }}>Resumo de Hoje</h2>
+            {rel && <p style={{ fontSize:12, color:"var(--foreground-muted)", margin:"3px 0 0" }}>{rel.periodo}</p>}
+          </div>
+          <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--foreground-muted)" }}><X size={18}/></button>
         </div>
-      </ModalBox>
+
+        <div style={{ padding:20, display:"flex", flexDirection:"column", gap:14 }}>
+          {loading && (
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {[1,2,3,4].map(i=>(
+                <div key={i} style={{ height:44, background:"var(--surface-overlay)", borderRadius:8, opacity:0.5, animation:"pulse 1.5s infinite" }}/>
+              ))}
+            </div>
+          )}
+
+          {erro && <p style={{ color:"var(--destructive)", fontSize:13, textAlign:"center" }}>{erro}</p>}
+
+          {rel && !loading && (
+            <>
+              {/* Stats principais */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                {[
+                  { l:"Receita Total",  v:fmt(rel.receitaTotal),    c:"var(--primary)",    bg:"rgba(16,185,129,.08)" },
+                  { l:"Lucro Estimado", v:fmt(rel.lucroTotal),      c:"#3b82f6",           bg:"rgba(59,130,246,.08)" },
+                  { l:"Ticket Médio",   v:fmt(rel.ticketMedio),     c:"#a78bfa",           bg:"rgba(167,139,250,.08)" },
+                  { l:"Nº de Vendas",   v:String(rel.totalVendas),  c:"var(--foreground)", bg:"var(--surface-overlay)" },
+                ].map(s=>(
+                  <div key={s.l} style={{ background:s.bg, border:`1px solid ${s.bg}`, borderRadius:10, padding:"12px 14px" }}>
+                    <p style={{ fontSize:11, fontWeight:600, color:"var(--foreground-muted)", textTransform:"uppercase", letterSpacing:".06em", margin:"0 0 4px" }}>{s.l}</p>
+                    <p style={{ fontSize:22, fontWeight:800, color:s.c, margin:0 }}>{s.v}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Descontos e cancelamentos */}
+              {(rel.totalDescontos > 0 || rel.cancelamentos > 0) && (
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  {rel.totalDescontos > 0 && (
+                    <div style={{ background:"rgba(245,158,11,.08)", borderRadius:9, padding:"10px 13px" }}>
+                      <p style={{ fontSize:11, color:"var(--foreground-muted)", margin:"0 0 2px" }}>Descontos dados</p>
+                      <p style={{ fontSize:16, fontWeight:700, color:"#f59e0b", margin:0 }}>− {fmt(rel.totalDescontos)}</p>
+                    </div>
+                  )}
+                  {rel.cancelamentos > 0 && (
+                    <div style={{ background:"rgba(239,68,68,.08)", borderRadius:9, padding:"10px 13px" }}>
+                      <p style={{ fontSize:11, color:"var(--foreground-muted)", margin:"0 0 2px" }}>Cancelamentos</p>
+                      <p style={{ fontSize:16, fontWeight:700, color:"var(--destructive)", margin:0 }}>{rel.cancelamentos} ({fmt(rel.valorCancelado)})</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Formas de pagamento */}
+              {rel.pagamentos.length > 0 && (
+                <div style={{ background:"var(--surface-overlay)", borderRadius:10, padding:"12px 14px" }}>
+                  <p style={{ fontSize:11, fontWeight:700, color:"var(--foreground-muted)", textTransform:"uppercase", letterSpacing:".07em", margin:"0 0 10px" }}>Pagamentos</p>
+                  <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                    {rel.pagamentos.map((p,i)=>(
+                      <div key={p.forma}>
+                        <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:4 }}>
+                          <span style={{ color:"var(--foreground)", fontWeight:500 }}>{p.forma}</span>
+                          <span style={{ color:CORES[i%CORES.length], fontWeight:700 }}>{fmt(p.total)} <span style={{ color:"var(--foreground-muted)", fontWeight:400 }}>({p.percentual.toFixed(1)}%)</span></span>
+                        </div>
+                        <div style={{ height:5, background:"var(--border)", borderRadius:99 }}>
+                          <div style={{ height:5, width:`${p.percentual}%`, background:CORES[i%CORES.length], borderRadius:99 }}/>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Top produtos */}
+              {rel.topProdutos.length > 0 && (
+                <div style={{ background:"var(--surface-overlay)", borderRadius:10, padding:"12px 14px" }}>
+                  <p style={{ fontSize:11, fontWeight:700, color:"var(--foreground-muted)", textTransform:"uppercase", letterSpacing:".07em", margin:"0 0 10px" }}>Mais Vendidos Hoje</p>
+                  {rel.topProdutos.slice(0,5).map((p,i)=>(
+                    <div key={p.nome} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderBottom:i<4?"1px solid var(--border-subtle)":"none" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <span style={{ fontSize:12, fontWeight:700, color:"var(--foreground-subtle)", minWidth:16 }}>{i+1}</span>
+                        <span style={{ fontSize:13, color:"var(--foreground)" }}>{p.nome}</span>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <p style={{ fontSize:13, fontWeight:700, color:"var(--primary)", margin:0 }}>{fmt(p.receita)}</p>
+                        <p style={{ fontSize:11, color:"var(--foreground-muted)", margin:0 }}>{p.quantidade}× vendidos</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Nenhuma venda hoje */}
+              {rel.totalVendas === 0 && (
+                <div style={{ textAlign:"center", padding:"20px 0", color:"var(--foreground-muted)" }}>
+                  <BarChart3 size={36} style={{ opacity:.3, marginBottom:8 }}/>
+                  <p style={{ fontSize:14 }}>Nenhuma venda registrada hoje ainda.</p>
+                </div>
+              )}
+
+              <button onClick={()=>{ onIrRelatorios(); onClose(); }}
+                style={{ ...btnP, gap:8 }}>
+                <FileText size={14}/> Ver Relatórios Completos
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </Overlay>
   );
 }
@@ -476,6 +592,7 @@ export default function DashboardHome({ usuario, onNavegar }: {
 
   // Modais
   const [modal, setModal] = useState<"venda"|"produto"|"caixa"|"cliente"|"relatorio"|null>(null);
+  const [overlayVenda, setOverlayVenda] = useState(false);
 
   const nav = (s:string) => onNavegar?.(s);
 
@@ -526,7 +643,7 @@ export default function DashboardHome({ usuario, onNavegar }: {
       cor:   caixaAtivo ? "var(--primary)" : "var(--foreground-muted)",
       bg:    caixaAtivo ? "rgba(16,185,129,.1)" : "var(--surface-overlay)",
       borda: caixaAtivo ? "rgba(16,185,129,.3)" : "var(--border)",
-      acao:  () => setModal("caixa"),
+      acao:  () => nav("caixa-rapido"),
     },
     {
       label: "Nova Venda",
@@ -535,7 +652,7 @@ export default function DashboardHome({ usuario, onNavegar }: {
       cor:   caixaAtivo ? "var(--foreground)" : "var(--foreground-subtle)",
       bg:    "var(--surface-overlay)",
       borda: "var(--border)",
-      acao:  () => caixaAtivo ? setModal("venda") : setModal("caixa"),
+      acao:  () => caixaAtivo ? setOverlayVenda(true) : nav("caixa-rapido"),
     },
     {
       label: "Novo Produto",
@@ -544,7 +661,7 @@ export default function DashboardHome({ usuario, onNavegar }: {
       cor:   "var(--foreground)",
       bg:    "var(--surface-overlay)",
       borda: "var(--border)",
-      acao:  () => setModal("produto"),
+      acao:  () => nav("produto-rapido"),
     },
     {
       label: "Novo Cliente",
@@ -553,7 +670,7 @@ export default function DashboardHome({ usuario, onNavegar }: {
       cor:   "var(--foreground)",
       bg:    "var(--surface-overlay)",
       borda: "var(--border)",
-      acao:  () => setModal("cliente"),
+      acao:  () => nav("cliente-rapido"),
     },
     {
       label: "Resumo do Dia",
@@ -587,41 +704,34 @@ export default function DashboardHome({ usuario, onNavegar }: {
 
   return (
     <ClientOnly>
-      {/* Modais */}
+      {/* Overlay de nova venda */}
+      {overlayVenda && <NovaVendaOverlay onClose={() => setOverlayVenda(false)} />}
+
+      {/* Caixa — overlay com blur */}
       {modal==="caixa" && (
-        <ModalCaixaRapido
-          empresas={empresas}
-          caixaAtivo={caixaAtivo}
-          onClose={()=>setModal(null)}
-          onFeito={(caixa,emp)=>{ setCaixaAtivo(caixa); setEmpresaAtiva(emp); }}
-        />
+        <Overlay onClose={()=>setModal(null)}>
+          <AbrirCaixaOverlay onConcluido={()=>{ setModal(null); if(empresaAtiva?.id) fetchDados(empresaAtiva.id); }} />
+        </Overlay>
       )}
-      {modal==="venda" && empresaAtiva && caixaAtivo && (
-        <ModalVendaRapida
-          empresaId={empresaAtiva.id}
-          caixaId={caixaAtivo.id}
-          onClose={()=>setModal(null)}
-          onFeito={()=>fetchDados(empresaAtiva.id)}
-        />
-      )}
+
+      {/* Produto — overlay com blur */}
       {modal==="produto" && empresaAtiva && (
-        <ModalProdutoRapido
-          empresaId={empresaAtiva.id}
-          onClose={()=>setModal(null)}
-          onFeito={()=>fetchDados(empresaAtiva.id)}
-        />
+        <Overlay onClose={()=>setModal(null)}>
+          <NovoProdutoOverlay onConcluido={()=>{ fetchDados(empresaAtiva.id); }} />
+        </Overlay>
       )}
+
+      {/* Cliente — overlay com blur */}
       {modal==="cliente" && empresaAtiva && (
-        <ModalClienteRapido
-          empresaId={empresaAtiva.id}
-          onClose={()=>setModal(null)}
-          onFeito={()=>fetchDados(empresaAtiva.id)}
-        />
+        <Overlay onClose={()=>setModal(null)}>
+          <NovoClienteOverlay onConcluido={()=>{ fetchDados(empresaAtiva.id); }} />
+        </Overlay>
       )}
+
+      {/* Resumo do dia — overlay com blur + relatório de hoje */}
       {modal==="relatorio" && empresaAtiva && (
-        <ModalRelatorioRapido
+        <ModalResumoDia
           empresaId={empresaAtiva.id}
-          visao={visao}
           onClose={()=>setModal(null)}
           onIrRelatorios={()=>nav("relatorios")}
         />

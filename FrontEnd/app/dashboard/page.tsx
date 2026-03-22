@@ -25,9 +25,15 @@ import GerenciarEmpresas from "./components/GerenciarEmpresas";
 import ModalCaixa        from "./components/Modalcaixa";
 import SeletorEmpresa    from "./components/Seletorempresa";
 import Planos            from "./components/Plano";
+import NovaVendaRapida   from "../dashboard/acoesRapidas/NovaVenda";
+import NovoProduto       from "../dashboard/acoesRapidas/NovoProduto";
+import NovoCliente       from "../dashboard/acoesRapidas/NovoCliente";
+import AbrirCaixa        from "../dashboard/acoesRapidas/AbrirCaixa";
+import PaginaAcaoRapida  from "../dashboard/acoesRapidas/PaginaAcaoRapida"
 
 type Secao = "dashboard" | "produtos" | "estoque" | "vendas" | "clientes"
-           | "relatorios" | "configuracoes" | "empresas" | "planos";
+           | "relatorios" | "configuracoes" | "empresas" | "planos"
+           | "venda-rapida" | "produto-rapido" | "cliente-rapido" | "caixa-rapido";
 
 function DashboardInner({ usuario }: { usuario: Usuario }) {
   const { empresaAtiva, caixaAtivo, setCaixaAtivo, setEmpresaAtiva } = useEmpresa();
@@ -53,6 +59,10 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
       case "configuracoes": return <Configuracoes usuario={usuario} />;
       case "empresas":      return <GerenciarEmpresas />;
       case "planos":        return <Planos />;
+      case "venda-rapida":  return <DashboardHome usuario={usuario} onNavegar={s => setSecao(s as any)} />;
+      case "produto-rapido":return <PaginaAcaoRapida onVoltar={()=>setSecao("dashboard")}><NovoProduto onConcluido={()=>setSecao("dashboard")} /></PaginaAcaoRapida>;
+      case "cliente-rapido":return <PaginaAcaoRapida onVoltar={()=>setSecao("dashboard")}><NovoCliente onConcluido={()=>setSecao("dashboard")} /></PaginaAcaoRapida>;
+      case "caixa-rapido":  return <PaginaAcaoRapida onVoltar={()=>setSecao("dashboard")}><AbrirCaixa onConcluido={()=>setSecao("dashboard")} /></PaginaAcaoRapida>;
       default:              return <DashboardHome usuario={usuario} onNavegar={s => setSecao(s as any)} />;
     }
   };
