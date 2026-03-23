@@ -25,7 +25,12 @@ export function removeToken() {
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return lerTokenCookie() ?? localStorage.getItem("jwt_token");
+  
+  // Tenta o cookie, se não tiver, tenta o localStorage
+  const cookieToken = lerTokenCookie();
+  if (cookieToken) return cookieToken;
+  
+  return localStorage.getItem("jwt_token");
 }
 
 // ─── Auth checks ──────────────────────────────────────────────────────────────

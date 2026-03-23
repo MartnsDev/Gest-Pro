@@ -260,11 +260,11 @@ useEffect(() => {
     const tokenDaUrl = params.get("token");
 
     // 2. Se existe token na URL, salva e LIMPA IMEDIATAMENTE
-    if (tokenDaUrl) {
-      salvarTokenCookie(tokenDaUrl);
-      // Usamos replaceState para remover o token da URL sem recarregar a página
-      window.history.replaceState({}, "", "/dashboard");
-    }
+  if (tokenDaUrl) {
+  salvarTokenCookie(tokenDaUrl); // Grava no cookie
+  localStorage.setItem("jwt_token", tokenDaUrl); // Grava no Storage (Garantia)
+  window.history.replaceState({}, "", "/dashboard");
+}
 
     // 3. Tenta buscar o token (seja o que acabamos de salvar ou o que já existia)
     const tokenFinal = lerTokenCookie();

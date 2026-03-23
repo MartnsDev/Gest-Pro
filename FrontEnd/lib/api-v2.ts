@@ -41,10 +41,19 @@ interface ErrorResponse {
  */
 export function salvarTokenCookie(token: string) {
   if (typeof document === "undefined") return;
-  const maxAge = 7 * 24 * 60 * 60;
-  // IMPORTANTE: Em produção, Secure; SameSite=Lax
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `jwt_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax${secure}`;
+
+  const maxAge = 7 * 24 * 60 * 60; // 7 dias
+  const isProducao = window.location.hostname !== "localhost";
+  
+  // No Railway, precisamos de SameSite=None e Secure para o cookie ser aceito
+  // entre o redirecionamento do backend e o domínio do frontend.
+  const cookieString = isProducao
+    ? `jwt_token=${token}; path=/; max-age=${maxAge}; SameSite=None; Secure`
+    : `jwt_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;
+  document.cookie = cookieString;
+  
+  // Backup no LocalStorage (Caso o navegador bloqueie o cookie de vez)
+  localStorage.setItem("jwt_token", token);
 }
 
 /**
@@ -72,18 +81,22 @@ export function lerTokenCookie(): string | null {
  * — cookies cross-domain não funcionam, então enviamos via header.
  */
 export async function fetchAuth(path: string, options: RequestInit = {}): Promise<Response> {
-  const token = lerTokenCookie();
+  // Tenta cookie, se falhar, tenta localStorage
+  const token = lerTokenCookie() || (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null);
+
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string> ?? {}),
   };
+
   if (token) {
     (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   }
+
   return fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
-    credentials: "include", // mantém para ambientes onde funciona
+    credentials: "include", 
   });
 }
 
