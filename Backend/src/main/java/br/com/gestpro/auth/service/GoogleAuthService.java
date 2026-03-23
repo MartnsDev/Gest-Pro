@@ -1,4 +1,4 @@
-package br.com.gestpro.infra.filter;
+package br.com.gestpro.auth.service;
 
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 @Service
-@RequiredArgsConstructor // Usando Lombok para manter o padrão do projeto
+@RequiredArgsConstructor
 public class GoogleAuthService {
 
     private final UsuarioRepository usuarioRepository;
@@ -52,7 +52,7 @@ public class GoogleAuthService {
                     return usuarioRepository.save(u);
                 })
                 .orElseGet(() -> {
-                    // 5. Fluxo para Novo Usuário via Google
+                    // Novo Usuário via Google
                     Usuario novo = new Usuario();
                     novo.setNome(nome);
                     novo.setEmail(email);
