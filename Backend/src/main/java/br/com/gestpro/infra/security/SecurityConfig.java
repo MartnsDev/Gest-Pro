@@ -41,6 +41,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**", "/oauth2/**").permitAll()
                         .requestMatchers("/api/payments/webhook").permitAll()
                         .requestMatchers("/api/payments/create-checkout-session").permitAll()
+                        .requestMatchers("/favicon.ico").permitAll()
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
