@@ -1,6 +1,6 @@
 // lib/api.ts
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  process.env.NEXT_PUBLIC_API_URL || "http://gestpro-backend-production.up.railway.app" || "http://localhost:8080";
 
 // ===================== Tipos =====================
 
