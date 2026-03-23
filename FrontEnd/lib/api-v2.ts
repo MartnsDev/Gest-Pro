@@ -41,11 +41,10 @@ interface ErrorResponse {
  */
 export function salvarTokenCookie(token: string) {
   if (typeof document === "undefined") return;
-
   const maxAge = 7 * 24 * 60 * 60;
-  const isProducao = typeof window !== "undefined" && window.location.protocol === "https:";
-
-  document.cookie = `jwt_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax${isProducao ? "; Secure" : ""}`;
+  // IMPORTANTE: Em produção, Secure; SameSite=Lax
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `jwt_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax${secure}`;
 }
 
 /**

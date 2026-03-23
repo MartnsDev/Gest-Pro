@@ -8,7 +8,7 @@ import {
   Zap, Building2, CheckCircle2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getUsuario, logout, type Usuario } from "@/lib/api-v2";
+import { getUsuario, lerTokenCookie, logout, removerTokenCookie, salvarTokenCookie, type Usuario } from "@/lib/api-v2";
 import { removeToken } from "@/lib/auth-v2";
 import styles from "@/app/styles/dashboard.module.css";
 
@@ -251,47 +251,48 @@ export default function DashboardPage() {
   const cancelado = searchParams.get("canceled") === "true";
   const secaoInicial = (searchParams.get("section") as Secao) ?? "dashboard";
 
-  useEffect(() => {
-    async function inicializarDashboard() {
-      try {
-        // PASSO 1: Se houver um token na URL (vindo do Google), salvamos no cookie PRIMEIRO
-        if (tokenDaUrl) {
-          salvarTokenCookie(tokenDaUrl);
-          // Limpamos a URL para remover o token da barra de endereços por segurança
-          window.history.replaceState({}, "", "/dashboard");
-        }
+  // app/dashboard/page.tsx
 
-        // PASSO 2: Agora que o token está no cookie (ou já estava), buscamos o usuário
-        const data = await getUsuario();
-        
-        if (!data) {
-          window.location.href = "/";
-          return;
-        }
-        
-        setUsuario(data);
-      } catch (error) {
-        console.error("Erro na autenticação:", error);
-        window.location.href = "/";
-      } finally {
-        setLoading(false);
-      }
+useEffect(() => {
+  async function inicializarDashboard() {
+    // 1. Pega o token da URL
+    const params = new URLSearchParams(window.location.search);
+    const tokenDaUrl = params.get("token");
+
+    // 2. Se existe token na URL, salva e LIMPA IMEDIATAMENTE
+    if (tokenDaUrl) {
+      salvarTokenCookie(tokenDaUrl);
+      // Usamos replaceState para remover o token da URL sem recarregar a página
+      window.history.replaceState({}, "", "/dashboard");
     }
 
-    inicializarDashboard();
-  }, [tokenDaUrl]); // Dependência do tokenDaUrl para reagir quando ele chegar
+    // 3. Tenta buscar o token (seja o que acabamos de salvar ou o que já existia)
+    const tokenFinal = lerTokenCookie();
 
-  if (loading) return <div className={styles.loadingContainer}>Carregando...</div>;
-  if (!usuario) return null;
+    // 4. Se NÃO tem token nenhum, tchau!
+    if (!tokenFinal) {
+      console.log("Sem token no cookie, redirecionando...");
+      window.location.href = "/auth/login";
+      return;
+    }
 
-  return (
-    <EmpresaProvider>
-      <DashboardInner 
-        usuario={usuario} 
-        mostrarToast={mostrarToast} 
-        secaoInicial={secaoInicial} 
-        cancelado={cancelado} 
-      />
-    </EmpresaProvider>
-  );
+    // 5. Agora sim, com token garantido no cookie, buscamos os dados
+    try {
+      const data = await getUsuario();
+      if (!data) throw new Error("Usuário inválido");
+      setUsuario(data);
+    } catch (err) {
+      console.error("Erro ao validar usuário:", err);
+      // Se deu erro, limpamos o cookie podre e voltamos pro login
+      removerTokenCookie();
+      window.location.href = "/auth/login";
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  inicializarDashboard();
+}, 
+[]);
+
 }
