@@ -1,16 +1,13 @@
 package br.com.gestpro.auth.service;
 
 import br.com.gestpro.auth.model.Usuario;
-import br.com.gestpro.infra.exception.ApiException;
+import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
-import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.plano.service.VerificarPlanoOperation;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 
 @Service
@@ -25,46 +22,44 @@ public class LoginGoogleOperation {
         this.verificarPlano = verificarPlano;
     }
 
-    @Transactional(noRollbackFor = {ApiException.class})
-    public Usuario execute(String email, String nome, String foto, HttpServletResponse response) throws IOException {
+    @Transactional
+    public Usuario execute(String email, String nome, String foto) {
 
         return usuarioRepository.findByEmail(email)
                 .map(u -> {
-                    // 1. Atualiza dados básicos vindos do Google
+                    // Atualiza dados vindos do Google
                     u.setNome(nome);
                     u.setFoto(foto);
 
-                    // 2. Garante confirmação de e-mail por ser provedor confiável
+                    // E-mail confiável via Google — confirma automaticamente
                     if (!u.isEmailConfirmado()) {
                         u.setEmailConfirmado(true);
                         u.setTokenConfirmacao(null);
                     }
 
-                    // 3. Marca como login Google se veio de um cadastro manual prévio
+                    // Marca como login Google se veio de cadastro manual
                     if (!u.isLoginGoogle()) {
                         u.setLoginGoogle(true);
                     }
 
-                    // 4. Verifica se o período de acesso (Experimental ou Pago) expirou
-                    // Usamos try-catch aqui para que a ApiException não impeça o login.
-                    // O objetivo é atualizar o status para INATIVO no banco, mas deixar o usuário entrar no Dashboard.
+                    // Verifica expiração do plano — atualiza status sem bloquear o login
                     try {
                         verificarPlano.validarAcesso(u);
-                    } catch (Exception e) {
-                        // Se cair aqui, o status já foi atualizado para INATIVO dentro do validarAcessoTemporario
-                        // Deixamos passar para o usuário conseguir logar e ver a página de planos.
+                    } catch (Exception ignored) {
+                        // Status já foi atualizado para INATIVO dentro de validarAcesso.
+                        // O usuário consegue logar e é redirecionado para /pagamento.
                     }
 
                     return usuarioRepository.save(u);
                 })
                 .orElseGet(() -> {
-                    // 5. Fluxo para Novo Usuário (Primeiro Acesso)
+                    // Novo usuário via Google — inicia período Experimental de 7 dias
                     Usuario novo = new Usuario();
                     novo.setNome(nome);
                     novo.setEmail(email);
                     novo.setSenha(null);
                     novo.setFoto(foto);
-                    novo.setTipoPlano(TipoPlano.EXPERIMENTAL); // Inicia no Experimental (7 dias)
+                    novo.setTipoPlano(TipoPlano.EXPERIMENTAL);
                     novo.setEmailConfirmado(true);
                     novo.setTokenConfirmacao(null);
                     novo.setStatusAcesso(StatusAcesso.ATIVO);
@@ -72,7 +67,7 @@ public class LoginGoogleOperation {
 
                     LocalDateTime agora = LocalDateTime.now();
                     novo.setDataCriacao(agora);
-                    novo.setDataPrimeiroLogin(agora); // O relógio dos 7 dias começa aqui
+                    novo.setDataPrimeiroLogin(agora); // relógio dos 7 dias começa aqui
 
                     return usuarioRepository.save(novo);
                 });

@@ -1,59 +1,60 @@
 // lib/auth.ts
-import { getUsuario, type Usuario } from "./api";
+import {
+  getUsuario,
+  salvarTokenCookie,
+  removerTokenCookie,
+  lerTokenCookie,
+  type Usuario,
+} from "./api";
 
-/**
- * Salva o token JWT no localStorage (apenas login normal)
- */
+// ─── Token helpers ────────────────────────────────────────────────────────────
+
 export function saveToken(token: string) {
-  if (typeof window !== "undefined" && token) {
-    localStorage.setItem("jwt_token", token);
-  }
+  if (typeof window === "undefined" || !token) return;
+  salvarTokenCookie(token);
+  localStorage.setItem("jwt_token", token);
 }
 
-/**
- * Remove o token JWT do localStorage
- */
 export function removeToken() {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("jwt_token");
-  }
+  if (typeof window === "undefined") return;
+  removerTokenCookie();
+  localStorage.removeItem("jwt_token");
 }
 
-/**
- * Obtém o token JWT do localStorage
- */
 export function getToken(): string | null {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("jwt_token");
-  }
-  return null;
+  if (typeof window === "undefined") return null;
+  return lerTokenCookie() ?? localStorage.getItem("jwt_token");
 }
 
-/**
- * Verifica se o usuário está autenticado
- * Retorna os dados do usuário se autenticado, null caso contrário
- * Funciona tanto para login normal quanto Google (via cookie HttpOnly)
- */
+// ─── Auth checks ──────────────────────────────────────────────────────────────
+
 export async function checkAuth(): Promise<Usuario | null> {
   try {
-    const usuario = await getUsuario(); // pega do backend via cookie
-    return usuario || null;
-  } catch (error) {
-    removeToken(); // remove token local caso tenha
+    return await getUsuario();
+  } catch {
+    removeToken();
     return null;
   }
 }
 
-/**
- * Redireciona para a página de login se não estiver autenticado
- */
 export async function requireAuth(): Promise<Usuario> {
   const usuario = await checkAuth();
   if (!usuario) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/";
-    }
+    if (typeof window !== "undefined") window.location.href = "/auth/login";
     throw new Error("Não autenticado");
   }
   return usuario;
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}/auth/logout`,
+      { method: "POST", credentials: "include" }
+    );
+  } catch {
+    // ignora erro de rede
+  } finally {
+    removeToken();
+  }
 }
