@@ -7,7 +7,7 @@ import {
   removerTokenCookie,
   lerTokenCookie,
   type Usuario,
-} from "./api";
+} from "./api-v2";
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 

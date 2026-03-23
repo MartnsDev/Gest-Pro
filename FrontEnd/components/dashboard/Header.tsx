@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { LogOut, Bell } from "lucide-react";
-import { logout } from "@/lib/api";
-import { removeToken } from "@/lib/auth";
-import type { Usuario } from "@/lib/api";
+import { logout } from "@/lib/api-v2";
+import { removeToken } from "@/lib/auth-v2";
+import type { Usuario } from "@/lib/api-v2";
 
 interface HeaderProps {
   usuario: Usuario;

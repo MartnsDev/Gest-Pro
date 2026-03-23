@@ -18,7 +18,7 @@ import NovaVendaOverlay from "../acoesRapidas/NovaVenda";
 import NovoProdutoOverlay from "../acoesRapidas/NovoProduto";
 import NovoClienteOverlay from "../acoesRapidas/NovoCliente";
 import AbrirCaixaOverlay  from "../acoesRapidas/AbrirCaixa";
-import type { Usuario } from "@/lib/api";
+import type { Usuario } from "@/lib/api-v2";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface PlanoDTO { tipoPlano: string; diasRestantes: number; empresasCriadas: number; limiteEmpresas: number; statusAcesso: string; }

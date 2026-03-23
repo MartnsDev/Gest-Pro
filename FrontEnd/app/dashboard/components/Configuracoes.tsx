@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, ReactNode } from "react";
-import type { Usuario } from "@/lib/api";
+import type { Usuario } from "@/lib/api-v2";
 import {
   User, Camera, Lock, Shield, Bell, HeadphonesIcon,
   Check, X, Eye, EyeOff, ChevronRight, Loader2,

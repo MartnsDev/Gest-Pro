@@ -8,8 +8,8 @@ import {
   Zap, Building2, CheckCircle2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getUsuario, logout, type Usuario } from "@/lib/api";
-import { removeToken } from "@/lib/auth";
+import { getUsuario, logout, type Usuario } from "@/lib/api-v2";
+import { removeToken } from "@/lib/auth-v2";
 import styles from "@/app/styles/dashboard.module.css";
 
 import { EmpresaProvider, useEmpresa } from "./context/Empresacontext";

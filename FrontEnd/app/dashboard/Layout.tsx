@@ -2,9 +2,9 @@
 
 import { useEffect, useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
-import { salvarTokenCookie, lerTokenCookie } from "@/lib/api";
-import { checkAuth } from "@/lib/auth";
-import type { Usuario } from "@/lib/api";
+import { salvarTokenCookie, lerTokenCookie } from "@/lib/api-v2";
+import { checkAuth } from "@/lib/auth-v2";
+import type { Usuario } from "@/lib/api-v2";
 
 // Contexto para passar o usuário para qualquer filho do dashboard
 const UsuarioContext = createContext<Usuario | null>(null);

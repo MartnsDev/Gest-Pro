@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { login, loginComGoogle } from "@/lib/api";
+import { login, loginComGoogle } from "@/lib/api-v2";
 
 export default function LoginPage() {
   const router = useRouter();

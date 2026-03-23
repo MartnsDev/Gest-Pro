@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { cadastrar, loginComGoogle } from "@/lib/api";
+import { cadastrar, loginComGoogle } from "@/lib/api-v2";
 
 export default function CadastroPage() {
   const router = useRouter();

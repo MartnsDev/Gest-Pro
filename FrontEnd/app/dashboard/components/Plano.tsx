@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getUsuario } from "@/lib/api";
+import { getUsuario } from "@/lib/api-v2";
 import {
   Building2,
   CheckCircle,
