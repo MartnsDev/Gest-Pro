@@ -1,899 +1,913 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-/* ─── Types ──────────────────────────────────────────────────────────────── */
-interface Feature {
-  icon: string;
-  title: string;
-  desc: string;
-  tag: string;
-  stat: string;
-}
+/* ─────────────────────────────────────────────
+   TYPES
+───────────────────────────────────────────── */
+interface NavProps { onLogin: () => void; onRegister: () => void; }
+interface HeroProps { onRegister: () => void; onLogin: () => void; }
+interface PlansProps { onRegister: () => void; }
+interface CTAProps { onRegister: () => void; onLogin: () => void; }
 
-interface Plan {
-  name: string;
-  price: string;
-  period?: string;
-  desc: string;
-  features: string[];
-  highlight: boolean;
-  cta: string;
-}
+/* ─────────────────────────────────────────────
+   GLOBAL STYLES (injected once)
+───────────────────────────────────────────── */
+const GlobalStyles = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600&display=swap');
 
-/* ─── Data ───────────────────────────────────────────────────────────────── */
-const FEATURES: Feature[] = [
-  { icon: "⬡", title: "Frente de Caixa", desc: "PDV completo com pagamento misto, troco automático e emissão de cupom.", tag: "PDV", stat: "< 3s por venda" },
-  { icon: "⬢", title: "Controle de Estoque", desc: "Cada venda deduz automaticamente. Alertas de mínimo antes do problema acontecer.", tag: "ESTOQUE", stat: "Tempo real" },
-  { icon: "◈", title: "Relatórios Reais", desc: "Receita, lucro, ticket médio. Exporte em PDF, CSV ou HTML com gráficos.", tag: "DADOS", stat: "4 formatos" },
-  { icon: "◎", title: "Multi-empresa", desc: "Várias empresas com um único login. Dados completamente isolados.", tag: "ESCALA", stat: "Ilimitadas" },
-  { icon: "◉", title: "Clientes & Vendas", desc: "Histórico completo, CPF, CNPJ. Vincule clientes às vendas em segundos.", tag: "CRM", stat: "360° view" },
-  { icon: "⬟", title: "Segurança Total", desc: "JWT HttpOnly, OAuth2 Google, troca por código. Sem atalhos de segurança.", tag: "AUTH", stat: "Enterprise" },
-];
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    ::selection { background: rgba(16,185,129,0.28); color: #e2fef4; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #050608; }
+    ::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.35); border-radius: 2px; }
 
-const PLANS: Plan[] = [
-  { name: "Experimental", price: "Grátis", desc: "Para conhecer o sistema", features: ["7 dias", "1 empresa", "1 caixa", "Relatórios básicos"], highlight: false, cta: "Começar grátis" },
-  { name: "Básico", price: "R$ 29", period: "/mês", desc: "Para negócios em início", features: ["30 dias", "1 empresa", "1 caixa", "Todos relatórios"], highlight: false, cta: "Assinar Básico" },
-  { name: "Pro", price: "R$ 59", period: "/mês", desc: "Para quem está crescendo", features: ["30 dias", "2 empresas", "3 caixas", "Exportação avançada"], highlight: true, cta: "Assinar Pro" },
-  { name: "Premium", price: "R$ 99", period: "/mês", desc: "Sem limites operacionais", features: ["30 dias", "Ilimitadas", "Ilimitados", "Suporte prioritário"], highlight: false, cta: "Assinar Premium" },
-];
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; } to { opacity: 1; }
+    }
+    @keyframes floatY {
+      0%,100% { transform: translateY(0px); }
+      50%      { transform: translateY(-14px); }
+    }
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    @keyframes pulseBorder {
+      0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.0); }
+      50%      { box-shadow: 0 0 0 6px rgba(16,185,129,0.12); }
+    }
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    @keyframes gridMove {
+      0%   { transform: translateY(0); }
+      100% { transform: translateY(60px); }
+    }
+    @keyframes dashFloat {
+      0%,100% { transform: translateY(0) rotate(-2deg); }
+      50%      { transform: translateY(-20px) rotate(2deg); }
+    }
+    @keyframes glowPulse {
+      0%,100% { opacity: 0.5; }
+      50%      { opacity: 1; }
+    }
+    @keyframes counterUp {
+      from { opacity:0; transform:translateY(12px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
 
-const STATS = [
-  { value: 3, suffix: "s", label: "para registrar uma venda" },
-  { value: 100, suffix: "%", label: "dos dados em tempo real" },
-  { value: 4, suffix: "x", label: "formas de pagamento" },
-  { value: 23, suffix: "k", label: "vendas processadas" },
-];
+    .fade-up        { animation: fadeUp 0.7s ease both; }
+    .fade-in        { animation: fadeIn 0.6s ease both; }
+    .float-y        { animation: floatY 6s ease-in-out infinite; }
+    .float-y-slow   { animation: floatY 9s ease-in-out infinite; }
+    .spin-slow      { animation: spinSlow 20s linear infinite; }
+    .glow-pulse     { animation: glowPulse 3s ease-in-out infinite; }
+    .dash-float     { animation: dashFloat 7s ease-in-out infinite; }
 
-/* ─── Hooks ──────────────────────────────────────────────────────────────── */
-function useInView(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setInView(true); obs.disconnect(); } }, { threshold });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, inView };
-}
+    /* delay helpers */
+    .d1 { animation-delay: .1s; }
+    .d2 { animation-delay: .2s; }
+    .d3 { animation-delay: .35s; }
+    .d4 { animation-delay: .5s; }
+    .d5 { animation-delay: .65s; }
+    .d6 { animation-delay: .8s; }
 
-function useCount(target: number, active: boolean, duration = 1400) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!active) return;
-    let start = 0;
-    const steps = 60;
-    const increment = target / steps;
-    const interval = duration / steps;
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= target) { setCount(target); clearInterval(timer); }
-      else setCount(Math.floor(start));
-    }, interval);
-    return () => clearInterval(timer);
-  }, [active, target, duration]);
-  return count;
-}
+    /* hover lift */
+    .hover-lift { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+    .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
 
-/* ─── Background ─────────────────────────────────────────────────────────── */
-function Background() {
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "#030305",
-      }} />
-      {/* Grid de pontos */}
-      <div style={{
-        position: "absolute", inset: 0,
-        backgroundImage: "radial-gradient(rgba(16,185,129,0.15) 1px, transparent 1px)",
-        backgroundSize: "32px 32px",
-        maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%)",
-      }} />
-      {/* Glow principal */}
-      <div style={{
-        position: "absolute", top: "-20%", left: "50%", transform: "translateX(-50%)",
-        width: 800, height: 800,
-        background: "radial-gradient(ellipse, rgba(16,185,129,0.08) 0%, transparent 70%)",
-        filter: "blur(60px)",
-      }} />
-      {/* Glow secundário */}
-      <div style={{
-        position: "absolute", bottom: "10%", right: "-10%",
-        width: 600, height: 600,
-        background: "radial-gradient(ellipse, rgba(5,150,105,0.06) 0%, transparent 70%)",
-        filter: "blur(80px)",
-      }} />
-      {/* Linhas horizontais scan */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px)",
-      }} />
-    </div>
-  );
-}
+    /* green btn */
+    .btn-green {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-family: 'Manrope', sans-serif;
+      font-weight: 600;
+      border-radius: 10px;
+      transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+      animation: pulseBorder 3s ease-in-out infinite;
+    }
+    .btn-green:hover {
+      transform: translateY(-2px) scale(1.03);
+      filter: brightness(1.12);
+      box-shadow: 0 10px 36px rgba(16,185,129,0.38);
+    }
 
-/* ─── Nav ────────────────────────────────────────────────────────────────── */
-function Nav({ onLogin, onRegister }: { onLogin: () => void; onRegister: () => void }) {
+    /* ghost btn */
+    .btn-ghost {
+      background: transparent;
+      color: rgba(241,245,249,0.75);
+      border: 1px solid rgba(255,255,255,0.12);
+      cursor: pointer;
+      font-family: 'Manrope', sans-serif;
+      font-weight: 500;
+      border-radius: 10px;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+    .btn-ghost:hover {
+      border-color: rgba(16,185,129,0.5);
+      color: #10b981;
+      background: rgba(16,185,129,0.06);
+    }
+
+    /* card glass */
+    .glass {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+    }
+    .glass-bright {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(16,185,129,0.18);
+      backdrop-filter: blur(16px);
+      border-radius: 16px;
+    }
+
+    /* section headings */
+    .section-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: #10b981;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.22);
+      padding: 5px 14px;
+      border-radius: 99px;
+      margin-bottom: 18px;
+    }
+    .section-heading {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      color: #f1f5f9;
+      line-height: 1.1;
+    }
+    .section-sub {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 400;
+      color: rgba(241,245,249,0.55);
+      line-height: 1.7;
+    }
+
+    /* grid-line bg */
+    .grid-bg::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    /* green dot blink */
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .blink { animation: blink 2s ease-in-out infinite; }
+
+    /* plan card popular ring */
+    .popular-ring {
+      border: 1.5px solid rgba(16,185,129,0.6) !important;
+      box-shadow: 0 0 40px rgba(16,185,129,0.12), inset 0 0 40px rgba(16,185,129,0.03);
+    }
+
+    /* mobile menu */
+    .mob-menu {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(5,6,8,0.97);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 28px;
+      animation: fadeIn 0.2s ease;
+    }
+  `}</style>
+);
+
+/* ─────────────────────────────────────────────
+   BACKGROUND  (ambient blobs + grid)
+───────────────────────────────────────────── */
+const Background = () => (
+  <div style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
+    {/* Dark base */}
+    <div style={{ position: "absolute", inset: 0, background: "#050608" }} />
+    {/* Blob top-left */}
+    <div className="glow-pulse" style={{
+      position: "absolute", top: "-15%", left: "-10%",
+      width: 700, height: 700, borderRadius: "50%",
+      background: "radial-gradient(circle, rgba(16,185,129,0.13) 0%, transparent 65%)",
+      filter: "blur(60px)",
+    }} />
+    {/* Blob top-right */}
+    <div style={{
+      position: "absolute", top: "5%", right: "-12%",
+      width: 500, height: 500, borderRadius: "50%",
+      background: "radial-gradient(circle, rgba(16,185,129,0.07) 0%, transparent 65%)",
+      filter: "blur(80px)",
+    }} />
+    {/* Blob center */}
+    <div className="glow-pulse" style={{
+      position: "absolute", top: "45%", left: "30%",
+      width: 800, height: 400, borderRadius: "50%",
+      background: "radial-gradient(ellipse, rgba(16,185,129,0.05) 0%, transparent 65%)",
+      filter: "blur(80px)",
+    }} />
+    {/* Grid overlay */}
+    <div style={{
+      position: "absolute", inset: 0,
+      backgroundImage:
+        "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
+      backgroundSize: "60px 60px",
+    }} />
+    {/* Vignette */}
+    <div style={{
+      position: "absolute", inset: 0,
+      background: "radial-gradient(ellipse at center, transparent 40%, rgba(5,6,8,0.7) 100%)",
+    }} />
+  </div>
+);
+
+/* ─────────────────────────────────────────────
+   NAV
+───────────────────────────────────────────── */
+const Nav = ({ onLogin, onRegister }: NavProps) => {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 60);
-    window.addEventListener("scroll", fn, { passive: true });
-    return () => window.removeEventListener("scroll", fn);
+    const h = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", h);
+    return () => window.removeEventListener("scroll", h);
   }, []);
 
+  const links = ["Funcionalidades", "Como Funciona", "Planos"];
+
   return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
-      height: 68,
-      display: "flex", alignItems: "center",
-      padding: "0 clamp(24px, 5vw, 80px)",
-      background: scrolled ? "rgba(3,3,5,0.88)" : "transparent",
-      backdropFilter: scrolled ? "blur(24px) saturate(180%)" : "none",
-      borderBottom: scrolled ? "1px solid rgba(16,185,129,0.1)" : "1px solid transparent",
-      transition: "all 0.5s cubic-bezier(0.16,1,0.3,1)",
+    <>
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        padding: scrolled ? "12px 0" : "20px 0",
+        background: scrolled ? "rgba(5,6,8,0.92)" : "transparent",
+        backdropFilter: scrolled ? "blur(20px)" : "none",
+        borderBottom: scrolled ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent",
+        transition: "all 0.35s ease",
+      }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {/* Logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: "linear-gradient(135deg, #10b981, #059669)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 4px 16px rgba(16,185,129,0.4)",
+              fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16, color: "#fff",
+            }}>G</div>
+            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 20, color: "#f1f5f9", letterSpacing: "-0.02em" }}>
+              Gest<span style={{ color: "#10b981" }}>Pro</span>
+            </span>
+          </div>
+
+          {/* Desktop Links */}
+          <div style={{ display: "flex", alignItems: "center", gap: 36 }} className="desktop-nav">
+            {links.map(l => (
+              <a key={l} href={`#${l.toLowerCase().replace(" ", "-")}`} style={{
+                fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 500,
+                color: "rgba(241,245,249,0.6)", textDecoration: "none",
+                transition: "color 0.2s",
+              }}
+                onMouseEnter={e => (e.currentTarget.style.color = "#10b981")}
+                onMouseLeave={e => (e.currentTarget.style.color = "rgba(241,245,249,0.6)")}
+              >{l}</a>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <button className="btn-ghost" onClick={onLogin} style={{ padding: "9px 20px", fontSize: 14 }}>Entrar</button>
+            <button className="btn-green" onClick={onRegister} style={{ padding: "9px 20px", fontSize: 14 }}>Começar grátis</button>
+            {/* Hamburger */}
+            <button onClick={() => setMenuOpen(true)} style={{
+              display: "none", background: "none", border: "none", cursor: "pointer",
+              color: "#f1f5f9", fontSize: 22, padding: 4,
+            }} className="mob-hamburger">☰</button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div className="mob-menu" onClick={() => setMenuOpen(false)}>
+          {links.map(l => (
+            <a key={l} href={`#${l.toLowerCase()}`}
+              style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 700, color: "#f1f5f9", textDecoration: "none" }}
+            >{l}</a>
+          ))}
+          <button className="btn-green" onClick={onRegister} style={{ padding: "14px 40px", fontSize: 16, marginTop: 16 }}>Começar grátis</button>
+        </div>
+      )}
+
+      {/* Hide desktop-nav on small screens */}
+      <style>{`
+        @media(max-width:768px){
+          .desktop-nav{display:none!important;}
+          .mob-hamburger{display:flex!important;}
+        }
+      `}</style>
+    </>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   HERO
+───────────────────────────────────────────── */
+const DashboardPreview = () => (
+  <div className="dash-float" style={{
+    width: "100%", maxWidth: 720,
+    borderRadius: 18, overflow: "hidden",
+    border: "1px solid rgba(16,185,129,0.25)",
+    boxShadow: "0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(16,185,129,0.1), 0 0 80px rgba(16,185,129,0.08)",
+    position: "relative",
+  }}>
+    {/* Top bar */}
+    <div style={{
+      background: "#0d0f12", borderBottom: "1px solid rgba(255,255,255,0.07)",
+      padding: "10px 16px", display: "flex", alignItems: "center", gap: 8,
     }}>
-      {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect x="4" y="4" width="11" height="11" rx="2" fill="#10b981" opacity="0.9"/>
-          <rect x="17" y="4" width="11" height="11" rx="2" fill="#10b981" opacity="0.4"/>
-          <rect x="4" y="17" width="11" height="11" rx="2" fill="#10b981" opacity="0.4"/>
-          <rect x="17" y="17" width="11" height="11" rx="2" fill="#10b981" opacity="0.7"/>
-        </svg>
-        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: "-0.03em", color: "#f1f5f9" }}>
+      {["#ff5f57","#ffbd2e","#28c840"].map(c => (
+        <div key={c} style={{ width: 11, height: 11, borderRadius: "50%", background: c }} />
+      ))}
+      <div style={{
+        flex: 1, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.05)",
+        marginLeft: 12, display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "'DM Mono', monospace", fontSize: 10, color: "rgba(255,255,255,0.3)",
+      }}>gestpro.app/dashboard</div>
+    </div>
+
+    {/* Dashboard body */}
+    <div style={{ background: "#0d0f12", padding: "16px", display: "flex", gap: 12 }}>
+      {/* Sidebar */}
+      <div style={{ width: 48, display: "flex", flexDirection: "column", gap: 14, paddingTop: 4 }}>
+        {["📊","📦","💰","👤","📈"].map((ic, i) => (
+          <div key={i} style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: i === 0 ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.04)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+          }}>{ic}</div>
+        ))}
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1 }}>
+        {/* Stat chips */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 }}>
+          {[
+            { label: "Vendas Hoje", value: "R$ 134,48", color: "#10b981" },
+            { label: "Vendas Mês", value: "R$ 606,48", color: "#3b82f6" },
+            { label: "Lucro Mês", value: "R$ 297,50", color: "#f59e0b" },
+            { label: "Em Estoque", value: "4 itens", color: "#8b5cf6" },
+          ].map(s => (
+            <div key={s.label} style={{
+              background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "10px 10px",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}>
+              <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 9, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 12, color: s.color }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Chart area */}
+        <div style={{
+          background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)",
+          padding: "12px", height: 100, position: "relative", overflow: "hidden",
+        }}>
+          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 9, color: "rgba(255,255,255,0.3)", marginBottom: 8 }}>VENDAS DIÁRIAS</div>
+          <svg viewBox="0 0 300 50" style={{ width: "100%", height: 55 }}>
+            <defs>
+              <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M0,45 C20,42 40,38 60,30 C80,22 100,20 120,18 C140,16 160,12 180,15 C200,18 220,22 240,10 C260,8 280,5 300,8 L300,55 L0,55 Z" fill="url(#chartGrad)" />
+            <path d="M0,45 C20,42 40,38 60,30 C80,22 100,20 120,18 C140,16 160,12 180,15 C200,18 220,22 240,10 C260,8 280,5 300,8" fill="none" stroke="#10b981" strokeWidth="1.5" />
+          </svg>
+        </div>
+
+        {/* Mini table */}
+        <div style={{ marginTop: 8 }}>
+          {[
+            { name: "Eight", val: "R$ 92,00", tag: "Pix" },
+            { name: "Produto B", val: "R$ 48,00", tag: "Crédito" },
+            { name: "Produto C", val: "R$ 32,00", tag: "Dinheiro" },
+          ].map(row => (
+            <div key={row.name} style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.04)",
+            }}>
+              <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: 10, color: "rgba(255,255,255,0.55)" }}>{row.name}</span>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 9, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: 5 }}>{row.tag}</span>
+                <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 11, color: "#10b981" }}>{row.val}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* Glow overlay */}
+    <div style={{
+      position: "absolute", inset: 0, pointerEvents: "none",
+      background: "linear-gradient(180deg, transparent 60%, rgba(16,185,129,0.04) 100%)",
+      borderRadius: 18,
+    }} />
+  </div>
+);
+
+const Hero = ({ onRegister, onLogin }: HeroProps) => (
+  <section style={{
+    position: "relative", zIndex: 10,
+    minHeight: "100vh", display: "flex", alignItems: "center",
+    padding: "120px 28px 80px",
+    maxWidth: 1200, margin: "0 auto",
+  }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 64, width: "100%", flexWrap: "wrap" }}>
+
+      {/* Left text */}
+      <div style={{ flex: "1 1 400px" }}>
+        {/* Badge */}
+        <div className="fade-up d1" style={{
+          display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 28,
+          background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)",
+          borderRadius: 99, padding: "6px 16px",
+          fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#10b981",
+          letterSpacing: ".1em", textTransform: "uppercase",
+        }}>
+          <span className="blink" style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
+          Gestão de Vendas Inteligente
+        </div>
+
+        {/* Heading */}
+        <h1 className="fade-up d2" style={{
+          fontFamily: "'Syne', sans-serif", fontWeight: 800,
+          fontSize: "clamp(40px, 5vw, 68px)",
+          lineHeight: 1.05, letterSpacing: "-0.03em",
+          color: "#f1f5f9", marginBottom: 22,
+        }}>
+          Seu negócio,<br />
+          <span style={{
+            background: "linear-gradient(135deg, #10b981 0%, #34d399 60%, #6ee7b7 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          }}>no controle.</span>
+        </h1>
+
+        {/* Sub */}
+        <p className="fade-up d3" style={{
+          fontFamily: "'Manrope', sans-serif", fontWeight: 400,
+          fontSize: 17, lineHeight: 1.75, color: "rgba(241,245,249,0.6)",
+          maxWidth: 460, marginBottom: 40,
+        }}>
+          Caixa, vendas, estoque e relatórios em um único painel. Feito para
+          lojistas que querem crescer sem complicação.
+        </p>
+
+        {/* Buttons */}
+        <div className="fade-up d4" style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <button className="btn-green" onClick={onRegister} style={{ padding: "14px 32px", fontSize: 15, borderRadius: 12 }}>
+            Começar grátis →
+          </button>
+          <button className="btn-ghost" onClick={onLogin} style={{ padding: "14px 26px", fontSize: 15, borderRadius: 12 }}>
+            Já tenho conta
+          </button>
+        </div>
+
+        {/* Social proof */}
+        <div className="fade-up d5" style={{ marginTop: 40, display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex" }}>
+            {["#10b981","#34d399","#6ee7b7","#a7f3d0","#d1fae5"].map((c, i) => (
+              <div key={i} style={{
+                width: 32, height: 32, borderRadius: "50%",
+                background: `linear-gradient(135deg, ${c}, #059669)`,
+                border: "2px solid #050608",
+                marginLeft: i === 0 ? 0 : -10,
+                fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {["M","J","A","R","L"][i]}
+              </div>
+            ))}
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 14, color: "#f1f5f9" }}>+2.400 lojistas</div>
+            <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, color: "rgba(241,245,249,0.45)" }}>já usam o GestPro</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Dashboard preview */}
+      <div className="fade-in d3" style={{ flex: "1 1 380px", display: "flex", justifyContent: "center", position: "relative" }}>
+        {/* Decorative ring */}
+        <div className="spin-slow" style={{
+          position: "absolute", width: 500, height: 500,
+          borderRadius: "50%", top: "50%", left: "50%",
+          transform: "translate(-50%,-50%)",
+          border: "1px dashed rgba(16,185,129,0.1)",
+          pointerEvents: "none",
+        }} />
+        <div style={{ position: "absolute", width: 350, height: 350, borderRadius: "50%", top: "50%", left: "50%", transform: "translate(-50%,-50%)", border: "1px dashed rgba(16,185,129,0.07)", pointerEvents: "none" }} />
+        <DashboardPreview />
+      </div>
+    </div>
+  </section>
+);
+
+/* ─────────────────────────────────────────────
+   STATS
+───────────────────────────────────────────── */
+const Stats = () => {
+  const stats = [
+    { value: "2.400+", label: "Lojistas ativos" },
+    { value: "R$ 12M+", label: "Em vendas gerenciadas" },
+    { value: "99,9%", label: "Uptime garantido" },
+    { value: "4.9★", label: "Avaliação média" },
+  ];
+
+  return (
+    <section style={{ position: "relative", zIndex: 10, padding: "0 28px 100px" }}>
+      <div style={{
+        maxWidth: 1100, margin: "0 auto",
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2,
+        borderRadius: 18, overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.06)",
+      }}>
+        {stats.map((s, i) => (
+          <div key={i} className="hover-lift" style={{
+            padding: "36px 28px",
+            background: "rgba(255,255,255,0.025)",
+            borderRight: i < stats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+            textAlign: "center",
+          }}>
+            <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 36, color: "#10b981", letterSpacing: "-0.03em", marginBottom: 6 }}>{s.value}</div>
+            <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 13, color: "rgba(241,245,249,0.45)", fontWeight: 400 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   FEATURES
+───────────────────────────────────────────── */
+const Features = () => {
+  const feats = [
+    {
+      icon: "💰", title: "Controle de Caixa",
+      desc: "Abra e feche caixas com saldo inicial, acompanhe cada centavo em tempo real com total transparência.",
+      tag: "Financeiro",
+    },
+    {
+      icon: "📦", title: "Gestão de Estoque",
+      desc: "Monitore produtos, receba alertas de estoque zero e nunca perca uma venda por falta de produto.",
+      tag: "Estoque",
+    },
+    {
+      icon: "📊", title: "Relatórios Completos",
+      desc: "Exporte em CSV, HTML ou PDF. Visualize por período, por caixa ou produto com gráficos detalhados.",
+      tag: "Analytics",
+    },
+    {
+      icon: "💳", title: "Multi Pagamentos",
+      desc: "PIX, Dinheiro, Débito e Crédito. Registre tudo e veja a distribuição por forma de pagamento.",
+      tag: "Pagamentos",
+    },
+    {
+      icon: "👥", title: "Gestão de Clientes",
+      desc: "Cadastre clientes, acompanhe histórico de compras e construa relacionamentos duradouros.",
+      tag: "CRM",
+    },
+    {
+      icon: "🏢", title: "Multi Empresa",
+      desc: "Gerencie várias filiais ou negócios em uma única conta. Troque com um clique.",
+      tag: "Empresas",
+    },
+  ];
+
+  return (
+    <section id="funcionalidades" style={{ position: "relative", zIndex: 10, padding: "80px 28px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 64 }}>
+          <div className="section-tag">✦ Funcionalidades</div>
+          <h2 className="section-heading" style={{ fontSize: "clamp(32px,4vw,52px)", marginBottom: 16 }}>
+            Tudo que você precisa,<br />num só lugar
+          </h2>
+          <p className="section-sub" style={{ maxWidth: 480, margin: "0 auto", fontSize: 16 }}>
+            Do caixa ao relatório final, o GestPro cobre todas as etapas da gestão do seu comércio.
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+          {feats.map((f, i) => (
+            <div key={i} className="glass hover-lift" style={{ padding: "28px 24px", cursor: "default", transition: "border-color .2s" }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(16,185,129,0.25)")}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)")}
+            >
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+                <div style={{ fontSize: 28 }}>{f.icon}</div>
+                <span style={{
+                  fontFamily: "'DM Mono',monospace", fontSize: 10, color: "#10b981",
+                  background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)",
+                  padding: "3px 10px", borderRadius: 99, letterSpacing: ".08em",
+                }}>{f.tag}</span>
+              </div>
+              <h3 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 19, color: "#f1f5f9", marginBottom: 10 }}>{f.title}</h3>
+              <p style={{ fontFamily: "'Manrope',sans-serif", fontSize: 14, color: "rgba(241,245,249,0.5)", lineHeight: 1.7 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   HOW IT WORKS
+───────────────────────────────────────────── */
+const HowItWorks = () => {
+  const steps = [
+    { n: "01", title: "Crie sua conta", desc: "Cadastro em menos de 2 minutos. Sem cartão de crédito.", icon: "🚀" },
+    { n: "02", title: "Configure sua empresa", desc: "Adicione produtos, defina preços e abra seu primeiro caixa.", icon: "⚙️" },
+    { n: "03", title: "Registre vendas", desc: "Interface simples para lançar vendas rapidamente no dia a dia.", icon: "💸" },
+    { n: "04", title: "Analise e cresça", desc: "Relatórios automáticos com insights para tomar decisões certeiras.", icon: "📈" },
+  ];
+
+  return (
+    <section id="como-funciona" style={{ position: "relative", zIndex: 10, padding: "80px 28px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 64 }}>
+          <div className="section-tag">✦ Como Funciona</div>
+          <h2 className="section-heading" style={{ fontSize: "clamp(32px,4vw,52px)", marginBottom: 16 }}>
+            Simples do início ao fim
+          </h2>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 24, position: "relative" }}>
+          {/* Connector line */}
+          <div style={{
+            position: "absolute", top: 42, left: "12%", right: "12%", height: 1,
+            background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.3), transparent)",
+            zIndex: 0,
+          }} />
+          {steps.map((s, i) => (
+            <div key={i} style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
+              <div style={{
+                width: 68, height: 68, borderRadius: "50%", margin: "0 auto 20px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1.5px solid rgba(16,185,129,0.3)",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 0 24px rgba(16,185,129,0.12)",
+                fontSize: 26,
+              }}>
+                {s.icon}
+              </div>
+              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "#10b981", letterSpacing: ".12em", marginBottom: 8 }}>{s.n}</div>
+              <h3 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 18, color: "#f1f5f9", marginBottom: 8 }}>{s.title}</h3>
+              <p style={{ fontFamily: "'Manrope',sans-serif", fontSize: 13, color: "rgba(241,245,249,0.5)", lineHeight: 1.65 }}>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   PLANS
+───────────────────────────────────────────── */
+const Plans = ({ onRegister }: PlansProps) => {
+  const plans = [
+    {
+      name: "Free", price: "R$ 0", period: "/mês",
+      desc: "Para testar e começar.",
+      features: ["1 empresa", "1 caixa ativo", "Até 30 vendas/mês", "Relatórios básicos", "Suporte por email"],
+      cta: "Começar grátis", popular: false,
+    },
+    {
+      name: "PRO", price: "R$ 29", period: "/mês",
+      desc: "Para quem leva o negócio a sério.",
+      features: ["Empresas ilimitadas", "Caixas ilimitados", "Vendas ilimitadas", "Relatórios avançados + export", "Gestão de clientes", "Multi pagamentos", "Suporte prioritário"],
+      cta: "Assinar PRO", popular: true,
+    },
+    {
+      name: "Enterprise", price: "Sob consulta", period: "",
+      desc: "Para redes e franquias.",
+      features: ["Tudo do PRO", "API dedicada", "Onboarding personalizado", "SLA garantido", "Gerente de conta"],
+      cta: "Falar com vendas", popular: false,
+    },
+  ];
+
+  return (
+    <section id="planos" style={{ position: "relative", zIndex: 10, padding: "80px 28px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 64 }}>
+          <div className="section-tag">✦ Planos</div>
+          <h2 className="section-heading" style={{ fontSize: "clamp(32px,4vw,52px)", marginBottom: 16 }}>
+            Preço justo,<br />valor real
+          </h2>
+          <p className="section-sub" style={{ fontSize: 16 }}>Comece grátis. Escale quando quiser.</p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20, alignItems: "center" }}>
+          {plans.map((p, i) => (
+            <div key={i}
+              className={`glass hover-lift ${p.popular ? "popular-ring" : ""}`}
+              style={{ padding: "32px 28px", position: "relative", transform: p.popular ? "scale(1.03)" : "none" }}
+            >
+              {p.popular && (
+                <div style={{
+                  position: "absolute", top: -13, left: "50%", transform: "translateX(-50%)",
+                  background: "linear-gradient(90deg, #10b981, #059669)",
+                  borderRadius: 99, padding: "4px 18px",
+                  fontFamily: "'DM Mono',monospace", fontSize: 10, color: "#fff", letterSpacing: ".1em",
+                  whiteSpace: "nowrap",
+                }}>⭐ MAIS POPULAR</div>
+              )}
+              <div style={{ marginBottom: 6, fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 15, color: p.popular ? "#10b981" : "rgba(241,245,249,0.6)" }}>{p.name}</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
+                <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 34, color: "#f1f5f9" }}>{p.price}</span>
+                <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: 13, color: "rgba(241,245,249,0.4)" }}>{p.period}</span>
+              </div>
+              <p style={{ fontFamily: "'Manrope',sans-serif", fontSize: 13, color: "rgba(241,245,249,0.45)", marginBottom: 24, lineHeight: 1.6 }}>{p.desc}</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+                {p.features.map(f => (
+                  <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <span style={{ color: "#10b981", fontSize: 14, marginTop: 1 }}>✓</span>
+                    <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: 13, color: "rgba(241,245,249,0.65)" }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                className={p.popular ? "btn-green" : "btn-ghost"}
+                onClick={onRegister}
+                style={{ width: "100%", padding: "12px", fontSize: 14, borderRadius: 10 }}
+              >{p.cta}</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   ABOUT / TESTIMONIALS
+───────────────────────────────────────────── */
+const About = () => {
+  const quotes = [
+    { name: "Matheus C.", role: "Loja de roupas", text: "Abri meu caixa e já tinha tudo funcionando em minutos. Nunca imaginei que seria tão fácil controlar as vendas." },
+    { name: "Ana Paula R.", role: "Loja de acessórios", text: "Os relatórios me mostraram que estava perdendo dinheiro em dois produtos. Ajustei os preços e o lucro cresceu 40%." },
+    { name: "Ricardo M.", role: "Mercadinho", text: "Gerencio 3 filiais pelo celular. O GestPro me dá uma visão completa de cada unidade com poucos cliques." },
+  ];
+
+  return (
+    <section style={{ position: "relative", zIndex: 10, padding: "80px 28px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 56 }}>
+          <div className="section-tag">✦ Depoimentos</div>
+          <h2 className="section-heading" style={{ fontSize: "clamp(30px,4vw,48px)" }}>
+            Quem usa, recomenda
+          </h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 18 }}>
+          {quotes.map((q, i) => (
+            <div key={i} className="glass hover-lift" style={{ padding: "28px 24px" }}>
+              <div style={{ fontSize: 24, color: "#10b981", marginBottom: 14, fontFamily: "'Syne',sans-serif" }}>"</div>
+              <p style={{ fontFamily: "'Manrope',sans-serif", fontSize: 14, color: "rgba(241,245,249,0.65)", lineHeight: 1.75, marginBottom: 20 }}>{q.text}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: "50%",
+                  background: "linear-gradient(135deg, #10b981, #059669)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 14, color: "#fff",
+                }}>{q.name[0]}</div>
+                <div>
+                  <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 13, color: "#f1f5f9" }}>{q.name}</div>
+                  <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 11, color: "rgba(241,245,249,0.35)" }}>{q.role}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   CTA FINAL
+───────────────────────────────────────────── */
+const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
+  <section style={{ position: "relative", zIndex: 10, padding: "80px 28px 100px" }}>
+    <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
+      <div className="glass-bright" style={{ padding: "64px 48px", borderRadius: 24, position: "relative", overflow: "hidden" }}>
+        {/* Glow bg */}
+        <div style={{
+          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+          width: 500, height: 300, borderRadius: "50%",
+          background: "radial-gradient(ellipse, rgba(16,185,129,0.12) 0%, transparent 70%)",
+          filter: "blur(40px)", pointerEvents: "none",
+        }} />
+        <div className="section-tag" style={{ margin: "0 auto 24px" }}>✦ Comece hoje mesmo</div>
+        <h2 className="section-heading" style={{ fontSize: "clamp(30px,4vw,52px)", marginBottom: 18 }}>
+          Pronto para ter<br />
+          <span style={{
+            background: "linear-gradient(135deg, #10b981, #34d399)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          }}>controle total?</span>
+        </h2>
+        <p className="section-sub" style={{ fontSize: 16, maxWidth: 420, margin: "0 auto 36px" }}>
+          Junte-se a mais de 2.400 lojistas que já descobriram o poder de gerir com inteligência.
+        </p>
+        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
+          <button className="btn-green" onClick={onRegister} style={{ padding: "15px 36px", fontSize: 15, borderRadius: 12 }}>
+            Criar conta grátis →
+          </button>
+          <button className="btn-ghost" onClick={onLogin} style={{ padding: "15px 28px", fontSize: 15, borderRadius: 12 }}>
+            Já tenho conta
+          </button>
+        </div>
+        <p style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, color: "rgba(241,245,249,0.3)", marginTop: 20 }}>
+          Sem cartão de crédito · Cancele quando quiser
+        </p>
+      </div>
+    </div>
+  </section>
+);
+
+/* ─────────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────────── */
+const Footer = () => (
+  <footer style={{
+    position: "relative", zIndex: 10,
+    borderTop: "1px solid rgba(255,255,255,0.06)",
+    padding: "40px 28px",
+  }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8,
+          background: "linear-gradient(135deg, #10b981, #059669)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 12, color: "#fff",
+        }}>G</div>
+        <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 16, color: "#f1f5f9" }}>
           Gest<span style={{ color: "#10b981" }}>Pro</span>
         </span>
       </div>
-
-      {/* Links */}
-      <div style={{ display: "flex", gap: 36, alignItems: "center" }}>
-        {["Funcionalidades", "Planos", "Sobre"].map(item => (
-          <a key={item} href={`#${item.toLowerCase()}`} style={{
-            fontSize: 13, color: "rgba(241,245,249,0.45)", textDecoration: "none",
-            letterSpacing: "0.02em", fontFamily: "'DM Mono', monospace",
-            transition: "color 0.2s",
-          }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#f1f5f9")}
-            onMouseLeave={e => (e.currentTarget.style.color = "rgba(241,245,249,0.45)")}>
-            {item}
-          </a>
-        ))}
-      </div>
-
-      {/* Ações */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flex: 1, justifyContent: "flex-end" }}>
-        <button onClick={onLogin} style={{
-          background: "transparent", border: "1px solid rgba(241,245,249,0.12)",
-          color: "rgba(241,245,249,0.6)", padding: "9px 20px",
-          fontSize: 13, fontFamily: "'DM Mono', monospace", borderRadius: 6,
-          cursor: "pointer", letterSpacing: "0.02em", transition: "all 0.2s",
-        }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(16,185,129,0.4)"; e.currentTarget.style.color = "#10b981"; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(241,245,249,0.12)"; e.currentTarget.style.color = "rgba(241,245,249,0.6)"; }}>
-          Entrar
-        </button>
-        <button onClick={onRegister} style={{
-          background: "#10b981", border: "none",
-          color: "#030305", padding: "9px 20px",
-          fontSize: 13, fontFamily: "'DM Mono', monospace", borderRadius: 6,
-          cursor: "pointer", fontWeight: 700, letterSpacing: "0.02em", transition: "all 0.2s",
-        }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#34d399"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.transform = "translateY(0)"; }}>
-          Começar grátis →
-        </button>
-      </div>
-    </nav>
-  );
-}
-
-/* ─── Hero ───────────────────────────────────────────────────────────────── */
-function Hero({ onRegister, onLogin }: { onRegister: () => void; onLogin: () => void }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setTimeout(() => setMounted(true), 100); }, []);
-
-  return (
-    <section style={{
-      minHeight: "100vh", display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
-      padding: "120px clamp(24px, 6vw, 120px) 80px",
-      position: "relative", zIndex: 2, textAlign: "center",
-    }}>
-      {/* Badge */}
-      <div style={{
-        display: "inline-flex", alignItems: "center", gap: 8,
-        padding: "6px 14px 6px 8px",
-        border: "1px solid rgba(16,185,129,0.2)", borderRadius: 99,
-        background: "rgba(16,185,129,0.05)",
-        marginBottom: 48,
-        opacity: mounted ? 1 : 0,
-        transform: mounted ? "translateY(0)" : "translateY(20px)",
-        transition: "all 0.8s cubic-bezier(0.16,1,0.3,1) 0s",
-      }}>
-        <span style={{
-          width: 7, height: 7, borderRadius: "50%", background: "#10b981",
-          boxShadow: "0 0 0 3px rgba(16,185,129,0.2)",
-          animation: "pulse 2s ease infinite",
-          display: "inline-block",
-        }} />
-        <span style={{ fontSize: 12, color: "#10b981", fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>
-          Em desenvolvimento ativo
-        </span>
-        <span style={{ fontSize: 12, color: "rgba(241,245,249,0.3)", fontFamily: "'DM Mono', monospace" }}>
-          — 7 dias grátis
-        </span>
-      </div>
-
-      {/* Título principal */}
-      <h1 style={{
-        fontFamily: "'Syne', sans-serif",
-        fontWeight: 800,
-        fontSize: "clamp(52px, 8vw, 108px)",
-        lineHeight: 0.95,
-        letterSpacing: "-0.04em",
-        color: "#f1f5f9",
-        maxWidth: 900,
-        marginBottom: 0,
-        opacity: mounted ? 1 : 0,
-        transform: mounted ? "translateY(0)" : "translateY(30px)",
-        transition: "all 0.9s cubic-bezier(0.16,1,0.3,1) 0.1s",
-      }}>
-        Gestão que
-        <br />
-        <span style={{
-          backgroundImage: "linear-gradient(135deg, #10b981 0%, #34d399 40%, #6ee7b7 100%)",
-          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-        }}>
-          simplifica.
-        </span>
-      </h1>
-
-      {/* Subtítulo */}
-      <p style={{
-        fontSize: "clamp(15px, 1.8vw, 19px)",
-        color: "rgba(241,245,249,0.45)",
-        maxWidth: 520,
-        lineHeight: 1.75,
-        margin: "32px 0 48px",
-        fontFamily: "'DM Mono', monospace",
-        opacity: mounted ? 1 : 0,
-        transform: mounted ? "translateY(0)" : "translateY(24px)",
-        transition: "all 0.9s cubic-bezier(0.16,1,0.3,1) 0.22s",
-      }}>
-        PDV, estoque, caixa e relatórios em um sistema só.
-        <span style={{ color: "rgba(16,185,129,0.8)" }}> Para quem não tem tempo a perder.</span>
+      <p style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, color: "rgba(241,245,249,0.3)" }}>
+        © {new Date().getFullYear()} GestPro · Todos os direitos reservados
       </p>
-
-      {/* CTAs */}
-      <div style={{
-        display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center",
-        opacity: mounted ? 1 : 0,
-        transform: mounted ? "translateY(0)" : "translateY(20px)",
-        transition: "all 0.9s cubic-bezier(0.16,1,0.3,1) 0.34s",
-      }}>
-        <button onClick={onRegister} style={{
-          background: "#10b981", border: "none", color: "#030305",
-          padding: "16px 40px", fontSize: 14, fontWeight: 700,
-          fontFamily: "'DM Mono', monospace", borderRadius: 8,
-          cursor: "pointer", letterSpacing: "0.05em", transition: "all 0.3s",
-          boxShadow: "0 0 40px rgba(16,185,129,0.25)",
-        }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#34d399"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 40px rgba(16,185,129,0.4)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 0 40px rgba(16,185,129,0.25)"; }}>
-          → Começar grátis
-        </button>
-        <button onClick={onLogin} style={{
-          background: "transparent", border: "1px solid rgba(241,245,249,0.12)",
-          color: "rgba(241,245,249,0.65)", padding: "16px 40px",
-          fontSize: 14, fontFamily: "'DM Mono', monospace", borderRadius: 8,
-          cursor: "pointer", letterSpacing: "0.03em", transition: "all 0.3s",
-        }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(16,185,129,0.35)"; e.currentTarget.style.color = "#10b981"; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(241,245,249,0.12)"; e.currentTarget.style.color = "rgba(241,245,249,0.65)"; }}>
-          Já tenho conta
-        </button>
-      </div>
-
-      {/* Trust badges */}
-      <div style={{
-        display: "flex", gap: 32, marginTop: 56, flexWrap: "wrap", justifyContent: "center",
-        opacity: mounted ? 1 : 0,
-        transition: "all 0.9s cubic-bezier(0.16,1,0.3,1) 0.48s",
-      }}>
-        {["JWT + OAuth2", "Dados isolados", "Exportação completa"].map((item, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "rgba(241,245,249,0.25)", fontFamily: "'DM Mono', monospace" }}>
-            <span style={{ color: "rgba(16,185,129,0.5)", fontSize: 8 }}>◆</span>
-            {item}
-          </div>
-        ))}
-      </div>
-
-      {/* Dashboard mockup */}
-      <DashboardMockup mounted={mounted} />
-    </section>
-  );
-}
-
-/* ─── Dashboard Mockup ───────────────────────────────────────────────────── */
-function DashboardMockup({ mounted }: { mounted: boolean }) {
-  return (
-    <div style={{
-      marginTop: 96, width: "100%", maxWidth: 960,
-      opacity: mounted ? 1 : 0,
-      transform: mounted ? "translateY(0) perspective(1200px) rotateX(0deg)" : "translateY(40px) perspective(1200px) rotateX(4deg)",
-      transition: "all 1.2s cubic-bezier(0.16,1,0.3,1) 0.5s",
-      position: "relative",
-    }}>
-      {/* Glow sob o card */}
-      <div style={{
-        position: "absolute", bottom: -40, left: "15%", right: "15%", height: 80,
-        background: "rgba(16,185,129,0.12)", filter: "blur(40px)", borderRadius: "50%",
-      }} />
-
-      <div style={{
-        border: "1px solid rgba(16,185,129,0.12)",
-        borderRadius: 16, overflow: "hidden",
-        background: "rgba(8,8,12,0.9)",
-        backdropFilter: "blur(20px)",
-        boxShadow: "0 100px 200px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03) inset",
-      }}>
-        {/* Barra topo */}
-        <div style={{
-          padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)",
-          display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.01)",
-        }}>
-          <div style={{ display: "flex", gap: 6 }}>
-            {["rgba(239,68,68,0.7)", "rgba(245,158,11,0.7)", "rgba(16,185,129,0.7)"].map((c, i) => (
-              <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c }} />
-            ))}
-          </div>
-          <div style={{
-            flex: 1, height: 22, maxWidth: 300, margin: "0 auto",
-            background: "rgba(255,255,255,0.04)", borderRadius: 6,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 10, color: "rgba(255,255,255,0.2)", fontFamily: "'DM Mono', monospace",
-          }}>
-            gestpro.com.br/dashboard
-          </div>
-          <div style={{ width: 60 }} />
-        </div>
-
-        {/* Layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", height: 380 }}>
-          {/* Sidebar */}
-          <div style={{ borderRight: "1px solid rgba(255,255,255,0.04)", padding: "20px 12px", background: "rgba(255,255,255,0.005)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28, padding: "0 8px" }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981" }} />
-              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontFamily: "'DM Mono', monospace" }}>Martins Essentials</span>
-            </div>
-            {["Dashboard", "Produtos", "Vendas", "Clientes", "Relatórios", "Empresas"].map((item, i) => (
-              <div key={item} style={{
-                padding: "9px 12px", borderRadius: 6, marginBottom: 2,
-                background: i === 0 ? "rgba(16,185,129,0.1)" : "transparent",
-                fontSize: 12,
-                color: i === 0 ? "#10b981" : "rgba(255,255,255,0.2)",
-                fontFamily: "'DM Mono', monospace",
-                display: "flex", alignItems: "center", gap: 8,
-              }}>
-                <span style={{ opacity: 0.6, fontSize: 10 }}>
-                  {["▣", "◫", "◉", "◎", "◈", "⬡"][i]}
-                </span>
-                {item}
-              </div>
-            ))}
-          </div>
-
-          {/* Conteúdo */}
-          <div style={{ padding: 24, overflow: "hidden" }}>
-            {/* KPIs */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
-              {[
-                { label: "RECEITA HOJE", value: "R$ 134,48", color: "#10b981" },
-                { label: "LUCRO MÊS", value: "R$ 297,50", color: "#34d399" },
-                { label: "VENDAS", value: "23", color: "#6ee7b7" },
-                { label: "ESTOQUE", value: "4 produtos", color: "#f59e0b" },
-              ].map((kpi, i) => (
-                <div key={i} style={{
-                  padding: "14px 16px", borderRadius: 8,
-                  border: "1px solid rgba(255,255,255,0.05)",
-                  background: "rgba(255,255,255,0.015)",
-                }}>
-                  <div style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: "0.12em", marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>{kpi.label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: kpi.color, fontFamily: "'Syne', sans-serif", letterSpacing: "-0.03em" }}>{kpi.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Gráfico */}
-            <div style={{
-              border: "1px solid rgba(255,255,255,0.04)", borderRadius: 8,
-              padding: "16px 20px", background: "rgba(255,255,255,0.01)", marginBottom: 14,
-            }}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em", marginBottom: 14, fontFamily: "'DM Mono', monospace" }}>VENDAS DIÁRIAS</div>
-              <svg width="100%" height="80" viewBox="0 0 500 80" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path d="M0,70 C60,70 80,50 120,40 C160,30 180,55 230,35 C280,15 300,45 350,25 C390,10 420,35 500,20 L500,80 L0,80 Z" fill="url(#g1)" />
-                <path d="M0,70 C60,70 80,50 120,40 C160,30 180,55 230,35 C280,15 300,45 350,25 C390,10 420,35 500,20" fill="none" stroke="#10b981" strokeWidth="2" opacity="0.9" />
-                {[[120, 40], [230, 35], [350, 25], [500, 20]].map(([x, y], i) => (
-                  <circle key={i} cx={x} cy={y} r="3" fill="#10b981" opacity="0.8" />
-                ))}
-              </svg>
-            </div>
-
-            {/* Ações rápidas */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-              {["Nova Venda", "Produto", "Cliente", "Relatório"].map((a, i) => (
-                <div key={i} style={{
-                  padding: "10px", borderRadius: 6,
-                  border: "1px solid rgba(255,255,255,0.05)",
-                  background: i === 0 ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.01)",
-                  fontSize: 10, color: i === 0 ? "#10b981" : "rgba(255,255,255,0.25)",
-                  fontFamily: "'DM Mono', monospace", textAlign: "center",
-                }}>
-                  {a}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Stats ──────────────────────────────────────────────────────────────── */
-function Stats() {
-  const { ref, inView } = useInView();
-  return (
-    <section ref={ref} style={{ position: "relative", zIndex: 2, borderTop: "1px solid rgba(16,185,129,0.08)", borderBottom: "1px solid rgba(16,185,129,0.08)", background: "rgba(16,185,129,0.02)" }}>
-      <div style={{
-        maxWidth: 1100, margin: "0 auto",
-        display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
-      }}>
-        {STATS.map((s, i) => {
-          const count = useCount(s.value, inView);
-          return (
-            <div key={i} style={{
-              padding: "56px 40px", textAlign: "center",
-              borderRight: i < 3 ? "1px solid rgba(16,185,129,0.08)" : "none",
-              opacity: inView ? 1 : 0,
-              transform: inView ? "translateY(0)" : "translateY(24px)",
-              transition: `all 0.7s cubic-bezier(0.16,1,0.3,1) ${i * 100}ms`,
-            }}>
-              <div style={{
-                fontFamily: "'Syne', sans-serif", fontWeight: 800,
-                fontSize: 60, letterSpacing: "-0.04em", lineHeight: 1,
-                color: "#f1f5f9", marginBottom: 8,
-              }}>
-                {count}{s.suffix}
-              </div>
-              <div style={{ fontSize: 12, color: "rgba(241,245,249,0.3)", letterSpacing: "0.08em", fontFamily: "'DM Mono', monospace" }}>
-                {s.label.toUpperCase()}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-/* ─── Features ───────────────────────────────────────────────────────────── */
-function Features() {
-  const { ref, inView } = useInView();
-  return (
-    <section id="funcionalidades" ref={ref} style={{ padding: "120px clamp(24px, 6vw, 80px)", position: "relative", zIndex: 2 }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{
-          marginBottom: 72,
-          opacity: inView ? 1 : 0, transform: inView ? "none" : "translateY(24px)",
-          transition: "all 0.8s cubic-bezier(0.16,1,0.3,1)",
-        }}>
-          <div style={{ fontSize: 11, color: "rgba(16,185,129,0.7)", letterSpacing: "0.2em", fontFamily: "'DM Mono', monospace", marginBottom: 20 }}>
-            FUNCIONALIDADES
-          </div>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(36px, 5vw, 60px)", letterSpacing: "-0.04em", color: "#f1f5f9", lineHeight: 1.05, maxWidth: 560 }}>
-            Tudo que você precisa.<br />
-            <span style={{ color: "rgba(241,245,249,0.2)" }}>Nada que não usa.</span>
-          </h2>
-        </div>
-
-        {/* Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.08)", borderRadius: 12, overflow: "hidden" }}>
-          {FEATURES.map((feat, i) => (
-            <FeatureCard key={i} feat={feat} index={i} inView={inView} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FeatureCard({ feat, index, inView }: { feat: Feature; index: number; inView: boolean }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        padding: "36px 32px",
-        background: hovered ? "rgba(16,185,129,0.05)" : "rgba(3,3,5,0.95)",
-        transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)",
-        opacity: inView ? 1 : 0,
-        transform: inView ? "translateY(0)" : "translateY(32px)",
-        transitionDelay: `${index * 70}ms`,
-        cursor: "default", position: "relative", overflow: "hidden",
-      }}>
-      {/* Top border glow on hover */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, height: 1,
-        background: hovered ? "linear-gradient(90deg, transparent, #10b981, transparent)" : "transparent",
-        transition: "background 0.4s",
-      }} />
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-        <span style={{ fontSize: 32, color: hovered ? "#10b981" : "rgba(16,185,129,0.5)", transition: "color 0.3s" }}>{feat.icon}</span>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(16,185,129,0.4)", fontFamily: "'DM Mono', monospace", padding: "3px 8px", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 4 }}>
-            {feat.tag}
-          </span>
-          <span style={{ fontSize: 10, color: hovered ? "#10b981" : "rgba(241,245,249,0.2)", fontFamily: "'DM Mono', monospace", transition: "color 0.3s" }}>
-            {feat.stat}
-          </span>
-        </div>
-      </div>
-
-      <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: "#f1f5f9", marginBottom: 10, letterSpacing: "-0.02em" }}>{feat.title}</h3>
-      <p style={{ fontSize: 13, color: "rgba(241,245,249,0.4)", lineHeight: 1.75, fontFamily: "'DM Mono', monospace" }}>{feat.desc}</p>
-    </div>
-  );
-}
-
-/* ─── How It Works ───────────────────────────────────────────────────────── */
-function HowItWorks() {
-  const { ref, inView } = useInView();
-  const steps = [
-    { n: "01", title: "Crie sua conta", desc: "Email + senha ou Google OAuth2. Confirmação imediata, sem burocracia." },
-    { n: "02", title: "Cadastre a empresa", desc: "Nome fantasia e CNPJ. Sistema pronto para operar em minutos." },
-    { n: "03", title: "Abra o caixa", desc: "Informe o saldo inicial e comece a registrar vendas em segundos." },
-    { n: "04", title: "Analise os dados", desc: "Cada venda alimenta dashboards em tempo real. Exportação instantânea." },
-  ];
-
-  return (
-    <section style={{ padding: "120px clamp(24px, 6vw, 80px)", position: "relative", zIndex: 2, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-      <div ref={ref} style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{
-          marginBottom: 80,
-          opacity: inView ? 1 : 0, transform: inView ? "none" : "translateY(24px)",
-          transition: "all 0.8s cubic-bezier(0.16,1,0.3,1)",
-        }}>
-          <div style={{ fontSize: 11, color: "rgba(16,185,129,0.7)", letterSpacing: "0.2em", fontFamily: "'DM Mono', monospace", marginBottom: 20 }}>
-            COMO FUNCIONA
-          </div>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(36px, 5vw, 56px)", letterSpacing: "-0.04em", color: "#f1f5f9", lineHeight: 1.05 }}>
-            Zero a controle total<br />
-            <span style={{ color: "rgba(241,245,249,0.2)" }}>em 4 passos.</span>
-          </h2>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0, position: "relative" }}>
-          {/* Linha conectora */}
-          <div style={{
-            position: "absolute", top: 28, left: "6%", right: "6%", height: 1,
-            background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.25) 20%, rgba(16,185,129,0.25) 80%, transparent)",
-          }} />
-
-          {steps.map((step, i) => (
-            <div key={i} style={{
-              padding: "0 28px",
-              opacity: inView ? 1 : 0,
-              transform: inView ? "translateY(0)" : "translateY(32px)",
-              transition: `all 0.7s cubic-bezier(0.16,1,0.3,1) ${i * 120}ms`,
-              position: "relative",
-            }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: "50%",
-                border: "1px solid rgba(16,185,129,0.35)",
-                background: "#030305",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                marginBottom: 28, fontSize: 14, fontWeight: 700,
-                color: "#10b981", fontFamily: "'DM Mono', monospace",
-              }}>
-                {step.n}
-              </div>
-              <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: "#f1f5f9", marginBottom: 10, letterSpacing: "-0.02em" }}>{step.title}</h3>
-              <p style={{ fontSize: 13, color: "rgba(241,245,249,0.4)", lineHeight: 1.75, fontFamily: "'DM Mono', monospace" }}>{step.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── Plans ──────────────────────────────────────────────────────────────── */
-function Plans({ onRegister }: { onRegister: () => void }) {
-  const { ref, inView } = useInView();
-  return (
-    <section id="planos" ref={ref} style={{ padding: "120px clamp(24px, 6vw, 80px)", position: "relative", zIndex: 2, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{
-          marginBottom: 72,
-          opacity: inView ? 1 : 0, transform: inView ? "none" : "translateY(24px)",
-          transition: "all 0.8s cubic-bezier(0.16,1,0.3,1)",
-        }}>
-          <div style={{ fontSize: 11, color: "rgba(16,185,129,0.7)", letterSpacing: "0.2em", fontFamily: "'DM Mono', monospace", marginBottom: 20 }}>PLANOS</div>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(36px, 5vw, 56px)", letterSpacing: "-0.04em", color: "#f1f5f9", lineHeight: 1.05 }}>
-            Comece grátis.<br />
-            <span style={{ color: "rgba(241,245,249,0.2)" }}>Cresça sem limites.</span>
-          </h2>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          {PLANS.map((plan, i) => (
-            <PlanCard key={i} plan={plan} index={i} inView={inView} onRegister={onRegister} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PlanCard({ plan, index, inView, onRegister }: { plan: Plan; index: number; inView: boolean; onRegister: () => void }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        padding: "32px 28px",
-        border: `1px solid ${plan.highlight ? "rgba(16,185,129,0.4)" : hovered ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.06)"}`,
-        borderRadius: 12,
-        background: plan.highlight ? "rgba(16,185,129,0.05)" : hovered ? "rgba(255,255,255,0.01)" : "transparent",
-        transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)",
-        transform: hovered ? "translateY(-4px)" : "translateY(0)",
-        opacity: inView ? 1 : 0,
-        transitionDelay: `${index * 80}ms`,
-        position: "relative",
-      }}>
-      {plan.highlight && (
-        <div style={{
-          position: "absolute", top: -1, left: "20%", right: "20%", height: 2,
-          background: "linear-gradient(90deg, transparent, #10b981, transparent)",
-          borderRadius: 2,
-        }} />
-      )}
-      {plan.highlight && (
-        <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", color: "#10b981", fontFamily: "'DM Mono', monospace", marginBottom: 12 }}>
-          ★ MAIS POPULAR
-        </div>
-      )}
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>{plan.name}</div>
-      <div style={{ fontSize: 12, color: "rgba(241,245,249,0.3)", fontFamily: "'DM Mono', monospace", marginBottom: 20 }}>{plan.desc}</div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 2, marginBottom: 28 }}>
-        <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 40, fontWeight: 800, letterSpacing: "-0.04em", color: plan.highlight ? "#10b981" : "#f1f5f9" }}>{plan.price}</span>
-        {plan.period && <span style={{ fontSize: 13, color: "rgba(241,245,249,0.3)", fontFamily: "'DM Mono', monospace" }}>{plan.period}</span>}
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
-        {plan.features.map((feat, j) => (
-          <div key={j} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "rgba(241,245,249,0.5)", fontFamily: "'DM Mono', monospace" }}>
-            <span style={{ color: "#10b981", fontSize: 10, flexShrink: 0 }}>✓</span>
-            {feat}
-          </div>
-        ))}
-      </div>
-
-      <button onClick={onRegister} style={{
-        width: "100%", padding: "12px",
-        background: plan.highlight ? "#10b981" : "transparent",
-        border: plan.highlight ? "none" : "1px solid rgba(255,255,255,0.1)",
-        color: plan.highlight ? "#030305" : "rgba(241,245,249,0.6)",
-        fontSize: 13, fontWeight: plan.highlight ? 700 : 500,
-        fontFamily: "'DM Mono', monospace", borderRadius: 8,
-        cursor: "pointer", letterSpacing: "0.04em", transition: "all 0.2s",
-      }}
-        onMouseEnter={e => {
-          if (plan.highlight) { e.currentTarget.style.background = "#34d399"; }
-          else { e.currentTarget.style.borderColor = "rgba(16,185,129,0.35)"; e.currentTarget.style.color = "#10b981"; }
-        }}
-        onMouseLeave={e => {
-          if (plan.highlight) { e.currentTarget.style.background = "#10b981"; }
-          else { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "rgba(241,245,249,0.6)"; }
-        }}>
-        {plan.cta}
-      </button>
-    </div>
-  );
-}
-
-/* ─── About ──────────────────────────────────────────────────────────────── */
-function About() {
-  const { ref, inView } = useInView();
-  const stack = [
-    { name: "Spring Boot 3", desc: "Backend + Segurança", dot: "#6DB33F" },
-    { name: "Next.js 16", desc: "Frontend + App Router", dot: "#f1f5f9" },
-    { name: "MySQL 8", desc: "Banco Relacional", dot: "#4479A1" },
-    { name: "JWT + OAuth2", desc: "Autenticação", dot: "#10b981" },
-    { name: "TypeScript", desc: "Tipagem Estática", dot: "#3178C6" },
-    { name: "Redis", desc: "Cache & Sessions", dot: "#DC382D" },
-  ];
-
-  return (
-    <section id="sobre" ref={ref} style={{ padding: "120px clamp(24px, 6vw, 80px)", position: "relative", zIndex: 2, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }}>
-        <div style={{ opacity: inView ? 1 : 0, transform: inView ? "none" : "translateX(-32px)", transition: "all 0.9s cubic-bezier(0.16,1,0.3,1)" }}>
-          <div style={{ fontSize: 11, color: "rgba(16,185,129,0.7)", letterSpacing: "0.2em", fontFamily: "'DM Mono', monospace", marginBottom: 20 }}>SOBRE O PROJETO</div>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(32px, 4vw, 48px)", letterSpacing: "-0.04em", color: "#f1f5f9", lineHeight: 1.1, marginBottom: 24 }}>
-            Construído por quem<br />entende o problema.
-          </h2>
-          <p style={{ fontSize: 14, color: "rgba(241,245,249,0.45)", lineHeight: 1.9, fontFamily: "'DM Mono', monospace", marginBottom: 16 }}>
-            O GestPro nasceu da observação de uma lacuna real: pequenos comerciantes usam planilhas frágeis ou sistemas complexos demais para a sua realidade.
-          </p>
-          <p style={{ fontSize: 14, color: "rgba(241,245,249,0.45)", lineHeight: 1.9, fontFamily: "'DM Mono', monospace", marginBottom: 36 }}>
-            Desenvolvido por <span style={{ color: "#10b981" }}>Matheus Martins</span> — arquitetura Java/Spring Boot + Next.js, focada em solidez e experiência de uso real.
-          </p>
-          <div style={{ display: "flex", gap: 12 }}>
-            {[
-              { label: "LinkedIn", href: "https://www.linkedin.com/in/matheusmartnsdev/" },
-              { label: "Instagram", href: "https://www.instagram.com/gestpro.app/" },
-            ].map(({ label, href }) => (
-              <a key={label} href={href} target="_blank" rel="noopener noreferrer" style={{
-                padding: "10px 20px", border: "1px solid rgba(255,255,255,0.1)",
-                color: "rgba(241,245,249,0.5)", fontSize: 12, fontFamily: "'DM Mono', monospace",
-                borderRadius: 8, textDecoration: "none", transition: "all 0.2s",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(16,185,129,0.35)"; e.currentTarget.style.color = "#10b981"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "rgba(241,245,249,0.5)"; }}>
-                {label}
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {/* Stack */}
-        <div style={{
-          display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10,
-          opacity: inView ? 1 : 0, transform: inView ? "none" : "translateX(32px)",
-          transition: "all 0.9s cubic-bezier(0.16,1,0.3,1) 0.15s",
-        }}>
-          {stack.map((tech, i) => (
-            <div key={i} style={{
-              padding: "20px", borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.06)",
-              background: "rgba(255,255,255,0.01)",
-              transition: "all 0.3s",
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(16,185,129,0.2)"; e.currentTarget.style.background = "rgba(16,185,129,0.03)"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; e.currentTarget.style.background = "rgba(255,255,255,0.01)"; }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: tech.dot, marginBottom: 10 }} />
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#f1f5f9", fontFamily: "'Syne', sans-serif", marginBottom: 4 }}>{tech.name}</div>
-              <div style={{ fontSize: 11, color: "rgba(241,245,249,0.3)", fontFamily: "'DM Mono', monospace" }}>{tech.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── CTA Final ──────────────────────────────────────────────────────────── */
-function CTAFinal({ onRegister, onLogin }: { onRegister: () => void; onLogin: () => void }) {
-  const { ref, inView } = useInView();
-  return (
-    <section ref={ref} style={{ padding: "140px clamp(24px, 6vw, 80px)", position: "relative", zIndex: 2, borderTop: "1px solid rgba(255,255,255,0.04)", textAlign: "center", overflow: "hidden" }}>
-      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 1000, height: 500, background: "radial-gradient(ellipse, rgba(16,185,129,0.07) 0%, transparent 65%)", pointerEvents: "none" }} />
-
-      <div style={{
-        position: "relative", maxWidth: 680, margin: "0 auto",
-        opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(32px)",
-        transition: "all 0.9s cubic-bezier(0.16,1,0.3,1)",
-      }}>
-        <div style={{ fontSize: 11, color: "rgba(16,185,129,0.7)", letterSpacing: "0.2em", fontFamily: "'DM Mono', monospace", marginBottom: 28 }}>COMECE AGORA</div>
-        <h2 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(44px, 7vw, 80px)", letterSpacing: "-0.04em", lineHeight: 0.95, color: "#f1f5f9", marginBottom: 28 }}>
-          Sem planilha.<br />
-          <span style={{ color: "#10b981" }}>Sem desculpa.</span>
-        </h2>
-        <p style={{ fontSize: 15, color: "rgba(241,245,249,0.4)", marginBottom: 52, lineHeight: 1.7, fontFamily: "'DM Mono', monospace" }}>
-          7 dias grátis, sem cartão de crédito. Seu negócio com controle real em menos de 5 minutos.
-        </p>
-        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-          <button onClick={onRegister} style={{
-            background: "#10b981", border: "none", color: "#030305",
-            padding: "18px 52px", fontSize: 14, fontWeight: 700,
-            fontFamily: "'DM Mono', monospace", borderRadius: 8,
-            cursor: "pointer", letterSpacing: "0.05em",
-            boxShadow: "0 0 60px rgba(16,185,129,0.3)", transition: "all 0.3s",
+      <div style={{ display: "flex", gap: 24 }}>
+        {["Termos", "Privacidade", "Contato"].map(l => (
+          <a key={l} href="#" style={{
+            fontFamily: "'Manrope',sans-serif", fontSize: 12,
+            color: "rgba(241,245,249,0.35)", textDecoration: "none",
+            transition: "color .2s",
           }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#34d399"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.transform = "translateY(0)"; }}>
-            → Criar conta grátis
-          </button>
-          <button onClick={onLogin} style={{
-            background: "transparent", border: "1px solid rgba(241,245,249,0.12)",
-            color: "rgba(241,245,249,0.6)", padding: "18px 52px",
-            fontSize: 14, fontFamily: "'DM Mono', monospace", borderRadius: 8,
-            cursor: "pointer", letterSpacing: "0.03em", transition: "all 0.3s",
-          }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(16,185,129,0.35)"; e.currentTarget.style.color = "#10b981"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(241,245,249,0.12)"; e.currentTarget.style.color = "rgba(241,245,249,0.6)"; }}>
-            Fazer login
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── Footer ─────────────────────────────────────────────────────────────── */
-function Footer() {
-  return (
-    <footer style={{
-      padding: "36px clamp(24px, 6vw, 80px)",
-      borderTop: "1px solid rgba(255,255,255,0.05)",
-      display: "flex", justifyContent: "space-between", alignItems: "center",
-      flexWrap: "wrap", gap: 16, position: "relative", zIndex: 2,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
-          <rect x="4" y="4" width="11" height="11" rx="2" fill="#10b981" opacity="0.6"/>
-          <rect x="17" y="4" width="11" height="11" rx="2" fill="#10b981" opacity="0.3"/>
-          <rect x="4" y="17" width="11" height="11" rx="2" fill="#10b981" opacity="0.3"/>
-          <rect x="17" y="17" width="11" height="11" rx="2" fill="#10b981" opacity="0.5"/>
-        </svg>
-        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 15, color: "rgba(241,245,249,0.4)" }}>GestPro</span>
-        <span style={{ color: "rgba(255,255,255,0.12)", fontSize: 12, fontFamily: "'DM Mono', monospace" }}>© 2025 Matheus Martins</span>
-      </div>
-      <div style={{ display: "flex", gap: 28 }}>
-        {["LinkedIn", "Instagram", "GitHub"].map(link => (
-          <a key={link} href="#" style={{ fontSize: 12, color: "rgba(241,245,249,0.25)", textDecoration: "none", fontFamily: "'DM Mono', monospace", transition: "color 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "rgba(241,245,249,0.7)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "rgba(241,245,249,0.25)")}>
-            {link}
-          </a>
+            onMouseEnter={e => (e.currentTarget.style.color = "#10b981")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(241,245,249,0.35)")}
+          >{l}</a>
         ))}
       </div>
-      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", fontFamily: "'DM Mono', monospace" }}>
-        Em desenvolvimento ativo
-      </div>
-    </footer>
-  );
-}
+    </div>
+  </footer>
+);
 
-/* ─── Main Page ──────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   ROOT EXPORT
+───────────────────────────────────────────── */
 export default function LandingPage() {
   const router = useRouter();
   const toLogin = useCallback(() => router.push("/auth/login"), [router]);
   const toRegister = useCallback(() => router.push("/auth/cadastro"), [router]);
 
   return (
-    <div style={{ background: "#030305", color: "#f1f5f9", minHeight: "100vh", overflowX: "hidden" }}>
-      {/* Fonts */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        ::selection { background: rgba(16,185,129,0.25); }
-        ::-webkit-scrollbar { width: 3px; }
-        ::-webkit-scrollbar-track { background: #030305; }
-        ::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.3); border-radius: 2px; }
-        @keyframes pulse {
-          0%, 100% { box-shadow: 0 0 0 3px rgba(16,185,129,0.2); }
-          50% { box-shadow: 0 0 0 6px rgba(16,185,129,0.05); }
-        }
-        html { scroll-behavior: smooth; }
-      `}</style>
-
+    <div style={{ background: "#050608", color: "#f1f5f9", minHeight: "100vh", overflowX: "hidden" }}>
+      <GlobalStyles />
       <Background />
       <Nav onLogin={toLogin} onRegister={toRegister} />
       <Hero onRegister={toRegister} onLogin={toLogin} />
