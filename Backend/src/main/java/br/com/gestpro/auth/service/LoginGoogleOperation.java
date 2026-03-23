@@ -5,6 +5,7 @@ import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.plano.service.VerificarPlanoOperation;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +24,7 @@ public class LoginGoogleOperation {
     }
 
     @Transactional
-    public Usuario execute(String email, String nome, String foto) {
+    public Usuario execute(String email, String nome, String foto, HttpServletResponse response) {
 
         return usuarioRepository.findByEmail(email)
                 .map(u -> {
