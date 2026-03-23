@@ -47,7 +47,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         // Cria cookie seguro com token
         Cookie jwtCookie = new Cookie("jwt_token", token);
         jwtCookie.setHttpOnly(true);      // não acessível via JS
-        jwtCookie.setSecure(false);        // colocar true em produção com HTTPS
+        jwtCookie.setSecure(true);        // colocar true em produção com HTTPS
+        jwtCookie.setAttribute("SameSite", "None");
         jwtCookie.setPath("/");            // disponível para todo domínio
         jwtCookie.setMaxAge(7 * 24 * 60 * 60); // expira em 7 dias
 
