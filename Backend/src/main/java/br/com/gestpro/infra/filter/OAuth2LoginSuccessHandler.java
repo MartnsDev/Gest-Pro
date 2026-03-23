@@ -45,21 +45,20 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         // Gera JWT
         String token = googleAuthService.gerarToken(usuario);
 
-        // Cria cookie seguro com token
-        Cookie jwtCookie = new Cookie("jwt_token", token);
-        jwtCookie.setHttpOnly(true);
-        jwtCookie.setSecure(true);
-        jwtCookie.setPath("/");
-        jwtCookie.setMaxAge(7 * 24 * 60 * 60);
-        jwtCookie.setAttribute("SameSite", "None");
-        // ---------------------------------------
+//        // Cria cookie seguro com token
+//        Cookie jwtCookie = new Cookie("jwt_token", token);
+//        jwtCookie.setHttpOnly(true);
+//        jwtCookie.setSecure(true);
+//        jwtCookie.setPath("/");
+//        jwtCookie.setMaxAge(7 * 24 * 60 * 60);
+//        jwtCookie.setAttribute("SameSite", "None");
+//        // ---------------------------------------
+//
+//        response.addCookie(jwtCookie);
 
-        response.addCookie(jwtCookie);
-
-        // Redireciona de acordo com StatusAcesso
         String redirectUrl = usuario.getStatusAcesso() == StatusAcesso.ATIVO
-                ? URL_FRONTEND + "/dashboard"
-                : URL_FRONTEND + "/pagamento";
+                ? URL_FRONTEND + "/dashboard?token=" + token
+                : URL_FRONTEND + "/pagamento?token=" + token;
 
         response.sendRedirect(redirectUrl);
     }
