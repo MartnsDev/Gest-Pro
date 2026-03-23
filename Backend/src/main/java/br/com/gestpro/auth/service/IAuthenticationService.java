@@ -31,6 +31,5 @@ public interface IAuthenticationService {
     //Salvar Foto Upload
     String salvarFoto(MultipartFile foto) throws IOException;
 
-    //Atualizar Plano
-    Usuario atualizarPlano(String email, TipoPlano tipo, int duracaoDias);
+
 }

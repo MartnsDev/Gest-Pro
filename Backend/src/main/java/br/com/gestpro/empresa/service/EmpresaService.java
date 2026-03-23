@@ -55,7 +55,7 @@ public class EmpresaService {
             throw new ApiException("Você não tem permissão para editar esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
         }
 
-        verificarPlano.validarAcessoTemporario(empresa.getDono());
+        verificarPlano.validarAcesso(empresa.getDono());
 
         empresa.setNomeFantasia(req.getNomeFantasia());
         empresa.setCnpj(req.getCnpj());

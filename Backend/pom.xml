@@ -32,6 +32,13 @@
 
     <dependencies>
 
+        <!-- Stripe - API checkout -->
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>24.0.0</version>
+        </dependency>
+
         <!-- Spring Data JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -266,7 +273,7 @@
                 <filtering>false</filtering>
             </resource>
         </resources>
+
+
     </build>
-
-
 </project>

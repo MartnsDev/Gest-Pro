@@ -1,37 +1,54 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getUsuario } from "@/lib/api";
 import {
-  Zap, Building2, Store, BarChart3,
-  CheckCircle, Clock, Crown, Star, Rocket, FlaskConical,
-  ArrowRight, AlertCircle,
+  Building2,
+  CheckCircle,
+  Clock,
+  Crown,
+  Star,
+  Rocket,
+  FlaskConical,
+  ArrowRight,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 
-interface PlanoInfo {
-  tipoPlano: string;
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
+/** Campos exatos retornados por GET /api/v1/dashboard/vendas/plano-usuario */
+interface PlanoDTO {
+  tipoPlano: string;       // "EXPERIMENTAL" | "BASICO" | "PRO" | "PREMIUM"
   diasRestantes: number;
   empresasCriadas: number;
   limiteEmpresas: number;
   statusAcesso: "ATIVO" | "INATIVO";
 }
 
+// ─── Helpers de fetch ─────────────────────────────────────────────────────────
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+
 async function fetchAuth<T>(path: string): Promise<T> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { credentials: "include", headers: { "Content-Type": "application/json" } }
-  );
+  const res = await fetch(`${API}${path}`, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+  });
   if (!res.ok) throw new Error(`Erro ${res.status}`);
   return res.json();
 }
 
-// ─── Definição dos planos ──────────────────────────────────────────────────
+// ─── Definição dos planos ─────────────────────────────────────────────────────
+
 const PLANOS = [
   {
     id: "EXPERIMENTAL",
     nome: "Experimental",
     descricao: "Para experimentar o GestPro",
     preco: null,
-    duracao: "7 dias",
+    duracao: "7 dias grátis",
     icon: FlaskConical,
     cor: "#6366f1",
     corMuted: "rgba(99,102,241,0.12)",
@@ -43,6 +60,7 @@ const PLANOS = [
       "Registro de vendas",
     ],
     destaque: false,
+    pagavel: false,
   },
   {
     id: "BASICO",
@@ -61,24 +79,26 @@ const PLANOS = [
       "Suporte por e-mail",
     ],
     destaque: false,
+    pagavel: true,
   },
   {
     id: "PRO",
     nome: "Pro",
     descricao: "Para negócios em crescimento",
-    preco: "R$ 59,90",
+    preco: "R$ 49,90",
     duracao: "por mês",
     icon: Rocket,
     cor: "#10b981",
     corMuted: "rgba(16,185,129,0.12)",
     features: [
       "5 empresas / lojas",
-      "5 Caixa",
+      "3 caixas por empresa",
       "Dashboard avançado",
       "Relatórios completos",
       "Suporte prioritário",
     ],
     destaque: true,
+    pagavel: true,
   },
   {
     id: "PREMIUM",
@@ -97,14 +117,17 @@ const PLANOS = [
       "Suporte dedicado 24h",
     ],
     destaque: false,
+    pagavel: true,
   },
-];
+] as const;
 
-const ORDEM = ["EXPERIMENTAL", "BASICO", "PRO", "PREMIUM"];
+const ORDEM = ["EXPERIMENTAL", "BASICO", "PRO", "PREMIUM"] as const;
 
-function barWidth(diasRestantes: number, duracaoTotal: number) {
-  if (duracaoTotal === 0) return 0;
-  return Math.min(100, Math.max(0, (diasRestantes / duracaoTotal) * 100));
+// ─── Helpers visuais ──────────────────────────────────────────────────────────
+
+function barWidth(dias: number, total: number) {
+  if (total === 0) return 0;
+  return Math.min(100, Math.max(0, (dias / total) * 100));
 }
 
 function barColor(pct: number) {
@@ -113,36 +136,142 @@ function barColor(pct: number) {
   return "var(--destructive)";
 }
 
-export default function Planos() {
-  const [plano,   setPlano]   = useState<PlanoInfo | null>(null);
-  const [loading, setLoading] = useState(true);
+// ─── Componente ───────────────────────────────────────────────────────────────
 
+export default function Planos() {
+  const searchParams = useSearchParams();
+
+  const [plano,        setPlano]        = useState<PlanoDTO | null>(null);
+  const [emailUsuario, setEmailUsuario] = useState<string | null>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [loadingPlano, setLoadingPlano] = useState<string | null>(null);
+  const [erro,         setErro]         = useState<string | null>(null);
+  const [cancelado,    setCancelado]    = useState(false);
+
+  // ── Detecta retorno cancelado da Stripe ───────────────────────────────────
   useEffect(() => {
-    fetchAuth<{ planoUsuario: PlanoInfo }>("/api/v1/dashboard/vendas/plano-usuario")
-      .then(d => setPlano(d.planoUsuario))
-      .catch(() => {})
+    if (searchParams.get("canceled") === "true") {
+      setCancelado(true);
+      // Remove o ?canceled=true da URL sem recarregar a página
+      window.history.replaceState({}, "", "/dashboard/planos");
+    }
+  }, [searchParams]);
+
+  // ── Busca dados em paralelo ────────────────────────────────────────────────
+  useEffect(() => {
+    Promise.all([
+      // 1. Dados do plano — GET /api/v1/dashboard/vendas/plano-usuario
+      fetchAuth<PlanoDTO>("/api/v1/dashboard/vendas/plano-usuario"),
+
+      // 2. Email do usuário — GET /api/usuario (já usado em getUsuario() da lib/api.ts)
+      getUsuario(),
+    ])
+      .then(([planoData, usuario]) => {
+        setPlano(planoData);
+        setEmailUsuario(usuario.email); // campo email do tipo Usuario (lib/api.ts)
+      })
+      .catch(() => {
+        // falha silenciosa — botões ficam inativos
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const planoAtualIdx = plano ? ORDEM.indexOf(plano.tipoPlano) : -1;
+  // ── Checkout ──────────────────────────────────────────────────────────────
+  async function handleAssinar(planoId: string) {
+    if (!emailUsuario) {
+      setErro("Não foi possível identificar seu e-mail. Recarregue a página.");
+      return;
+    }
+
+    setErro(null);
+    setLoadingPlano(planoId);
+
+    try {
+      const res = await fetch(`${API}/api/payments/create-checkout-session`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plano: planoId,              // "BASICO" | "PRO" | "PREMIUM"
+          customerEmail: emailUsuario, // email vindo de getUsuario()
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Erro ao iniciar o checkout.");
+      }
+
+      const { url } = await res.json();
+
+      // Stripe redireciona de volta para /dashboard?success=true após pagamento
+      // O webhook /api/payments/webhook ativa o plano automaticamente
+      window.location.href = url;
+
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Não foi possível iniciar o checkout.";
+      setErro(msg);
+      setLoadingPlano(null);
+    }
+  }
+
+  // ── Derivações ─────────────────────────────────────────────────────────────
+  const planoAtualIdx = plano ? ORDEM.indexOf(plano.tipoPlano as typeof ORDEM[number]) : -1;
   const duracaoTotal  = plano?.tipoPlano === "EXPERIMENTAL" ? 7 : 30;
   const pct           = plano ? barWidth(plano.diasRestantes, duracaoTotal) : 100;
   const planoAtual    = PLANOS.find(p => p.id === plano?.tipoPlano);
+  const estaAtivo     = plano?.statusAcesso === "ATIVO";
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div style={{ padding: "28px 28px 60px", display: "flex", flexDirection: "column", gap: 32, maxWidth: 900 }}>
 
-      {/* Header */}
+      {/* Cabeçalho */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Planos & Assinaturas</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
+          Planos & Assinaturas
+        </h1>
         <p style={{ fontSize: 14, color: "var(--foreground-muted)", marginTop: 6 }}>
           Gerencie seu plano e expanda o que seu negócio pode fazer.
         </p>
       </div>
 
-      {/* Card plano atual */}
+      {/* Erro global */}
+      {erro && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "10px 14px",
+          background: "var(--destructive-muted)",
+          border: "1px solid rgba(239,68,68,0.25)",
+          borderRadius: 10, fontSize: 13, color: "var(--destructive)",
+        }}>
+          <AlertCircle size={14} />
+          {erro}
+        </div>
+      )}
+
+      {/* Banner de cancelamento — quando o usuário volta sem pagar */}
+      {cancelado && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "10px 14px",
+          background: "rgba(245,158,11,0.08)",
+          border: "1px solid rgba(245,158,11,0.3)",
+          borderRadius: 10, fontSize: 13, color: "#d97706",
+        }}>
+          <AlertCircle size={14} />
+          Pagamento cancelado. Você pode assinar quando quiser.
+        </div>
+      )}
+
+      {/* Card do plano atual */}
       {loading ? (
-        <div style={{ height: 120, background: "var(--surface-elevated)", borderRadius: 16, border: "1px solid var(--border)" }} className="skeleton" />
+        <div style={{
+          height: 160,
+          background: "var(--surface-elevated)",
+          borderRadius: 16,
+          border: "1px solid var(--border)",
+        }} className="skeleton" />
       ) : plano && planoAtual ? (
         <div style={{
           background: "var(--surface-elevated)",
@@ -150,19 +279,32 @@ export default function Planos() {
           borderRadius: 16, padding: "22px 24px",
           display: "flex", flexDirection: "column", gap: 16,
         }}>
+          {/* Título + preço */}
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: planoAtual.corMuted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 12,
+                background: planoAtual.corMuted,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
                 <planoAtual.icon size={22} color={planoAtual.cor} />
               </div>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <p style={{ fontSize: 18, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Plano {planoAtual.nome}</p>
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 99, background: planoAtual.corMuted, color: planoAtual.cor }}>
-                    ATIVO
+                  <p style={{ fontSize: 18, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
+                    Plano {planoAtual.nome}
+                  </p>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 99,
+                    background: estaAtivo ? planoAtual.corMuted : "rgba(239,68,68,0.12)",
+                    color: estaAtivo ? planoAtual.cor : "var(--destructive)",
+                  }}>
+                    {plano.statusAcesso}
                   </span>
                 </div>
-                <p style={{ fontSize: 13, color: "var(--foreground-muted)", margin: "3px 0 0" }}>{planoAtual.descricao}</p>
+                <p style={{ fontSize: 13, color: "var(--foreground-muted)", margin: "3px 0 0" }}>
+                  {planoAtual.descricao}
+                </p>
               </div>
             </div>
 
@@ -170,7 +312,9 @@ export default function Planos() {
               <p style={{ fontSize: 22, fontWeight: 700, color: planoAtual.cor, margin: 0 }}>
                 {planoAtual.preco ?? "Gratuito"}
               </p>
-              <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "2px 0 0" }}>{planoAtual.duracao}</p>
+              <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "2px 0 0" }}>
+                {planoAtual.duracao}
+              </p>
             </div>
           </div>
 
@@ -181,11 +325,15 @@ export default function Planos() {
                 <Clock size={12} /> Tempo restante
               </span>
               <span style={{ fontSize: 12, fontWeight: 600, color: pct < 20 ? "var(--destructive)" : "var(--foreground)" }}>
-                {plano.diasRestantes} dias
+                {plano.diasRestantes} {plano.diasRestantes === 1 ? "dia" : "dias"}
               </span>
             </div>
             <div style={{ height: 6, background: "var(--surface-overlay)", borderRadius: 99, overflow: "hidden" }}>
-              <div style={{ width: `${pct}%`, height: "100%", background: barColor(pct), borderRadius: 99, transition: "width .6s ease" }} />
+              <div style={{
+                width: `${pct}%`, height: "100%",
+                background: barColor(pct),
+                borderRadius: 99, transition: "width .6s ease",
+              }} />
             </div>
           </div>
 
@@ -193,13 +341,35 @@ export default function Planos() {
           <div style={{ display: "flex", gap: 20, paddingTop: 4 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: "var(--foreground-muted)" }}>
               <Building2 size={14} color={planoAtual.cor} />
-              <span>{plano.empresasCriadas} / {plano.limiteEmpresas === 99 ? "∞" : plano.limiteEmpresas} empresas</span>
+              <span>
+                {plano.empresasCriadas} / {plano.limiteEmpresas >= 99 ? "∞" : plano.limiteEmpresas} empresas
+              </span>
             </div>
           </div>
 
-          {pct < 20 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "var(--destructive-muted)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, fontSize: 13, color: "var(--destructive)" }}>
-              <AlertCircle size={14} /> Seu plano expira em breve. Renove para não perder o acesso.
+          {/* Alertas */}
+          {pct < 20 && estaAtivo && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "9px 12px",
+              background: "var(--destructive-muted)",
+              border: "1px solid rgba(239,68,68,0.2)",
+              borderRadius: 8, fontSize: 13, color: "var(--destructive)",
+            }}>
+              <AlertCircle size={14} />
+              Seu plano expira em breve. Renove para não perder o acesso.
+            </div>
+          )}
+          {!estaAtivo && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "9px 12px",
+              background: "var(--destructive-muted)",
+              border: "1px solid rgba(239,68,68,0.2)",
+              borderRadius: 8, fontSize: 13, color: "var(--destructive)",
+            }}>
+              <AlertCircle size={14} />
+              Seu acesso está bloqueado. Assine um plano para reativar.
             </div>
           )}
         </div>
@@ -208,7 +378,10 @@ export default function Planos() {
       {/* Separador */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-        <span style={{ fontSize: 12, color: "var(--foreground-subtle)", textTransform: "uppercase", letterSpacing: ".07em", whiteSpace: "nowrap" }}>
+        <span style={{
+          fontSize: 12, color: "var(--foreground-subtle)",
+          textTransform: "uppercase", letterSpacing: ".07em", whiteSpace: "nowrap",
+        }}>
           Todos os planos
         </span>
         <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
@@ -219,45 +392,54 @@ export default function Planos() {
         {PLANOS.map((p, idx) => {
           const isAtual   = p.id === plano?.tipoPlano;
           const isUpgrade = idx > planoAtualIdx && planoAtualIdx >= 0;
-          const Icon = p.icon;
+          const isLoading = loadingPlano === p.id;
+          const Icon      = p.icon;
 
           return (
-            <div key={p.id} style={{
-              position: "relative",
-              background: "var(--surface-elevated)",
-              border: `1px solid ${isAtual ? p.cor + "66" : p.destaque ? p.cor + "33" : "var(--border)"}`,
-              borderRadius: 16,
-              padding: "22px 20px",
-              display: "flex", flexDirection: "column", gap: 16,
-              transition: "transform .18s, border-color .18s",
-            }}
-              onMouseEnter={e => !isAtual && ((e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)")}
-              onMouseLeave={e => !isAtual && ((e.currentTarget as HTMLDivElement).style.transform = "translateY(0)")}
+            <div
+              key={p.id}
+              style={{
+                position: "relative",
+                background: "var(--surface-elevated)",
+                border: `1px solid ${isAtual ? p.cor + "66" : p.destaque ? p.cor + "33" : "var(--border)"}`,
+                borderRadius: 16, padding: "22px 20px",
+                display: "flex", flexDirection: "column", gap: 16,
+                transition: "transform .18s, border-color .18s",
+              }}
+              onMouseEnter={e => { if (!isAtual) (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)"; }}
+              onMouseLeave={e => { if (!isAtual) (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; }}
             >
-              {/* Badge destaque */}
               {p.destaque && (
-                <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", padding: "3px 14px", background: p.cor, color: "#fff", borderRadius: 99, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
+                <div style={{
+                  position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)",
+                  padding: "3px 14px", background: p.cor, color: "#fff",
+                  borderRadius: 99, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
+                }}>
                   MAIS POPULAR
                 </div>
               )}
 
-              {/* Badge atual */}
               {isAtual && (
-                <div style={{ position: "absolute", top: 14, right: 14, padding: "2px 8px", background: p.corMuted, color: p.cor, borderRadius: 99, fontSize: 10, fontWeight: 700 }}>
+                <div style={{
+                  position: "absolute", top: 14, right: 14,
+                  padding: "2px 8px", background: p.corMuted, color: p.cor,
+                  borderRadius: 99, fontSize: 10, fontWeight: 700,
+                }}>
                   ATUAL
                 </div>
               )}
 
-              {/* Ícone + nome */}
               <div>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: p.corMuted, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, background: p.corMuted,
+                  display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12,
+                }}>
                   <Icon size={20} color={p.cor} />
                 </div>
                 <p style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>{p.nome}</p>
                 <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "3px 0 0" }}>{p.descricao}</p>
               </div>
 
-              {/* Preço */}
               <div>
                 <p style={{ fontSize: 24, fontWeight: 800, color: p.cor, margin: 0, lineHeight: 1 }}>
                   {p.preco ?? "Grátis"}
@@ -265,7 +447,6 @@ export default function Planos() {
                 <p style={{ fontSize: 12, color: "var(--foreground-subtle)", margin: "4px 0 0" }}>{p.duracao}</p>
               </div>
 
-              {/* Features */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
                 {p.features.map(f => (
                   <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "var(--foreground-muted)" }}>
@@ -275,27 +456,31 @@ export default function Planos() {
                 ))}
               </div>
 
-              {/* Botão */}
               <button
-                disabled={isAtual}
+                disabled={isAtual || isLoading || !p.pagavel}
                 style={{
                   marginTop: 4,
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   padding: "10px 0",
-                  background: isAtual ? "var(--surface-overlay)" : isUpgrade ? p.cor : "transparent",
-                  border: `1px solid ${isAtual ? "var(--border)" : p.cor}`,
+                  background: isAtual || !p.pagavel ? "var(--surface-overlay)" : isUpgrade ? p.cor : "transparent",
+                  border: `1px solid ${isAtual || !p.pagavel ? "var(--border)" : p.cor}`,
                   borderRadius: 10,
-                  color: isAtual ? "var(--foreground-subtle)" : isUpgrade ? "#fff" : p.cor,
+                  color: isAtual || !p.pagavel ? "var(--foreground-subtle)" : isUpgrade ? "#fff" : p.cor,
                   fontSize: 13, fontWeight: 600,
-                  cursor: isAtual ? "default" : "pointer",
+                  cursor: isAtual || !p.pagavel || isLoading ? "default" : "pointer",
+                  opacity: isLoading ? 0.7 : 1,
                   transition: "opacity .15s",
                 }}
-                onMouseEnter={e => !isAtual && ((e.currentTarget as HTMLButtonElement).style.opacity = "0.85")}
-                onMouseLeave={e => !isAtual && ((e.currentTarget as HTMLButtonElement).style.opacity = "1")}
-                onClick={() => !isAtual && alert(`Entre em contato para assinar o plano ${p.nome}.`)}
+                onMouseEnter={e => { if (!isAtual && !isLoading && p.pagavel) (e.currentTarget as HTMLButtonElement).style.opacity = "0.85"; }}
+                onMouseLeave={e => { if (!isAtual && !isLoading && p.pagavel) (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+                onClick={() => { if (!isAtual && !isLoading && p.pagavel) handleAssinar(p.id); }}
               >
-                {isAtual ? (
+                {isLoading ? (
+                  <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Aguarde...</>
+                ) : isAtual ? (
                   <><CheckCircle size={14} /> Plano atual</>
+                ) : !p.pagavel ? (
+                  <>Plano gratuito</>
                 ) : isUpgrade ? (
                   <>Fazer upgrade <ArrowRight size={14} /></>
                 ) : (
@@ -307,7 +492,7 @@ export default function Planos() {
         })}
       </div>
 
-      {/* Comparativo rápido */}
+      {/* Tabela comparativa */}
       <div style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>Comparativo de limites</p>
@@ -318,7 +503,11 @@ export default function Planos() {
               <tr style={{ borderBottom: "1px solid var(--border)" }}>
                 <th style={{ padding: "12px 20px", textAlign: "left", color: "var(--foreground-muted)", fontWeight: 500 }}>Recurso</th>
                 {PLANOS.map(p => (
-                  <th key={p.id} style={{ padding: "12px 16px", textAlign: "center", color: p.id === plano?.tipoPlano ? p.cor : "var(--foreground-muted)", fontWeight: p.id === plano?.tipoPlano ? 700 : 500 }}>
+                  <th key={p.id} style={{
+                    padding: "12px 16px", textAlign: "center",
+                    color: p.id === plano?.tipoPlano ? p.cor : "var(--foreground-muted)",
+                    fontWeight: p.id === plano?.tipoPlano ? 700 : 500,
+                  }}>
                     {p.nome}
                   </th>
                 ))}
@@ -326,16 +515,23 @@ export default function Planos() {
             </thead>
             <tbody>
               {[
-                { label: "Duração", values: ["7 dias", "30 dias", "30 dias", "30 dias"] },
-                { label: "Empresas", values: ["1", "1", "5", "Ilimitado"] },
-                { label: "Caixas ", values: ["1", "1", "5", "Ilimitado"] },
-                { label: "Relatórios",  values: ["Básico", "Básico", "Completo", "Avançado"] },
-                { label: "Suporte",     values: ["—", "E-mail", "Prioritário", "Dedicado 24h"] },
+                { label: "Duração",    values: ["7 dias",  "30 dias",     "30 dias",     "30 dias"] },
+                { label: "Empresas",   values: ["1",       "1",           "5",           "Ilimitado"] },
+                { label: "Caixas",     values: ["1",       "1",           "3",           "Ilimitado"] },
+                { label: "Relatórios", values: ["Básico",  "Básico",      "Completo",    "Avançado"] },
+                { label: "Suporte",    values: ["—",       "E-mail",      "Prioritário", "Dedicado 24h"] },
               ].map((row, i) => (
-                <tr key={row.label} style={{ borderBottom: "1px solid var(--border-subtle)", background: i % 2 === 0 ? "transparent" : "var(--surface-overlay)" }}>
+                <tr key={row.label} style={{
+                  borderBottom: "1px solid var(--border-subtle)",
+                  background: i % 2 === 0 ? "transparent" : "var(--surface-overlay)",
+                }}>
                   <td style={{ padding: "11px 20px", color: "var(--foreground-muted)", fontWeight: 500 }}>{row.label}</td>
                   {row.values.map((v, j) => (
-                    <td key={j} style={{ padding: "11px 16px", textAlign: "center", color: PLANOS[j].id === plano?.tipoPlano ? "var(--foreground)" : "var(--foreground-muted)", fontWeight: PLANOS[j].id === plano?.tipoPlano ? 600 : 400 }}>
+                    <td key={j} style={{
+                      padding: "11px 16px", textAlign: "center",
+                      color: PLANOS[j].id === plano?.tipoPlano ? "var(--foreground)" : "var(--foreground-muted)",
+                      fontWeight: PLANOS[j].id === plano?.tipoPlano ? 600 : 400,
+                    }}>
                       {v}
                     </td>
                   ))}
@@ -346,6 +542,9 @@ export default function Planos() {
         </div>
       </div>
 
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }

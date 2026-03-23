@@ -39,6 +39,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/esqueceu-senha", "/api/auth/redefinir-senha").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/cadastro").permitAll()
                         .requestMatchers("/auth/**", "/oauth2/**").permitAll()
+                        .requestMatchers("/api/payments/webhook").permitAll()
+                        .requestMatchers("/api/payments/create-checkout-session").permitAll()
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))

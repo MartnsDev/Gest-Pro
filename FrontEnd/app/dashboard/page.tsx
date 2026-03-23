@@ -1,17 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Home, Package, CreditCard, Users,
   BarChart3, Settings, DollarSign, Lock,
-  Zap, Building2,
+  Zap, Building2, CheckCircle2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUsuario, logout, type Usuario } from "@/lib/api";
 import { removeToken } from "@/lib/auth";
 import styles from "@/app/styles/dashboard.module.css";
 
-// ✅ Path correto — contexto está em app/dashboard/context/
 import { EmpresaProvider, useEmpresa } from "./context/Empresacontext";
 
 import DashboardHome     from "./components/DashboardHome";
@@ -25,22 +25,80 @@ import GerenciarEmpresas from "./components/GerenciarEmpresas";
 import ModalCaixa        from "./components/Modalcaixa";
 import SeletorEmpresa    from "./components/Seletorempresa";
 import Planos            from "./components/Plano";
-import NovaVendaRapida   from "../dashboard/acoesRapidas/NovaVenda";
-import NovoProduto       from "../dashboard/acoesRapidas/NovoProduto";
-import NovoCliente       from "../dashboard/acoesRapidas/NovoCliente";
-import AbrirCaixa        from "../dashboard/acoesRapidas/AbrirCaixa";
-import PaginaAcaoRapida  from "../dashboard/acoesRapidas/PaginaAcaoRapida"
+import NovoProduto       from "./acoesRapidas/NovoProduto";
+import NovoCliente       from "./acoesRapidas/NovoCliente";
+import AbrirCaixa        from "./acoesRapidas/AbrirCaixa";
+import PaginaAcaoRapida  from "./acoesRapidas/PaginaAcaoRapida";
 
-type Secao = "dashboard" | "produtos" | "estoque" | "vendas" | "clientes"
-           | "relatorios" | "configuracoes" | "empresas" | "planos"
-           | "venda-rapida" | "produto-rapido" | "cliente-rapido" | "caixa-rapido";
+type Secao =
+  | "dashboard" | "produtos" | "estoque" | "vendas" | "clientes"
+  | "relatorios" | "configuracoes" | "empresas" | "planos"
+  | "produto-rapido" | "cliente-rapido" | "caixa-rapido";
 
-function DashboardInner({ usuario }: { usuario: Usuario }) {
+// ─── Toast de pagamento confirmado ────────────────────────────────────────────
+
+function ToastPagamento({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 6000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  return (
+    <div style={{
+      position: "fixed", top: 20, right: 20, zIndex: 9999,
+      display: "flex", alignItems: "center", gap: 12,
+      padding: "14px 18px",
+      background: "var(--surface-elevated)",
+      border: "1px solid rgba(16,185,129,0.35)",
+      borderRadius: 14,
+      boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+      animation: "slideIn .35s cubic-bezier(.175,.885,.32,1.275)",
+      maxWidth: 340,
+    }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+        background: "rgba(16,185,129,0.12)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <CheckCircle2 size={18} color="#10b981" />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
+          Plano ativado com sucesso! 🎉
+        </p>
+        <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "2px 0 0" }}>
+          Seu acesso foi atualizado. Aproveite!
+        </p>
+      </div>
+      <button onClick={onClose} style={{
+        background: "none", border: "none", padding: 4,
+        cursor: "pointer", color: "var(--foreground-subtle)",
+        display: "flex", alignItems: "center", flexShrink: 0,
+      }}>
+        <X size={14} />
+      </button>
+      <style>{`
+        @keyframes slideIn {
+          from { transform: translateX(120%); opacity: 0; }
+          to   { transform: translateX(0);    opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ─── Dashboard interno ────────────────────────────────────────────────────────
+
+function DashboardInner({
+  usuario, mostrarToast, secaoInicial, cancelado,
+}: {
+  usuario: Usuario; mostrarToast: boolean; secaoInicial: Secao; cancelado: boolean;
+}) {
   const { empresaAtiva, caixaAtivo, setCaixaAtivo, setEmpresaAtiva } = useEmpresa();
-  const [secao,      setSecao]      = useState<Secao>("dashboard");
+  const [secao,      setSecao]      = useState<Secao>(secaoInicial);
   const [modalCaixa, setModalCaixa] = useState(false);
+  const [toast,      setToast]      = useState(mostrarToast);
 
-  // Foto e nome podem ser atualizados em Configurações sem recarregar a página
   const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
   const resolverFoto = (url?: string | null) => {
     if (!url) return null;
@@ -48,11 +106,8 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
     return `${API}${url}`;
   };
 
-  const [fotoAtual, setFotoAtual] = useState<string | null>(
-    resolverFoto(usuario.fotoUpload ?? usuario.foto)
-  );
+  const [fotoAtual, setFotoAtual] = useState<string | null>(resolverFoto(usuario.fotoUpload ?? usuario.foto));
   const [nomeAtual, setNomeAtual] = useState(usuario.nome);
-
   const iniciais = nomeAtual.split(" ").map(n => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2);
 
   const handleLogout = async () => {
@@ -61,27 +116,54 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
     window.location.href = "/";
   };
 
+  const tituloSecao: Record<Secao, string> = {
+    dashboard: "Visão Geral", produtos: "Produtos", estoque: "Estoque",
+    vendas: "Vendas", clientes: "Clientes", relatorios: "Relatórios",
+    configuracoes: "Configurações", empresas: "Empresas", planos: "Planos",
+    "produto-rapido": "Novo Produto", "cliente-rapido": "Novo Cliente", "caixa-rapido": "Abrir Caixa",
+  };
+
   const renderSection = () => {
     switch (secao) {
-      case "dashboard":     return <DashboardHome usuario={usuario} onNavegar={s => setSecao(s as any)} />;
-      case "produtos":      return <Produtos />;
-      case "estoque":       return <Estoque />;
-      case "vendas":        return <Vendas />;
-      case "clientes":      return <Clientes />;
-      case "relatorios":    return <Relatorios />;
-      case "configuracoes": return <Configuracoes usuario={usuario} onFotoAtualizada={url => setFotoAtual(resolverFoto(url))} onNomeAtualizado={nome => setNomeAtual(nome)} />;
-      case "empresas":      return <GerenciarEmpresas />;
-      case "planos":        return <Planos />;
-      case "venda-rapida":  return <DashboardHome usuario={usuario} onNavegar={s => setSecao(s as any)} />;
-      case "produto-rapido":return <PaginaAcaoRapida onVoltar={()=>setSecao("dashboard")}><NovoProduto onConcluido={()=>setSecao("dashboard")} /></PaginaAcaoRapida>;
-      case "cliente-rapido":return <PaginaAcaoRapida onVoltar={()=>setSecao("dashboard")}><NovoCliente onConcluido={()=>setSecao("dashboard")} /></PaginaAcaoRapida>;
-      case "caixa-rapido":  return <PaginaAcaoRapida onVoltar={()=>setSecao("dashboard")}><AbrirCaixa onConcluido={()=>setSecao("dashboard")} /></PaginaAcaoRapida>;
-      default:              return <DashboardHome usuario={usuario} onNavegar={s => setSecao(s as any)} />;
+      case "dashboard":      return <DashboardHome usuario={usuario} onNavegar={s => setSecao(s as Secao)} />;
+      case "produtos":       return <Produtos />;
+      case "estoque":        return <Estoque />;
+      case "vendas":         return <Vendas />;
+      case "clientes":       return <Clientes />;
+      case "relatorios":     return <Relatorios />;
+      case "configuracoes":  return <Configuracoes usuario={usuario} onFotoAtualizada={url => setFotoAtual(resolverFoto(url))} onNomeAtualizado={nome => setNomeAtual(nome)} />;
+      case "empresas":       return <GerenciarEmpresas />;
+      case "planos":         return <Planos />;
+      case "produto-rapido": return <PaginaAcaoRapida onVoltar={() => setSecao("dashboard")}><NovoProduto onConcluido={() => setSecao("dashboard")} /></PaginaAcaoRapida>;
+      case "cliente-rapido": return <PaginaAcaoRapida onVoltar={() => setSecao("dashboard")}><NovoCliente onConcluido={() => setSecao("dashboard")} /></PaginaAcaoRapida>;
+      case "caixa-rapido":   return <PaginaAcaoRapida onVoltar={() => setSecao("dashboard")}><AbrirCaixa onConcluido={() => setSecao("dashboard")} /></PaginaAcaoRapida>;
+      default:               return <DashboardHome usuario={usuario} onNavegar={s => setSecao(s as Secao)} />;
     }
   };
 
   return (
     <div className={styles.dashboardContainer}>
+
+      {toast && <ToastPagamento onClose={() => setToast(false)} />}
+
+      {/* Banner cancelamento — aparece quando volta da Stripe sem pagar */}
+      {cancelado && secao === "planos" && (
+        <div style={{
+          position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
+          zIndex: 9999, display: "flex", alignItems: "center", gap: 10,
+          padding: "12px 18px",
+          background: "var(--surface-elevated)",
+          border: "1px solid rgba(245,158,11,0.35)",
+          borderRadius: 12,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+          fontSize: 13, color: "#d97706",
+          animation: "slideIn .3s ease",
+          whiteSpace: "nowrap",
+        }}>
+          Pagamento cancelado. Você pode assinar quando quiser.
+        </div>
+      )}
+
       <header className={styles.dashboardHeader}>
         <div className={styles.headerBrand}>
           <div className={styles.headerLogo}>
@@ -90,27 +172,17 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
           <span className={styles.headerTitle}>GestPro</span>
           <div style={{ marginLeft: 16, paddingLeft: 16, borderLeft: "1px solid var(--border)" }}>
             <p style={{ fontSize: 10, color: "var(--foreground-subtle)", margin: 0, textTransform: "uppercase", letterSpacing: ".06em" }}>GESTPRO</p>
-            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
-              {secao === "dashboard" ? "Visão Geral" :
-               secao === "empresas"  ? "Empresas"    :
-               secao.charAt(0).toUpperCase() + secao.slice(1)}
-            </p>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>{tituloSecao[secao]}</p>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <SeletorEmpresa
-            empresaAtiva={empresaAtiva}
-            onSelecionar={setEmpresaAtiva}
-            onNova={() => setSecao("empresas")}
-          />
+          <SeletorEmpresa empresaAtiva={empresaAtiva} onSelecionar={setEmpresaAtiva} onNova={() => setSecao("empresas")} />
           <button onClick={() => setModalCaixa(true)} style={{
-            display: "flex", alignItems: "center", gap: 7,
-            padding: "7px 14px",
+            display: "flex", alignItems: "center", gap: 7, padding: "7px 14px",
             background: caixaAtivo ? "rgba(16,185,129,0.12)" : "transparent",
             border: `1px solid ${caixaAtivo ? "rgba(16,185,129,0.4)" : "var(--border)"}`,
-            borderRadius: 8,
-            color: caixaAtivo ? "var(--primary)" : "var(--foreground-muted)",
+            borderRadius: 8, color: caixaAtivo ? "var(--primary)" : "var(--foreground-muted)",
             fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all .15s",
           }}>
             {caixaAtivo ? <DollarSign size={14} /> : <Lock size={14} />}
@@ -119,13 +191,9 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
           <div className={styles.headerUser}>
             <span className={styles.headerUserName}>{nomeAtual.split(" ")[0]}!</span>
             {fotoAtual
-              ? <img src={fotoAtual} alt={nomeAtual} className={styles.headerUserAvatar}
-                  onError={() => setFotoAtual(null)} />
-              : <div className={styles.headerUserInitials}>{iniciais}</div>
-            }
-            <Button onClick={handleLogout} variant="ghost" className="text-white hover:text-gray-300 hover:bg-[#1a3a52]">
-              Sair
-            </Button>
+              ? <img src={fotoAtual} alt={nomeAtual} className={styles.headerUserAvatar} onError={() => setFotoAtual(null)} />
+              : <div className={styles.headerUserInitials}>{iniciais}</div>}
+            <Button onClick={handleLogout} variant="ghost" className="text-white hover:text-gray-300 hover:bg-[#1a3a52]">Sair</Button>
           </div>
         </div>
       </header>
@@ -133,7 +201,7 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
       <div className={styles.dashboardLayout}>
         <aside className={styles.sidebar}>
           <nav className={styles.sidebarNav}>
-            {[
+            {([
               { id: "dashboard",     label: "Dashboard",     icon: <Home /> },
               { id: "produtos",      label: "Produtos",      icon: <Package /> },
               { id: "vendas",        label: "Vendas",        icon: <CreditCard /> },
@@ -142,8 +210,8 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
               { id: "empresas",      label: "Empresas",      icon: <Building2 /> },
               { id: "configuracoes", label: "Configurações", icon: <Settings /> },
               { id: "planos",        label: "Planos",        icon: <Zap /> },
-            ].map(item => (
-              <button key={item.id} onClick={() => setSecao(item.id as Secao)}
+            ] as { id: Secao; label: string; icon: React.ReactNode }[]).map(item => (
+              <button key={item.id} onClick={() => setSecao(item.id)}
                 className={`${styles.sidebarNavItem} ${secao === item.id ? styles.sidebarNavItemActive : ""}`}>
                 {item.icon}
                 <span>{item.label}</span>
@@ -169,11 +237,20 @@ function DashboardInner({ usuario }: { usuario: Usuario }) {
   );
 }
 
+// ─── Página raiz ──────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
-  const [loading, setLoading] = useState(true);
+  const searchParams  = useSearchParams();
+  const [usuario,  setUsuario]  = useState<Usuario | null>(null);
+  const [loading,  setLoading]  = useState(true);
+
+  const mostrarToast  = searchParams.get("payment") === "success";
+  const cancelado     = searchParams.get("canceled") === "true";
+  const secaoInicial  = (searchParams.get("section") as Secao) ?? "dashboard";
 
   useEffect(() => {
+    // Limpa todos os params da URL sem recarregar
+    if (mostrarToast || cancelado) window.history.replaceState({}, "", "/dashboard");
     (async () => {
       try {
         const data = await getUsuario();
@@ -192,7 +269,7 @@ export default function DashboardPage() {
 
   return (
     <EmpresaProvider>
-      <DashboardInner usuario={usuario} />
+      <DashboardInner usuario={usuario} mostrarToast={mostrarToast} secaoInicial={secaoInicial} cancelado={cancelado} />
     </EmpresaProvider>
   );
 }

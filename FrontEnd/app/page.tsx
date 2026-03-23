@@ -1,852 +1,821 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import LoginPage from "./auth/login/page";
-import CadastroPage from "./auth/cadastro/page";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
-import {
-  Check,
-  X,
-  ArrowRight,
-  TrendingUp,
-  Users,
-  BarChart2,
-  FileText,
-  Package,
-  ShoppingCart,
-  Shield,
-  Clock,
-  HeartHandshake,
-  Menu,
-} from "lucide-react";
-import s from "@/app/styles/landing.module.css";
-import a from "@/app/styles/auth.module.css";
+/* ─── Dados ──────────────────────────────────────────────────────────────── */
+const FEATURES = [
+  {
+    icon: "◈",
+    title: "Frente de Caixa",
+    desc: "PDV completo com pagamento misto, troco automático e emissão de cupom. Tão rápido quanto precisa ser.",
+    tag: "PDV",
+  },
+  {
+    icon: "◉",
+    title: "Controle de Estoque",
+    desc: "Cada venda deduz, cada cancelamento repõe. Alertas de estoque mínimo antes do problema acontecer.",
+    tag: "ESTOQUE",
+  },
+  {
+    icon: "◫",
+    title: "Relatórios Reais",
+    desc: "Receita, lucro, ticket médio, pico de horário. Exporte em PDF, CSV ou HTML com gráficos.",
+    tag: "DADOS",
+  },
+  {
+    icon: "◌",
+    title: "Multi-empresa",
+    desc: "Gerencie várias empresas com um único login. Dados completamente isolados por operação.",
+    tag: "ESCALA",
+  },
+  {
+    icon: "◧",
+    title: "Clientes & Fornecedores",
+    desc: "Histórico completo, CPF, CNPJ, contatos. Vincule clientes às vendas em segundos.",
+    tag: "CRM",
+  },
+  {
+    icon: "◎",
+    title: "Segurança Real",
+    desc: "JWT em cookie HttpOnly, OAuth2 com Google, troca de senha por código. Sem atalhos.",
+    tag: "SEGURO",
+  },
+];
 
-/* ─── Google Icon ─────────────────────────────────────────────────────────── */
-function GoogleIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      aria-hidden
-      style={{ flexShrink: 0 }}
-    >
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      />
-    </svg>
-  );
-}
+const PLANS = [
+  { name: "Experimental", price: "Grátis", days: "7 dias", empresas: "1 empresa", caixas: "1 caixa", highlight: false },
+  { name: "Básico", price: "R$ 29", period: "/mês", days: "30 dias", empresas: "1 empresa", caixas: "1 caixa", highlight: false },
+  { name: "Pro", price: "R$ 59", period: "/mês", days: "30 dias", empresas: "2 empresas", caixas: "3 caixas", highlight: true },
+  { name: "Premium", price: "R$ 99", period: "/mês", days: "30 dias", empresas: "Ilimitadas", caixas: "Ilimitados", highlight: false },
+];
 
-/* ─── SVG Illustration ─────────────────────────────────────────────────────── */
-function StoreIllustration() {
-  return (
-    <svg
-      viewBox="0 0 520 420"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={s.illustration}
-    >
-      <ellipse
-        cx="260"
-        cy="395"
-        rx="210"
-        ry="22"
-        fill="rgba(16,185,129,0.08)"
-      />
-      <rect x="52" y="205" width="38" height="98" rx="6" fill="url(#b1)" />
-      <rect x="102" y="162" width="38" height="141" rx="6" fill="url(#b2)" />
-      <rect x="152" y="118" width="38" height="185" rx="6" fill="url(#b3)" />
-      <rect x="202" y="74" width="38" height="229" rx="6" fill="url(#b4)" />
-      <path
-        d="M71 200 L218 68"
-        stroke="#10b981"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeDasharray="7 4"
-      />
-      <path
-        d="M210 58 L222 70 L210 82"
-        stroke="#10b981"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <rect x="272" y="202" width="184" height="163" rx="8" fill="#1a3557" />
-      <rect x="282" y="213" width="164" height="82" rx="5" fill="#0d213d" />
-      <rect
-        x="292"
-        y="222"
-        width="57"
-        height="47"
-        rx="4"
-        fill="#3b82f6"
-        opacity=".75"
-      />
-      <rect
-        x="359"
-        y="222"
-        width="57"
-        height="47"
-        rx="4"
-        fill="#3b82f6"
-        opacity=".75"
-      />
-      <rect x="341" y="315" width="42" height="50" rx="4" fill="#0d213d" />
-      <circle cx="375" cy="342" r="3" fill="#60a5fa" />
-      <path d="M268 202 Q278 162 364 162 Q450 162 460 202 Z" fill="#10b981" />
-      <rect x="38" y="66" width="82" height="72" rx="13" fill="#0f766e" />
-      <path
-        d="M54 88 L57 107 L96 107 L99 88"
-        stroke="white"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <path
-        d="M51 81 L54 88"
-        stroke="white"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <circle cx="67" cy="114" r="4.5" fill="white" />
-      <circle cx="89" cy="114" r="4.5" fill="white" />
-      <rect x="40" y="311" width="46" height="44" rx="4" fill="#f59e0b" />
-      <rect x="46" y="302" width="46" height="44" rx="4" fill="#fbbf24" />
-      <line
-        x1="69"
-        y1="302"
-        x2="69"
-        y2="346"
-        stroke="#f59e0b"
-        strokeWidth="1.5"
-      />
-      <line
-        x1="46"
-        y1="324"
-        x2="92"
-        y2="324"
-        stroke="#f59e0b"
-        strokeWidth="1.5"
-      />
-      <rect x="372" y="56" width="122" height="38" rx="19" fill="#059669" />
-      <text
-        x="433"
-        y="80"
-        textAnchor="middle"
-        fill="white"
-        fontSize="13"
-        fontWeight="700"
-        fontFamily="'Sora',system-ui"
-      >
-        +24% vendas
-      </text>
-      <defs>
-        <linearGradient id="b1" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#1d4ed8" />
-        </linearGradient>
-        <linearGradient id="b2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#06b6d4" />
-          <stop offset="100%" stopColor="#0284c7" />
-        </linearGradient>
-        <linearGradient id="b3" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#10b981" />
-          <stop offset="100%" stopColor="#059669" />
-        </linearGradient>
-        <linearGradient id="b4" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="100%" stopColor="#10b981" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
+const METRICS = [
+  { value: "0", suffix: "s", label: "para registrar uma venda" },
+  { value: "100", suffix: "%", label: "dos dados em tempo real" },
+  { value: "4", suffix: "x", label: "formas de pagamento" },
+  { value: "∞", suffix: "", label: "relatórios exportáveis" },
+];
 
-/* ─── Scroll Reveal ────────────────────────────────────────────────────────── */
-function useReveal() {
+/* ─── Hook: Intersection Observer ────────────────────────────────────────── */
+function useVisible(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setVisible(true);
-          obs.unobserve(el);
-        }
-      },
-      { threshold: 0.12 },
-    );
-    obs.observe(el);
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true); }, { threshold });
+    if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
   }, []);
-  return { ref, className: `${s.reveal} ${visible ? s.revealVisible : ""}` };
+  return { ref, visible };
 }
-function Reveal({
-  children,
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  delay?: number;
-}) {
-  const { ref, className } = useReveal();
+
+/* ─── Componente: Cursor personalizado ───────────────────────────────────── */
+function Cursor() {
+  const dot = useRef<HTMLDivElement>(null);
+  const ring = useRef<HTMLDivElement>(null);
+  const pos = useRef({ x: 0, y: 0 });
+  const ringPos = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      pos.current = { x: e.clientX, y: e.clientY };
+      if (dot.current) {
+        dot.current.style.transform = `translate(${e.clientX - 4}px, ${e.clientY - 4}px)`;
+      }
+    };
+    let raf: number;
+    const animate = () => {
+      ringPos.current.x += (pos.current.x - ringPos.current.x) * 0.12;
+      ringPos.current.y += (pos.current.y - ringPos.current.y) * 0.12;
+      if (ring.current) {
+        ring.current.style.transform = `translate(${ringPos.current.x - 20}px, ${ringPos.current.y - 20}px)`;
+      }
+      raf = requestAnimationFrame(animate);
+    };
+    window.addEventListener("mousemove", move);
+    raf = requestAnimationFrame(animate);
+
+    const addHover = () => { if (ring.current) ring.current.style.scale = "2"; };
+    const removeHover = () => { if (ring.current) ring.current.style.scale = "1"; };
+    document.querySelectorAll("a,button,[data-hover]").forEach(el => {
+      el.addEventListener("mouseenter", addHover);
+      el.addEventListener("mouseleave", removeHover);
+    });
+
+    return () => {
+      window.removeEventListener("mousemove", move);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
   return (
-    <div
-      ref={ref}
-      className={className}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
-      {children}
+    <>
+      <div ref={dot} style={{ position: "fixed", width: 8, height: 8, borderRadius: "50%", background: "#10b981", pointerEvents: "none", zIndex: 9999, top: 0, left: 0, transition: "transform 0.05s linear" }} />
+      <div ref={ring} style={{ position: "fixed", width: 40, height: 40, borderRadius: "50%", border: "1px solid rgba(16,185,129,0.5)", pointerEvents: "none", zIndex: 9998, top: 0, left: 0, transition: "scale 0.3s ease" }} />
+    </>
+  );
+}
+
+/* ─── Componente: Partículas de fundo ────────────────────────────────────── */
+function GridBG() {
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
+      {/* Grid */}
+      <div style={{
+        position: "absolute", inset: 0,
+        backgroundImage: `
+          linear-gradient(rgba(16,185,129,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(16,185,129,0.03) 1px, transparent 1px)
+        `,
+        backgroundSize: "80px 80px",
+      }} />
+      {/* Gradient orbs */}
+      <div style={{ position: "absolute", top: "10%", left: "5%", width: 600, height: 600, background: "radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%)", filter: "blur(40px)" }} />
+      <div style={{ position: "absolute", bottom: "20%", right: "5%", width: 500, height: 500, background: "radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 70%)", filter: "blur(40px)" }} />
+      {/* Scan line */}
+      <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px)", pointerEvents: "none" }} />
     </div>
   );
 }
 
-/* ─── Modal ──────────────────────────────────────────────────────────────────── */
-function Modal({
-  type,
-  onClose,
-  onSwitch,
-}: {
-  type: "login" | "register";
-  onClose: () => void;
-  onSwitch: (t: "login" | "register") => void;
-}) {
-  /* shared */
-  const isLogin = type === "login";
+/* ─── Componente: Contador animado ───────────────────────────────────────── */
+function Counter({ value, suffix }: { value: string; suffix: string }) {
+  const [display, setDisplay] = useState("0");
+  const { ref, visible } = useVisible();
 
   useEffect(() => {
-    const fn = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", fn);
-    return () => window.removeEventListener("keydown", fn);
-  }, [onClose]);
+    if (!visible || isNaN(Number(value))) { setDisplay(value); return; }
+    const end = Number(value);
+    let start = 0;
+    const duration = 1500;
+    const step = duration / end;
+    const timer = setInterval(() => {
+      start += Math.ceil(end / 30);
+      if (start >= end) { setDisplay(String(end)); clearInterval(timer); }
+      else setDisplay(String(start));
+    }, step);
+    return () => clearInterval(timer);
+  }, [visible, value]);
 
   return (
-    <div
-      className={a.modalOverlay}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className={a.modalCard}>
-        <button className={a.modalClose} onClick={onClose} aria-label="Fechar">
-          <X size={15} />
-        </button>
+    <span ref={ref} style={{ display: "inline" }}>{display}{suffix}</span>
+  );
+}
 
-        {/* Escolhe qual componente renderizar */}
-        {isLogin ? <LoginPage /> : <CadastroPage />}
+/* ─── Componente: Linha de ticker ────────────────────────────────────────── */
+function Ticker() {
+  const items = ["CONTROLE DE CAIXA", "GESTÃO DE ESTOQUE", "RELATÓRIOS EM TEMPO REAL", "MULTI-EMPRESA", "EMISSÃO DE CUPOM", "ANÁLISE DE LUCRO", "PDV COMPLETO", "OAUTH2 GOOGLE"];
+  const doubled = [...items, ...items];
+  return (
+    <div style={{ overflow: "hidden", borderTop: "1px solid rgba(16,185,129,0.15)", borderBottom: "1px solid rgba(16,185,129,0.15)", padding: "14px 0", background: "rgba(16,185,129,0.02)" }}>
+      <div style={{ display: "flex", gap: 60, animation: "ticker 30s linear infinite", whiteSpace: "nowrap" }}>
+        {doubled.map((item, i) => (
+          <span key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(16,185,129,0.6)", fontFamily: "'DM Mono', monospace" }}>
+            {item} <span style={{ color: "rgba(16,185,129,0.3)", marginLeft: 30 }}>—</span>
+          </span>
+        ))}
       </div>
     </div>
   );
 }
 
-/* ─── Data ───────────────────────────────────────────────────────────────────── */
-const features = [
-  {
-    icon: <Package size={22} />,
-    bg: "linear-gradient(135deg,#d1fae5,#a7f3d0)",
-    color: "#059669",
-    title: "Estoque Inteligente",
-    desc: "Alertas automáticos de ruptura, movimentação em tempo real e controle de validade.",
-  },
-  {
-    icon: <ShoppingCart size={22} />,
-    bg: "linear-gradient(135deg,#dbeafe,#bfdbfe)",
-    color: "#2563eb",
-    title: "PDV Completo",
-    desc: "Vendas rápidas, troco automático, múltiplas formas de pagamento e cupom fiscal.",
-  },
-  {
-    icon: <BarChart2 size={22} />,
-    bg: "linear-gradient(135deg,#ccfbf1,#99f6e4)",
-    color: "#0d9488",
-    title: "Dashboard em Tempo Real",
-    desc: "Veja faturamento, ticket médio e produtos mais vendidos num único painel.",
-  },
-  {
-    icon: <Users size={22} />,
-    bg: "linear-gradient(135deg,#fef3c7,#fde68a)",
-    color: "#d97706",
-    title: "CRM de Clientes",
-    desc: "Histórico de compras, perfil de consumo e ações de fidelização integradas.",
-  },
-  {
-    icon: <FileText size={22} />,
-    bg: "linear-gradient(135deg,#ede9fe,#ddd6fe)",
-    color: "#7c3aed",
-    title: "Notas Fiscais (NF-e)",
-    desc: "Emita NF-e e NFC-e diretamente pelo sistema, sem precisar de outro software.",
-  },
-  {
-    icon: <Shield size={22} />,
-    bg: "linear-gradient(135deg,#fce7f3,#fbcfe8)",
-    color: "#db2777",
-    title: "Segurança Bancária",
-    desc: "Criptografia ponta a ponta, backups diários automáticos e controle por perfil.",
-  },
-];
-const impactItems = [
-  {
-    icon: <TrendingUp size={22} />,
-    title: "Aumente seu faturamento em 24%",
-    desc: "Lojistas que usam o GestPro reportam aumento médio de 24% nas vendas nos primeiros 90 dias.",
-  },
-  {
-    icon: <Clock size={22} />,
-    title: "Economize 15h por semana",
-    desc: "Automatize tarefas manuais como controle de estoque, fechamento de caixa e emissão de notas.",
-  },
-  {
-    icon: <HeartHandshake size={22} />,
-    title: "Suporte que resolve de verdade",
-    desc: "Time 100% brasileiro, disponível por chat e WhatsApp. Tempo médio de resposta: 3 minutos.",
-  },
-];
-
-const pricingPlans = [
-  {
-    name: "Teste Gratuito",
-    price: "0,00",
-    period: "7 dias",
-    popular: false,
-    btnLabel: "Começar agora",
-    features: [
-      { text: "1 empresa", ok: true },
-      { text: "1 loja", ok: true },
-      { text: "Produtos ilimitados", ok: true },
-      { text: "PDV completo", ok: true },
-      { text: "Controle de estoque", ok: true },
-      { text: "Comprovante de venda", ok: true },
-      { text: "Financeiro básico", ok: true },
-      { text: "NF-e e NFC-e", ok: false },
-      { text: "Relatórios avançados", ok: false },
-      { text: "Multi-lojas", ok: false },
-    ],
-  },
-  {
-    name: "Básico",
-    price: "39,90",
-    period: "mês",
-    popular: false,
-    btnLabel: "Assinar Básico",
-    features: [
-      { text: "1 empresa", ok: true },
-      { text: "Até 2 lojas", ok: true },
-      { text: "Até 500 Produtos", ok: true },
-      { text: "PDV completo", ok: true },
-      { text: "Controle de estoque", ok: true },
-      { text: "Financeiro completo", ok: true },
-      { text: "Relatórios padrão", ok: true },
-      { text: "NF-e e NFC-e (limitado)", ok: true },
-      { text: "Multi-lojas avançado", ok: false },
-      { text: "API e integrações", ok: false },
-    ],
-  },
-  {
-    name: "Pro",
-    price: "69,90",
-    period: "mês",
-    popular: true,
-    btnLabel: "Assinar Pro",
-    features: [
-      { text: "Empresas ilimitadas", ok: true },
-      { text: "Multi-lojas", ok: true },
-      { text: "PDV completo", ok: true },
-      { text: "Estoque avançado", ok: true },
-      { text: "Financeiro completo", ok: true },
-      { text: "NF-e e NFC-e ilimitado", ok: true },
-      { text: "Dashboards avançados", ok: true },
-      { text: "CRM de clientes", ok: true },
-      { text: "Suporte prioritário", ok: true },
-      { text: "API pública", ok: false },
-    ],
-  },
-  {
-    name: "Premium",
-    price: "129,90",
-    period: "mês",
-    popular: false,
-    btnLabel: "Falar com vendas",
-    features: [
-      { text: "Tudo do Pro", ok: true },
-      { text: "API completa", ok: true },
-      { text: "Integrações personalizadas", ok: true },
-      { text: "Relatórios customizados", ok: true },
-      { text: "Usuários ilimitados", ok: true },
-      { text: "SLA dedicado", ok: true },
-      { text: "Suporte 24/7", ok: true },
-      { text: "Onboarding assistido", ok: true },
-    ],
-  },
-];
-
-const navItems = [
-  { label: "Funcionalidades", target: "features" },
-  { label: "Diferenciais", target: "impact" },
-  { label: "Preços", target: "pricing" },
-  { label: "Contato", target: "cta" },
-];
-
-/* ════════════════════════════════════════════════════════════════════════════
-   PAGE
-════════════════════════════════════════════════════════════════════════════ */
-export default function LandingPage() {
-  const [modal, setModal] = useState<"login" | "register" | null>(null);
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", fn, { passive: true });
-    return () => window.removeEventListener("scroll", fn);
-  }, []);
-  useEffect(() => {
-    document.body.style.overflow = modal ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [modal]);
-
-  const scrollTo = useCallback((id: string) => {
-    setMobileOpen(false);
-    document
-      .getElementById(id)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
-  const open = (m: "login" | "register") => {
-    setModal(m);
-    setMobileOpen(false);
-  };
+/* ─── Componente: Card de feature ────────────────────────────────────────── */
+function FeatureCard({ feat, index }: { feat: typeof FEATURES[0]; index: number }) {
+  const { ref, visible } = useVisible();
+  const [hovered, setHovered] = useState(false);
 
   return (
-    <div className={s.page}>
-      {/* NAVBAR */}
-      <nav className={`${s.navbar} ${scrolled ? s.navbarScrolled : ""}`}>
-        <div className={s.navInner}>
-          <div className={s.logo}>
-            <svg
-              width="26"
-              height="26"
-              viewBox="0 0 36 36"
-              fill="none"
-              aria-hidden
-            >
-              <rect x="2" y="14" width="5" height="18" rx="2" fill="#3b82f6" />
-              <rect x="10" y="8" width="5" height="24" rx="2" fill="#06b6d4" />
-              <rect x="18" y="2" width="5" height="30" rx="2" fill="#10b981" />
-              <path
-                d="M6 12 L21 4"
-                stroke="#10b981"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <path
-                d="M18 3 L24 2 L23 8"
-                stroke="#10b981"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle
-                cx="28"
-                cy="20"
-                r="6"
-                fill="none"
-                stroke="#3b82f6"
-                strokeWidth="2"
-              />
-              <path
-                d="M26 20 h4 M28 18 v4"
-                stroke="#3b82f6"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span className={s.logoDark}>Gest</span>
-            <span className={s.logoGreen}>Pro</span>
+    <div ref={ref} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: "32px", borderRadius: 2,
+        border: `1px solid ${hovered ? "rgba(16,185,129,0.4)" : "rgba(255,255,255,0.06)"}`,
+        background: hovered ? "rgba(16,185,129,0.04)" : "rgba(255,255,255,0.01)",
+        transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)",
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(32px)",
+        transitionDelay: `${index * 80}ms`,
+        cursor: "default",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+      {/* Glow no hover */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: hovered ? "linear-gradient(90deg, transparent, rgba(16,185,129,0.6), transparent)" : "transparent", transition: "background 0.4s" }} />
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+        <span style={{ fontSize: 28, color: "rgba(16,185,129,0.8)", lineHeight: 1 }}>{feat.icon}</span>
+        <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", color: "rgba(16,185,129,0.4)", fontFamily: "'DM Mono', monospace", padding: "4px 8px", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 2 }}>
+          {feat.tag}
+        </span>
+      </div>
+      <h3 style={{ fontSize: 18, fontWeight: 700, color: "#f8fafc", margin: "0 0 12px", letterSpacing: "-0.02em", fontFamily: "'Syne', sans-serif" }}>{feat.title}</h3>
+      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", lineHeight: 1.7, margin: 0, fontFamily: "'DM Mono', monospace" }}>{feat.desc}</p>
+    </div>
+  );
+}
+
+/* ─── Página Principal ────────────────────────────────────────────────────── */
+export default function LandingPage() {
+  const router = useRouter();
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [scrollY, setScrollY] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const onScroll = () => setScrollY(window.scrollY);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const onMouse = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
+    window.addEventListener("mousemove", onMouse);
+    return () => window.removeEventListener("mousemove", onMouse);
+  }, []);
+
+  const heroParallax = -scrollY * 0.3;
+
+  return (
+    <div style={{ background: "#050507", color: "#f8fafc", minHeight: "100vh", fontFamily: "'DM Mono', monospace", overflowX: "hidden" }}>
+      <Cursor />
+      <GridBG />
+
+      {/* ── Fonts ── */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::selection { background: rgba(16,185,129,0.3); color: #fff; }
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: #050507; }
+        ::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.4); }
+
+        @keyframes ticker {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(40px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes pulse-ring {
+          0% { transform: scale(1); opacity: 0.6; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes dash {
+          to { stroke-dashoffset: 0; }
+        }
+
+        .hero-title {
+          animation: fadeUp 1s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+        }
+        .hero-sub {
+          animation: fadeUp 1s cubic-bezier(0.16,1,0.3,1) 0.25s both;
+        }
+        .hero-cta {
+          animation: fadeUp 1s cubic-bezier(0.16,1,0.3,1) 0.4s both;
+        }
+        .hero-badge {
+          animation: fadeUp 1s cubic-bezier(0.16,1,0.3,1) 0s both;
+        }
+
+        .btn-primary {
+          background: #10b981;
+          color: #000;
+          border: none;
+          padding: 16px 36px;
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          cursor: pointer;
+          font-family: 'DM Mono', monospace;
+          border-radius: 2px;
+          position: relative;
+          overflow: hidden;
+          transition: all 0.3s;
+          text-transform: uppercase;
+        }
+        .btn-primary::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: rgba(255,255,255,0.15);
+          transform: translateX(-100%);
+          transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        .btn-primary:hover::before { transform: translateX(0); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(16,185,129,0.3); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-ghost {
+          background: transparent;
+          color: rgba(255,255,255,0.6);
+          border: 1px solid rgba(255,255,255,0.12);
+          padding: 16px 36px;
+          font-size: 13px;
+          font-weight: 500;
+          letter-spacing: 0.08em;
+          cursor: pointer;
+          font-family: 'DM Mono', monospace;
+          border-radius: 2px;
+          transition: all 0.3s;
+        }
+        .btn-ghost:hover {
+          border-color: rgba(16,185,129,0.4);
+          color: #10b981;
+          background: rgba(16,185,129,0.04);
+        }
+
+        .nav-link {
+          color: rgba(255,255,255,0.45);
+          text-decoration: none;
+          font-size: 12px;
+          letter-spacing: 0.1em;
+          transition: color 0.2s;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+        }
+        .nav-link:hover { color: rgba(255,255,255,0.9); }
+
+        .plan-card {
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 2px;
+          padding: 36px;
+          transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+          background: rgba(255,255,255,0.01);
+          cursor: default;
+        }
+        .plan-card:hover {
+          border-color: rgba(16,185,129,0.35);
+          background: rgba(16,185,129,0.03);
+          transform: translateY(-4px);
+        }
+        .plan-card.highlight {
+          border-color: rgba(16,185,129,0.5);
+          background: rgba(16,185,129,0.05);
+        }
+
+        .metric-item {
+          transition: all 0.3s;
+        }
+        .metric-item:hover {
+          transform: scale(1.05);
+        }
+
+        .faq-item {
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+          overflow: hidden;
+        }
+
+        .dashboard-preview {
+          animation: float 6s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* ── NAV ─────────────────────────────────────────────────────────── */}
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        padding: "0 48px",
+        height: 64,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: scrollY > 40 ? "rgba(5,5,7,0.92)" : "transparent",
+        backdropFilter: scrollY > 40 ? "blur(20px)" : "none",
+        borderBottom: scrollY > 40 ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
+        transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)",
+      }}>
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 28, height: 28, position: "relative" }}>
+            <div style={{ position: "absolute", inset: 0, border: "1.5px solid #10b981", borderRadius: 6, transform: "rotate(45deg)" }} />
+            <div style={{ position: "absolute", inset: 6, background: "#10b981", borderRadius: 2, transform: "rotate(45deg)" }} />
           </div>
-          <div className={s.navLinks}>
-            {navItems.map((n) => (
-              <button
-                key={n.target}
-                className={s.navLink}
-                onClick={() => scrollTo(n.target)}
-              >
-                {n.label}
-              </button>
-            ))}
-          </div>
-          <div className={s.navActions}>
-            <button className={s.navBtnSecondary} onClick={() => open("login")}>
-              Entrar
-            </button>
-            <button
-              className={s.navBtnPrimary}
-              onClick={() => open("register")}
-            >
-              Começar grátis <ArrowRight size={14} />
-            </button>
-            <button
-              className={s.mobileMenuBtn}
-              onClick={() => setMobileOpen((v) => !v)}
-              aria-label="Menu"
-            >
-              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </div>
+          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em", color: "#f8fafc" }}>
+            Gest<span style={{ color: "#10b981" }}>Pro</span>
+          </span>
+        </div>
+
+        {/* Links */}
+        <div style={{ display: "flex", alignItems: "center", gap: 40 }}>
+          {["Funcionalidades", "Planos", "Sobre"].map(link => (
+            <a key={link} className="nav-link" href={`#${link.toLowerCase()}`}>{link}</a>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button className="btn-ghost" onClick={() => router.push("/auth/login")} style={{ padding: "10px 24px" }}>
+            Entrar
+          </button>
+          <button className="btn-primary" onClick={() => router.push("/auth/cadastro")} style={{ padding: "10px 24px" }}>
+            Começar grátis
+          </button>
         </div>
       </nav>
 
-      {/* Mobile menu */}
-      <div className={`${s.mobileMenu} ${mobileOpen ? s.mobileMenuOpen : ""}`}>
-        {navItems.map((n) => (
-          <button
-            key={n.target}
-            className={s.mobileMenuLink}
-            onClick={() => scrollTo(n.target)}
-          >
-            {n.label}
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section ref={heroRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "120px 48px 80px", position: "relative", textAlign: "center" }}>
+
+        {/* Mouse glow */}
+        <div style={{
+          position: "fixed", pointerEvents: "none", zIndex: 1,
+          width: 400, height: 400, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%)",
+          transform: `translate(${mousePos.x - 200}px, ${mousePos.y - 200}px)`,
+          transition: "transform 0.15s ease",
+        }} />
+
+        {/* Badge */}
+        <div className="hero-badge" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 16px 6px 8px", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 99, background: "rgba(16,185,129,0.06)", marginBottom: 40, position: "relative", zIndex: 2 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#10b981", fontWeight: 600 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", display: "inline-block", animation: "blink 2s ease infinite" }} />
+            Em desenvolvimento ativo
+          </span>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.06em" }}>— experimente grátis por 7 dias</span>
+        </div>
+
+        {/* Título */}
+        <h1 className="hero-title" style={{
+          fontFamily: "'Syne', sans-serif",
+          fontWeight: 800,
+          fontSize: "clamp(48px, 7vw, 96px)",
+          lineHeight: 1.0,
+          letterSpacing: "-0.04em",
+          maxWidth: 900,
+          color: "#f8fafc",
+          position: "relative",
+          zIndex: 2,
+          marginBottom: 28,
+        }}>
+          Gestão que cabe<br />
+          <span style={{
+            background: "linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}>
+            no seu negócio.
+          </span>
+        </h1>
+
+        {/* Sub */}
+        <p className="hero-sub" style={{
+          fontSize: "clamp(15px, 1.8vw, 18px)",
+          color: "rgba(255,255,255,0.45)",
+          maxWidth: 520,
+          lineHeight: 1.8,
+          marginBottom: 48,
+          position: "relative",
+          zIndex: 2,
+        }}>
+          PDV, estoque, caixa e relatórios em um sistema só.
+          Sem planilha, sem complicação.
+          <span style={{ color: "rgba(16,185,129,0.7)" }}> Para quem não tem tempo a perder.</span>
+        </p>
+
+        {/* CTAs */}
+        <div className="hero-cta" style={{ display: "flex", gap: 16, alignItems: "center", position: "relative", zIndex: 2, flexWrap: "wrap", justifyContent: "center" }}>
+          <button className="btn-primary" onClick={() => router.push("/auth/cadastro")}>
+            → Começar grátis
           </button>
-        ))}
-        <div className={s.mobileMenuActions}>
-          <button
-            className={s.navBtnSecondary}
-            style={{ width: "100%", justifyContent: "center" }}
-            onClick={() => open("login")}
-          >
-            Entrar
-          </button>
-          <button
-            className={s.navBtnPrimary}
-            style={{ width: "100%", justifyContent: "center" }}
-            onClick={() => open("register")}
-          >
-            Começar grátis <ArrowRight size={14} />
+          <button className="btn-ghost" onClick={() => router.push("/auth/login")}>
+            Já tenho conta
           </button>
         </div>
-      </div>
 
-      {/* HERO */}
-      <section className={s.heroSection} id="hero">
-        <div className={s.heroGrid}>
-          <div className={s.heroLeft}>
-            <div className={s.floatWrapper}>
-              <StoreIllustration />
-            </div>
-          </div>
-          <div className={s.heroRight}>
-            <span className={s.badge}>
-              <span className={s.badgeDot} />7 dias grátis — sem cartão de
-              crédito
+        {/* Trust line */}
+        <div style={{ marginTop: 64, display: "flex", alignItems: "center", gap: 32, color: "rgba(255,255,255,0.2)", fontSize: 11, letterSpacing: "0.1em", position: "relative", zIndex: 2, flexWrap: "wrap", justifyContent: "center" }}>
+          {["JWT + OAuth2", "Dados isolados por empresa", "Exportação sem servidor"].map((item, i) => (
+            <span key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ color: "rgba(16,185,129,0.5)", fontSize: 8 }}>◆</span>
+              {item}
             </span>
-            <h1 className={s.heroTitle}>
-              Sua loja no controle.
-              <br />
-              <span className={s.heroHighlight}>Suas vendas nas alturas.</span>
-            </h1>
-            <p className={s.heroSubtitle}>
-              Mais de{" "}
-              <strong style={{ color: "#34d399" }}>2.400 lojistas</strong> já
-              organizam estoque, vendas e clientes com o GestPro — e faturam
-              mais todo mês.
-            </p>
-            <div className={s.socialRow}>
-              <div className={s.avatarStack}>
-                {(["#10b981", "#3b82f6", "#f59e0b", "#ec4899"] as const).map(
-                  (c, i) => (
-                    <div
-                      key={i}
-                      className={s.avatarBubble}
-                      style={{ background: c, marginLeft: i ? "-10px" : 0 }}
-                    >
-                      {["M", "A", "R", "C"][i]}
+          ))}
+        </div>
+
+        {/* Scroll indicator */}
+        <div style={{ position: "absolute", bottom: 40, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, opacity: scrollY > 50 ? 0 : 1, transition: "opacity 0.3s" }}>
+          <span style={{ fontSize: 10, letterSpacing: "0.2em", color: "rgba(255,255,255,0.2)" }}>SCROLL</span>
+          <div style={{ width: 1, height: 40, background: "linear-gradient(to bottom, rgba(16,185,129,0.5), transparent)" }} />
+        </div>
+
+        {/* Dashboard preview mockup */}
+        <div style={{
+          marginTop: 100,
+          width: "100%",
+          maxWidth: 900,
+          position: "relative",
+          zIndex: 2,
+          transform: `translateY(${heroParallax * 0.2}px)`,
+        }}>
+          <div className="dashboard-preview" style={{
+            border: "1px solid rgba(16,185,129,0.15)",
+            borderRadius: 8,
+            overflow: "hidden",
+            background: "rgba(10,10,15,0.8)",
+            backdropFilter: "blur(20px)",
+            boxShadow: "0 80px 160px rgba(0,0,0,0.6), 0 0 80px rgba(16,185,129,0.05)",
+          }}>
+            {/* Barra do topo */}
+            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "rgba(239,68,68,0.6)" }} />
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "rgba(245,158,11,0.6)" }} />
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "rgba(16,185,129,0.6)" }} />
+              <div style={{ flex: 1, height: 20, background: "rgba(255,255,255,0.03)", borderRadius: 4, marginLeft: 16 }} />
+            </div>
+            {/* Corpo */}
+            <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", height: 340 }}>
+              {/* Sidebar */}
+              <div style={{ borderRight: "1px solid rgba(255,255,255,0.04)", padding: 20, display: "flex", flexDirection: "column", gap: 6 }}>
+                {["Dashboard", "Produtos", "Vendas", "Clientes", "Relatórios"].map((item, i) => (
+                  <div key={item} style={{ padding: "8px 12px", borderRadius: 4, background: i === 0 ? "rgba(16,185,129,0.12)" : "transparent", fontSize: 11, color: i === 0 ? "#10b981" : "rgba(255,255,255,0.25)", fontFamily: "'DM Mono', monospace" }}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+              {/* Conteúdo */}
+              <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
+                  {["R$ 1.240", "R$ 380", "23 vendas", "7 alertas"].map((val, i) => (
+                    <div key={i} style={{ padding: "14px 16px", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 6, background: "rgba(255,255,255,0.01)" }}>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: i === 3 ? "rgba(239,68,68,0.8)" : "#10b981", fontFamily: "'Syne', sans-serif", marginBottom: 4 }}>{val}</div>
+                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.08em" }}>
+                        {["RECEITA HOJE", "LUCRO", "REALIZADAS", "ESTOQUE"][i]}
+                      </div>
                     </div>
-                  ),
-                )}
+                  ))}
+                </div>
+                {/* Gráfico mock */}
+                <div style={{ flex: 1, border: "1px solid rgba(255,255,255,0.04)", borderRadius: 6, padding: "14px 16px", position: "relative", overflow: "hidden" }}>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em", marginBottom: 12 }}>VENDAS DA SEMANA</div>
+                  <svg width="100%" height="80" viewBox="0 0 400 80" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M0,60 C50,60 60,20 100,25 C140,30 160,45 200,30 C240,15 260,35 300,20 C340,5 360,30 400,15 L400,80 L0,80 Z" fill="url(#areaGrad)" />
+                    <path d="M0,60 C50,60 60,20 100,25 C140,30 160,45 200,30 C240,15 260,35 300,20 C340,5 360,30 400,15" fill="none" stroke="#10b981" strokeWidth="1.5" opacity="0.8" />
+                  </svg>
+                </div>
               </div>
-              <p className={s.socialText}>
-                <strong>+2.400</strong> lojistas ativos — 4,9/5
-              </p>
-            </div>
-            <div className={s.heroCta}>
-              <button
-                className={s.ctaBtnPrimary}
-                onClick={() => open("register")}
-              >
-                Testar 7 dias grátis <ArrowRight size={16} />
-              </button>
-              <button className={s.ctaBtnGhost} onClick={() => open("login")}>
-                Já tenho conta
-              </button>
-            </div>
-            <div className={s.heroGuarantees}>
-              {[
-                "Sem cartão de crédito",
-                "Cancele quando quiser",
-                "Suporte em português",
-              ].map((t) => (
-                <span key={t} className={s.guaranteeItem}>
-                  <Check size={12} strokeWidth={3} /> {t}
-                </span>
-              ))}
             </div>
           </div>
+          {/* Reflexo */}
+          <div style={{ position: "absolute", bottom: -60, left: "10%", right: "10%", height: 60, background: "linear-gradient(to bottom, rgba(16,185,129,0.04), transparent)", filter: "blur(20px)", transform: "scaleY(-1) translateY(-100%)" }} />
         </div>
-        <svg
-          className={s.wave}
-          viewBox="0 0 1440 72"
-          fill="none"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M0 36 C360 72 1080 0 1440 36 L1440 72 L0 72 Z"
-            fill="#f0fdf4"
+      </section>
+
+      {/* ── TICKER ───────────────────────────────────────────────────────── */}
+      <Ticker />
+
+      {/* ── MÉTRICAS ─────────────────────────────────────────────────────── */}
+      <section style={{ padding: "100px 48px", position: "relative", zIndex: 2 }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>
+          {METRICS.map((m, i) => {
+            const { ref, visible } = useVisible();
+            return (
+              <div ref={ref} key={i} className="metric-item" style={{
+                padding: "40px 48px",
+                borderRight: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateY(0)" : "translateY(24px)",
+                transition: `all 0.7s cubic-bezier(0.16,1,0.3,1) ${i * 100}ms`,
+                textAlign: "center",
+              }}>
+                <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 56, letterSpacing: "-0.04em", lineHeight: 1, color: "#f8fafc", marginBottom: 10 }}>
+                  <Counter value={m.value} suffix={m.suffix} />
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>{m.label.toUpperCase()}</div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── FEATURES ─────────────────────────────────────────────────────── */}
+      <section id="funcionalidades" style={{ padding: "100px 48px", position: "relative", zIndex: 2 }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <SectionHeader
+            tag="FUNCIONALIDADES"
+            title={<>Tudo que você precisa.<br /><span style={{ color: "rgba(255,255,255,0.25)" }}>Nada que você não usa.</span></>}
+            sub="Desenvolvido a partir dos problemas reais de quem opera um pequeno negócio todos os dias."
           />
-        </svg>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, marginTop: 64, border: "1px solid rgba(255,255,255,0.05)" }}>
+            {FEATURES.map((feat, i) => (
+              <FeatureCard key={i} feat={feat} index={i} />
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* TRUST BAR */}
-      <Reveal>
-        <div className={s.trustBar}>
-          <div className={s.trustInner}>
+      {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
+      <section style={{ padding: "100px 48px", position: "relative", zIndex: 2, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <SectionHeader
+            tag="COMO FUNCIONA"
+            title={<>De zero ao controle<br /><span style={{ color: "rgba(255,255,255,0.25)" }}>em minutos.</span></>}
+          />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0, marginTop: 80, position: "relative" }}>
+            {/* Linha de conexão */}
+            <div style={{ position: "absolute", top: 28, left: "12%", right: "12%", height: 1, background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.3), rgba(16,185,129,0.3), transparent)", zIndex: 0 }} />
             {[
-              { val: "2.400+", label: "Lojas ativas" },
-              { val: "R$ 18M+", label: "Em vendas gerenciadas" },
-              { val: "99,9%", label: "Uptime garantido" },
-              { val: "4,9/5", label: "Avaliação dos clientes" },
-            ].map((t) => (
-              <div key={t.label} className={s.trustItem}>
-                <span className={s.trustVal}>{t.val}</span>
-                <span className={s.trustLabel}>{t.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Reveal>
-
-      {/* FEATURES */}
-      <section className={s.featuresSection} id="features">
-        <div className={s.sectionInner}>
-          <Reveal>
-            <div className={s.sectionHead}>
-              <span className={s.sectionEyebrow}>Funcionalidades</span>
-              <h2 className={s.sectionTitle}>Tudo para sua loja crescer</h2>
-              <p className={s.sectionSub}>
-                Cada recurso foi criado pensando no dia a dia de quem trabalha
-                com varejo.
-              </p>
-            </div>
-          </Reveal>
-          <div className={s.featureGrid}>
-            {features.map((f, i) => (
-              <Reveal key={f.title} delay={i * 80}>
-                <div className={s.featureCard}>
-                  <div
-                    className={s.featureIconWrap}
-                    style={{ background: f.bg, color: f.color }}
-                  >
-                    {f.icon}
+              { n: "01", title: "Crie sua conta", desc: "Email e senha ou login com Google. Confirmação imediata." },
+              { n: "02", title: "Cadastre sua empresa", desc: "Nome fantasia, CNPJ. Pronto para operar." },
+              { n: "03", title: "Abra o caixa", desc: "Informe o saldo inicial e comece a registrar." },
+              { n: "04", title: "Venda e analise", desc: "Cada venda gera dados. Relatórios em tempo real." },
+            ].map((step, i) => {
+              const { ref, visible } = useVisible();
+              return (
+                <div ref={ref} key={i} style={{
+                  padding: "0 24px",
+                  opacity: visible ? 1 : 0,
+                  transform: visible ? "translateY(0)" : "translateY(32px)",
+                  transition: `all 0.7s cubic-bezier(0.16,1,0.3,1) ${i * 150}ms`,
+                  position: "relative",
+                  zIndex: 1,
+                }}>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", border: "1px solid rgba(16,185,129,0.4)", background: "rgba(5,5,7,1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24, fontSize: 13, fontWeight: 700, color: "#10b981", fontFamily: "'DM Mono', monospace" }}>
+                    {step.n}
                   </div>
-                  <h3 className={s.featureTitle}>{f.title}</h3>
-                  <p className={s.featureDesc}>{f.desc}</p>
+                  <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700, color: "#f8fafc", marginBottom: 10, letterSpacing: "-0.02em" }}>{step.title}</h3>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.7 }}>{step.desc}</p>
                 </div>
-              </Reveal>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* IMPACT */}
-      <section className={s.impactSection} id="impact">
-        <div className={s.sectionInner}>
-          <Reveal>
-            <div className={s.sectionHead}>
-              <span className={s.sectionEyebrow}>Diferenciais</span>
-              <h2 className={s.sectionTitle}>
-                Por que lojistas escolhem o GestPro?
-              </h2>
-              <p className={s.sectionSub}>
-                Resultados reais de quem já usa o sistema no dia a dia.
-              </p>
-            </div>
-          </Reveal>
-          <div className={s.impactGrid}>
-            {impactItems.map((item, i) => (
-              <Reveal key={item.title} delay={i * 100}>
-                <div className={s.impactCard}>
-                  <div className={s.impactIcon}>{item.icon}</div>
-                  <h3 className={s.impactTitle}>{item.title}</h3>
-                  <p className={s.impactDesc}>{item.desc}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PRICING */}
-      <section className={s.pricingSection} id="pricing">
-        <div className={s.sectionInner}>
-          <Reveal>
-            <div className={s.sectionHead}>
-              <span className={s.sectionEyebrow}>Preços</span>
-              <h2 className={s.sectionTitle}>
-                Escolha o plano ideal para sua loja
-              </h2>
-              <p className={s.sectionSub}>
-                Comece com <strong>7 dias grátis</strong>. Sem cartão. Cancele
-                quando quiser.
-              </p>
-            </div>
-          </Reveal>
-          <div className={s.pricingGrid}>
-            {pricingPlans.map((plan, i) => (
-              <Reveal key={plan.name} delay={i * 110}>
-                <div
-                  className={`${s.pricingCard} ${plan.popular ? s.pricingCardPopular : ""}`}
-                >
-                  {plan.popular && (
-                    <div className={s.popularBadge}>Mais Popular</div>
+      {/* ── PLANOS ───────────────────────────────────────────────────────── */}
+      <section id="planos" style={{ padding: "100px 48px", position: "relative", zIndex: 2, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <SectionHeader
+            tag="PLANOS"
+            title={<>Comece grátis.<br /><span style={{ color: "rgba(255,255,255,0.25)" }}>Cresça conforme precisar.</span></>}
+            sub="Sem cartão de crédito para começar. Upgrade a qualquer momento."
+          />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginTop: 64 }}>
+            {PLANS.map((plan, i) => {
+              const { ref, visible } = useVisible();
+              return (
+                <div ref={ref} key={i} className={`plan-card${plan.highlight ? " highlight" : ""}`}
+                  style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(32px)", transition: `all 0.7s cubic-bezier(0.16,1,0.3,1) ${i * 80}ms`, position: "relative" }}>
+                  {plan.highlight && (
+                    <div style={{ position: "absolute", top: -1, left: 24, right: 24, height: 2, background: "linear-gradient(90deg, transparent, #10b981, transparent)" }} />
                   )}
-                  <p className={s.pricingName}>{plan.name}</p>
-                  <div className={s.pricingPriceRow}>
-                    <span className={s.pricingCurrency}>R$</span>
-                    <span className={s.pricingAmount}>{plan.price}</span>
-                    <span className={s.pricingPeriod}>/{plan.period}</span>
+                  {plan.highlight && (
+                    <div style={{ marginBottom: 16, fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", color: "#10b981", fontFamily: "'DM Mono', monospace" }}>MAIS POPULAR</div>
+                  )}
+                  <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: "#f8fafc", marginBottom: 8 }}>{plan.name}</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 2, marginBottom: 24 }}>
+                    <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, color: plan.highlight ? "#10b981" : "#f8fafc" }}>{plan.price}</span>
+                    {plan.period && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.3)" }}>{plan.period}</span>}
                   </div>
-                  {plan.save ? (
-                    <span className={s.pricingSave}>{plan.save}</span>
-                  ) : (
-                    <div className={s.pricingNosave} />
-                  )}
-                  <hr className={s.pricingDivider} />
-                  <ul className={s.pricingFeaturesList}>
-                    {plan.features.map((f) => (
-                      <li
-                        key={f.text}
-                        className={`${s.pricingFeatureItem} ${!f.ok ? s.pricingFeatureDisabled : ""}`}
-                      >
-                        <span className={s.pricingFeatureIcon}>
-                          {f.ok ? (
-                            <Check size={11} strokeWidth={3} />
-                          ) : (
-                            <X size={11} strokeWidth={3} />
-                          )}
-                        </span>
-                        {f.text}
-                      </li>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+                    {[plan.days, plan.empresas, plan.caixas].map((feat, j) => (
+                      <div key={j} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "rgba(255,255,255,0.55)" }}>
+                        <span style={{ color: "#10b981", fontSize: 10 }}>✓</span>
+                        {feat}
+                      </div>
                     ))}
-                  </ul>
-                  <button
-                    className={
-                      plan.popular ? s.pricingBtnPrimary : s.pricingBtn
-                    }
-                    onClick={() => open("register")}
-                  >
-                    {plan.btnLabel} <ArrowRight size={14} />
+                  </div>
+                  <button className={plan.highlight ? "btn-primary" : "btn-ghost"}
+                    onClick={() => router.push("/auth/cadastro")}
+                    style={{ width: "100%", padding: "12px 0" }}>
+                    {plan.name === "Experimental" ? "Começar grátis" : "Escolher plano"}
                   </button>
-                  <p className={s.pricingNote}>
-                    Sem cartão · Cancele quando quiser
-                  </p>
                 </div>
-              </Reveal>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className={s.ctaSection} id="cta">
-        <Reveal>
-          <div className={s.ctaContent}>
-            <span className={s.ctaEyebrow}>Pronto para crescer?</span>
-            <h2 className={s.ctaTitle}>
-              Pare de perder vendas por falta de controle.
+      {/* ── SOBRE ────────────────────────────────────────────────────────── */}
+      <section id="sobre" style={{ padding: "100px 48px", position: "relative", zIndex: 2, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(16,185,129,0.6)", marginBottom: 20, fontFamily: "'DM Mono', monospace" }}>SOBRE O PROJETO</div>
+            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(32px, 4vw, 48px)", fontWeight: 800, letterSpacing: "-0.04em", color: "#f8fafc", lineHeight: 1.1, marginBottom: 24 }}>
+              Construído por quem<br />entende o problema.
             </h2>
-            <p className={s.ctaSub}>
-              Cada dia sem um sistema de gestão é dinheiro deixado na mesa.
-              Comece agora em menos de 2 minutos.
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", lineHeight: 1.9, marginBottom: 16 }}>
+              O GestPro nasceu da observação de uma lacuna real: pequenos comerciantes usam planilhas frágeis ou sistemas complexos demais para a sua realidade.
             </p>
-            <button
-              className={s.ctaBtnPrimary}
-              onClick={() => open("register")}
-            >
-              Começar grátis agora <ArrowRight size={16} />
-            </button>
-            <div
-              className={s.heroGuarantees}
-              style={{ justifyContent: "center", marginTop: 4 }}
-            >
-              {["7 dias grátis", "Sem cartão", "Suporte 24/7"].map((t) => (
-                <span key={t} className={s.guaranteeItemDark}>
-                  <Check size={12} strokeWidth={3} /> {t}
-                </span>
-              ))}
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", lineHeight: 1.9, marginBottom: 32 }}>
+              Desenvolvido por <span style={{ color: "#10b981" }}>Matheus Martins</span>, com Java/Spring Boot no backend e Next.js no frontend — arquitetura sólida, interface que qualquer pessoa consegue operar.
+            </p>
+            <div style={{ display: "flex", gap: 16 }}>
+              <a href="https://www.linkedin.com/in/matheusmartnsdev/" target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ padding: "10px 20px", fontSize: 12, textDecoration: "none", display: "inline-block" }}>
+                LinkedIn
+              </a>
+              <a href="https://www.instagram.com/gestpro.app/" target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ padding: "10px 20px", fontSize: 12, textDecoration: "none", display: "inline-block" }}>
+                Instagram
+              </a>
             </div>
           </div>
-        </Reveal>
+
+          {/* Tech stack visual */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {[
+              { name: "Spring Boot 3", desc: "Backend + Segurança", color: "#6DB33F" },
+              { name: "Next.js 14", desc: "Frontend + App Router", color: "#f8fafc" },
+              { name: "MySQL 8", desc: "Banco Relacional", color: "#4479A1" },
+              { name: "JWT + OAuth2", desc: "Autenticação", color: "#10b981" },
+              { name: "Spring Security", desc: "Autorização", color: "#6DB33F" },
+              { name: "TypeScript", desc: "Tipagem Estática", color: "#3178C6" },
+            ].map((tech, i) => {
+              const { ref, visible } = useVisible();
+              return (
+                <div ref={ref} key={i} style={{
+                  padding: "20px", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 2,
+                  opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(16px)",
+                  transition: `all 0.5s cubic-bezier(0.16,1,0.3,1) ${i * 60}ms`,
+                }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: tech.color, marginBottom: 10 }} />
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#f8fafc", fontFamily: "'Syne', sans-serif", marginBottom: 4 }}>{tech.name}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em" }}>{tech.desc}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className={s.footer}>
-        <div className={s.footerInner}>
-          <div className={s.footerLogo}>
-            <span className={s.logoDark}>Gest</span>
-            <span className={s.logoGreen}>Pro</span>
-          </div>
-          <nav className={s.footerLinks}>
-            {[
-              { label: "Funcionalidades", target: "features" },
-              { label: "Preços", target: "pricing" },
-              { label: "Contato", target: "cta" },
-            ].map((l) => (
-              <button
-                key={l.label}
-                className={s.footerLink}
-                onClick={() => scrollTo(l.target)}
-              >
-                {l.label}
-              </button>
-            ))}
-            <a href="#" className={s.footerLink}>
-              Política de Privacidade
-            </a>
-            <a href="#" className={s.footerLink}>
-              Termos de Uso
-            </a>
-          </nav>
-          <p className={s.footerCopy}>
-            © {new Date().getFullYear()} GestPro. Todos os direitos reservados.
+      {/* ── CTA FINAL ────────────────────────────────────────────────────── */}
+      <section style={{ padding: "120px 48px", position: "relative", zIndex: 2, borderTop: "1px solid rgba(255,255,255,0.04)", textAlign: "center", overflow: "hidden" }}>
+        {/* Glow central */}
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 800, height: 400, background: "radial-gradient(ellipse, rgba(16,185,129,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+        <div style={{ position: "relative", maxWidth: 700, margin: "0 auto" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(16,185,129,0.6)", marginBottom: 24, fontFamily: "'DM Mono', monospace" }}>COMECE AGORA</div>
+          <h2 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(40px, 6vw, 72px)", letterSpacing: "-0.04em", lineHeight: 1.0, color: "#f8fafc", marginBottom: 24 }}>
+            Sem planilha.<br />
+            <span style={{ color: "#10b981" }}>Sem desculpa.</span>
+          </h2>
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", marginBottom: 48, lineHeight: 1.7 }}>
+            7 dias grátis, sem cartão de crédito. Seu negócio com controle real em menos de 5 minutos.
           </p>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+            <button className="btn-primary" onClick={() => router.push("/auth/cadastro")} style={{ padding: "18px 48px", fontSize: 14 }}>
+              → Criar conta grátis
+            </button>
+            <button className="btn-ghost" onClick={() => router.push("/auth/login")} style={{ padding: "18px 48px", fontSize: 14 }}>
+              Fazer login
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
+      <footer style={{ padding: "40px 48px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", zIndex: 2, flexWrap: "wrap", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 20, height: 20, position: "relative" }}>
+            <div style={{ position: "absolute", inset: 0, border: "1.5px solid rgba(16,185,129,0.6)", borderRadius: 4, transform: "rotate(45deg)" }} />
+            <div style={{ position: "absolute", inset: 5, background: "rgba(16,185,129,0.6)", borderRadius: 2, transform: "rotate(45deg)" }} />
+          </div>
+          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, color: "rgba(255,255,255,0.5)" }}>GestPro</span>
+          <span style={{ color: "rgba(255,255,255,0.15)", fontSize: 12 }}>© 2025 Matheus Martins</span>
+        </div>
+        <div style={{ display: "flex", gap: 32 }}>
+          {["LinkedIn", "Instagram", "GitHub"].map(link => (
+            <a key={link} className="nav-link" href="#" style={{ fontSize: 11 }}>{link}</a>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", fontFamily: "'DM Mono', monospace" }}>
+          Em desenvolvimento ativo
         </div>
       </footer>
+    </div>
+  );
+}
 
-      {modal && (
-        <Modal
-          type={modal}
-          onClose={() => setModal(null)}
-          onSwitch={(t) => setModal(t)}
-        />
-      )}
+/* ─── Componente auxiliar: SectionHeader ─────────────────────────────────── */
+function SectionHeader({ tag, title, sub }: { tag: string; title: React.ReactNode; sub?: string }) {
+  const { ref, visible } = useVisible();
+  return (
+    <div ref={ref} style={{ maxWidth: 600, opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(24px)", transition: "all 0.8s cubic-bezier(0.16,1,0.3,1)" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(16,185,129,0.6)", marginBottom: 20, fontFamily: "'DM Mono', monospace" }}>{tag}</div>
+      <h2 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(32px, 4vw, 52px)", letterSpacing: "-0.04em", lineHeight: 1.05, color: "#f8fafc", marginBottom: sub ? 16 : 0 }}>
+        {title}
+      </h2>
+      {sub && <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", lineHeight: 1.8, marginTop: 16 }}>{sub}</p>}
     </div>
   );
 }

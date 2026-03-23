@@ -1,6 +1,7 @@
 package br.com.gestpro.auth.service;
 
 import br.com.gestpro.auth.model.Usuario;
+import br.com.gestpro.infra.exception.ApiException;
 import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.auth.repository.UsuarioRepository;
@@ -24,7 +25,7 @@ public class LoginGoogleOperation {
         this.verificarPlano = verificarPlano;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {ApiException.class})
     public Usuario execute(String email, String nome, String foto, HttpServletResponse response) throws IOException {
 
         return usuarioRepository.findByEmail(email)
@@ -48,7 +49,7 @@ public class LoginGoogleOperation {
                     // Usamos try-catch aqui para que a ApiException não impeça o login.
                     // O objetivo é atualizar o status para INATIVO no banco, mas deixar o usuário entrar no Dashboard.
                     try {
-                        verificarPlano.validarAcessoTemporario(u);
+                        verificarPlano.validarAcesso(u);
                     } catch (Exception e) {
                         // Se cair aqui, o status já foi atualizado para INATIVO dentro do validarAcessoTemporario
                         // Deixamos passar para o usuário conseguir logar e ver a página de planos.
