@@ -46,11 +46,16 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         // Cria cookie seguro com token
         Cookie jwtCookie = new Cookie("jwt_token", token);
-        jwtCookie.setHttpOnly(true);      // não acessível via JS
-        jwtCookie.setSecure(true);        // colocar true em produção com HTTPS
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setSecure(true);
+        jwtCookie.setPath("/");
+        jwtCookie.setMaxAge(7 * 24 * 60 * 60);
+
+        // --- AJUSTE PARA PRODUÇÃO NO RAILWAY ---
+        // Isso permite que o frontend (gestpro-frontend-...) acesse o cookie do backend (gestpro-backend-...)
+        jwtCookie.setDomain("up.railway.app");
         jwtCookie.setAttribute("SameSite", "None");
-        jwtCookie.setPath("/");            // disponível para todo domínio
-        jwtCookie.setMaxAge(7 * 24 * 60 * 60); // expira em 7 dias
+        // ---------------------------------------
 
         response.addCookie(jwtCookie);
 
