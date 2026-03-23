@@ -45,16 +45,16 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         // Gera JWT
         String token = googleAuthService.gerarToken(usuario);
 
-//        // Cria cookie seguro com token
-//        Cookie jwtCookie = new Cookie("jwt_token", token);
-//        jwtCookie.setHttpOnly(true);
-//        jwtCookie.setSecure(true);
-//        jwtCookie.setPath("/");
-//        jwtCookie.setMaxAge(7 * 24 * 60 * 60);
-//        jwtCookie.setAttribute("SameSite", "None");
-//        // ---------------------------------------
-//
-//        response.addCookie(jwtCookie);
+        // Cria cookie seguro com token
+        Cookie jwtCookie = new Cookie("jwt_token", token);
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setSecure(true);
+        jwtCookie.setPath("/");
+        jwtCookie.setMaxAge(7 * 24 * 60 * 60);
+        jwtCookie.setAttribute("SameSite", "None");
+        // ---------------------------------------
+
+        response.addCookie(jwtCookie);
 
         String redirectUrl = usuario.getStatusAcesso() == StatusAcesso.ATIVO
                 ? URL_FRONTEND + "/dashboard?token=" + token
