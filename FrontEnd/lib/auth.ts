@@ -1,4 +1,6 @@
-// lib/auth.ts
+// lib/auth.tss
+"use client";
+
 import {
   getUsuario,
   salvarTokenCookie,
