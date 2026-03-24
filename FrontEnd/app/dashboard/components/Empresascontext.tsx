@@ -43,43 +43,53 @@ const EmpresaContext = createContext<EmpresaContextType>({
 });
 
 const STORAGE_KEY = "gestpro_empresa_ativa_id";
+const API_BASE    = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+// ─── fetchAuth com Authorization header ──────────────────────────────────────
 async function fetchAuth<T>(path: string): Promise<T> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { credentials: "include", headers: { "Content-Type": "application/json" } }
-  );
+  const token =
+    (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
   if (!res.ok) throw new Error(`Erro ${res.status}`);
   return res.json();
 }
 
+// ─── Provider ─────────────────────────────────────────────────────────────────
 export function EmpresaProvider({ children }: { children: ReactNode }) {
   const [empresaAtiva, setEmpresaAtivaState] = useState<Empresa | null>(null);
   const [caixaAtivo,   setCaixaAtivo]        = useState<CaixaInfo | null>(null);
   const [empresas,     setEmpresas]          = useState<Empresa[]>([]);
-  // flag para não sobrescrever no reload
   const inicializado = useRef(false);
 
+  // ── Carrega caixa aberto da empresa ────────────────────────────────────────
   const carregarCaixa = async (empresa: Empresa) => {
     setCaixaAtivo(null);
     try {
-      const caixa = await fetchAuth<CaixaInfo>(`/api/v1/caixas/aberto?empresaId=${empresa.id}`);
-      caixa.empresaNome = empresa.nomeFantasia;
-      setCaixaAtivo(caixa);
+      const caixa = await fetchAuth<CaixaInfo>(
+        `/api/v1/caixas/aberto?empresaId=${empresa.id}`
+      );
+      setCaixaAtivo({ ...caixa, empresaNome: empresa.nomeFantasia });
     } catch {
-      // sem caixa aberto — ok
+      // sem caixa aberto — normal
     }
   };
 
-  // Troca manual de empresa (usuário clicou)
+  // ── Troca manual de empresa (usuário clicou) ────────────────────────────────
   const setEmpresaAtiva = (empresa: Empresa) => {
     setEmpresaAtivaState(empresa);
-    // Persiste no localStorage para sobreviver ao reload
     try { localStorage.setItem(STORAGE_KEY, String(empresa.id)); } catch {}
     carregarCaixa(empresa);
   };
 
-  // Carrega lista de empresas — só define empresa ativa na primeira vez (mount)
+  // ── Carrega lista de empresas ───────────────────────────────────────────────
   const recarregarEmpresas = async () => {
     try {
       const data = await fetchAuth<Empresa[]>("/api/v1/empresas");
@@ -87,9 +97,10 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
 
       if (data.length === 0) return;
 
-      // Na primeira carga, tenta restaurar do localStorage
+      // Só define empresa ativa na primeira carga
       if (!inicializado.current) {
         inicializado.current = true;
+
         let empParaAtivar: Empresa | undefined;
 
         try {
@@ -99,22 +110,28 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
           }
         } catch {}
 
-        // Se não encontrou a salva, usa a primeira
         if (!empParaAtivar) empParaAtivar = data[0];
 
         setEmpresaAtivaState(empParaAtivar);
         await carregarCaixa(empParaAtivar);
       }
-      // Se já inicializado (recarregarEmpresas chamado manualmente), NÃO muda a empresa ativa
-    } catch {}
+    } catch (err) {
+      console.error("Erro ao carregar empresas:", err);
+    }
   };
 
-  useEffect(() => { recarregarEmpresas(); }, []);
+  useEffect(() => {
+    recarregarEmpresas();
+  }, []);
 
   return (
     <EmpresaContext.Provider value={{
-      empresaAtiva, caixaAtivo, empresas,
-      setEmpresaAtiva, setCaixaAtivo, recarregarEmpresas,
+      empresaAtiva,
+      caixaAtivo,
+      empresas,
+      setEmpresaAtiva,
+      setCaixaAtivo,
+      recarregarEmpresas,
     }}>
       {children}
     </EmpresaContext.Provider>
