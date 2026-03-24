@@ -45,8 +45,8 @@ Ele resolve um problema concreto: **a maioria dos pequenos comerciantes não tem
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="Img/Gestpro-Landing-Inicio.jpeg" alt="Landing Page" />
-      <br/><sub><b>Landing Page & Login</b></sub>
+      <img src="Img/lading-gp-dark.png" alt="Landing Page" />
+      <br/><sub><b>Landing Page, Login & Cadastro</b></sub>
     </td>
     <td align="center" width="50%">
       <img src="Img/dashboard-gp-dark.png" alt="Dashboard" />
@@ -60,7 +60,7 @@ Ele resolve um problema concreto: **a maioria dos pequenos comerciantes não tem
     </td>
     <td align="center" width="50%">
       <img src="Img/relatorios-gp-dark.png" alt="Relatórios" />
-      <br/><sub><b>Relatorio</b></sub>
+      <br/><sub><b>Relatório</b></sub>
     </td>
   </tr>
 </table>
