@@ -36,49 +36,54 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String token = extrairTokenDoCookie(request);
+        // 1. Tenta extrair do Header Authorization (Prioridade para LocalStorage/Mobile)
+        String token = null;
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+        }
+
+        // 2. Se não achou no Header, tenta no Cookie (Backup)
+        if (token == null) {
+            token = extrairTokenDoCookie(request);
+        }
 
         try {
             if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-
                 String email = jwtService.getEmailFromToken(token);
 
                 if (email != null) {
                     var usuarioOpt = usuarioRepository.findByEmail(email);
 
                     if (usuarioOpt.isPresent()) {
-
                         var usuario = usuarioOpt.get();
-                        var userDetails = new UsuarioPrincipal(usuario);
 
-                        if (jwtService.validarToken(token, userDetails)) {
+                        // Validação do Token
+                        if (jwtService.validarToken(token, new UsuarioPrincipal(usuario))) {
 
-                            UsernamePasswordAuthenticationToken authToken =
-                                    new UsernamePasswordAuthenticationToken(
-                                            userDetails,
-                                            null,
-                                            userDetails.getAuthorities()
-                                    );
-
-                            authToken.setDetails(
-                                    new WebAuthenticationDetailsSource().buildDetails(request)
-                            );
-
-                            SecurityContextHolder.getContext().setAuthentication(authToken);
-
-                            // Regra de plano
+                            // Verificação de Status de Acesso (Plano)
                             if (usuario.getStatusAcesso() != StatusAcesso.ATIVO) {
                                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                                response.getWriter().write("{\"erro\": \"Plano inativo\"}");
-                                return;
+                                response.getWriter().write("{\"erro\": \"PLANO_INATIVO\"}");
+                                return; // Interrompe aqui se o plano estiver inativo
                             }
+
+                            // Se o plano está ATIVO, autentica o usuário
+                            var userDetails = new UsuarioPrincipal(usuario);
+                            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities()
+                            );
+                            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(authToken);
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            System.out.println("Erro ao validar token JWT: " + e.getMessage());
+            // Use logs em vez de System.out para melhor debug no Railway
+            logger.error("Erro ao validar token JWT: " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);
