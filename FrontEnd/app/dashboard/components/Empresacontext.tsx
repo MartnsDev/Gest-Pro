@@ -1,7 +1,15 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
-import { fetchAuth } from "@/lib/api-v2";
+import { fetchAuth, lerTokenCookie } from "@/lib/api-v2";
+
+// Verifica se há um token disponível
+function hasToken(): boolean {
+  if (typeof window === "undefined") return false;
+  const localStorageToken = localStorage.getItem("jwt_token");
+  const cookieToken = lerTokenCookie();
+  return !!(localStorageToken || cookieToken);
+}
 
 export interface Empresa {
   id: number;
@@ -56,25 +64,41 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
 
   // ── Carrega caixa aberto da empresa ────────────────────────────────────────
   const carregarCaixa = async (empresa: Empresa) => {
+    console.log("[v0] carregarCaixa - Iniciando para empresa:", empresa.id, empresa.nomeFantasia);
+    
+    // Verifica se há token antes de fazer a chamada
+    if (!hasToken()) {
+      console.log("[v0] carregarCaixa - Sem token, pulando...");
+      return;
+    }
+    
     setCaixaAtivo(null);
     try {
       // Usa a função fetchAuth do api-v2.ts que já gerencia token corretamente
       const response = await fetchAuth(`/api/v1/caixas/aberto?empresaId=${empresa.id}`);
       
+      console.log("[v0] carregarCaixa - Response status:", response.status);
+      
       if (!response.ok) {
         // 404 significa que não há caixa aberto - é normal
         if (response.status === 404) {
-          console.log(`Nenhum caixa aberto para empresa ${empresa.id}`);
+          console.log(`[v0] Nenhum caixa aberto para empresa ${empresa.id}`);
+          return;
+        }
+        // 401 significa que o token não está sendo enviado corretamente
+        if (response.status === 401) {
+          console.error("[v0] Token inválido ou não enviado para caixa aberto");
           return;
         }
         throw new Error(`Erro ${response.status}`);
       }
       
       const caixa: CaixaInfo = await response.json();
+      console.log("[v0] carregarCaixa - Caixa encontrado:", caixa);
       setCaixaAtivo({ ...caixa, empresaNome: empresa.nomeFantasia });
     } catch (err) {
       // sem caixa aberto — normal
-      console.log("Sem caixa aberto ou erro ao carregar:", err);
+      console.error("[v0] Erro ao carregar caixa:", err);
     }
   };
 
@@ -94,6 +118,14 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
 
   // ── Carrega lista de empresas ───────────────────────────────────────────────
   const recarregarEmpresas = async () => {
+    console.log("[v0] recarregarEmpresas - Iniciando...");
+    
+    // Verifica se há token antes de fazer a chamada
+    if (!hasToken()) {
+      console.log("[v0] recarregarEmpresas - Sem token, pulando...");
+      return;
+    }
+    
     try {
       // Usa a função fetchAuth do api-v2.ts
       const response = await fetchAuth("/api/v1/empresas");
@@ -131,7 +163,28 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    recarregarEmpresas();
+    // Pequeno delay para garantir que o token já esteja disponível após login/redirect
+    const tentarCarregar = async () => {
+      // Primeira tentativa imediata
+      if (hasToken()) {
+        console.log("[v0] useEffect - Token encontrado, carregando empresas...");
+        await recarregarEmpresas();
+        return;
+      }
+      
+      // Se não há token, espera um pouco e tenta novamente (caso seja redirect do OAuth)
+      console.log("[v0] useEffect - Sem token, aguardando 500ms...");
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (hasToken()) {
+        console.log("[v0] useEffect - Token encontrado após delay, carregando empresas...");
+        await recarregarEmpresas();
+      } else {
+        console.log("[v0] useEffect - Ainda sem token após delay");
+      }
+    };
+    
+    tentarCarregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
