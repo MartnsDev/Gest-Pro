@@ -40,9 +40,14 @@ const fmt = (v?: number | null) =>
 const fmtN = (v: number) => new Intl.NumberFormat("pt-BR").format(v);
 const CORES = ["#10b981", "#3b82f6", "#a78bfa", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#84cc16"];
 
-async function fetchAuth<T>(path: string): Promise<T> {
+async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
+  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { credentials: "include", headers: { "Content-Type": "application/json" } });
+    {
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...opts,
+    });
   if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.mensagem ?? `Erro ${res.status}`); }
   return res.json();
 }

@@ -20,15 +20,26 @@ interface Perfil {
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
+  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts });
+    {
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...opts,
+    });
   if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.mensagem ?? `Erro ${res.status}`); }
   return res.json();
 }
 
 async function fetchFormData<T>(path: string, body: FormData): Promise<T> {
+  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { method: "POST", credentials: "include", body });
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body,
+    });
   if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.mensagem ?? `Erro ${res.status}`); }
   return res.json();
 }

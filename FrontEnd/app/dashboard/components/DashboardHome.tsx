@@ -39,8 +39,13 @@ const fmt = (v?: number | null) =>
   new Intl.NumberFormat("pt-BR",{ style:"currency", currency:"BRL" }).format(v ?? 0);
 
 async function fetchQ<T>(path: string, opts?: RequestInit): Promise<T> {
+  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { credentials:"include", headers:{"Content-Type":"application/json"}, ...opts });
+    {
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...opts,
+    });
   if (!res.ok){ const e = await res.json().catch(()=>null); throw new Error(e?.mensagem ?? `Erro ${res.status}`); }
   return res.json();
 }
@@ -598,27 +603,19 @@ export default function DashboardHome({ usuario, onNavegar }: {
 
   const fetchDados = async (id: number) => {
   setLoading(true);
-  
-  // 1. Tenta buscar o token (ajuste a chave 'token' para a que você usa no login)
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-  const base = `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}`;
-  
-  const opts = { 
-    credentials: "include" as const, 
+  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+  const opts = {
+    credentials: "include" as const,
     headers: {
       "Content-Type": "application/json",
-      // 2. Adiciona o Header de Autorização
-      ...(token ? { "Authorization": `Bearer ${token}` } : {})
-    } 
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   };
 
   try {
     const [v, metodo, produto, diarias] = await Promise.allSettled([
-      fetch(`${base}/api/v1/dashboard/visao-geral?empresaId=${id}`, opts).then(r => {
-        if (r.status === 401) throw new Error("Não autorizado");
-        return r.json();
-      }),
+      fetch(`${base}/api/v1/dashboard/visao-geral?empresaId=${id}`, opts).then(r => r.json()),
       fetch(`${base}/api/v1/dashboard/vendas/metodo-pagamento?empresaId=${id}`, opts).then(r => r.json()),
       fetch(`${base}/api/v1/dashboard/vendas/produto?empresaId=${id}`, opts).then(r => r.json()),
       fetch(`${base}/api/v1/dashboard/vendas/diarias?empresaId=${id}`, opts).then(r => r.json()),
@@ -629,8 +626,7 @@ export default function DashboardHome({ usuario, onNavegar }: {
     if (produto.status === "fulfilled") setVendasProduto(produto.value ?? []);
     if (diarias.status === "fulfilled") setVendasDiarias(diarias.value ?? []);
   } catch (err) {
-    console.error("Erro na autenticação:", err);
-    // Opcional: Redirecionar para login se for 401
+    console.error("Erro ao buscar dados do dashboard:", err);
   } finally {
     setLoading(false);
   }
