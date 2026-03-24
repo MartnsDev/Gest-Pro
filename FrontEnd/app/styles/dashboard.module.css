@@ -1,8 +1,11 @@
 /* ============================================
-   DASHBOARD - Cores alinhadas com globals.css
+   DASHBOARD — Mobile-first, responsivo
    ============================================ */
 
-/* Layout Principal */
+/* ── Reset base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ── Container principal ── */
 .dashboardContainer {
   min-height: 100vh;
   background: var(--background);
@@ -17,56 +20,77 @@
   height: 100vh;
   background: var(--background);
   color: var(--foreground);
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
-/* Header */
+/* ══════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════ */
 .dashboardHeader {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
+  right: 0;
   height: 56px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 0 1.5rem;
+  padding: 0 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   z-index: 1000;
+  gap: 8px;
 }
 
 .headerBrand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .headerLogo {
-  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.headerLogo img {
+  width: 28px;
+  height: 28px;
 }
 
 .headerTitle {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--foreground);
+  /* oculta em telas muito pequenas */
+  display: none;
+}
+
+/* separador brand/título de seção — oculto no mobile */
+.headerBrand > div:last-child {
+  display: none;
 }
 
 .headerUser {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .headerUserName {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   color: var(--foreground-muted);
+  /* oculta em telas muito pequenas */
+  display: none;
 }
 
 .headerUserAvatar,
 .headerUserInitials {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--primary);
@@ -74,7 +98,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.75rem;
   color: white;
   flex-shrink: 0;
 }
@@ -83,166 +107,197 @@
   background: var(--primary);
 }
 
-/* Layout com Sidebar */
+/* ══════════════════════════════════════════
+   LAYOUT GERAL
+══════════════════════════════════════════ */
 .dashboardLayout {
   display: flex;
-  margin-top: 56px;
+  flex-direction: column;
+  /* espaço header (56px) + nav inferior mobile (64px) */
+  padding-top: 56px;
+  padding-bottom: 64px;
+  min-height: 100vh;
 }
 
-/* Sidebar */
+/* ══════════════════════════════════════════
+   SIDEBAR — MOBILE: barra inferior fixa
+══════════════════════════════════════════ */
 .sidebar {
   position: fixed;
-  top: 56px;
+  bottom: 0;
   left: 0;
-  width: 15rem;
-  height: calc(100vh - 56px);
+  right: 0;
+  height: 64px;
   background: var(--surface);
-  border-right: 1px solid var(--border);
-  padding: 1rem 0.75rem;
-  display: flex;
-  flex-direction: column;
+  border-top: 1px solid var(--border);
   z-index: 900;
-  overflow-y: auto;
+  padding: 0 4px;
+  display: flex;
+  align-items: stretch;
 }
 
 .sidebarNav {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  gap: 0;
 }
 
 .sidebarNavItem {
-  width: 100%;
+  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.875rem;
-  border-radius: var(--radius-md);
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border-radius: 10px;
   color: var(--foreground-muted);
-  transition: background-color 0.15s, color 0.15s;
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 0.9rem;
-  text-align: left;
+  font-size: 0.6rem;
+  font-weight: 500;
+  text-align: center;
+  transition: color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebarNavItem svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.sidebarNavItem span {
+  display: block;
+  line-height: 1;
+  letter-spacing: 0.01em;
 }
 
 .sidebarNavItem:hover {
-  background: var(--sidebar-hover-bg);
   color: var(--foreground);
+  background: var(--sidebar-hover-bg);
 }
 
 .sidebarNavItemActive {
+  color: var(--primary) !important;
   background: var(--sidebar-active-bg);
-  color: var(--sidebar-active-fg);
-  font-weight: 500;
 }
 
-/* Main Content */
+.sidebarNavItemActive svg {
+  stroke-width: 2.5;
+}
+
+/* ══════════════════════════════════════════
+   MAIN CONTENT
+══════════════════════════════════════════ */
 .mainContent {
   flex: 1;
-  margin-left: 15rem;
-  min-height: calc(100vh - 56px);
-  overflow-y: auto;
+  width: 100%;
+  min-height: calc(100vh - 56px - 64px);
   background: var(--background);
+  overflow-x: hidden;
 }
 
-/* Inner wrapper */
 .mainContentInner {
+  width: 100%;
   max-width: 90rem;
   margin: 0 auto;
 }
 
-/* Welcome Section */
-.welcomeSection {
-  margin-bottom: 2rem;
-}
+/* ══════════════════════════════════════════
+   WELCOME
+══════════════════════════════════════════ */
+.welcomeSection { margin-bottom: 1.25rem; }
 
 .welcomeTitle {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
   color: var(--foreground);
 }
 
 .welcomeSubtitle {
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: var(--foreground-muted);
 }
 
-/* Metrics Grid */
+/* ══════════════════════════════════════════
+   MÉTRICAS
+══════════════════════════════════════════ */
 .metricsGrid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 1.25rem;
 }
 
 .metricCard {
-  border-radius: var(--radius-lg);
-  padding: 1.25rem;
+  border-radius: 12px;
+  padding: 14px;
   background: var(--surface-elevated);
   border: 1px solid var(--border);
   color: var(--foreground);
 }
 
-/* Content Grid */
+/* ══════════════════════════════════════════
+   CONTENT GRID
+══════════════════════════════════════════ */
 .contentGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5rem;
+  gap: 14px;
 }
 
-/* Chart Card */
+/* ══════════════════════════════════════════
+   CHART CARD
+══════════════════════════════════════════ */
 .chartCard {
   background: var(--surface-elevated);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  border-radius: 12px;
+  padding: 14px;
   border: 1px solid var(--border);
 }
 
 .chartTitle {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--foreground);
-  margin-bottom: 1.25rem;
+  margin-bottom: 12px;
 }
 
 .chartContainer {
   position: relative;
-  height: 16rem;
+  height: 180px;
 }
 
-/* Product Table */
+/* ══════════════════════════════════════════
+   PRODUCT TABLE
+══════════════════════════════════════════ */
 .productTable {
-  margin-top: 1.5rem;
   background: var(--surface-elevated);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  border-radius: 12px;
+  padding: 14px;
   border: 1px solid var(--border);
 }
 
-.tableContainer {
-  overflow-x: auto;
-}
+.tableContainer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
+.table { width: 100%; border-collapse: collapse; }
 
-.tableHead {
-  border-bottom: 1px solid var(--border);
-}
+.tableHead { border-bottom: 1px solid var(--border); }
 
 .tableHeadCell {
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: 8px 10px;
   color: var(--foreground-muted);
   font-weight: 500;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .tableRow {
@@ -250,101 +305,130 @@
   transition: background 0.15s;
 }
 
-.tableRow:hover {
-  background: var(--surface-overlay);
-}
+.tableRow:hover { background: var(--surface-overlay); }
 
 .tableCell {
-  padding: 0.875rem 1rem;
-  font-size: 0.9rem;
+  padding: 10px;
+  font-size: 0.82rem;
   color: var(--foreground);
 }
 
 .statusBadge {
   background: var(--success-muted);
   color: var(--success);
-  padding: 0.2rem 0.65rem;
+  padding: 2px 8px;
   border-radius: 9999px;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 500;
   display: inline-block;
+  white-space: nowrap;
 }
 
-/* RESPONSIVIDADE MOBILE */
-@media (max-width: 767px) {
-  .dashboardLayout {
-    flex-direction: column;
+/* ══════════════════════════════════════════
+   TABLET  ≥ 640px
+══════════════════════════════════════════ */
+@media (min-width: 640px) {
+  .dashboardHeader { padding: 0 20px; }
+
+  .headerTitle { display: block; }
+  .headerUserName { display: block; }
+
+  .headerUserAvatar,
+  .headerUserInitials {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
   }
 
-  .sidebar {
-    position: relative;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: auto;
-    border-right: none;
-    border-top: 1px solid var(--border);
-    padding: 0.5rem 0;
+  .metricsGrid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+  .sidebarNavItem { font-size: 0.65rem; }
+  .sidebarNavItem svg { width: 22px; height: 22px; }
+}
+
+/* ══════════════════════════════════════════
+   TABLET largo  ≥ 768px
+══════════════════════════════════════════ */
+@media (min-width: 768px) {
+  .metricsGrid { grid-template-columns: repeat(3, 1fr); }
+  .contentGrid { grid-template-columns: repeat(2, 1fr); }
+  .chartContainer { height: 200px; }
+}
+
+/* ══════════════════════════════════════════
+   DESKTOP  ≥ 1024px — sidebar lateral
+══════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  /* Header */
+  .dashboardHeader { padding: 0 24px; }
+  .headerBrand > div:last-child { display: block; }
+  .headerLogo img { width: 36px; height: 36px; }
+
+  /* Layout: sidebar lateral + main */
+  .dashboardLayout {
     flex-direction: row;
-    justify-content: space-around;
-    overflow-x: auto;
+    padding-top: 56px;
+    padding-bottom: 0;
+  }
+
+  /* Sidebar lateral fixa */
+  .sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    right: auto;
+    width: 220px;
+    height: calc(100vh - 56px);
+    border-top: none;
+    border-right: 1px solid var(--border);
+    padding: 12px 10px;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .sidebarNav {
-    flex-direction: row;
-    gap: 0;
-    justify-content: center;
-    flex-wrap: nowrap;
-    width: 100%;
+    flex-direction: column;
+    gap: 2px;
+    align-items: stretch;
   }
 
   .sidebarNavItem {
-    flex: 1;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: flex-start;
     align-items: center;
-    justify-content: center;
-    padding: 0.25rem 0;
+    gap: 10px;
+    padding: 9px 12px;
+    font-size: 0.875rem;
+    border-radius: 8px;
   }
 
-  .sidebarNavItem span {
-    display: none;
-  }
+  .sidebarNavItem svg { width: 18px; height: 18px; }
 
-  .sidebarNavItem svg {
-    width: 1.6rem;
-    height: 1.6rem;
-    margin: 0;
-  }
+  .sidebarNavItem span { display: block; }
 
+  /* Main content com margem para sidebar */
   .mainContent {
-    margin-left: 0;
-    margin-top: 56px;
-    padding: 1rem;
+    margin-left: 220px;
+    min-height: calc(100vh - 56px);
   }
+
+  /* Métricas e gráficos */
+  .metricsGrid { grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .contentGrid { grid-template-columns: repeat(3, 1fr); }
+  .chartCard { grid-column: span 2; }
+  .chartContainer { height: 220px; }
+
+  /* Elementos header full */
+  .headerUserAvatar,
+  .headerUserInitials { width: 40px; height: 40px; font-size: 1rem; }
 }
 
-/* TABLET */
-@media (min-width: 768px) {
-  .metricsGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .contentGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* DESKTOP */
-@media (min-width: 1024px) {
-  .metricsGrid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .contentGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .chartCard {
-    grid-column: span 2;
-  }
+/* ══════════════════════════════════════════
+   DESKTOP largo  ≥ 1280px
+══════════════════════════════════════════ */
+@media (min-width: 1280px) {
+  .sidebar { width: 240px; }
+  .mainContent { margin-left: 240px; }
+  .metricsGrid { gap: 16px; }
 }
