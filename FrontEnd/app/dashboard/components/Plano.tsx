@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { getUsuario } from "@/lib/api-v2";
 import {
   Building2,
@@ -31,10 +31,18 @@ interface PlanoDTO {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+// ✅ CORRIGIDO: envia o token JWT no header Authorization (necessário no Railway,
+// pois frontend e backend estão em domínios diferentes e cookies cross-domain não funcionam)
 async function fetchAuth<T>(path: string): Promise<T> {
+  const token =
+    (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
+
   const res = await fetch(`${API}${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
   if (!res.ok) throw new Error(`Erro ${res.status}`);
   return res.json();
@@ -136,9 +144,10 @@ function barColor(pct: number) {
   return "var(--destructive)";
 }
 
-// ─── Componente ───────────────────────────────────────────────────────────────
+// ─── Componente interno (usa useSearchParams — deve estar dentro do Suspense) ──
 
-export default function Planos() {
+function PlanosInner() {
+  // ✅ CORRIGIDO: useSearchParams dentro do componente filho, envolvido por Suspense no export default
   const searchParams = useSearchParams();
 
   const [plano,        setPlano]        = useState<PlanoDTO | null>(null);
@@ -152,7 +161,6 @@ export default function Planos() {
   useEffect(() => {
     if (searchParams.get("canceled") === "true") {
       setCancelado(true);
-      // Remove o ?canceled=true da URL sem recarregar a página
       window.history.replaceState({}, "", "/dashboard/planos");
     }
   }, [searchParams]);
@@ -160,15 +168,12 @@ export default function Planos() {
   // ── Busca dados em paralelo ────────────────────────────────────────────────
   useEffect(() => {
     Promise.all([
-      // 1. Dados do plano — GET /api/v1/dashboard/vendas/plano-usuario
       fetchAuth<PlanoDTO>("/api/v1/dashboard/vendas/plano-usuario"),
-
-      // 2. Email do usuário — GET /api/usuario (já usado em getUsuario() da lib/api.ts)
       getUsuario(),
     ])
       .then(([planoData, usuario]) => {
         setPlano(planoData);
-        setEmailUsuario(usuario.email); // campo email do tipo Usuario (lib/api.ts)
+        setEmailUsuario(usuario.email);
       })
       .catch(() => {
         // falha silenciosa — botões ficam inativos
@@ -192,8 +197,8 @@ export default function Planos() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          plano: planoId,              // "BASICO" | "PRO" | "PREMIUM"
-          customerEmail: emailUsuario, // email vindo de getUsuario()
+          plano: planoId,
+          customerEmail: emailUsuario,
         }),
       });
 
@@ -203,9 +208,6 @@ export default function Planos() {
       }
 
       const { url } = await res.json();
-
-      // Stripe redireciona de volta para /dashboard?success=true após pagamento
-      // O webhook /api/payments/webhook ativa o plano automaticamente
       window.location.href = url;
 
     } catch (e: unknown) {
@@ -250,7 +252,7 @@ export default function Planos() {
         </div>
       )}
 
-      {/* Banner de cancelamento — quando o usuário volta sem pagar */}
+      {/* Banner de cancelamento */}
       {cancelado && (
         <div style={{
           display: "flex", alignItems: "center", gap: 8,
@@ -546,5 +548,24 @@ export default function Planos() {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
+  );
+}
+
+// ─── Export default com Suspense ──────────────────────────────────────────────
+// ✅ CORRIGIDO: useSearchParams() exige que o componente esteja dentro de <Suspense>.
+// Sem isso, o Next.js 14 falha no build com erro de pré-renderização estática.
+
+export default function Planos() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        height: 200, color: "var(--foreground-muted)", fontSize: 14,
+      }}>
+        Carregando planos...
+      </div>
+    }>
+      <PlanosInner />
+    </Suspense>
   );
 }
