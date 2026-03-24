@@ -25,7 +25,6 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
     .find((row) => row.startsWith("jwt_token="))
     ?.split("=")[1];
 
-  // Se não achar no cookie, tenta o localStorage como plano B
   const finalToken = token || localStorage.getItem("jwt_token");
 
   const headers = new Headers({
@@ -46,11 +45,7 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
     }
   );
 
-  if (res.status === 401) {
-    // Se der 401, o token expirou ou é inválido
-    console.error("Sessão expirada");
-    // window.location.href = "/auth/login"; // Opcional: deslogar se falhar
-  }
+  if (res.status === 401) console.error("Sessão expirada");
 
   if (!res.ok) {
     const err = await res.json().catch(() => null);
@@ -68,16 +63,16 @@ const inp: React.CSSProperties = {
 };
 
 export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }: Props) {
-  const [empresas,   setEmpresas]   = useState<Empresa[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [criando,    setCriando]    = useState(false);
-  const [erro,       setErro]       = useState("");
-  const [sucesso,    setSucesso]    = useState("");
-  const [salvando,   setSalvando]   = useState(false);
-  const [form,       setForm]       = useState({ nomeFantasia: "", cnpj: "" });
-  const [editandoId, setEditandoId] = useState<number | null>(null);
-  const [editForm,   setEditForm]   = useState({ nomeFantasia: "", cnpj: "" });
-  const [salvandoId, setSalvandoId] = useState<number | null>(null);
+  const [empresas,    setEmpresas]    = useState<Empresa[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [criando,     setCriando]     = useState(false);
+  const [erro,        setErro]        = useState("");
+  const [sucesso,     setSucesso]     = useState("");
+  const [salvando,    setSalvando]    = useState(false);
+  const [form,        setForm]        = useState({ nomeFantasia: "", cnpj: "" });
+  const [editandoId,  setEditandoId]  = useState<number | null>(null);
+  const [editForm,    setEditForm]    = useState({ nomeFantasia: "", cnpj: "" });
+  const [salvandoId,  setSalvandoId]  = useState<number | null>(null);
 
   const carregar = async () => {
     try {
@@ -93,54 +88,60 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
 
   const ok = (msg: string) => { setSucesso(msg); setTimeout(() => setSucesso(""), 3000); };
 
-  const salvar = async () => {
-    if (!form.nomeFantasia.trim()) { setErro("Nome fantasia é obrigatório."); return; }
-    setSalvando(true); setErro("");
-    try {
-      await fetchAuth("/api/v1/empresas", { method: "POST", body: JSON.stringify(form) });
-      ok("Empresa cadastrada com sucesso!");
-      setForm({ nomeFantasia: "", cnpj: "" });
-      setCriando(false);
-      await carregar();
-    } catch (e: any) { setErro(e.message); }
-    finally { setSalvando(false); }
-  };
-
   const iniciarEdicao = (emp: Empresa) => {
     setEditandoId(emp.id);
     setEditForm({ nomeFantasia: emp.nomeFantasia, cnpj: emp.cnpj ?? "" });
     setErro("");
   };
 
- const salvar = async () => {
-  if (!form.nomeFantasia.trim()) { setErro("Nome fantasia é obrigatório."); return; }
-  
-  setSalvando(true); setErro("");
-  
-  // Trata campos vazios para não dar erro de duplicata no banco
-  const dadosParaEnviar = {
-    ...form,
-    cnpj: form.cnpj.trim() === "" ? null : form.cnpj.trim(),
-    // Adicione outros campos aqui se o seu backend exigir, 
-    // como logotipo_url: null, se houver no seu DTO
+  const salvarEdicao = async (id: number) => {
+    if (!editForm.nomeFantasia.trim()) { setErro("Nome fantasia é obrigatório."); return; }
+    setSalvandoId(id); setErro("");
+    try {
+      const dados = {
+        ...editForm,
+        cnpj: editForm.cnpj.trim() === "" ? null : editForm.cnpj.trim()
+      };
+      // Note o uso do PUT e do ID na URL (ou no corpo, dependendo do seu backend)
+      await fetchAuth(`/api/v1/empresas/${id}`, { 
+        method: "PUT", 
+        body: JSON.stringify(dados) 
+      });
+      ok("Empresa atualizada!");
+      setEditandoId(null);
+      await carregar();
+    } catch (e: any) { 
+      setErro(e.message); 
+    } finally { 
+      setSalvandoId(null); 
+    }
   };
 
-  try {
-    await fetchAuth("/api/v1/empresas", { 
-      method: "POST", 
-      body: JSON.stringify(dadosParaEnviar) 
-    });
-    ok("Empresa cadastrada com sucesso!");
-    setForm({ nomeFantasia: "", cnpj: "" });
-    setCriando(false);
-    await carregar();
-  } catch (e: any) { 
-    setErro(e.message); 
-  } finally { 
-    setSalvando(false); 
-  }
-};
+  const salvar = async () => {
+    if (!form.nomeFantasia.trim()) { setErro("Nome fantasia é obrigatório."); return; }
+    setSalvando(true); setErro("");
+    try {
+      const dadosParaEnviar = {
+        ...form,
+        cnpj: form.cnpj.trim() === "" ? null : form.cnpj.trim(),
+      };
+      await fetchAuth("/api/v1/empresas", { 
+        method: "POST", 
+        body: JSON.stringify(dadosParaEnviar) 
+      });
+      ok("Empresa cadastrada com sucesso!");
+      setForm({ nomeFantasia: "", cnpj: "" });
+      setCriando(false);
+      await carregar();
+    } catch (e: any) { 
+      setErro(e.message); 
+    } finally { 
+      setSalvando(false); 
+    }
+  };
 
+  // ... (o restante do seu JSX permanece o mesmo, ele já está bem construído)
+  // Certifique-se apenas de que o botão de salvar edição chama: onClick={() => salvarEdicao(emp.id)}
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: "var(--foreground-muted)", fontSize: 14 }}>
       Carregando empresas...
