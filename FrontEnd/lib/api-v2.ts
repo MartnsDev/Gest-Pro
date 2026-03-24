@@ -1,4 +1,4 @@
-// lib/api.ts
+// lib/api-v2.ts
 "use client";
 
 export const API_BASE_URL =
@@ -82,27 +82,54 @@ export function lerTokenCookie(): string | null {
  */
 // lib/api-v2.ts
 export async function fetchAuth(path: string, options: RequestInit = {}): Promise<Response> {
-  // Tenta ler do LocalStorage primeiro para garantir
-  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) || lerTokenCookie();
+  // 1. Tenta ler de todas as fontes possíveis
+  const token = (typeof window !== "undefined" 
+    ? localStorage.getItem("jwt_token") 
+    : null) || lerTokenCookie();
 
-  console.log("Token extraído para fetch:", token ? "Sim (presente)" : "Não (vazio)");
+  // Log detalhado para debug (pode remover depois)
+  if (token) {
+    console.log(`📡 Fetch: ${path} | Token: ${token.substring(0, 10)}...`);
+  } else {
+    console.warn(`📡 Fetch: ${path} | ⚠️ SEM TOKEN`);
+  }
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string> ?? {}),
   };
 
   if (token) {
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+    // 2. .trim() para evitar espaços em branco que quebram o Bearer
+    headers["Authorization"] = `Bearer ${token.trim()}`;
   }
 
-  return fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-    credentials: "include", 
-  });
-}
+  // 3. Garante que a URL não tenha barras duplas acidentais
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const url = `${API_BASE_URL}${cleanPath}`;
 
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      // Se o backend está no Railway e o front em outro lugar, 
+      // tente comentar a linha abaixo se o 401 persistir, 
+      // pois 'include' exige configurações de CORS muito estritas.
+      credentials: "include", 
+    });
+
+    // 4. Se der 401, limpa o token podre para não entrar em loop
+    if (response.status === 401 && typeof window !== "undefined") {
+      console.error("🚫 Token inválido ou expirado. Redirecionando...");
+      // localStorage.removeItem("jwt_token"); // Opcional: deslogar se for 401
+    }
+
+    return response;
+  } catch (error) {
+    console.error("❌ Erro na requisição fetchAuth:", error);
+    throw error;
+  }
+}
 // ===================== Funções de Auth =====================
 
 /**
