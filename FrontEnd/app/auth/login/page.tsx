@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+// Importando as funções da sua API
+import { login, loginComGoogle } from "@/lib/api-v2"; 
 
 /* ─────────────────────────────────────────────
-   GLOBAL STYLES
+    GLOBAL STYLES
 ───────────────────────────────────────────── */
 const GlobalStyles = () => (
   <style>{`
@@ -91,7 +93,7 @@ const GlobalStyles = () => (
 );
 
 /* ─────────────────────────────────────────────
-   LOGO COMPONENT
+    LOGO COMPONENT
 ───────────────────────────────────────────── */
 const Logo = () => (
   <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1 }}>
@@ -107,7 +109,7 @@ const Logo = () => (
 );
 
 /* ─────────────────────────────────────────────
-   GOOGLE ICON
+    GOOGLE ICON
 ───────────────────────────────────────────── */
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18">
@@ -133,21 +135,31 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.email || !form.senha) { setErro("Preencha todos os campos"); return; }
-    setLoading(true); setErro("");
     
-    // Simulação de login - substitua pela sua API real
+    setLoading(true); 
+    setErro("");
+    
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      // await login(form.email, form.senha);
+      // Chama a função real de login da sua lib/api.ts
+      await login(form.email, form.senha);
+      
+      // Se chegar aqui, o login foi bem sucedido
       router.push("/dashboard");
     } catch (err: any) {
-      setErro(err.message || "Credenciais inválidas");
-    } finally { setLoading(false); }
+      // Trata erros específicos mapeados na sua lib
+      if (err.message === "PLANO_INATIVO") {
+        router.push("/pagamento");
+      } else {
+        setErro(err.message || "Credenciais inválidas ou erro no servidor");
+      }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const handleGoogleLogin = () => {
-    // Implementar login com Google
-    console.log("Login com Google");
+    // Chama a função de redirecionamento para o Google da sua lib
+    loginComGoogle();
   };
 
   return (
@@ -160,24 +172,20 @@ export default function LoginPage() {
         padding: "48px", position: "relative", overflow: "hidden",
         borderRight: "1px solid rgba(16,185,129,0.08)",
       }}>
-        {/* Grid de pontos */}
         <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(16,185,129,0.12) 1px, transparent 1px)", backgroundSize: "28px 28px", maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)" }} />
-        {/* Glow */}
         <div style={{ position: "absolute", top: "20%", left: "30%", width: 600, height: 600, background: "radial-gradient(ellipse, rgba(16,185,129,0.07) 0%, transparent 70%)", filter: "blur(60px)", pointerEvents: "none" }} />
 
-        {/* Logo */}
         <div style={{ opacity: mounted ? 1 : 0, transition: "opacity .6s" }}>
           <Logo />
         </div>
 
-        {/* Centro — quote */}
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{
             opacity: mounted ? 1 : 0,
             transform: mounted ? "translateY(0)" : "translateY(24px)",
             transition: "all .9s cubic-bezier(0.16,1,0.3,1) .2s",
           }}>
-            <div style={{ fontSize: 11, color: "rgba(16,185,129,0.6)", letterSpacing: "0.2em", marginBottom: 20, fontFamily: "var(--font-dm-mono), 'DM Mono', monospace" }}>
+            <div style={{ fontSize: 11, color: "rgba(16,185,129,0.6)", letterSpacing: "0.2em", marginBottom: 20 }}>
               CONTROLE REAL
             </div>
             <h2 style={{ fontFamily: "var(--font-syne), 'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(32px, 3.5vw, 52px)", letterSpacing: "-0.04em", lineHeight: 1.05, color: "#f1f5f9", marginBottom: 20 }}>
@@ -191,7 +199,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Mini stats */}
           <div style={{
             display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 48,
             opacity: mounted ? 1 : 0,
@@ -211,7 +218,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Rodapé */}
         <div style={{ fontSize: 11, color: "rgba(241,245,249,0.2)", position: "relative", zIndex: 1 }}>
           © 2025 GestPro · Matheus Martins
         </div>
@@ -228,7 +234,6 @@ export default function LoginPage() {
           transform: mounted ? "translateY(0)" : "translateY(32px)",
           transition: "all .8s cubic-bezier(0.16,1,0.3,1) .15s",
         }}>
-          {/* Header do form */}
           <div style={{ marginBottom: 36 }}>
             <h1 className="login-title" style={{ fontFamily: "var(--font-syne), 'Syne', sans-serif", fontWeight: 800, fontSize: 28, letterSpacing: "-0.03em", color: "#f1f5f9", marginBottom: 8 }}>
               Bem-vindo de volta
@@ -238,20 +243,17 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Google */}
           <button className="btn-google" onClick={handleGoogleLogin} style={{ marginBottom: 24 }}>
             <GoogleIcon />
             Continuar com Google
           </button>
 
-          {/* Divisor */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
             <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
             <span style={{ fontSize: 11, color: "rgba(241,245,249,0.25)", letterSpacing: "0.1em" }}>OU</span>
             <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
           </div>
 
-          {/* Formulário */}
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <label style={{ fontSize: 12, color: "rgba(241,245,249,0.5)", display: "block", marginBottom: 7, letterSpacing: "0.05em" }}>
@@ -304,7 +306,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Erro */}
             {erro && (
               <div style={{ padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, fontSize: 13, color: "#f87171" }}>
                 {erro}
@@ -321,13 +322,11 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Footer do form */}
           <p style={{ fontSize: 13, color: "rgba(241,245,249,0.35)", textAlign: "center", marginTop: 28, fontFamily: "var(--font-manrope), 'Manrope', sans-serif" }}>
             Não tem conta?{" "}
             <Link href="/auth/cadastro" className="link-style">Criar conta grátis</Link>
           </p>
 
-          {/* Volta para landing */}
           <div style={{ textAlign: "center", marginTop: 16 }}>
             <Link href="/" style={{ fontSize: 12, color: "rgba(241,245,249,0.2)", textDecoration: "none", transition: "color .2s" }}
               onMouseEnter={e => (e.currentTarget.style.color = "rgba(241,245,249,0.5)")}
@@ -338,25 +337,14 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Responsive styles */}
       <style>{`
         @media (max-width: 900px) {
-          .login-left-panel {
-            display: none !important;
-          }
-          .login-right-panel {
-            width: 100% !important;
-            min-width: 100% !important;
-            padding: 32px 20px !important;
-          }
+          .login-left-panel { display: none !important; }
+          .login-right-panel { width: 100% !important; min-width: 100% !important; padding: 32px 20px !important; }
         }
         @media (max-width: 480px) {
-          .login-form-card {
-            padding: 0 !important;
-          }
-          .login-title {
-            font-size: 24px !important;
-          }
+          .login-form-card { padding: 0 !important; }
+          .login-title { font-size: 24px !important; }
         }
       `}</style>
     </div>
