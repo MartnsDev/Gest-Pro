@@ -112,17 +112,34 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
     setErro("");
   };
 
-  const salvarEdicao = async (id: number) => {
-    if (!editForm.nomeFantasia.trim()) { setErro("Nome fantasia é obrigatório."); return; }
-    setSalvandoId(id); setErro("");
-    try {
-      await fetchAuth(`/api/v1/empresas/${id}`, { method: "PUT", body: JSON.stringify(editForm) });
-      ok("Empresa atualizada!");
-      setEditandoId(null);
-      await carregar();
-    } catch (e: any) { setErro(e.message); }
-    finally { setSalvandoId(null); }
+ const salvar = async () => {
+  if (!form.nomeFantasia.trim()) { setErro("Nome fantasia é obrigatório."); return; }
+  
+  setSalvando(true); setErro("");
+  
+  // Trata campos vazios para não dar erro de duplicata no banco
+  const dadosParaEnviar = {
+    ...form,
+    cnpj: form.cnpj.trim() === "" ? null : form.cnpj.trim(),
+    // Adicione outros campos aqui se o seu backend exigir, 
+    // como logotipo_url: null, se houver no seu DTO
   };
+
+  try {
+    await fetchAuth("/api/v1/empresas", { 
+      method: "POST", 
+      body: JSON.stringify(dadosParaEnviar) 
+    });
+    ok("Empresa cadastrada com sucesso!");
+    setForm({ nomeFantasia: "", cnpj: "" });
+    setCriando(false);
+    await carregar();
+  } catch (e: any) { 
+    setErro(e.message); 
+  } finally { 
+    setSalvando(false); 
+  }
+};
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: "var(--foreground-muted)", fontSize: 14 }}>
