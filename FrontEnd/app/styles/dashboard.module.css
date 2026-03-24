@@ -272,42 +272,46 @@
 
 /* ══════════════════════════════════════════
    MOBILE — apenas até 767px
-   Tudo abaixo só afeta celular.
-   Desktop não foi tocado.
+   Apenas CSS, sem alterar JSX
 ══════════════════════════════════════════ */
 @media (max-width: 767px) {
 
-  /* Header: padding menor e itens compactos */
+  /* ── Header ── */
   .dashboardHeader {
-    padding: 0 12px;
-    gap: 8px;
+    padding: 0 10px;
+    gap: 6px;
   }
 
-  /* Esconde o separador "GESTPRO / nome da seção" */
+  /* Esconde separador "GESTPRO / seção" */
   .headerBrand > div:last-child {
     display: none;
   }
 
-  /* Nome do usuário some — mantém só o avatar */
+  /* Esconde só o span do nome, mantém botão Sair e avatar */
   .headerUserName {
     display: none;
   }
 
-  /* Avatar menor */
   .headerUserAvatar,
   .headerUserInitials {
-    width: 32px;
-    height: 32px;
-    font-size: 0.75rem;
+    width: 30px;
+    height: 30px;
+    font-size: 0.7rem;
   }
 
-  /* Layout empilhado + espaço para nav inferior */
+  /* Botão Sair menor mas visível */
+  .headerUser button {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+  }
+
+  /* ── Layout ── */
   .dashboardLayout {
     flex-direction: column;
     padding-bottom: 64px;
   }
 
-  /* Sidebar lateral → nav inferior fixa */
+  /* ── Sidebar → nav inferior fixa ── */
   .sidebar {
     position: fixed;
     top: auto;
@@ -353,35 +357,52 @@
     line-height: 1;
   }
 
-  .sidebarNavItemActive {
-    color: var(--primary);
-    background: var(--sidebar-active-bg);
-    font-weight: 600;
+  /* Itens 5, 6 e 7 somem (Empresas, Config, Planos) */
+  .sidebarNavItem:nth-child(5),
+  .sidebarNavItem:nth-child(6),
+  .sidebarNavItem:nth-child(7) {
+    display: none;
   }
 
-  /* Main sem margem lateral */
+  /*
+    Item 8 (último = Planos) vira botão "Mais"
+    — esconde o label original e mostra "Mais"
+    — o ícone fica, só troca o texto via CSS
+  */
+  .sidebarNavItem:last-child span {
+    visibility: hidden;
+    position: relative;
+  }
+
+  .sidebarNavItem:last-child span::after {
+    content: "Mais";
+    visibility: visible;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  /* ── Conteúdo principal ── */
   .mainContent {
     margin-left: 0;
     min-height: calc(100vh - 56px - 64px);
   }
 
-  /* Métricas em 2 colunas no celular */
+  /* Métricas 2 colunas */
   .metricsGrid {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
 
-  /* Gráficos empilhados */
   .contentGrid {
     grid-template-columns: 1fr;
   }
 
-  /* Chart menor para caber na tela */
   .chartContainer {
     height: 180px;
   }
 
-  /* Padding interno reduzido */
   .chartCard,
   .productTable {
     padding: 14px;
