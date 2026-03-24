@@ -20,10 +20,26 @@ interface Props {
 }
 
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
+  // 1. Tenta pegar o token do cookie (mesma lógica que funcionou na dashboard)
+  const token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("jwt_token="))
+    ?.split("=")[1];
+
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts }
+    { 
+      ...opts,
+      credentials: "include", 
+      headers: { 
+        "Content-Type": "application/json",
+        // 2. Adiciona o cabeçalho de autorização se o token existir
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        ...opts?.headers 
+      } 
+    }
   );
+
   if (!res.ok) {
     const err = await res.json().catch(() => null);
     throw new Error(err?.mensagem ?? `Erro ${res.status}`);
