@@ -1,11 +1,8 @@
 /* ============================================
-   DASHBOARD — Mobile-first, responsivo
+   DASHBOARD - Cores alinhadas com globals.css
    ============================================ */
 
-/* ── Reset base ── */
-*, *::before, *::after { box-sizing: border-box; }
-
-/* ── Container principal ── */
+/* Layout Principal */
 .dashboardContainer {
   min-height: 100vh;
   background: var(--background);
@@ -20,77 +17,56 @@
   height: 100vh;
   background: var(--background);
   color: var(--foreground);
-  font-size: 1rem;
+  font-size: 1.2rem;
 }
 
-/* ══════════════════════════════════════════
-   HEADER
-══════════════════════════════════════════ */
+/* Header */
 .dashboardHeader {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
+  width: 100%;
   height: 56px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 0 12px;
+  padding: 0 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   z-index: 1000;
-  gap: 8px;
 }
 
 .headerBrand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+  gap: 0.75rem;
 }
 
 .headerLogo {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.headerLogo img {
-  width: 28px;
-  height: 28px;
+  color: var(--foreground);
 }
 
 .headerTitle {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--foreground);
-  /* oculta em telas muito pequenas */
-  display: none;
-}
-
-/* separador brand/título de seção — oculto no mobile */
-.headerBrand > div:last-child {
-  display: none;
 }
 
 .headerUser {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  gap: 0.75rem;
 }
 
 .headerUserName {
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   color: var(--foreground-muted);
-  /* oculta em telas muito pequenas */
-  display: none;
 }
 
 .headerUserAvatar,
 .headerUserInitials {
-  width: 32px;
-  height: 32px;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--primary);
@@ -98,7 +74,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 1rem;
   color: white;
   flex-shrink: 0;
 }
@@ -107,197 +83,166 @@
   background: var(--primary);
 }
 
-/* ══════════════════════════════════════════
-   LAYOUT GERAL
-══════════════════════════════════════════ */
+/* Layout com Sidebar */
 .dashboardLayout {
   display: flex;
-  flex-direction: column;
-  /* espaço header (56px) + nav inferior mobile (64px) */
-  padding-top: 56px;
-  padding-bottom: 64px;
-  min-height: 100vh;
+  margin-top: 56px;
 }
 
-/* ══════════════════════════════════════════
-   SIDEBAR — MOBILE: barra inferior fixa
-══════════════════════════════════════════ */
+/* Sidebar */
 .sidebar {
   position: fixed;
-  bottom: 0;
+  top: 56px;
   left: 0;
-  right: 0;
-  height: 64px;
+  width: 15rem;
+  height: calc(100vh - 56px);
   background: var(--surface);
-  border-top: 1px solid var(--border);
-  z-index: 900;
-  padding: 0 4px;
+  border-right: 1px solid var(--border);
+  padding: 1rem 0.75rem;
   display: flex;
-  align-items: stretch;
+  flex-direction: column;
+  z-index: 900;
+  overflow-y: auto;
 }
 
 .sidebarNav {
   display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  width: 100%;
-  gap: 0;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .sidebarNavItem {
-  flex: 1;
+  width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 6px 2px;
-  border-radius: 10px;
+  gap: 0.75rem;
+  padding: 0.6rem 0.875rem;
+  border-radius: var(--radius-md);
   color: var(--foreground-muted);
+  transition: background-color 0.15s, color 0.15s;
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 0.6rem;
-  font-weight: 500;
-  text-align: center;
-  transition: color 0.15s, background 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.sidebarNavItem svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
-.sidebarNavItem span {
-  display: block;
-  line-height: 1;
-  letter-spacing: 0.01em;
+  font-size: 0.9rem;
+  text-align: left;
 }
 
 .sidebarNavItem:hover {
-  color: var(--foreground);
   background: var(--sidebar-hover-bg);
+  color: var(--foreground);
 }
 
 .sidebarNavItemActive {
-  color: var(--primary) !important;
   background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-fg);
+  font-weight: 500;
 }
 
-.sidebarNavItemActive svg {
-  stroke-width: 2.5;
-}
-
-/* ══════════════════════════════════════════
-   MAIN CONTENT
-══════════════════════════════════════════ */
+/* Main Content */
 .mainContent {
   flex: 1;
-  width: 100%;
-  min-height: calc(100vh - 56px - 64px);
+  margin-left: 15rem;
+  min-height: calc(100vh - 56px);
+  overflow-y: auto;
   background: var(--background);
-  overflow-x: hidden;
 }
 
+/* Inner wrapper */
 .mainContentInner {
-  width: 100%;
   max-width: 90rem;
   margin: 0 auto;
 }
 
-/* ══════════════════════════════════════════
-   WELCOME
-══════════════════════════════════════════ */
-.welcomeSection { margin-bottom: 1.25rem; }
+/* Welcome Section */
+.welcomeSection {
+  margin-bottom: 2rem;
+}
 
 .welcomeTitle {
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
   color: var(--foreground);
 }
 
 .welcomeSubtitle {
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--foreground-muted);
 }
 
-/* ══════════════════════════════════════════
-   MÉTRICAS
-══════════════════════════════════════════ */
+/* Metrics Grid */
 .metricsGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 1.25rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .metricCard {
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
   background: var(--surface-elevated);
   border: 1px solid var(--border);
   color: var(--foreground);
 }
 
-/* ══════════════════════════════════════════
-   CONTENT GRID
-══════════════════════════════════════════ */
+/* Content Grid */
 .contentGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 1.5rem;
 }
 
-/* ══════════════════════════════════════════
-   CHART CARD
-══════════════════════════════════════════ */
+/* Chart Card */
 .chartCard {
   background: var(--surface-elevated);
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
   border: 1px solid var(--border);
 }
 
 .chartTitle {
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--foreground);
-  margin-bottom: 12px;
+  margin-bottom: 1.25rem;
 }
 
 .chartContainer {
   position: relative;
-  height: 180px;
+  height: 16rem;
 }
 
-/* ══════════════════════════════════════════
-   PRODUCT TABLE
-══════════════════════════════════════════ */
+/* Product Table */
 .productTable {
+  margin-top: 1.5rem;
   background: var(--surface-elevated);
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
   border: 1px solid var(--border);
 }
 
-.tableContainer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tableContainer {
+  overflow-x: auto;
+}
 
-.table { width: 100%; border-collapse: collapse; }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
 
-.tableHead { border-bottom: 1px solid var(--border); }
+.tableHead {
+  border-bottom: 1px solid var(--border);
+}
 
 .tableHeadCell {
   text-align: left;
-  padding: 8px 10px;
+  padding: 0.75rem 1rem;
   color: var(--foreground-muted);
   font-weight: 500;
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  white-space: nowrap;
 }
 
 .tableRow {
@@ -305,130 +250,166 @@
   transition: background 0.15s;
 }
 
-.tableRow:hover { background: var(--surface-overlay); }
+.tableRow:hover {
+  background: var(--surface-overlay);
+}
 
 .tableCell {
-  padding: 10px;
-  font-size: 0.82rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.9rem;
   color: var(--foreground);
 }
 
 .statusBadge {
   background: var(--success-muted);
   color: var(--success);
-  padding: 2px 8px;
+  padding: 0.2rem 0.65rem;
   border-radius: 9999px;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 500;
   display: inline-block;
-  white-space: nowrap;
 }
 
 /* ══════════════════════════════════════════
-   TABLET  ≥ 640px
+   MOBILE — apenas até 767px
+   Tudo abaixo só afeta celular.
+   Desktop não foi tocado.
 ══════════════════════════════════════════ */
-@media (min-width: 640px) {
-  .dashboardHeader { padding: 0 20px; }
+@media (max-width: 767px) {
 
-  .headerTitle { display: block; }
-  .headerUserName { display: block; }
+  /* Header: padding menor e itens compactos */
+  .dashboardHeader {
+    padding: 0 12px;
+    gap: 8px;
+  }
 
+  /* Esconde o separador "GESTPRO / nome da seção" */
+  .headerBrand > div:last-child {
+    display: none;
+  }
+
+  /* Nome do usuário some — mantém só o avatar */
+  .headerUserName {
+    display: none;
+  }
+
+  /* Avatar menor */
   .headerUserAvatar,
   .headerUserInitials {
-    width: 36px;
-    height: 36px;
-    font-size: 0.85rem;
+    width: 32px;
+    height: 32px;
+    font-size: 0.75rem;
   }
 
-  .metricsGrid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-
-  .sidebarNavItem { font-size: 0.65rem; }
-  .sidebarNavItem svg { width: 22px; height: 22px; }
-}
-
-/* ══════════════════════════════════════════
-   TABLET largo  ≥ 768px
-══════════════════════════════════════════ */
-@media (min-width: 768px) {
-  .metricsGrid { grid-template-columns: repeat(3, 1fr); }
-  .contentGrid { grid-template-columns: repeat(2, 1fr); }
-  .chartContainer { height: 200px; }
-}
-
-/* ══════════════════════════════════════════
-   DESKTOP  ≥ 1024px — sidebar lateral
-══════════════════════════════════════════ */
-@media (min-width: 1024px) {
-  /* Header */
-  .dashboardHeader { padding: 0 24px; }
-  .headerBrand > div:last-child { display: block; }
-  .headerLogo img { width: 36px; height: 36px; }
-
-  /* Layout: sidebar lateral + main */
+  /* Layout empilhado + espaço para nav inferior */
   .dashboardLayout {
-    flex-direction: row;
-    padding-top: 56px;
-    padding-bottom: 0;
+    flex-direction: column;
+    padding-bottom: 64px;
   }
 
-  /* Sidebar lateral fixa */
+  /* Sidebar lateral → nav inferior fixa */
   .sidebar {
     position: fixed;
-    top: 56px;
-    left: 0;
+    top: auto;
     bottom: 0;
-    right: auto;
-    width: 220px;
-    height: calc(100vh - 56px);
-    border-top: none;
-    border-right: 1px solid var(--border);
-    padding: 12px 10px;
-    flex-direction: column;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 64px;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    padding: 0 4px;
+    flex-direction: row;
     align-items: stretch;
+    overflow: visible;
   }
 
   .sidebarNav {
-    flex-direction: column;
-    gap: 2px;
+    flex-direction: row;
+    gap: 0;
+    width: 100%;
     align-items: stretch;
   }
 
   .sidebarNavItem {
-    flex-direction: row;
-    justify-content: flex-start;
+    flex: 1;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    font-size: 0.875rem;
-    border-radius: 8px;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 2px;
+    font-size: 0.6rem;
+    border-radius: 10px;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .sidebarNavItem svg { width: 18px; height: 18px; }
+  .sidebarNavItem svg {
+    width: 20px;
+    height: 20px;
+  }
 
-  .sidebarNavItem span { display: block; }
+  .sidebarNavItem span {
+    display: block;
+    line-height: 1;
+  }
 
-  /* Main content com margem para sidebar */
+  .sidebarNavItemActive {
+    color: var(--primary);
+    background: var(--sidebar-active-bg);
+    font-weight: 600;
+  }
+
+  /* Main sem margem lateral */
   .mainContent {
-    margin-left: 220px;
-    min-height: calc(100vh - 56px);
+    margin-left: 0;
+    min-height: calc(100vh - 56px - 64px);
   }
 
-  /* Métricas e gráficos */
-  .metricsGrid { grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .contentGrid { grid-template-columns: repeat(3, 1fr); }
-  .chartCard { grid-column: span 2; }
-  .chartContainer { height: 220px; }
+  /* Métricas em 2 colunas no celular */
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
 
-  /* Elementos header full */
-  .headerUserAvatar,
-  .headerUserInitials { width: 40px; height: 40px; font-size: 1rem; }
+  /* Gráficos empilhados */
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Chart menor para caber na tela */
+  .chartContainer {
+    height: 180px;
+  }
+
+  /* Padding interno reduzido */
+  .chartCard,
+  .productTable {
+    padding: 14px;
+  }
 }
 
-/* ══════════════════════════════════════════
-   DESKTOP largo  ≥ 1280px
-══════════════════════════════════════════ */
-@media (min-width: 1280px) {
-  .sidebar { width: 240px; }
-  .mainContent { margin-left: 240px; }
-  .metricsGrid { gap: 16px; }
+/* TABLET */
+@media (min-width: 768px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .contentGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* DESKTOP */
+@media (min-width: 1024px) {
+  .metricsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .contentGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .chartCard {
+    grid-column: span 2;
+  }
 }
