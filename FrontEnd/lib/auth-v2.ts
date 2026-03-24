@@ -1,4 +1,4 @@
-// lib/auth.tss
+// lib/auth-v2.ts
 "use client";
 
 import {
