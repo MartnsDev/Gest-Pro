@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useEmpresa } from "../context/Empresacontext";
-import { fetchAuthJson } from "@/lib/api-v2";
 import {
   Plus, X, Check, Search, ChevronDown, ChevronUp,
   AlertCircle, CreditCard, DollarSign, Smartphone,
@@ -75,6 +74,18 @@ const fmtData = (s?: any) => {
   if (!d) return "—";
   return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
+
+async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
+  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
+    {
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...opts,
+    });
+  if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.mensagem ?? `Erro ${res.status}`); }
+  return res.json();
+}
 
 const inp: React.CSSProperties = { width: "100%", padding: "8px 11px", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 13, outline: "none" };
 const btnP: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: "var(--primary)", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" };
@@ -155,7 +166,7 @@ function gerarCupom(venda: Venda, nomeEmpresa: string) {
   </div>
 </div>
 
-<button class="print-btn no-print" onclick="window.print()">Imprimir / Salvar PDF</button>
+<button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
 
 <script>
   window.onload = () => setTimeout(() => { window.focus(); window.print(); }, 400);
@@ -278,7 +289,7 @@ function ModalNovaVenda({ caixaId, empresaId, onClose, onSucesso }: {
   const [salvando,    setSalvando]    = useState(false);
 
   useEffect(() => {
-    fetchAuthJson<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`).then(setProdutos).catch(() => toast.error("Erro ao carregar produtos"));
+    fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`).then(setProdutos).catch(() => toast.error("Erro ao carregar produtos"));
   }, [empresaId]);
 
   const filtrados = useMemo(() => produtos.filter(p => p.quantidadeEstoque > 0 && p.nome.toLowerCase().includes(busca.toLowerCase())), [produtos, busca]);
@@ -330,7 +341,7 @@ function ModalNovaVenda({ caixaId, empresaId, onClose, onSucesso }: {
       // Envia valorRecebido sempre que dinheiro estiver envolvido e o cliente tiver informado
       if (temDinheiro && recebidoN > 0) body.valorRecebido = recebidoN;
 
-      const venda = await fetchAuthJson<Venda>("/api/v1/vendas/registrar", { method: "POST", body: JSON.stringify(body) });
+      const venda = await fetchAuth<Venda>("/api/v1/vendas/registrar", { method: "POST", body: JSON.stringify(body) });
       onClose();
       onSucesso(venda);
     } catch (e: any) { toast.error(e.message); }
@@ -468,7 +479,7 @@ function ModalNovaVenda({ caixaId, empresaId, onClose, onSucesso }: {
                     </div>
                   )}
                   {valPag2N >= total && valPag2N > 0 && (
-                    <p style={{ fontSize: 12, color: "var(--destructive)", margin: 0 }}>O valor da 2ª forma não pode ser maior ou igual ao total.</p>
+                    <p style={{ fontSize: 12, color: "var(--destructive)", margin: 0 }}>⚠ O valor da 2ª forma não pode ser maior ou igual ao total.</p>
                   )}
                 </div>
               )}
@@ -500,7 +511,7 @@ function ModalNovaVenda({ caixaId, empresaId, onClose, onSucesso }: {
                   )}
                   {recebidoN > 0 && recebidoN === valorEmDinheiro && (
                     <div style={{ padding: "8px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>Valor exato — sem troco</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>✓ Valor exato — sem troco</span>
                     </div>
                   )}
                   {falta !== null && falta > 0 && (
@@ -545,7 +556,7 @@ function DetalheVenda({ venda, nomeEmpresa, onClose, onAtualizado }: {
   const salvarObs = async () => {
     setSalvando(true);
     try {
-      const updated = await fetchAuthJson<Venda>(`/api/v1/vendas/${venda.id}/observacao`, { method: "PATCH", body: JSON.stringify({ observacao: novaObs }) });
+      const updated = await fetchAuth<Venda>(`/api/v1/vendas/${venda.id}/observacao`, { method: "PATCH", body: JSON.stringify({ observacao: novaObs }) });
       onAtualizado(updated);
       setEditandoObs(false);
       toast.success("Observação salva!");
@@ -556,7 +567,7 @@ function DetalheVenda({ venda, nomeEmpresa, onClose, onAtualizado }: {
   const confirmarCancelamento = async () => {
     setSalvando(true);
     try {
-      const updated = await fetchAuthJson<Venda>(`/api/v1/vendas/${venda.id}/cancelar`, { method: "POST", body: JSON.stringify({ motivo }) });
+      const updated = await fetchAuth<Venda>(`/api/v1/vendas/${venda.id}/cancelar`, { method: "POST", body: JSON.stringify({ motivo }) });
       onAtualizado(updated);
       setCancelando(false);
       toast.success("Venda cancelada. Estoque devolvido.");
@@ -697,7 +708,7 @@ function CaixaCard({ caixa, empresaId, nomeEmpresa, onNovaVenda }: {
 
   useEffect(() => {
     setLoading(true);
-    fetchAuthJson<Venda[]>(`/api/v1/vendas/caixa/${caixa.id}`)
+    fetchAuth<Venda[]>(`/api/v1/vendas/caixa/${caixa.id}`)
       .then(setVendas).catch(() => {}).finally(() => setLoading(false));
   }, [caixa.id]);
 
@@ -739,7 +750,7 @@ function CaixaCard({ caixa, empresaId, nomeEmpresa, onNovaVenda }: {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>Caixa #{caixa.id}</span>
               <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 99, fontWeight: 600, background: caixa.aberto ? "var(--primary-muted)" : "var(--surface-overlay)", color: caixa.aberto ? "var(--primary)" : "var(--foreground-muted)" }}>
-                {caixa.aberto ? "ABERTO" : "FECHADO"}
+                {caixa.aberto ? "● ABERTO" : "FECHADO"}
               </span>
               {canceladas > 0 && <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 99, background: "rgba(239,68,68,0.1)", color: "var(--destructive)", fontWeight: 500 }}>{canceladas} cancelada(s)</span>}
             </div>
@@ -854,21 +865,16 @@ function CaixaCard({ caixa, empresaId, nomeEmpresa, onNovaVenda }: {
 
 /* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Vendas() {
-  const { empresaAtiva, caixaAtivo, recarregarCaixa } = useEmpresa();
+  const { empresaAtiva, caixaAtivo } = useEmpresa();
   const [caixas,       setCaixas]       = useState<CaixaInfo[]>([]);
   const [loading,      setLoading]      = useState(false);
   const [modalNova,    setModalNova]    = useState(false);
   const [vendaSucesso, setVendaSucesso] = useState<Venda | null>(null);
 
-  // Recarrega o caixa quando entrar na pagina
-  useEffect(() => {
-    recarregarCaixa();
-  }, [recarregarCaixa]);
-
   const carregar = async () => {
     if (!empresaAtiva) return;
     setLoading(true);
-    try { setCaixas(await fetchAuthJson<CaixaInfo[]>(`/api/v1/caixas/empresa/${empresaAtiva.id}`)); }
+    try { setCaixas(await fetchAuth<CaixaInfo[]>(`/api/v1/caixas/empresa/${empresaAtiva.id}`)); }
     catch { toast.error("Erro ao carregar caixas"); }
     finally { setLoading(false); }
   };
