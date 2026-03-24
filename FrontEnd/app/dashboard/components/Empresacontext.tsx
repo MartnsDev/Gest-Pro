@@ -1,15 +1,9 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
-import { fetchAuth, lerTokenCookie } from "@/lib/api-v2";
+import { fetchAuth, hasToken } from "@/lib/api-v2";
 
-// Verifica se há um token disponível
-function hasToken(): boolean {
-  if (typeof window === "undefined") return false;
-  const localStorageToken = localStorage.getItem("jwt_token");
-  const cookieToken = lerTokenCookie();
-  return !!(localStorageToken || cookieToken);
-}
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 export interface Empresa {
   id: number;
@@ -56,6 +50,7 @@ const EmpresaContext = createContext<EmpresaContextType>({
 const STORAGE_KEY = "gestpro_empresa_ativa_id";
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
+
 export function EmpresaProvider({ children }: { children: ReactNode }) {
   const [empresaAtiva, setEmpresaAtivaState] = useState<Empresa | null>(null);
   const [caixaAtivo,   setCaixaAtivo]        = useState<CaixaInfo | null>(null);
@@ -64,41 +59,21 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
 
   // ── Carrega caixa aberto da empresa ────────────────────────────────────────
   const carregarCaixa = async (empresa: Empresa) => {
-    console.log("[v0] carregarCaixa - Iniciando para empresa:", empresa.id, empresa.nomeFantasia);
-    
-    // Verifica se há token antes de fazer a chamada
-    if (!hasToken()) {
-      console.log("[v0] carregarCaixa - Sem token, pulando...");
-      return;
-    }
+    if (!hasToken()) return;
     
     setCaixaAtivo(null);
     try {
-      // Usa a função fetchAuth do api-v2.ts que já gerencia token corretamente
       const response = await fetchAuth(`/api/v1/caixas/aberto?empresaId=${empresa.id}`);
       
-      console.log("[v0] carregarCaixa - Response status:", response.status);
-      
       if (!response.ok) {
-        // 404 significa que não há caixa aberto - é normal
-        if (response.status === 404) {
-          console.log(`[v0] Nenhum caixa aberto para empresa ${empresa.id}`);
-          return;
-        }
-        // 401 significa que o token não está sendo enviado corretamente
-        if (response.status === 401) {
-          console.error("[v0] Token inválido ou não enviado para caixa aberto");
-          return;
-        }
-        throw new Error(`Erro ${response.status}`);
+        // 404 = sem caixa aberto (normal), 401 = token invalido
+        return;
       }
       
       const caixa: CaixaInfo = await response.json();
-      console.log("[v0] carregarCaixa - Caixa encontrado:", caixa);
       setCaixaAtivo({ ...caixa, empresaNome: empresa.nomeFantasia });
-    } catch (err) {
+    } catch {
       // sem caixa aberto — normal
-      console.error("[v0] Erro ao carregar caixa:", err);
     }
   };
 
@@ -118,21 +93,12 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
 
   // ── Carrega lista de empresas ───────────────────────────────────────────────
   const recarregarEmpresas = async () => {
-    console.log("[v0] recarregarEmpresas - Iniciando...");
-    
-    // Verifica se há token antes de fazer a chamada
-    if (!hasToken()) {
-      console.log("[v0] recarregarEmpresas - Sem token, pulando...");
-      return;
-    }
+    if (!hasToken()) return;
     
     try {
-      // Usa a função fetchAuth do api-v2.ts
       const response = await fetchAuth("/api/v1/empresas");
       
-      if (!response.ok) {
-        throw new Error(`Erro ${response.status}`);
-      }
+      if (!response.ok) return;
       
       const data: Empresa[] = await response.json();
       setEmpresas(data);
@@ -157,30 +123,24 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
         setEmpresaAtivaState(empParaAtivar);
         await carregarCaixa(empParaAtivar);
       }
-    } catch (err) {
-      console.error("Erro ao carregar empresas:", err);
+    } catch {
+      // erro ao carregar empresas
     }
   };
 
   useEffect(() => {
-    // Pequeno delay para garantir que o token já esteja disponível após login/redirect
     const tentarCarregar = async () => {
       // Primeira tentativa imediata
       if (hasToken()) {
-        console.log("[v0] useEffect - Token encontrado, carregando empresas...");
         await recarregarEmpresas();
         return;
       }
       
       // Se não há token, espera um pouco e tenta novamente (caso seja redirect do OAuth)
-      console.log("[v0] useEffect - Sem token, aguardando 500ms...");
       await new Promise(resolve => setTimeout(resolve, 500));
       
       if (hasToken()) {
-        console.log("[v0] useEffect - Token encontrado após delay, carregando empresas...");
         await recarregarEmpresas();
-      } else {
-        console.log("[v0] useEffect - Ainda sem token após delay");
       }
     };
     

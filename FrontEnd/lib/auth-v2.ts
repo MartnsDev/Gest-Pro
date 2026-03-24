@@ -5,7 +5,7 @@ import {
   getUsuario,
   salvarTokenCookie,
   removerTokenCookie,
-  lerTokenCookie,
+  getToken,
   type Usuario,
 } from "./api-v2";
 
@@ -23,15 +23,8 @@ export function removeToken() {
   localStorage.removeItem("jwt_token");
 }
 
-export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  
-  // Tenta o cookie, se não tiver, tenta o localStorage
-  const cookieToken = lerTokenCookie();
-  if (cookieToken) return cookieToken;
-  
-  return localStorage.getItem("jwt_token");
-}
+// Re-export getToken para manter compatibilidade
+export { getToken };
 
 // ─── Auth checks ──────────────────────────────────────────────────────────────
 

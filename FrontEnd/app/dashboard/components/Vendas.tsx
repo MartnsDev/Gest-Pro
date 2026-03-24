@@ -9,6 +9,7 @@ import {
   Trash2, Edit2, Ban,} from "lucide-react";
 import { toast } from "sonner";
 
+
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Produto {
   id: number; nome: string; preco: number;
@@ -44,6 +45,7 @@ const FORMA_LABEL: Record<string, string> = {
   PIX: "Pix", DINHEIRO: "Dinheiro", CARTAO_DEBITO: "Débito", CARTAO_CREDITO: "Crédito",
 };
 
+
 const fmt = (v?: number | null) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 
@@ -73,15 +75,18 @@ const fmtData = (s?: any) => {
   return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
-async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    {
-      credentials: "include",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      ...opts,
-    });
-  if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.mensagem ?? `Erro ${res.status}`); }
+async function fetchAuth<T>(path: string): Promise<T> {
+  const token =
+    (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
+
+  const res = await fetch(`${API}${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
   return res.json();
 }
 

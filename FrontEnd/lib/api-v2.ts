@@ -73,26 +73,34 @@ export function lerTokenCookie(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// ===================== Token helpers =====================
+
+/**
+ * Verifica se há um token disponível (localStorage ou cookie)
+ */
+export function hasToken(): boolean {
+  if (typeof window === "undefined") return false;
+  const localStorageToken = localStorage.getItem("jwt_token");
+  const cookieToken = lerTokenCookie();
+  return !!(localStorageToken || cookieToken);
+}
+
+/**
+ * Obtém o token JWT de qualquer fonte disponível
+ */
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("jwt_token") || lerTokenCookie();
+}
+
 // ===================== Fetch autenticado =====================
 
 /**
  * Fetch com token JWT no header Authorization.
- * Necessário porque frontend e backend estão em domínios diferentes no Railway
- * — cookies cross-domain não funcionam, então enviamos via header.
+ * Retorna Response - use para quando precisar verificar status manualmente.
  */
-// lib/api-v2.ts
 export async function fetchAuth(path: string, options: RequestInit = {}): Promise<Response> {
-  // 1. Tenta ler de todas as fontes possíveis
-  const token = (typeof window !== "undefined" 
-    ? localStorage.getItem("jwt_token") 
-    : null) || lerTokenCookie();
-
-  // Log detalhado para debug (pode remover depois)
-  if (token) {
-    console.log(`📡 Fetch: ${path} | Token: ${token.substring(0, 10)}...`);
-  } else {
-    console.warn(`📡 Fetch: ${path} | ⚠️ SEM TOKEN`);
-  }
+  const token = getToken();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -100,36 +108,36 @@ export async function fetchAuth(path: string, options: RequestInit = {}): Promis
   };
 
   if (token) {
-    // 2. .trim() para evitar espaços em branco que quebram o Bearer
     headers["Authorization"] = `Bearer ${token.trim()}`;
   }
 
-  // 3. Garante que a URL não tenha barras duplas acidentais
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const url = `${API_BASE_URL}${cleanPath}`;
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers,
-      // Se o backend está no Railway e o front em outro lugar, 
-      // tente comentar a linha abaixo se o 401 persistir, 
-      // pois 'include' exige configurações de CORS muito estritas.
-      credentials: "include", 
-    });
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: "include", 
+  });
 
-    // 4. Se der 401, limpa o token podre para não entrar em loop
-    if (response.status === 401 && typeof window !== "undefined") {
-      console.error("🚫 Token inválido ou expirado. Redirecionando...");
-      // localStorage.removeItem("jwt_token"); // Opcional: deslogar se for 401
-    }
-
-    return response;
-  } catch (error) {
-    console.error("❌ Erro na requisição fetchAuth:", error);
-    throw error;
-  }
+  return response;
 }
+
+/**
+ * Fetch autenticado que já parseia o JSON e lança erro se não for ok.
+ * Use esta função nas páginas para simplificar o código.
+ */
+export async function fetchAuthJson<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetchAuth(path, options);
+  
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.mensagem ?? err?.erro ?? `Erro ${response.status}`);
+  }
+  
+  return response.json();
+}
+
 // ===================== Funções de Auth =====================
 
 /**
