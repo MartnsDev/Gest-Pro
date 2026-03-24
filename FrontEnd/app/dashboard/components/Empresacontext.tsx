@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
+import { fetchAuth } from "@/lib/api-v2";
 
 export interface Empresa {
   id: number;
@@ -31,6 +32,7 @@ interface EmpresaContextType {
   setEmpresaAtiva:    (e: Empresa) => void;
   setCaixaAtivo:      (c: CaixaInfo | null) => void;
   recarregarEmpresas: () => Promise<void>;
+  recarregarCaixa:    () => Promise<void>;
 }
 
 const EmpresaContext = createContext<EmpresaContextType>({
@@ -40,27 +42,10 @@ const EmpresaContext = createContext<EmpresaContextType>({
   setEmpresaAtiva:    () => {},
   setCaixaAtivo:      () => {},
   recarregarEmpresas: async () => {},
+  recarregarCaixa:    async () => {},
 });
 
 const STORAGE_KEY = "gestpro_empresa_ativa_id";
-const API_BASE    = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-
-// ─── fetchAuth com Authorization header ──────────────────────────────────────
-async function fetchAuth<T>(path: string): Promise<T> {
-  const token =
-    (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-
-  if (!res.ok) throw new Error(`Erro ${res.status}`);
-  return res.json();
-}
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function EmpresaProvider({ children }: { children: ReactNode }) {
@@ -73,12 +58,30 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   const carregarCaixa = async (empresa: Empresa) => {
     setCaixaAtivo(null);
     try {
-      const caixa = await fetchAuth<CaixaInfo>(
-        `/api/v1/caixas/aberto?empresaId=${empresa.id}`
-      );
+      // Usa a função fetchAuth do api-v2.ts que já gerencia token corretamente
+      const response = await fetchAuth(`/api/v1/caixas/aberto?empresaId=${empresa.id}`);
+      
+      if (!response.ok) {
+        // 404 significa que não há caixa aberto - é normal
+        if (response.status === 404) {
+          console.log(`Nenhum caixa aberto para empresa ${empresa.id}`);
+          return;
+        }
+        throw new Error(`Erro ${response.status}`);
+      }
+      
+      const caixa: CaixaInfo = await response.json();
       setCaixaAtivo({ ...caixa, empresaNome: empresa.nomeFantasia });
-    } catch {
+    } catch (err) {
       // sem caixa aberto — normal
+      console.log("Sem caixa aberto ou erro ao carregar:", err);
+    }
+  };
+
+  // ── Recarrega o caixa da empresa ativa ──────────────────────────────────────
+  const recarregarCaixa = async () => {
+    if (empresaAtiva) {
+      await carregarCaixa(empresaAtiva);
     }
   };
 
@@ -92,7 +95,14 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   // ── Carrega lista de empresas ───────────────────────────────────────────────
   const recarregarEmpresas = async () => {
     try {
-      const data = await fetchAuth<Empresa[]>("/api/v1/empresas");
+      // Usa a função fetchAuth do api-v2.ts
+      const response = await fetchAuth("/api/v1/empresas");
+      
+      if (!response.ok) {
+        throw new Error(`Erro ${response.status}`);
+      }
+      
+      const data: Empresa[] = await response.json();
       setEmpresas(data);
 
       if (data.length === 0) return;
@@ -122,6 +132,7 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     recarregarEmpresas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -132,6 +143,7 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
       setEmpresaAtiva,
       setCaixaAtivo,
       recarregarEmpresas,
+      recarregarCaixa,
     }}>
       {children}
     </EmpresaContext.Provider>
