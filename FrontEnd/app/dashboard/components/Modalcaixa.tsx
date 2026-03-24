@@ -12,9 +12,18 @@ interface Props {
 }
 
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
+  const token =
+    (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts }
+    {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      ...opts,
+    }
   );
   if (!res.ok) {
     const err = await res.json().catch(() => null);

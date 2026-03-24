@@ -20,33 +20,19 @@ interface Props {
 }
 
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const token = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("jwt_token="))
-    ?.split("=")[1];
-
-  const finalToken = token || localStorage.getItem("jwt_token");
-
-  const headers = new Headers({
-    "Content-Type": "application/json",
-    ...opts?.headers,
-  });
-
-  if (finalToken) {
-    headers.set("Authorization", `Bearer ${finalToken}`);
-  }
-
+  const token =
+    (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { 
+    {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       ...opts,
-      credentials: "include", 
-      headers: headers
     }
   );
-
-  if (res.status === 401) console.error("Sessão expirada");
-
   if (!res.ok) {
     const err = await res.json().catch(() => null);
     throw new Error(err?.mensagem ?? `Erro ${res.status}`);
