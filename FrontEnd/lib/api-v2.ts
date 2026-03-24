@@ -80,9 +80,12 @@ export function lerTokenCookie(): string | null {
  * Necessário porque frontend e backend estão em domínios diferentes no Railway
  * — cookies cross-domain não funcionam, então enviamos via header.
  */
+// lib/api-v2.ts
 export async function fetchAuth(path: string, options: RequestInit = {}): Promise<Response> {
-  // Tenta cookie, se falhar, tenta localStorage
-  const token = lerTokenCookie() || (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null);
+  // Tenta ler do LocalStorage primeiro para garantir
+  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) || lerTokenCookie();
+
+  console.log("Token extraído para fetch:", token ? "Sim (presente)" : "Não (vazio)");
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
