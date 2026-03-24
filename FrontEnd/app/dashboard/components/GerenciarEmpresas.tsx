@@ -20,25 +20,37 @@ interface Props {
 }
 
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  // 1. Tenta pegar o token do cookie (mesma lógica que funcionou na dashboard)
   const token = document.cookie
     .split("; ")
     .find((row) => row.startsWith("jwt_token="))
     ?.split("=")[1];
+
+  // Se não achar no cookie, tenta o localStorage como plano B
+  const finalToken = token || localStorage.getItem("jwt_token");
+
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    ...opts?.headers,
+  });
+
+  if (finalToken) {
+    headers.set("Authorization", `Bearer ${finalToken}`);
+  }
 
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
     { 
       ...opts,
       credentials: "include", 
-      headers: { 
-        "Content-Type": "application/json",
-        // 2. Adiciona o cabeçalho de autorização se o token existir
-        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-        ...opts?.headers 
-      } 
+      headers: headers
     }
   );
+
+  if (res.status === 401) {
+    // Se der 401, o token expirou ou é inválido
+    console.error("Sessão expirada");
+    // window.location.href = "/auth/login"; // Opcional: deslogar se falhar
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => null);
