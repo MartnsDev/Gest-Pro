@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Home, Package, CreditCard, Users,
@@ -146,7 +146,7 @@ function DashboardInner({
 
       {toast && <ToastPagamento onClose={() => setToast(false)} />}
 
-      {/* Banner cancelamento — aparece quando volta da Stripe sem pagar */}
+      {/* Banner cancelamento */}
       {cancelado && secao === "planos" && (
         <div style={{
           position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
@@ -237,62 +237,78 @@ function DashboardInner({
   );
 }
 
-// ─── Página raiz ──────────────────────────────────────────────────────────────
+// ─── Componente de Suporte para Suspense ──────────────────────────────────────
 
-
-export default function DashboardPage() {
+function DashboardLoader() {
   const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Capturamos os parâmetros da URL
-  const tokenDaUrl = searchParams.get("token");
   const mostrarToast = searchParams.get("payment") === "success";
   const cancelado = searchParams.get("canceled") === "true";
   const secaoInicial = (searchParams.get("section") as Secao) ?? "dashboard";
 
-  // app/dashboard/page.tsx
+  useEffect(() => {
+    async function inicializarDashboard() {
+      const tokenDaUrl = searchParams.get("token");
 
-useEffect(() => {
-  async function inicializarDashboard() {
-    // 1. Pega o token da URL
-    const params = new URLSearchParams(window.location.search);
-    const tokenDaUrl = params.get("token");
+      if (tokenDaUrl) {
+        salvarTokenCookie(tokenDaUrl);
+        localStorage.setItem("jwt_token", tokenDaUrl);
+        window.history.replaceState({}, "", "/dashboard");
+      }
 
-    // 2. Se existe token na URL, salva e LIMPA IMEDIATAMENTE
-  if (tokenDaUrl) {
-  salvarTokenCookie(tokenDaUrl); // Grava no cookie
-  localStorage.setItem("jwt_token", tokenDaUrl); // Grava no Storage (Garantia)
-  window.history.replaceState({}, "", "/dashboard");
-}
+      const tokenFinal = lerTokenCookie();
 
-    // 3. Tenta buscar o token (seja o que acabamos de salvar ou o que já existia)
-    const tokenFinal = lerTokenCookie();
+      if (!tokenFinal) {
+        window.location.href = "/auth/login";
+        return;
+      }
 
-    // 4. Se NÃO tem token nenhum, tchau!
-    if (!tokenFinal) {
-      console.log("Sem token no cookie, redirecionando...");
-      window.location.href = "/auth/login";
-      return;
+      try {
+        const data = await getUsuario();
+        if (!data) throw new Error("Usuário inválido");
+        setUsuario(data);
+      } catch (err) {
+        console.error("Erro ao validar usuário:", err);
+        removerTokenCookie();
+        window.location.href = "/auth/login";
+      } finally {
+        setLoading(false);
+      }
     }
 
-    // 5. Agora sim, com token garantido no cookie, buscamos os dados
-    try {
-      const data = await getUsuario();
-      if (!data) throw new Error("Usuário inválido");
-      setUsuario(data);
-    } catch (err) {
-      console.error("Erro ao validar usuário:", err);
-      // Se deu erro, limpamos o cookie podre e voltamos pro login
-      removerTokenCookie();
-      window.location.href = "/auth/login";
-    } finally {
-      setLoading(false);
-    }
+    inicializarDashboard();
+  }, [searchParams]);
+
+  if (loading) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
+        <p style={{ color: "#000" }}>Carregando GestPro...</p>
+      </div>
+    );
   }
 
-  inicializarDashboard();
-}, 
-[]);
+  if (!usuario) return null;
 
+  return (
+    <EmpresaProvider>
+      <DashboardInner 
+        usuario={usuario} 
+        mostrarToast={mostrarToast} 
+        secaoInicial={secaoInicial} 
+        cancelado={cancelado} 
+      />
+    </EmpresaProvider>
+  );
+}
+
+// ─── Página raiz ──────────────────────────────────────────────────────────────
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <DashboardLoader />
+    </Suspense>
+  );
 }
