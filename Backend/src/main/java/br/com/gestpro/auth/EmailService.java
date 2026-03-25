@@ -4,6 +4,7 @@ import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,6 +20,7 @@ public class EmailService {
     }
 
     // ================= TEMPLATE BASE =================
+    @Async
     private String templateBase(String titulo, String conteudo) {
         return """
             <!DOCTYPE html>
@@ -51,6 +53,7 @@ public class EmailService {
     }
 
     // ================= EMAIL GENÉRICO =================
+    @Async
     public void enviarEmail(String to, String nomeUsuario, String subject, String body) {
 
         try {
@@ -79,6 +82,7 @@ public class EmailService {
     }
 
     // ================= CONFIRMAÇÃO =================
+    @Async
     public void enviarConfirmacao(String emailDestino, String linkConfirmacao) {
 
         String conteudo = """
@@ -118,6 +122,7 @@ public class EmailService {
     }
 
     // ================= CÓDIGO =================
+    @Async
     public void enviarCodigoConfirmacao(String emailDestino, String nomeUsuario, String codigo) {
 
         String nome = (nomeUsuario != null && !nomeUsuario.isBlank()) ? nomeUsuario : "usuário";
