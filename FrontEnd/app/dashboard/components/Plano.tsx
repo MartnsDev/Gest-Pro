@@ -133,6 +133,9 @@ const PLANOS = [
 
 const ORDEM = ["EXPERIMENTAL", "BASICO", "PRO", "PREMIUM"] as const;
 
+// ─── Duração do trial — deve bater com TipoPlano.EXPERIMENTAL.duracaoDiasPadrao
+const DURACAO_TRIAL_DIAS = 30;
+
 // ─── Helpers visuais ──────────────────────────────────────────────────────────
 
 function barWidth(dias: number, total: number) {
@@ -166,19 +169,26 @@ function PlanosInner() {
     }
   }, [searchParams]);
 
-  // ── Busca dados em paralelo ────────────────────────────────────────────────
+  // ── Busca dados separados: email (nunca 403) + plano (pode 403) ───────────
+  // Email vem de /usuario/me — endpoint público autenticado, sem checagem de plano.
+  // Plano vem separado para que a falha não impeça o botão de assinar.
   useEffect(() => {
-    Promise.all([
-      fetchAuth<PlanoDTO>("/api/v1/dashboard/vendas/plano-usuario"),
-      getUsuario(),
-    ])
-      .then(([planoData, usuario]) => {
-        setPlano(planoData);
-        setEmailUsuario(usuario.email);
-      })
-      .catch(() => {
-        // falha silenciosa — botões ficam inativos
-      })
+    const token = getToken();
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    // Email: nunca retorna 403 por plano inativo
+    fetch(`${API}/api/v1/usuario/me`, { credentials: "include", headers })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => setEmailUsuario(data.email ?? null))
+      .catch(() => {}); // silencioso — erro aparece ao clicar
+
+    // Plano: pode retornar 403; tratamos silenciosamente
+    fetchAuth<PlanoDTO>("/api/v1/dashboard/vendas/plano-usuario")
+      .then(setPlano)
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -214,8 +224,6 @@ function PlanosInner() {
       }
 
       const { url } = await res.json();
-
-      // Redireciona para o checkout do Stripe
       globalThis.window.location.href = url;
     } catch (e: unknown) {
       const msg =
@@ -228,7 +236,11 @@ function PlanosInner() {
   // ── Derivações ─────────────────────────────────────────────────────────────
   const planoAtualIdx =
     plano ? ORDEM.indexOf(plano.tipoPlano as (typeof ORDEM)[number]) : -1;
-  const duracaoTotal = plano?.tipoPlano === "EXPERIMENTAL" ? 7 : 30;
+
+  // Para planos pagos, a duração real vem da Stripe (sempre 30 dias/mês).
+  // Para EXPERIMENTAL, usa a constante local que espelha o enum do backend.
+  const duracaoTotal = DURACAO_TRIAL_DIAS; // 30 para todos
+
   const pct = plano ? barWidth(plano.diasRestantes, duracaoTotal) : 100;
   const planoAtual = PLANOS.find((p) => p.id === plano?.tipoPlano);
   const estaAtivo = plano?.statusAcesso === "ATIVO";
@@ -340,9 +352,7 @@ function PlanosInner() {
               gap: 12,
             }}
           >
-            <div
-              style={{ display: "flex", alignItems: "center", gap: 14 }}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div
                 style={{
                   width: 48,
@@ -868,9 +878,10 @@ function PlanosInner() {
             </thead>
             <tbody>
               {[
+                // EXPERIMENTAL tem 30 dias de trial, planos pagos são mensais (30 dias via Stripe)
                 {
                   label: "Duração",
-                  values: ["7 dias", "30 dias", "30 dias", "30 dias"],
+                  values: ["30 dias", "Mensal", "Mensal", "Mensal"],
                 },
                 { label: "Empresas", values: ["1", "1", "5", "Ilimitado"] },
                 { label: "Caixas", values: ["1", "1", "3", "Ilimitado"] },

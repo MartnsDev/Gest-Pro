@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Crown, Star, Rocket, CheckCircle, ArrowRight, AlertCircle,
@@ -27,21 +27,21 @@ const PLANOS = [
     preco: "29,90", icon: Star,
     cor: "#3b82f6", corBg: "rgba(59,130,246,0.08)", corBorder: "rgba(59,130,246,0.25)",
     destaque: false,
-    features: ["1 empresa / loja","1 caixa registrador","Dashboard completo","Relatórios básicos","Suporte por e-mail"],
+    features: ["1 empresa / loja", "1 caixa registrador", "Dashboard completo", "Relatórios básicos", "Suporte por e-mail"],
   },
   {
     id: "PRO", nome: "Pro", tagline: "O mais escolhido",
     preco: "49,90", icon: Rocket,
     cor: "#10b981", corBg: "rgba(16,185,129,0.08)", corBorder: "rgba(16,185,129,0.30)",
     destaque: true,
-    features: ["5 empresas / lojas","3 caixas por empresa","Dashboard avançado","Relatórios completos","Suporte prioritário"],
+    features: ["5 empresas / lojas", "3 caixas por empresa", "Dashboard avançado", "Relatórios completos", "Suporte prioritário"],
   },
   {
     id: "PREMIUM", nome: "Premium", tagline: "Para redes e franquias",
     preco: "99,90", icon: Crown,
     cor: "#f59e0b", corBg: "rgba(245,158,11,0.08)", corBorder: "rgba(245,158,11,0.25)",
     destaque: false,
-    features: ["Empresas ilimitadas","Caixas ilimitados","Dashboard completo","Relatórios avançados","Suporte dedicado 24h"],
+    features: ["Empresas ilimitadas", "Caixas ilimitados", "Dashboard completo", "Relatórios avançados", "Suporte dedicado 24h"],
   },
 ] as const;
 
@@ -56,32 +56,31 @@ const BENEFICIOS = [
   { icon: RefreshCw,  texto: "Cancele quando quiser"   },
 ];
 
-// ─── Componente ───────────────────────────────────────────────────────────────
+// ─── Componente interno (isolado do Suspense) ─────────────────────────────────
 
-export default function Pagamento() {
+function PagamentoInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
-  const initialPlano = useRef<PlanoId>(
-    (PLANOS.find((p) => p.id === (searchParams.get("plano")?.toUpperCase() ?? ""))?.id ?? "PRO") as PlanoId
-  );
+  // Lê o plano da URL uma única vez no mount — useState garante reatividade
+  const [selecionado, setSelecionado] = useState<PlanoId>(() => {
+    const param = searchParams.get("plano")?.toUpperCase() ?? "";
+    return (PLANOS.find((p) => p.id === param)?.id ?? "PRO") as PlanoId;
+  });
 
-  const [selecionado,  setSelecionado]  = useState<PlanoId>(initialPlano.current);
   const [emailUsuario, setEmailUsuario] = useState<string>("");
+  const [emailCarregado, setEmailCarregado] = useState(false);
   const [processando,  setProcessando]  = useState(false);
-  const [loading,      setLoading]      = useState(true);
   const [erro,         setErro]         = useState<string | null>(null);
 
-  // ── Busca APENAS o email — nunca retorna 403 ──────────────────────────────
-  // Não chamamos /plano-usuario aqui pois usuário inativo recebe 403
-  // e o loading ficaria preso. Só precisamos do email para o checkout.
+  // ── Busca APENAS o email — endpoint que nunca retorna 403 por plano ────────
   useEffect(() => {
     let cancelado = false;
     const token = getToken();
 
-    // Timeout de segurança: desbloqueia o botão em no máximo 4s
+    // Timeout de segurança: libera o botão mesmo se a requisição travar
     const timeout = setTimeout(() => {
-      if (!cancelado) setLoading(false);
+      if (!cancelado) setEmailCarregado(true);
     }, 4000);
 
     fetch(`${API}/api/v1/usuario/me`, {
@@ -92,11 +91,23 @@ export default function Pagamento() {
       },
     })
       .then((r) => r.ok ? r.json() : Promise.reject("not-ok"))
-      .then((data) => { if (!cancelado) setEmailUsuario(data.email ?? ""); })
-      .catch(() => { /* silencioso — erro aparece só ao clicar */ })
-      .finally(() => { if (!cancelado) { clearTimeout(timeout); setLoading(false); } });
+      .then((data) => {
+        if (!cancelado) setEmailUsuario(data.email ?? "");
+      })
+      .catch(() => {
+        // silencioso — o erro aparece descritivamente ao tentar assinar
+      })
+      .finally(() => {
+        if (!cancelado) {
+          clearTimeout(timeout);
+          setEmailCarregado(true);
+        }
+      });
 
-    return () => { cancelado = true; clearTimeout(timeout); };
+    return () => {
+      cancelado = true;
+      clearTimeout(timeout);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Checkout ──────────────────────────────────────────────────────────────
@@ -134,6 +145,9 @@ export default function Pagamento() {
 
   const plano = PLANOS.find((p) => p.id === selecionado)!;
   const Icon  = plano.icon;
+
+  // Botão desabilitado enquanto email não foi carregado ou está processando
+  const botaoDesabilitado = processando || !emailCarregado;
 
   return (
     <>
@@ -225,7 +239,7 @@ export default function Pagamento() {
                 </div>
 
                 {PLANOS.map((p, i) => {
-                  const sel = selecionado === p.id;
+                  const sel   = selecionado === p.id;
                   const PIcon = p.icon;
                   return (
                     <button key={p.id} onClick={() => setSelecionado(p.id)} style={{
@@ -374,23 +388,29 @@ export default function Pagamento() {
 
                 <button
                   onClick={handleAssinar}
-                  disabled={processando || loading}
+                  disabled={botaoDesabilitado}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     padding: "13px 0", border: "none", borderRadius: 12,
-                    background: (processando || loading) ? "var(--surface-overlay)" : plano.cor,
-                    color: (processando || loading) ? "var(--foreground-subtle)" : "#fff",
+                    background: botaoDesabilitado ? "var(--surface-overlay)" : plano.cor,
+                    color: botaoDesabilitado ? "var(--foreground-subtle)" : "#fff",
                     fontSize: 14, fontWeight: 700,
-                    cursor: (processando || loading) ? "not-allowed" : "pointer",
-                    boxShadow: (processando || loading) ? "none" : `0 4px 18px ${plano.cor}40`,
+                    cursor: botaoDesabilitado ? "not-allowed" : "pointer",
+                    boxShadow: botaoDesabilitado ? "none" : `0 4px 18px ${plano.cor}40`,
                     transition: "opacity .15s, background .15s",
                   }}
-                  onMouseEnter={(e) => { if (!processando && !loading) (e.currentTarget as HTMLButtonElement).style.opacity = "0.85"; }}
-                  onMouseLeave={(e) => { if (!processando && !loading) (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+                  onMouseEnter={(e) => {
+                    if (!botaoDesabilitado)
+                      (e.currentTarget as HTMLButtonElement).style.opacity = "0.85";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!botaoDesabilitado)
+                      (e.currentTarget as HTMLButtonElement).style.opacity = "1";
+                  }}
                 >
                   {processando ? (
                     <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Redirecionando...</>
-                  ) : loading ? (
+                  ) : !emailCarregado ? (
                     <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Carregando...</>
                   ) : (
                     <><CreditCard size={14} /> Assinar agora <ArrowRight size={13} /></>
@@ -428,5 +448,24 @@ export default function Pagamento() {
         </div>
       </div>
     </>
+  );
+}
+
+// ─── Export default com Suspense — obrigatório por usar useSearchParams ────────
+
+export default function Pagamento() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          height: 200, color: "var(--foreground-muted)", fontSize: 14,
+        }}>
+          Carregando...
+        </div>
+      }
+    >
+      <PagamentoInner />
+    </Suspense>
   );
 }
