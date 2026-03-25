@@ -27,21 +27,21 @@ const PLANOS = [
     preco: "29,90", icon: Star,
     cor: "#3b82f6", corBg: "rgba(59,130,246,0.08)", corBorder: "rgba(59,130,246,0.25)",
     destaque: false,
-    features: ["1 empresa / loja", "1 caixa registrador", "Dashboard completo", "Relatórios básicos", "Suporte por e-mail"],
+    features: ["1 empresa / loja", "1 caixa registrador", "Dashboard completo", "Relatórios básicos", "Suporte por e-mail", "Cadastrar até 500 produtos", "Exportação PDF/CSV", "Nota fiscal",],
   },
   {
     id: "PRO", nome: "Pro", tagline: "O mais escolhido",
     preco: "49,90", icon: Rocket,
     cor: "#10b981", corBg: "rgba(16,185,129,0.08)", corBorder: "rgba(16,185,129,0.30)",
     destaque: true,
-    features: ["5 empresas / lojas", "3 caixas por empresa", "Dashboard avançado", "Relatórios completos", "Suporte prioritário"],
+    features: ["5 empresas / lojas", "5 caixas", "Produtos ilimitados", "Dashboard avançado", "Relatórios completos", "Suporte prioritário", "Exportação PDF/CSV", "Nota fiscal", "Gestão completa",],
   },
   {
     id: "PREMIUM", nome: "Premium", tagline: "Para redes e franquias",
     preco: "99,90", icon: Crown,
     cor: "#f59e0b", corBg: "rgba(245,158,11,0.08)", corBorder: "rgba(245,158,11,0.25)",
     destaque: false,
-    features: ["Empresas ilimitadas", "Caixas ilimitados", "Dashboard completo", "Relatórios avançados", "Suporte dedicado 24h"],
+    features: ["Empresas ilimitadas", "Caixas ilimitados", "Produtos ilimitados", "Dashboard Avançado", "Relatórios Avançados", "Suporte dedicado 24h", "Gestão completa", "Exportação PDF/CSV", "Nota fiscal", "API para integrações", "Gestão completa"],
   },
 ] as const;
 

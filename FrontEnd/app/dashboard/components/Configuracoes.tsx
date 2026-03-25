@@ -20,7 +20,7 @@ interface Perfil {
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
+  const token = (typeof globalThis.window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
     {
       credentials: "include",
@@ -32,7 +32,7 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
 }
 
 async function fetchFormData<T>(path: string, body: FormData): Promise<T> {
-  const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
+  const token = (typeof globalThis.window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
     {
       method: "POST",
@@ -48,7 +48,7 @@ const PLANO_INFO: Record<string, { label: string; cor: string; icon: ReactNode; 
   EXPERIMENTAL: {
     label: "Experimental", cor: "#71717a",
     icon: <Package size={18} />,
-    beneficios: ["1 empresa", "1 caixa", "Funcionalidades básicas", "7 dias de acesso"],
+    beneficios: ["1 empresa", "1 caixa", "Relatórios básicos", "Exportação PDF/CSV", "Nota fiscal", "30 dias de acesso"],
   },
   BASICO: {
     label: "Básico", cor: "#3b82f6",
@@ -58,12 +58,12 @@ const PLANO_INFO: Record<string, { label: string; cor: string; icon: ReactNode; 
   PRO: {
     label: "Pro", cor: "#a78bfa",
     icon: <Star size={18} />,
-    beneficios: ["2 empresas", "3 caixas simultâneos", "Relatórios completos", "Exportação PDF/CSV", "Suporte prioritário", "30 dias"],
+    beneficios: ["5 empresas", "5 caixas simultâneos", "Relatórios completos", "Exportação PDF/CSV", "Nota fiscal", "Suporte prioritário", "30 dias"],
   },
   PREMIUM: {
     label: "Premium", cor: "#f59e0b",
     icon: <Crown size={18} />,
-    beneficios: ["Empresas ilimitadas", "Caixas ilimitados", "Todos os relatórios", "Nota fiscal", "Suporte 24/7", "API access", "30 dias"],
+    beneficios: ["Empresas ilimitadas", "Caixas ilimitados", "Todos os relatórios", "Nota fiscal", "Suporte 24/7", "API access", "API mercado livre, amazon, shopee", "30 dias"],
   },
 };
 
@@ -656,7 +656,7 @@ function FormularioSuporte({ nomeUsuario, emailUsuario }: { nomeUsuario: string;
 
     // mailto: abre o cliente de e-mail padrão (Gmail no desktop, app no mobile)
     const url = `mailto:gestprosuporte@gmail.com?subject=${encodeURIComponent(assuntoFull)}&body=${encodeURIComponent(corpo)}`;
-    window.location.href = url;
+    globalThis.window.location.href = url;
 
     setEnviado(true);
     setTimeout(() => setEnviado(false), 4000);
