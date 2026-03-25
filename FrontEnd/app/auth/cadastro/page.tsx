@@ -262,7 +262,7 @@ export default function CadastroPage() {
                   Criar conta grátis
                 </h1>
                 <p style={{ fontSize: 14, color: "rgba(241,245,249,0.4)", fontFamily: "var(--font-manrope), 'Manrope', sans-serif" }}>
-                  7 dias sem custo, sem cartão de crédito
+                  30 dias sem custo, sem cartão de crédito
                 </p>
               </div>
 
