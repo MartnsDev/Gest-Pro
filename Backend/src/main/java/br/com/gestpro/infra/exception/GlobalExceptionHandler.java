@@ -2,12 +2,14 @@ package br.com.gestpro.infra.exception;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -120,5 +122,15 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(500).body(erro);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Object> handleMaxSizeException(MaxUploadSizeExceededException exc) {
+        ApiException apiException = new ApiException(
+                "O arquivo excede o limite permitido (5MB).",
+                HttpStatus.BAD_REQUEST,
+                "/api/v1/configuracoes/perfil/foto"
+        );
+        return new ResponseEntity<>(apiException, HttpStatus.BAD_REQUEST);
     }
 }

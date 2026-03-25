@@ -112,14 +112,6 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoServiceInterface {
             throw new ApiException("Erro ao salvar foto.", HttpStatus.INTERNAL_SERVER_ERROR, "/configuracoes/perfil/foto");
         }
 
-        long maxSize = 5 * 1024 * 1024;
-
-        if (foto.getSize() > maxSize) {
-            throw new ApiException(
-                    "\"Erro: A foto não pode ser maior que 5MB.\"",
-                    HttpStatus.BAD_REQUEST,
-                    "/configuracoes/perfil/foto");
-        }
 
         String url = "/uploads/fotos/" + nomeArquivo;
         Usuario u = buscar(email);
