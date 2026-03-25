@@ -223,8 +223,8 @@ export async function getUsuario(): Promise<Usuario> {
 
   if (response.status === 401 || response.status === 403) {
     // Plano inativo — redireciona para pagamento
-    if (response.status === 403 && typeof window !== "undefined") {
-      window.location.href = "/pagamento";
+    if (response.status === 403 && typeof globalThis.window !== "undefined") {
+      globalThis.window.location.href = "/pagamento";  
     }
     throw new Error(response.status === 403 ? "PLANO_INATIVO" : "NAO_AUTENTICADO");
   }
@@ -249,5 +249,5 @@ export async function getUsuario(): Promise<Usuario> {
  * Login com Google — redireciona para o backend iniciar o fluxo OAuth2.
  */
 export function loginComGoogle() {
-  window.location.href = `${API_BASE_URL}/oauth2/authorization/google`;
+  globalThis.window.location.href = `${API_BASE_URL}/oauth2/authorization/google`;
 }
