@@ -40,7 +40,7 @@ const fmt = (v?: number | null) =>
 
 async function fetchQ<T>(path: string, opts?: RequestInit): Promise<T> {
   const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
     {
       credentials: "include",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -604,7 +604,7 @@ export default function DashboardHome({ usuario, onNavegar }: {
   const fetchDados = async (id: number) => {
   setLoading(true);
   const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
-  const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
   const opts = {
     credentials: "include" as const,
     headers: {

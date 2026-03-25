@@ -47,7 +47,7 @@ const FORM_VAZIO: ContatoForm = {
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
   const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
+    `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
     {
       credentials: "include",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },

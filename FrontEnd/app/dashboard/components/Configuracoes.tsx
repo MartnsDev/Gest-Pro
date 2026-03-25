@@ -21,7 +21,7 @@ interface Perfil {
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
   const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
     {
       credentials: "include",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -33,7 +33,7 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
 
 async function fetchFormData<T>(path: string, body: FormData): Promise<T> {
   const token = (typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null) ?? "";
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
     {
       method: "POST",
       credentials: "include",
@@ -89,7 +89,7 @@ function Secao({ titulo, sub, icon, children }: { titulo: string; sub?: string; 
 }
 
 /* ─── Foto de perfil ─────────────────────────────────────────────────────── */
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
 
 // Garante que a URL da foto aponta para o backend, não para o Next.js
 function resolverFotoUrl(url?: string | null): string | null {

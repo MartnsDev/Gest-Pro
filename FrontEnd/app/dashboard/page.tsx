@@ -99,7 +99,7 @@ function DashboardInner({
   const [modalCaixa, setModalCaixa] = useState(false);
   const [toast,      setToast]      = useState(mostrarToast);
 
-  const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+  const API = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
   const resolverFoto = (url?: string | null) => {
     if (!url) return null;
     if (url.startsWith("http") || url.startsWith("blob:")) return url;

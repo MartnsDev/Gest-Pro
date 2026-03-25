@@ -29,9 +29,9 @@ interface PlanoDTO {
 
 // ─── Helpers de fetch ─────────────────────────────────────────────────────────
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
 
-// ✅ CORRIGIDO: envia o token JWT no header Authorization (necessário no Railway,
+// CORRIGIDO: envia o token JWT no header Authorization (necessário no Railway,
 // pois frontend e backend estão em domínios diferentes e cookies cross-domain não funcionam)
 async function fetchAuth<T>(path: string): Promise<T> {
   const token =
@@ -144,10 +144,10 @@ function barColor(pct: number) {
   return "var(--destructive)";
 }
 
-// ─── Componente interno (usa useSearchParams — deve estar dentro do Suspense) ──
+// ─── Componente interno 
 
 function PlanosInner() {
-  // ✅ CORRIGIDO: useSearchParams dentro do componente filho, envolvido por Suspense no export default
+
   const searchParams = useSearchParams();
 
   const [plano,        setPlano]        = useState<PlanoDTO | null>(null);
@@ -552,7 +552,7 @@ function PlanosInner() {
 }
 
 // ─── Export default com Suspense ──────────────────────────────────────────────
-// ✅ CORRIGIDO: useSearchParams() exige que o componente esteja dentro de <Suspense>.
+// CORRIGIDO: useSearchParams() exige que o componente esteja dentro de <Suspense>.
 // Sem isso, o Next.js 14 falha no build com erro de pré-renderização estática.
 
 export default function Planos() {
