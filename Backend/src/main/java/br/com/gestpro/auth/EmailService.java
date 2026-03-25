@@ -176,9 +176,9 @@ public class EmailService {
     private String resendApiKey;
 
     // ================= ENVIO CENTRAL =================
+    // ================= ENVIO CENTRAL =================
     private void enviarHtml(String to, String subject, String html) {
         try {
-            // Validação básica para evitar NPE se a variável não subir no deploy
             if (resendApiKey == null || resendApiKey.isEmpty()) {
                 System.err.println("ERRO: RESEND_API_KEY não encontrada nas variáveis de ambiente!");
                 return;
@@ -186,30 +186,29 @@ public class EmailService {
 
             HttpClient client = HttpClient.newHttpClient();
 
-            // O Gson trata as aspas e caracteres especiais do HTML para o JSON não quebrar
             String json = """
-                    {
-                        "from": "GestPro <onboarding@resend.dev>",
-                        "to": ["%s"],
-                        "subject": "%s",
-                        "html": %s
-                    }
-                    """.formatted(to, subject, new Gson().toJson(html));
+                {
+                    "from": "GestPro <suporte@gestpro.site>",
+                    "to": ["%s"],
+                    "subject": "%s",
+                    "html": %s
+                }
+                """.formatted(to, subject, new Gson().toJson(html));
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.resend.com/emails"))
-                    .header("Authorization", "Bearer " + resendApiKey) // Ajustado para bater com o nome da variável
+                    .header("Authorization", "Bearer " + resendApiKey)
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json))
                     .build();
 
-            // Enviando de forma síncrona aqui (o @Async nos métodos de cima cuida da thread separada)
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200 || response.statusCode() == 201) {
-                System.out.println("E-mail enviado via API Resend! Status: " + response.statusCode());
+                System.out.println(" E-mail enviado via API Resend! Status: " + response.statusCode());
             } else {
-                System.err.println("Falha na Resend: " + response.statusCode() + " - " + response.body());
+                // Isso vai te mostrar exatamente por que a Resend recusou (ex: se o domínio ainda não foi verificado)
+                System.err.println(" Falha na Resend: " + response.statusCode() + " - " + response.body());
             }
 
         } catch (Exception e) {
