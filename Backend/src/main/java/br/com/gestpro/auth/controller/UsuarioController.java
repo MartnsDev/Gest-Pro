@@ -41,18 +41,8 @@ public class UsuarioController {
         return ResponseEntity.ok(UsuarioResponse.from(u));
     }
 
-    @GetMapping("/api/v1/usuario/me")
-    public ResponseEntity<UsuarioResponse> getUsuarioPlano(Authentication authentication) {
-        Usuario u = usuarioRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ApiException("Usuário não encontrado.",
-                        HttpStatus.NOT_FOUND, "/api/usuario"));
 
-        return ResponseEntity.ok(UsuarioResponse.from(u));
-    }
-
-    // ===============================
     // Logout
-    // ===============================
     @PostMapping("/auth/logout")
     public ResponseEntity<String> logout(HttpServletResponse response) {
         Cookie cookie = new Cookie("jwt_token", null); // mesmo nome usado no login

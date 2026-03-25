@@ -193,7 +193,7 @@ function PlanosInner() {
     };
 
     // Email: nunca retorna 403 por plano inativo
-    fetch(`${API}/api/v1/usuario/me`, { credentials: "include", headers })
+    fetch(`${API}/api/usuario`, { credentials: "include", headers })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data) => setEmailUsuario(data.email ?? null))
       .catch(() => {}); // silencioso — erro aparece ao clicar
