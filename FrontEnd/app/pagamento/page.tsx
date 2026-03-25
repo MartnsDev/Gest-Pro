@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Crown,
   Star,
   Rocket,
-  FlaskConical,
   CheckCircle,
   ArrowRight,
   AlertCircle,
@@ -14,6 +13,12 @@ import {
   CreditCard,
   Shield,
   Zap,
+  TrendingUp,
+  Lock,
+  RefreshCw,
+  BarChart2,
+  Users,
+  Package,
 } from "lucide-react";
 import { getUsuario } from "@/lib/api-v2";
 
@@ -49,38 +54,37 @@ async function fetchAuth<T>(path: string): Promise<T> {
   return res.json();
 }
 
-// ─── Planos pagos disponíveis ─────────────────────────────────────────────────
+// ─── Dados estáticos ──────────────────────────────────────────────────────────
 
-const PLANOS_PAGOS = [
+const PLANOS = [
   {
     id: "BASICO",
     nome: "Básico",
-    descricao: "Ideal para pequenos negócios",
-    preco: "R$ 29,90",
-    precoNum: 29.9,
-    duracao: "por mês",
+    tagline: "Para quem está começando",
+    preco: "29,90",
     icon: Star,
     cor: "#3b82f6",
-    corMuted: "rgba(59,130,246,0.12)",
+    corBg: "rgba(59,130,246,0.08)",
+    corBorder: "rgba(59,130,246,0.25)",
+    destaque: false,
     features: [
       "1 empresa / loja",
-      "1 caixa",
+      "1 caixa registrador",
       "Dashboard completo",
       "Relatórios básicos",
       "Suporte por e-mail",
     ],
-    destaque: false,
   },
   {
     id: "PRO",
     nome: "Pro",
-    descricao: "Para negócios em crescimento",
-    preco: "R$ 49,90",
-    precoNum: 49.9,
-    duracao: "por mês",
+    tagline: "O mais escolhido",
+    preco: "49,90",
     icon: Rocket,
     cor: "#10b981",
-    corMuted: "rgba(16,185,129,0.12)",
+    corBg: "rgba(16,185,129,0.08)",
+    corBorder: "rgba(16,185,129,0.30)",
+    destaque: true,
     features: [
       "5 empresas / lojas",
       "3 caixas por empresa",
@@ -88,18 +92,17 @@ const PLANOS_PAGOS = [
       "Relatórios completos",
       "Suporte prioritário",
     ],
-    destaque: true,
   },
   {
     id: "PREMIUM",
     nome: "Premium",
-    descricao: "Para redes e franquias",
-    preco: "R$ 99,90",
-    precoNum: 99.9,
-    duracao: "por mês",
+    tagline: "Para redes e franquias",
+    preco: "99,90",
     icon: Crown,
     cor: "#f59e0b",
-    corMuted: "rgba(245,158,11,0.12)",
+    corBg: "rgba(245,158,11,0.08)",
+    corBorder: "rgba(245,158,11,0.25)",
+    destaque: false,
     features: [
       "Empresas ilimitadas",
       "Caixas ilimitados",
@@ -107,68 +110,80 @@ const PLANOS_PAGOS = [
       "Relatórios avançados",
       "Suporte dedicado 24h",
     ],
-    destaque: false,
   },
 ] as const;
 
-// ─── Componente interno ───────────────────────────────────────────────────────
+type PlanoId = (typeof PLANOS)[number]["id"];
 
-function PagamentoInner() {
+const BENEFICIOS = [
+  { icon: BarChart2,  texto: "Vendas em tempo real"    },
+  { icon: Package,    texto: "Estoque automatizado"    },
+  { icon: Users,      texto: "Gestão de clientes"      },
+  { icon: TrendingUp, texto: "Relatórios inteligentes" },
+  { icon: Lock,       texto: "Dados 100% seguros"      },
+  { icon: RefreshCw,  texto: "Cancele quando quiser"   },
+];
+
+// ─── Página principal ─────────────────────────────────────────────────────────
+// Sem Suspense wrapper aqui — o layout pai já deve prover o Suspense se necessário.
+// useSearchParams é lido uma única vez via useRef para não causar re-renders.
+
+export default function Pagamento() {
+  const router       = useRouter();
   const searchParams = useSearchParams();
-  const router = useRouter();
 
-  // Plano pré-selecionado via query string (ex: /pagamento?plano=PRO)
-  const planoQuery = searchParams.get("plano")?.toUpperCase() ?? "";
-  const defaultPlano =
-    PLANOS_PAGOS.find((p) => p.id === planoQuery)?.id ?? "PRO";
+  // Lê query param UMA única vez na montagem → sem loop de re-render
+  const initialPlano = useRef<PlanoId>(
+    (PLANOS.find(
+      (p) => p.id === (searchParams.get("plano")?.toUpperCase() ?? "")
+    )?.id ?? "PRO") as PlanoId
+  );
 
-  const [planoSelecionado, setPlanoSelecionado] = useState<string>(defaultPlano);
+  const [selecionado,  setSelecionado]  = useState<PlanoId>(initialPlano.current);
   const [emailUsuario, setEmailUsuario] = useState<string | null>(null);
-  const [planoAtual, setPlanoAtual] = useState<PlanoDTO | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [processando, setProcessando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
+  const [planoAtual,   setPlanoAtual]   = useState<PlanoDTO | null>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [processando,  setProcessando]  = useState(false);
+  const [erro,         setErro]         = useState<string | null>(null);
 
-  // ── Busca dados do usuário e plano atual ──────────────────────────────────
+  // ── Fetch único na montagem ───────────────────────────────────────────────
   useEffect(() => {
+    let cancelado = false;
+
     Promise.all([
       fetchAuth<PlanoDTO>("/api/v1/dashboard/vendas/plano-usuario"),
       getUsuario(),
     ])
       .then(([planoData, usuario]) => {
+        if (cancelado) return;
         setPlanoAtual(planoData);
         setEmailUsuario(usuario.email);
       })
-      .catch(() => {
-        // falha silenciosa
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(() => { /* silencioso */ })
+      .finally(() => { if (!cancelado) setLoading(false); });
 
-  // ── Checkout → redireciona para Stripe ───────────────────────────────────
+    return () => { cancelado = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Checkout ──────────────────────────────────────────────────────────────
   async function handleAssinar() {
     if (!emailUsuario) {
       setErro("Não foi possível identificar seu e-mail. Recarregue a página.");
       return;
     }
-
     setErro(null);
     setProcessando(true);
 
     try {
       const token = getToken();
-
-      const res = await fetch(`${API}/api/payments/create-checkout-session`, {
-        method: "POST",
+      const res   = await fetch(`${API}/api/payments/create-checkout-session`, {
+        method:      "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({
-          plano: planoSelecionado,
-          customerEmail: emailUsuario,
-        }),
+        body: JSON.stringify({ plano: selecionado, customerEmail: emailUsuario }),
       });
 
       if (!res.ok) {
@@ -179,421 +194,330 @@ function PagamentoInner() {
       const { url } = await res.json();
       window.location.href = url;
     } catch (e: unknown) {
-      const msg =
-        e instanceof Error ? e.message : "Não foi possível iniciar o checkout.";
-      setErro(msg);
+      setErro(e instanceof Error ? e.message : "Não foi possível iniciar o checkout.");
       setProcessando(false);
     }
   }
 
-  const plano = PLANOS_PAGOS.find((p) => p.id === planoSelecionado)!;
-  const Icon = plano.icon;
-  const planoAtualInativo = planoAtual?.statusAcesso === "INATIVO";
+  const plano       = PLANOS.find((p) => p.id === selecionado)!;
+  const Icon        = plano.icon;
+  const estaInativo = planoAtual?.statusAcesso === "INATIVO";
 
   return (
-    <div
-      style={{
-        padding: "28px 28px 60px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 28,
-        maxWidth: 860,
-      }}
-    >
-      {/* Cabeçalho */}
-      <div>
-        <h1
-          style={{
-            fontSize: 22,
-            fontWeight: 700,
-            color: "var(--foreground)",
-            margin: 0,
-          }}
-        >
-          Assinar plano
+    <div style={{ padding: "28px 28px 60px", maxWidth: 920 }}>
+
+      {/* ── Cabeçalho marketing ───────────────────────────────────────────── */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          padding: "4px 12px", borderRadius: 99, marginBottom: 14,
+          background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)",
+        }}>
+          <TrendingUp size={13} color="#10b981" />
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#10b981", letterSpacing: ".04em" }}>
+            GESTÃO PROFISSIONAL
+          </span>
+        </div>
+
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--foreground)", margin: "0 0 8px", lineHeight: 1.25 }}>
+          Transforme sua loja em uma{" "}
+          <span style={{ color: "#10b981" }}>máquina de vendas</span>
         </h1>
-        <p
-          style={{
-            fontSize: 14,
-            color: "var(--foreground-muted)",
-            marginTop: 6,
-          }}
-        >
-          {planoAtualInativo
-            ? "Seu acesso está bloqueado. Escolha um plano para reativar."
-            : "Escolha o plano ideal e continue no Stripe com segurança."}
+        <p style={{ fontSize: 14, color: "var(--foreground-muted)", margin: 0, maxWidth: 500 }}>
+          Controle estoque, vendas e clientes em um só lugar.
+          {estaInativo && " Seu acesso expirou — escolha um plano e retome agora."}
         </p>
       </div>
 
-      {/* Banner plano inativo */}
-      {planoAtualInativo && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "10px 14px",
-            background: "var(--destructive-muted)",
-            border: "1px solid rgba(239,68,68,0.25)",
-            borderRadius: 10,
-            fontSize: 13,
-            color: "var(--destructive)",
-          }}
-        >
-          <AlertCircle size={14} />
-          Seu período {planoAtual?.tipoPlano === "EXPERIMENTAL" ? "experimental" : "de acesso"} encerrou. Assine para retomar.
+      {/* ── Banners de alerta ─────────────────────────────────────────────── */}
+      {estaInativo && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "11px 16px", marginBottom: 20,
+          background: "rgba(239,68,68,0.06)",
+          border: "1px solid rgba(239,68,68,0.2)",
+          borderRadius: 12, fontSize: 13, color: "var(--destructive)",
+        }}>
+          <AlertCircle size={15} />
+          Seu período {planoAtual?.tipoPlano === "EXPERIMENTAL" ? "experimental" : "de acesso"} encerrou. Assine para retomar o acesso.
         </div>
       )}
 
-      {/* Erro */}
       {erro && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "10px 14px",
-            background: "var(--destructive-muted)",
-            border: "1px solid rgba(239,68,68,0.25)",
-            borderRadius: 10,
-            fontSize: 13,
-            color: "var(--destructive)",
-          }}
-        >
-          <AlertCircle size={14} />
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "11px 16px", marginBottom: 20,
+          background: "rgba(239,68,68,0.06)",
+          border: "1px solid rgba(239,68,68,0.2)",
+          borderRadius: 12, fontSize: 13, color: "var(--destructive)",
+        }}>
+          <AlertCircle size={15} />
           {erro}
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 20, alignItems: "start" }}>
+      {/* ── Layout principal ──────────────────────────────────────────────── */}
+      <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
 
-        {/* ── Coluna esquerda: seleção de plano ─────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* ── Coluna esquerda ──────────────────────────────────────────────── */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 20 }}>
 
-          {/* Label */}
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground-muted)", margin: 0, textTransform: "uppercase", letterSpacing: ".05em" }}>
-            Escolha seu plano
-          </p>
+          {/* Seleção de planos */}
+          <div style={{
+            background: "var(--surface-elevated)",
+            border: "1px solid var(--border)",
+            borderRadius: 16, overflow: "hidden",
+          }}>
+            <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground-muted)", margin: 0, textTransform: "uppercase", letterSpacing: ".06em" }}>
+                Escolha seu plano
+              </p>
+            </div>
 
-          {PLANOS_PAGOS.map((p) => {
-            const selecionado = planoSelecionado === p.id;
-            const PIcon = p.icon;
-
-            return (
-              <button
-                key={p.id}
-                onClick={() => setPlanoSelecionado(p.id)}
-                style={{
-                  position: "relative",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                  padding: "16px 20px",
-                  background: "var(--surface-elevated)",
-                  border: `1.5px solid ${selecionado ? p.cor : "var(--border)"}`,
-                  borderRadius: 14,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "border-color .15s, transform .15s",
-                }}
-                onMouseEnter={(e) => {
-                  if (!selecionado)
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = p.cor + "66";
-                }}
-                onMouseLeave={(e) => {
-                  if (!selecionado)
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)";
-                }}
-              >
-                {/* Badge mais popular */}
-                {p.destaque && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: -10,
-                      left: 20,
-                      padding: "2px 10px",
-                      background: p.cor,
-                      color: "#fff",
-                      borderRadius: 99,
-                      fontSize: 10,
-                      fontWeight: 700,
-                    }}
-                  >
-                    MAIS POPULAR
-                  </div>
-                )}
-
-                {/* Ícone */}
-                <div
+            {PLANOS.map((p, i) => {
+              const sel   = selecionado === p.id;
+              const PIcon = p.icon;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSelecionado(p.id)}
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background: selecionado ? p.corMuted : "var(--surface-overlay)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    transition: "background .15s",
+                    width: "100%", display: "flex", alignItems: "center", gap: 16,
+                    padding: "16px 20px", border: "none",
+                    borderTop: i > 0 ? "1px solid var(--border)" : "none",
+                    borderLeft: sel ? `3px solid ${p.cor}` : "3px solid transparent",
+                    background: sel ? p.corBg : "transparent",
+                    cursor: "pointer", textAlign: "left",
+                    transition: "background .12s, border-color .12s",
                   }}
                 >
-                  <PIcon size={20} color={selecionado ? p.cor : "var(--foreground-muted)"} />
-                </div>
+                  {/* Ícone */}
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                    background: sel ? p.corBg : "var(--surface-overlay)",
+                    border: `1px solid ${sel ? p.corBorder : "transparent"}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "all .12s",
+                  }}>
+                    <PIcon size={18} color={sel ? p.cor : "var(--foreground-muted)"} />
+                  </div>
 
-                {/* Info */}
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
-                    {p.nome}
-                  </p>
-                  <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "2px 0 0" }}>
-                    {p.descricao}
-                  </p>
-                </div>
+                  {/* Nome + tagline */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: sel ? "var(--foreground)" : "var(--foreground-muted)" }}>
+                        {p.nome}
+                      </span>
+                      {p.destaque && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: "2px 7px",
+                          background: p.cor, color: "#fff", borderRadius: 99,
+                        }}>
+                          POPULAR
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 12, color: "var(--foreground-subtle)" }}>
+                      {p.tagline}
+                    </span>
+                  </div>
 
-                {/* Preço */}
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <p style={{ fontSize: 18, fontWeight: 800, color: p.cor, margin: 0, lineHeight: 1 }}>
-                    {p.preco}
-                  </p>
-                  <p style={{ fontSize: 11, color: "var(--foreground-subtle)", margin: "2px 0 0" }}>
-                    {p.duracao}
-                  </p>
-                </div>
+                  {/* Preço */}
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <p style={{ fontSize: 19, fontWeight: 800, color: sel ? p.cor : "var(--foreground-muted)", margin: 0, lineHeight: 1 }}>
+                      R$ {p.preco}
+                    </p>
+                    <p style={{ fontSize: 11, color: "var(--foreground-subtle)", margin: "2px 0 0" }}>/mês</p>
+                  </div>
 
-                {/* Check */}
-                {selecionado && (
-                  <CheckCircle
-                    size={18}
-                    color={p.cor}
-                    style={{ flexShrink: 0, marginLeft: 8 }}
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
+                  {/* Radio */}
+                  <div style={{
+                    width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
+                    border: `2px solid ${sel ? p.cor : "var(--border)"}`,
+                    background: sel ? p.cor : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "all .12s",
+                  }}>
+                    {sel && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
-        {/* ── Coluna direita: resumo + CTA ──────────────────────────────── */}
-        <div
-          style={{
-            width: 280,
+          {/* Benefícios */}
+          <div style={{
             background: "var(--surface-elevated)",
-            border: `1.5px solid ${plano.cor}44`,
-            borderRadius: 16,
-            padding: "22px 20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 20,
-            position: "sticky",
-            top: 24,
-          }}
-        >
-          {/* Header resumo */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: plano.corMuted,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Icon size={20} color={plano.cor} />
+            border: "1px solid var(--border)",
+            borderRadius: 16, padding: "18px 20px",
+          }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground-muted)", margin: "0 0 14px", textTransform: "uppercase", letterSpacing: ".06em" }}>
+              Incluso em todos os planos
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+              {BENEFICIOS.map(({ icon: BIcon, texto }) => (
+                <div key={texto} style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13, color: "var(--foreground-muted)" }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                    background: "rgba(16,185,129,0.08)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <BIcon size={13} color="#10b981" />
+                  </div>
+                  {texto}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Prova social */}
+          <div style={{
+            background: "var(--surface-elevated)",
+            border: "1px solid var(--border)",
+            borderRadius: 16, padding: "18px 20px",
+            display: "flex", gap: 14, alignItems: "flex-start",
+          }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
+              background: "linear-gradient(135deg, #10b981, #3b82f6)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 15, fontWeight: 800, color: "#fff",
+            }}>
+              M
             </div>
             <div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
-                Plano {plano.nome}
+              <p style={{ fontSize: 13, color: "var(--foreground)", margin: "0 0 5px", fontStyle: "italic", lineHeight: 1.5 }}>
+                "Antes eu perdia vendas por falta de controle. Com o GestPro, organizo tudo em minutos."
               </p>
-              <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "2px 0 0" }}>
-                {plano.descricao}
+              <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: 0, fontWeight: 600 }}>
+                Marcos Oliveira · Loja de Eletrônicos, SP
               </p>
             </div>
           </div>
 
-          {/* Divisor */}
-          <div style={{ height: 1, background: "var(--border)" }} />
+        </div>
 
-          {/* Features */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {plano.features.map((f) => (
-              <div
-                key={f}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 8,
-                  fontSize: 13,
-                  color: "var(--foreground-muted)",
-                }}
-              >
-                <CheckCircle size={14} color={plano.cor} style={{ flexShrink: 0, marginTop: 1 }} />
-                {f}
+        {/* ── Coluna direita: resumo ────────────────────────────────────────── */}
+        <div style={{ width: 272, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{
+            background: "var(--surface-elevated)",
+            border: `1.5px solid ${plano.corBorder}`,
+            borderRadius: 16, padding: "20px",
+            display: "flex", flexDirection: "column", gap: 16,
+          }}>
+
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: 11, flexShrink: 0,
+                background: plano.corBg, border: `1px solid ${plano.corBorder}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Icon size={19} color={plano.cor} />
               </div>
-            ))}
-          </div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
+                  Plano {plano.nome}
+                </p>
+                <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "2px 0 0" }}>
+                  {plano.tagline}
+                </p>
+              </div>
+            </div>
 
-          {/* Divisor */}
-          <div style={{ height: 1, background: "var(--border)" }} />
+            <div style={{ height: 1, background: "var(--border)" }} />
 
-          {/* Total */}
-          <div>
-            <div
+            {/* Features */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {plano.features.map((f) => (
+                <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, color: "var(--foreground-muted)" }}>
+                  <CheckCircle size={13} color={plano.cor} style={{ flexShrink: 0, marginTop: 1 }} />
+                  {f}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ height: 1, background: "var(--border)" }} />
+
+            {/* Preço */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ fontSize: 12, color: "var(--foreground-muted)" }}>Cobrança mensal</span>
+                <span style={{ fontSize: 22, fontWeight: 900, color: plano.cor, lineHeight: 1 }}>
+                  R$ {plano.preco}
+                </span>
+              </div>
+              <p style={{ fontSize: 11, color: "var(--foreground-subtle)", margin: "3px 0 0", textAlign: "right" }}>
+                Sem multa por cancelamento
+              </p>
+            </div>
+
+            {/* CTA */}
+            <button
+              onClick={handleAssinar}
+              disabled={processando || loading}
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "baseline",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "13px 0", border: "none", borderRadius: 12,
+                background: processando || loading ? "var(--surface-overlay)" : plano.cor,
+                color: processando || loading ? "var(--foreground-subtle)" : "#fff",
+                fontSize: 14, fontWeight: 700,
+                cursor: processando || loading ? "not-allowed" : "pointer",
+                boxShadow: processando || loading ? "none" : `0 4px 18px ${plano.cor}40`,
+                transition: "opacity .15s",
+              }}
+              onMouseEnter={(e) => {
+                if (!processando && !loading)
+                  (e.currentTarget as HTMLButtonElement).style.opacity = "0.85";
+              }}
+              onMouseLeave={(e) => {
+                if (!processando && !loading)
+                  (e.currentTarget as HTMLButtonElement).style.opacity = "1";
               }}
             >
-              <span style={{ fontSize: 13, color: "var(--foreground-muted)" }}>
-                Cobrança mensal
-              </span>
-              <span
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: plano.cor,
-                  lineHeight: 1,
-                }}
-              >
-                {plano.preco}
-              </span>
+              {loading ? (
+                <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Carregando...</>
+              ) : processando ? (
+                <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Redirecionando...</>
+              ) : (
+                <><CreditCard size={14} /> Assinar agora <ArrowRight size={13} /></>
+              )}
+            </button>
+
+            {/* Selos */}
+            <div style={{ display: "flex", justifyContent: "center", gap: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--foreground-subtle)" }}>
+                <Shield size={11} /> Pagamento seguro
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--foreground-subtle)" }}>
+                <Zap size={11} /> Ativação imediata
+              </div>
             </div>
-            <p style={{ fontSize: 11, color: "var(--foreground-subtle)", margin: "4px 0 0", textAlign: "right" }}>
-              Cancele quando quiser
+
+            <p style={{ fontSize: 11, color: "var(--foreground-subtle)", textAlign: "center", margin: 0 }}>
+              Processado via <strong style={{ color: "var(--foreground-muted)" }}>Stripe</strong>
             </p>
           </div>
 
-          {/* Botão CTA */}
+          {/* Voltar */}
           <button
-            onClick={handleAssinar}
-            disabled={processando || loading}
+            onClick={() => router.push("/dashboard/planos")}
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              padding: "12px 0",
-              background: processando || loading ? "var(--surface-overlay)" : plano.cor,
-              border: "none",
-              borderRadius: 12,
-              color: processando || loading ? "var(--foreground-subtle)" : "#fff",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: processando || loading ? "default" : "pointer",
-              opacity: processando ? 0.8 : 1,
-              transition: "opacity .15s, background .15s",
-            }}
-            onMouseEnter={(e) => {
-              if (!processando && !loading)
-                (e.currentTarget as HTMLButtonElement).style.opacity = "0.88";
-            }}
-            onMouseLeave={(e) => {
-              if (!processando && !loading)
-                (e.currentTarget as HTMLButtonElement).style.opacity = "1";
+              background: "none", border: "none",
+              color: "var(--foreground-muted)", fontSize: 13,
+              cursor: "pointer", padding: "6px 0",
+              textDecoration: "underline", textUnderlineOffset: 3,
+              width: "100%",
             }}
           >
-            {processando ? (
-              <>
-                <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-                Redirecionando...
-              </>
-            ) : (
-              <>
-                <CreditCard size={16} />
-                Assinar via Stripe
-                <ArrowRight size={14} />
-              </>
-            )}
+            ← Ver todos os planos
           </button>
-
-          {/* Selos de segurança */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 16,
-              paddingTop: 4,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                fontSize: 11,
-                color: "var(--foreground-subtle)",
-              }}
-            >
-              <Shield size={12} />
-              Pagamento seguro
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                fontSize: 11,
-                color: "var(--foreground-subtle)",
-              }}
-            >
-              <Zap size={12} />
-              Ativação imediata
-            </div>
-          </div>
         </div>
       </div>
-
-      {/* Voltar */}
-      <button
-        onClick={() => router.push("/dashboard/planos")}
-        style={{
-          alignSelf: "flex-start",
-          background: "none",
-          border: "none",
-          color: "var(--foreground-muted)",
-          fontSize: 13,
-          cursor: "pointer",
-          padding: 0,
-          textDecoration: "underline",
-          textUnderlineOffset: 3,
-        }}
-      >
-        ← Ver todos os planos
-      </button>
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
-  );
-}
-
-// ─── Export default com Suspense ──────────────────────────────────────────────
-
-export default function Pagamento() {
-  return (
-    <Suspense
-      fallback={
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: 200,
-            color: "var(--foreground-muted)",
-            fontSize: 14,
-          }}
-        >
-          Carregando...
-        </div>
-      }
-    >
-      <PagamentoInner />
-    </Suspense>
   );
 }

@@ -60,7 +60,7 @@ public class LoginManualOperation {
         // Usamos o try-catch para permitir o login mesmo se o plano venceu.
         // O método 'validarAcessoTemporario' já atualizará o status no banco para INATIVO.
         try {
-            verificarPlano.validarAcessoIsolado(usuario);
+            verificarPlano.validarAcesso(usuario);
         } catch (ApiException e) {
             // Ignoramos a interrupção aqui. O usuário loga, mas o status dele no token/banco será INATIVO.
             // Isso permite que o Frontend redirecione ele para a página de Planos/Pagamento.
