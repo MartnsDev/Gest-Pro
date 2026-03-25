@@ -10,6 +10,7 @@ import br.com.gestpro.plano.stripe.repository.AssinaturaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -21,7 +22,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class VerificarPlanoOperation {
 
-    private final UsuarioRepository    usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
     private final AssinaturaRepository assinaturaRepository;
 
     // ─── Ponto de entrada único ───────────────────────────────────────────────
@@ -29,10 +30,10 @@ public class VerificarPlanoOperation {
     /**
      * Valida se o usuário tem acesso ativo.
      * Delega para o fluxo correto conforme o tipo de plano.
-     *
+     * <p>
      * - EXPERIMENTAL → valida por dataPrimeiroLogin + 7 dias
      * - Planos pagos  → valida pelo dataVencimento real da Stripe
-     *
+     * <p>
      * Se expirado ou bloqueado: atualiza o banco e lança 403.
      */
     @Transactional
@@ -42,6 +43,13 @@ public class VerificarPlanoOperation {
         } else {
             validarAcessoPago(usuario);
         }
+    }
+
+    // Em VerificarPlanoOperation.java — adicione este método:
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void validarAcessoIsolado(Usuario usuario) {
+        validarAcesso(usuario);
     }
 
     // ─── Fluxo EXPERIMENTAL ───────────────────────────────────────────────────
@@ -188,13 +196,15 @@ public class VerificarPlanoOperation {
         }
     }
 
-    /** Formata o status para mensagem amigável ao usuário */
+    /**
+     * Formata o status para mensagem amigável ao usuário
+     */
     private String formatarStatus(String status) {
         return switch (status) {
-            case "CANCELADO"    -> "cancelada";
+            case "CANCELADO" -> "cancelada";
             case "INADIMPLENTE" -> "inadimplente";
-            case "VENCIDO"      -> "vencida";
-            default             -> status.toLowerCase();
+            case "VENCIDO" -> "vencida";
+            default -> status.toLowerCase();
         };
     }
 }

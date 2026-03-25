@@ -43,7 +43,7 @@ public class GoogleAuthService {
                     // Usamos try-catch para que a expiração do plano NÃO impeça o login,
                     // mas o status 'INATIVO' seja persistido no banco.
                     try {
-                        verificarPlano.validarAcesso(u);
+                        verificarPlano.validarAcessoIsolado(u);
                     } catch (Exception e) {
                         // O status já foi alterado para INATIVO dentro do validarAcessoTemporario
                         // Deixamos o fluxo seguir para o usuário conseguir ver o Dashboard/Planos
