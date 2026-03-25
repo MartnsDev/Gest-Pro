@@ -11,7 +11,7 @@ import lombok.Getter;
 @Getter
 public enum TipoPlano {
 
-    EXPERIMENTAL(7,  1,  1),
+    EXPERIMENTAL(30,  1,  1),
     BASICO      (30, 1,  1),
     PRO         (30, 5,  3),
     PREMIUM     (30, 99, 99);
