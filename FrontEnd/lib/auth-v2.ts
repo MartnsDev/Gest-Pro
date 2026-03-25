@@ -49,7 +49,7 @@ export async function requireAuth(): Promise<Usuario> {
 export async function logout(): Promise<void> {
   try {
     await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}/auth/logout`,
+      `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}/auth/logout`,
       { method: "POST", credentials: "include" }
     );
   } catch {
