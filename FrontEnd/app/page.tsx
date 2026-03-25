@@ -594,7 +594,7 @@ const HowItWorks = () => {
 const Plans = ({ onRegister }: PlansProps) => {
   const plans = [
     {
-      name: "Experimental", price: "Grátis", period: "7 dias grátis",
+      name: "Experimental", price: "Grátis", period: "30 dias grátis",
       desc: "Para experimentar o GestPro",
       features: ["1 empresa / loja", "1 caixa por empresa", "Dashboard completo", "Cadastro de produtos", "Registro de vendas"],
       cta: "Plano gratuito", popular: false, icon: "flask", color: "#3b82f6",

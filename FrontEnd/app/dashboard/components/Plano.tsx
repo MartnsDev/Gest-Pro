@@ -33,8 +33,8 @@ const API =
   "https://gestpro-backend-production.up.railway.app";
 
 function getToken(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("jwt_token") ?? "";
+  if (typeof globalThis.window === "undefined") return "";
+  return globalThis.localStorage.getItem("jwt_token") ?? "";
 }
 
 async function fetchAuth<T>(path: string): Promise<T> {
@@ -58,7 +58,7 @@ const PLANOS = [
     nome: "Experimental",
     descricao: "Para experimentar o GestPro",
     preco: null,
-    duracao: "7 dias grátis",
+    duracao: "30 dias grátis",
     icon: FlaskConical,
     cor: "#6366f1",
     corMuted: "rgba(99,102,241,0.12)",
@@ -162,7 +162,7 @@ function PlanosInner() {
   useEffect(() => {
     if (searchParams.get("canceled") === "true") {
       setCancelado(true);
-      window.history.replaceState({}, "", "/dashboard/planos");
+      globalThis.window.history.replaceState({}, "", "/dashboard/planos");
     }
   }, [searchParams]);
 
@@ -216,7 +216,7 @@ function PlanosInner() {
       const { url } = await res.json();
 
       // Redireciona para o checkout do Stripe
-      window.location.href = url;
+      globalThis.window.location.href = url;
     } catch (e: unknown) {
       const msg =
         e instanceof Error ? e.message : "Não foi possível iniciar o checkout.";
