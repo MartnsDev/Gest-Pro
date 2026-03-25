@@ -16,7 +16,25 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# Opensquad & Anti-Gravity
+.agent/
+_opensquad/
+.gemini/
+skills/
+squads/
+*.agent.yaml
+scratch/
+ dashboard/
+ 
+
+# Anti-Gravity specific
+antigravity.db
+.antigravity/
+
+# Security
+.env
+.env.local
+.env.*.local
 .env*
 
 # vercel
