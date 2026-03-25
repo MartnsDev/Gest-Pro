@@ -188,7 +188,7 @@ export default function CadastroPage() {
         <div style={{ position: "relative", zIndex: 1, opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(24px)", transition: "all .9s cubic-bezier(0.16,1,0.3,1) .2s" }}>
           <div style={{ fontSize: 11, color: "rgba(16,185,129,0.6)", letterSpacing: "0.2em", marginBottom: 20, fontFamily: "var(--font-dm-mono), 'DM Mono', monospace" }}>COMECE GRÁTIS</div>
           <h2 style={{ fontFamily: "var(--font-syne), 'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(28px, 3vw, 48px)", letterSpacing: "-0.04em", lineHeight: 1.1, color: "#f1f5f9", marginBottom: 40 }}>
-            7 dias para<br />
+            30 dias para<br />
             <span style={{ backgroundImage: "linear-gradient(135deg, #10b981, #34d399)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               experimentar tudo.
             </span>
