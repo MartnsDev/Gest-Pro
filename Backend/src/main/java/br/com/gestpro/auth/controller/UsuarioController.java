@@ -32,7 +32,7 @@ public class UsuarioController {
     }
 
 
-    @GetMapping("/api/v1/usuario")
+    @GetMapping("/api/v1/usuario/me")
     public ResponseEntity<UsuarioResponse> getUsuario(Authentication authentication) {
         Usuario u = usuarioRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new ApiException("Usuário não encontrado.",
