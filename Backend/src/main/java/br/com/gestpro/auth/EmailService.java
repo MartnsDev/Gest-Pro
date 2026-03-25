@@ -1,11 +1,19 @@
 package br.com.gestpro.auth;
 
+import com.google.gson.Gson;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+import static com.stripe.Stripe.apiKey;
 
 @Service
 public class EmailService {
@@ -163,25 +171,52 @@ public class EmailService {
                 templateBase("🔐 Verificação de Segurança", conteudo));
     }
 
+
+    @Value("${resend.api.key}")
+    private String resendApiKey;
+
     // ================= ENVIO CENTRAL =================
     private void enviarHtml(String to, String subject, String html) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            // Validação básica para evitar NPE se a variável não subir no deploy
+            if (resendApiKey == null || resendApiKey.isEmpty()) {
+                System.err.println("ERRO: RESEND_API_KEY não encontrada nas variáveis de ambiente!");
+                return;
+            }
 
-            helper.setFrom("GestPro <" + remetente + ">");
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(html, true);
+            HttpClient client = HttpClient.newHttpClient();
 
-            mailSender.send(message);
+            // O Gson trata as aspas e caracteres especiais do HTML para o JSON não quebrar
+            String json = """
+                    {
+                        "from": "GestPro <onboarding@resend.dev>",
+                        "to": ["%s"],
+                        "subject": "%s",
+                        "html": %s
+                    }
+                    """.formatted(to, subject, new Gson().toJson(html));
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.resend.com/emails"))
+                    .header("Authorization", "Bearer " + resendApiKey) // Ajustado para bater com o nome da variável
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+
+            // Enviando de forma síncrona aqui (o @Async nos métodos de cima cuida da thread separada)
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200 || response.statusCode() == 201) {
+                System.out.println("E-mail enviado via API Resend! Status: " + response.statusCode());
+            } else {
+                System.err.println("Falha na Resend: " + response.statusCode() + " - " + response.body());
+            }
 
         } catch (Exception e) {
+            System.err.println("Falha crítica ao enviar via API: " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException("Erro ao enviar email: " + e.getMessage());
         }
     }
-
     // ================= GERAR CÓDIGO =================
     public String gerarCodigo() {
         int codigo = 100000 + (int)(Math.random() * 900000);
