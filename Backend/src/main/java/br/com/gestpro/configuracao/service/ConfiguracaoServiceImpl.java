@@ -8,6 +8,7 @@ import br.com.gestpro.infra.exception.ApiException;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -109,6 +110,15 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoServiceInterface {
             Files.write(destino, foto.getBytes());
         } catch (IOException e) {
             throw new ApiException("Erro ao salvar foto.", HttpStatus.INTERNAL_SERVER_ERROR, "/configuracoes/perfil/foto");
+        }
+
+        long maxSize = 5 * 1024 * 1024;
+
+        if (foto.getSize() > maxSize) {
+            throw new ApiException(
+                    "\"Erro: A foto não pode ser maior que 5MB.\"",
+                    HttpStatus.BAD_REQUEST,
+                    "/configuracoes/perfil/foto");
         }
 
         String url = "/uploads/fotos/" + nomeArquivo;
