@@ -8,9 +8,7 @@ import br.com.gestpro.plano.stripe.service.PaymentService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.SignatureVerificationException;
-import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
-import com.stripe.model.Subscription;
 import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
@@ -35,7 +33,6 @@ public class CheckoutController {
     private final AtualizarPlanoOperation atualizarPlano;
     private final AssinaturaRepository    assinaturaRepository;
 
-    // Jackson já está no classpath do Spring Boot — sem dependência extra
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Value("${stripe.webhook.secret}")
@@ -44,7 +41,8 @@ public class CheckoutController {
     // ─── Criar sessão de checkout ─────────────────────────────────────────────
 
     @PostMapping("/create-checkout-session")
-    public ResponseEntity<Map<String, String>> createCheckout(@Valid @RequestBody CheckoutRequest request) {
+    public ResponseEntity<Map<String, String>> createCheckout(
+            @Valid @RequestBody CheckoutRequest request) {
         try {
             String checkoutUrl = paymentService.createCheckoutSession(
                     request.plano(),
@@ -63,8 +61,7 @@ public class CheckoutController {
 
     /**
      * Retorna o plano contratado a partir do session_id.
-     * Usado pela página /payment/sucesso para mostrar o plano correto
-     * sem depender do webhook já ter processado.
+     * Usado pela página /payment/sucesso para exibição imediata sem depender do webhook.
      *
      * GET /api/payments/session-info?sessionId=cs_xxx
      * Retorna: { "priceId": "price_xxx", "plano": "PRO" }
@@ -80,8 +77,8 @@ public class CheckoutController {
                     null
             );
 
-            String priceId = session.getLineItems().getData().get(0).getPrice().getId();
-            PlanoTipo plano = PlanoTipo.fromPriceId(priceId);
+            String priceId    = session.getLineItems().getData().get(0).getPrice().getId();
+            PlanoTipo plano   = PlanoTipo.fromPriceId(priceId);
 
             return ResponseEntity.ok(Map.of(
                     "priceId", priceId,
@@ -100,24 +97,24 @@ public class CheckoutController {
     /**
      * Endpoint chamado automaticamente pela Stripe após cada evento relevante.
      *
-     * Usa getRawJson() + Jackson para extrair os campos necessários do payload —
-     * evita qualquer dependência de GSON interno da stripe-java que pode não ser
-     * acessível dependendo da versão.
+     * <p>Eventos tratados:
+     * <ul>
+     *   <li>checkout.session.completed    → ativa o plano (primeiro pagamento)</li>
+     *   <li>invoice.payment_succeeded     → renova o vencimento (subscription_cycle / subscription_update)</li>
+     *   <li>invoice.payment_failed        → marca inadimplente e bloqueia acesso</li>
+     *   <li>customer.subscription.updated → renova plano APENAS se ainda ativo na Stripe</li>
+     *   <li>customer.subscription.deleted → cancela o plano definitivamente</li>
+     * </ul>
      *
-     * checkout.session.completed    → ativa o plano (primeiro pagamento)
-     * invoice.payment_succeeded     → renova o vencimento (cobrança mensal)
-     * invoice.payment_failed        → marca inadimplente e bloqueia acesso
-     * customer.subscription.updated → atualiza plano (upgrade / downgrade)
-     * customer.subscription.deleted → cancela o plano definitivamente
-     *
-     * Sempre retorna 200 — a Stripe reenvia por até 3 dias se receber != 2xx.
+     * <p>Sempre retorna 200 — a Stripe reenvia por até 3 dias se receber != 2xx.
+     * Erros de negócio são logados mas não propagados para fora deste método.
      */
     @PostMapping("/webhook")
     public ResponseEntity<String> handleWebhook(
             @RequestBody String payload,
             @RequestHeader("Stripe-Signature") String sigHeader) {
 
-        // 1. Valida assinatura HMAC
+        // 1. Valida assinatura HMAC — rejeita com 400 se inválida
         Event event;
         try {
             event = Webhook.constructEvent(payload, sigHeader, endpointSecret);
@@ -131,66 +128,33 @@ public class CheckoutController {
 
         log.info("Webhook recebido: type={} | id={}", event.getType(), event.getId());
 
-        // 2. Processa — nunca lança exceção para fora
+        // 2. Processa — nunca lança exceção para fora (Stripe reentregaria indefinidamente)
         try {
-            // Lê o objeto do evento via Jackson diretamente do rawJson
-            // Isso é independente da versão da API e do GSON interno da Stripe
             String rawJson = event.getDataObjectDeserializer().getRawJson();
             JsonNode obj   = MAPPER.readTree(rawJson);
 
             switch (event.getType()) {
 
-                case "checkout.session.completed" -> {
-                    // Para Session ainda usamos o deserializador padrão pois
-                    // precisamos de objetos tipados (getSubscription, getCustomer)
-                    Session session = desserializar(event, Session.class);
+                case "checkout.session.completed" -> handleCheckoutCompleted(event);
 
-                    String email = session.getCustomerEmail();
-                    if (email == null) {
-                        // Customer já existia na Stripe — recupera o email pelo customerId
-                        email = assinaturaRepository
-                                .findByStripeCustomerId(session.getCustomer())
-                                .map(a -> a.getUsuario().getEmail())
-                                .orElseThrow(() -> new RuntimeException(
-                                        "customerEmail nulo e customer sem assinatura prévia: "
-                                                + session.getCustomer()));
-                    }
+                case "invoice.payment_succeeded"  -> handleInvoicePaymentSucceeded(obj);
 
-                    atualizarPlano.ativarPlano(email, session.getSubscription(), session.getCustomer());
-                }
-
-                case "invoice.payment_succeeded" -> {
-                    // Lê billing_reason e subscription direto do JSON — sem GSON
-                    String reason       = textoOuNull(obj, "billing_reason");
-                    String subscription = textoOuNull(obj, "subscription");
-
-                    log.info("invoice.payment_succeeded | billing_reason={} | subscription={}",
-                            reason, subscription);
-
-                    // subscription_create → primeiro pagamento (tratado em checkout.session.completed)
-                    // subscription_cycle  → renovação mensal automática
-                    // subscription_update → mudança de plano (upgrade/downgrade)
-                    if ("subscription_cycle".equals(reason) || "subscription_update".equals(reason)) {
-                        atualizarPlano.renovarPlano(subscription);
-                    }
-                }
-
-                case "invoice.payment_failed" -> {
+                case "invoice.payment_failed"     -> {
                     String subscription = textoOuNull(obj, "subscription");
                     log.warn("invoice.payment_failed | subscription={}", subscription);
-                    atualizarPlano.marcarInadimplente(subscription);
+                    if (subscription != null) {
+                        atualizarPlano.marcarInadimplente(subscription);
+                    }
                 }
 
-                case "customer.subscription.updated" -> {
-                    String subscriptionId = textoOuNull(obj, "id");
-                    log.info("customer.subscription.updated | subscription={}", subscriptionId);
-                    atualizarPlano.renovarPlano(subscriptionId);
-                }
+                case "customer.subscription.updated" -> handleSubscriptionUpdated(obj);
 
                 case "customer.subscription.deleted" -> {
                     String subscriptionId = textoOuNull(obj, "id");
                     log.info("customer.subscription.deleted | subscription={}", subscriptionId);
-                    atualizarPlano.cancelarPlano(subscriptionId);
+                    if (subscriptionId != null) {
+                        atualizarPlano.cancelarPlano(subscriptionId);
+                    }
                 }
 
                 default -> log.debug("Evento ignorado: {}", event.getType());
@@ -201,18 +165,130 @@ public class CheckoutController {
                     event.getType(), event.getId(), e.getMessage(), e);
         }
 
+        // Sempre 200 para a Stripe não reenviar indefinidamente
         return ResponseEntity.ok("");
+    }
+
+    // ─── Handlers privados por tipo de evento ─────────────────────────────────
+
+    /**
+     * checkout.session.completed — primeiro pagamento confirmado.
+     *
+     * Recupera o e-mail do cliente:
+     * 1. Pelo campo customerEmail da sessão (cliente novo)
+     * 2. Pela assinatura existente no banco via customerId (cliente recorrente sem email no evento)
+     * 3. Lança RuntimeException se nenhuma das opções resolver (será logado, não reentregue)
+     */
+    private void handleCheckoutCompleted(Event event) {
+        Session session = desserializar(event, Session.class);
+
+        String email = session.getCustomerEmail();
+
+        if (email == null || email.isBlank()) {
+            // Cliente já existia na Stripe — tenta recuperar pelo customerId
+            String customerId = session.getCustomer();
+            email = assinaturaRepository
+                    .findByStripeCustomerId(customerId)
+                    .map(a -> a.getUsuario().getEmail())
+                    .orElse(null);
+
+            if (email == null) {
+                // Último recurso: busca a assinatura pelo subscriptionId
+                // (pode ter sido criada por outro fluxo)
+                email = assinaturaRepository
+                        .findByStripeSubscriptionId(session.getSubscription())
+                        .map(a -> a.getUsuario().getEmail())
+                        .orElseThrow(() -> new RuntimeException(
+                                "Não foi possível identificar o e-mail do cliente. " +
+                                        "customerId=" + customerId +
+                                        " | subscriptionId=" + session.getSubscription()
+                        ));
+            }
+        }
+
+        atualizarPlano.ativarPlano(email, session.getSubscription(), session.getCustomer());
+    }
+
+    /**
+     * invoice.payment_succeeded — pagamento de fatura confirmado.
+     *
+     * Só aciona renovação para:
+     * - subscription_cycle  → cobrança mensal automática
+     * - subscription_update → upgrade ou downgrade de plano
+     *
+     * subscription_create é ignorado aqui pois já é tratado em checkout.session.completed.
+     */
+    private void handleInvoicePaymentSucceeded(JsonNode obj) {
+        String reason       = textoOuNull(obj, "billing_reason");
+        String subscription = textoOuNull(obj, "subscription");
+
+        log.info("invoice.payment_succeeded | billing_reason={} | subscription={}", reason, subscription);
+
+        if (subscription == null) {
+            log.warn("invoice.payment_succeeded sem subscriptionId — ignorado");
+            return;
+        }
+
+        if ("subscription_cycle".equals(reason) || "subscription_update".equals(reason)) {
+            atualizarPlano.renovarPlano(subscription);
+        } else {
+            log.debug("invoice.payment_succeeded ignorado para billing_reason={}", reason);
+        }
+    }
+
+    /**
+     * customer.subscription.updated — plano atualizado (upgrade, downgrade, cancelamento agendado).
+     *
+     * ATENÇÃO: este evento também dispara quando cancel_at_period_end = true.
+     * Nesse caso NÃO renovamos — o plano será cancelado em customer.subscription.deleted.
+     *
+     * Só renova se:
+     * 1. cancel_at_period_end = false (não está agendado para cancelar)
+     * 2. status = "active" ou "trialing" na Stripe
+     */
+    private void handleSubscriptionUpdated(JsonNode obj) {
+        String subscriptionId    = textoOuNull(obj, "id");
+        String status            = textoOuNull(obj, "status");
+        JsonNode cancelAtEnd     = obj.get("cancel_at_period_end");
+
+        log.info("customer.subscription.updated | subscription={} | status={} | cancel_at_period_end={}",
+                subscriptionId, status, cancelAtEnd);
+
+        if (subscriptionId == null) {
+            log.warn("customer.subscription.updated sem id — ignorado");
+            return;
+        }
+
+        boolean cancelAgendado = cancelAtEnd != null && cancelAtEnd.asBoolean(false);
+
+        if (cancelAgendado) {
+            log.info("Assinatura {} agendada para cancelamento — renovação ignorada.", subscriptionId);
+            return;
+        }
+
+        if (!"active".equals(status) && !"trialing".equals(status)) {
+            log.info("customer.subscription.updated ignorado: status={} para subscription={}",
+                    status, subscriptionId);
+            return;
+        }
+
+        // AtualizarPlanoOperation.renovarPlano() tem idempotência interna:
+        // ignora se o vencimento da Stripe não avançou o já salvo no banco.
+        atualizarPlano.renovarPlano(subscriptionId);
     }
 
     // ─── Helpers privados ─────────────────────────────────────────────────────
 
-    /** Lê um campo de texto do JsonNode, retorna null se ausente ou nulo */
+    /** Lê um campo de texto do JsonNode; retorna null se ausente ou nulo. */
     private String textoOuNull(JsonNode node, String campo) {
         JsonNode valor = node.get(campo);
         return (valor != null && !valor.isNull()) ? valor.asText() : null;
     }
 
-    /** Deserializa o objeto do evento via deserializador padrão da Stripe (usado para Session) */
+    /**
+     * Deserializa o objeto do evento via deserializador padrão da Stripe.
+     * Lança RuntimeException se o objeto estiver ausente ou for de tipo inesperado.
+     */
     @SuppressWarnings("unchecked")
     private <T extends StripeObject> T desserializar(Event event, Class<T> clazz) {
         Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
@@ -220,7 +296,7 @@ public class CheckoutController {
         if (objectOpt.isEmpty()) {
             throw new RuntimeException(
                     "Objeto ausente no evento " + event.getType() +
-                            " — verifique a versão da API no dashboard da Stripe."
+                            " — verifique se a versão da API no webhook bate com a do SDK."
             );
         }
 

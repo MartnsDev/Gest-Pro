@@ -30,10 +30,12 @@ public class AtualizarPlanoOperation {
     /**
      * Ativa ou atualiza o plano do usuário após confirmação de pagamento.
      * Chamado pelo webhook checkout.session.completed.
+     * <p>
+     * O vencimento vem de subscription.getCurrentPeriodEnd() — nunca calculado localmente.
      *
      * @param email          E-mail do cliente conforme retornado pela Stripe
      * @param subscriptionId ID da assinatura Stripe (sub_xxx)
-     * @param customerId     ID do customer Stripe (cus_xxx) — salvo para uso futuro
+     * @param customerId     ID do customer Stripe (cus_xxx)
      */
     @Transactional
     public void ativarPlano(String email, String subscriptionId, String customerId) {
@@ -41,9 +43,17 @@ public class AtualizarPlanoOperation {
 
         Subscription subscription = buscarSubscriptionStripe(subscriptionId);
 
+        // Valida se a assinatura está realmente ativa na Stripe antes de ativar
+        String stripeStatus = subscription.getStatus();
+        if (!"active".equals(stripeStatus) && !"trialing".equals(stripeStatus)) {
+            log.warn("Ignorando ativarPlano: status da Stripe é '{}' para subscription {}",
+                    stripeStatus, subscriptionId);
+            return;
+        }
+
         LocalDate vencimento = extrairVencimento(subscription);
-        PlanoTipo  planoTipo = extrairPlanoTipo(subscription);
-        TipoPlano  tipoPlano = TipoPlano.fromPlanoTipo(planoTipo);
+        PlanoTipo planoTipo  = extrairPlanoTipo(subscription);
+        TipoPlano tipoPlano  = TipoPlano.fromPlanoTipo(planoTipo);
 
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado: " + email));
@@ -61,7 +71,6 @@ public class AtualizarPlanoOperation {
         assinatura.setUltimaAtualizacao(LocalDateTime.now());
         assinaturaRepository.save(assinatura);
 
-        // Sincroniza o TipoPlano e StatusAcesso no próprio Usuario
         usuario.setTipoPlano(tipoPlano);
         usuario.setStatusAcesso(StatusAcesso.ATIVO);
         usuarioRepository.save(usuario);
@@ -70,8 +79,11 @@ public class AtualizarPlanoOperation {
     }
 
     /**
-     * Renova o vencimento após cobrança recorrente bem-sucedida.
-     * Chamado pelo webhook invoice.payment_succeeded.
+     * Renova o vencimento após cobrança recorrente ou atualização de plano.
+     * Chamado pelos webhooks invoice.payment_succeeded e customer.subscription.updated.
+     * <p>
+     * Idempotente: se o vencimento recebido for igual ou anterior ao já salvo,
+     * a operação é ignorada (evita race condition de webhooks fora de ordem).
      *
      * @param subscriptionId ID da assinatura Stripe
      */
@@ -81,32 +93,49 @@ public class AtualizarPlanoOperation {
 
         Subscription subscription = buscarSubscriptionStripe(subscriptionId);
 
-        LocalDate vencimento = extrairVencimento(subscription);
-        PlanoTipo planoTipo  = extrairPlanoTipo(subscription);
-        TipoPlano tipoPlano  = TipoPlano.fromPlanoTipo(planoTipo);
+        // Só renova se a Stripe confirma que está ativa
+        String stripeStatus = subscription.getStatus();
+        if (!"active".equals(stripeStatus) && !"trialing".equals(stripeStatus)) {
+            log.warn("Ignorando renovarPlano: status da Stripe é '{}' para subscription {}",
+                    stripeStatus, subscriptionId);
+            return;
+        }
+
+        LocalDate novoVencimento = extrairVencimento(subscription);
+        PlanoTipo planoTipo      = extrairPlanoTipo(subscription);
+        TipoPlano tipoPlano      = TipoPlano.fromPlanoTipo(planoTipo);
 
         Assinatura assinatura = assinaturaRepository
                 .findByStripeSubscriptionId(subscriptionId)
                 .orElseThrow(() -> new RuntimeException("Assinatura não encontrada: " + subscriptionId));
 
+        // Idempotência: ignora se o novo vencimento não avançou (webhook duplicado ou fora de ordem)
+        if (assinatura.getDataVencimento() != null
+                && !novoVencimento.isAfter(assinatura.getDataVencimento())) {
+            log.info("Ignorando renovarPlano: vencimento {} não avança o atual {} para subscription {}",
+                    novoVencimento, assinatura.getDataVencimento(), subscriptionId);
+            return;
+        }
+
         assinatura.setPlano(planoTipo);
-        assinatura.setDataVencimento(vencimento);
+        assinatura.setDataVencimento(novoVencimento);
         assinatura.setStatus("ATIVO");
         assinatura.setUltimaAtualizacao(LocalDateTime.now());
         assinaturaRepository.save(assinatura);
 
-        // Garante que o usuário também está ativo (pode ter ficado INATIVO por atraso)
         Usuario usuario = assinatura.getUsuario();
         usuario.setTipoPlano(tipoPlano);
         usuario.setStatusAcesso(StatusAcesso.ATIVO);
         usuarioRepository.save(usuario);
 
-        log.info("Plano renovado com sucesso: {} | vence em: {}", subscriptionId, vencimento);
+        log.info("Plano renovado com sucesso: {} | vence em: {}", subscriptionId, novoVencimento);
     }
 
     /**
-     * Cancela o plano do usuário.
+     * Cancela o plano do usuário ao fim do período pago.
      * Chamado pelo webhook customer.subscription.deleted.
+     * <p>
+     * Rebaixa para EXPERIMENTAL (tier gratuito) e bloqueia acesso.
      *
      * @param subscriptionId ID da assinatura Stripe
      */
@@ -122,7 +151,7 @@ public class AtualizarPlanoOperation {
                     assinaturaRepository.save(assinatura);
 
                     Usuario usuario = assinatura.getUsuario();
-                    usuario.setTipoPlano(TipoPlano.EXPERIMENTAL); // Volta ao tier mais baixo
+                    usuario.setTipoPlano(TipoPlano.EXPERIMENTAL);
                     usuario.setStatusAcesso(StatusAcesso.INATIVO);
                     usuarioRepository.save(usuario);
 
@@ -133,6 +162,9 @@ public class AtualizarPlanoOperation {
     /**
      * Marca como inadimplente quando o pagamento falha após as tentativas da Stripe.
      * Chamado pelo webhook invoice.payment_failed.
+     * <p>
+     * Preserva o TipoPlano — apenas bloqueia o acesso. O plano será rebaixado
+     * somente em customer.subscription.deleted, quando a Stripe desistir definitivamente.
      *
      * @param subscriptionId ID da assinatura Stripe
      */
@@ -148,6 +180,8 @@ public class AtualizarPlanoOperation {
                     assinaturaRepository.save(assinatura);
 
                     Usuario usuario = assinatura.getUsuario();
+                    // Não rebaixa TipoPlano aqui — o usuário pode regularizar o pagamento.
+                    // O acesso é apenas bloqueado até a Stripe confirmar pagamento ou cancelar.
                     usuario.setStatusAcesso(StatusAcesso.INATIVO);
                     usuarioRepository.save(usuario);
 
@@ -155,7 +189,7 @@ public class AtualizarPlanoOperation {
                 }, () -> log.warn("Subscription não encontrada para inadimplência: {}", subscriptionId));
     }
 
-    // ─── Helpers privados ────────────────────────────────────────────────────
+    // ─── Helpers privados ─────────────────────────────────────────────────────
 
     private Subscription buscarSubscriptionStripe(String subscriptionId) {
         try {
