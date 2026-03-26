@@ -80,7 +80,7 @@ export function lerTokenCookie(): string | null {
  * Verifica se há um token disponível (localStorage ou cookie)
  */
 export function hasToken(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof globalThis.window === "undefined") return false;
   const localStorageToken = localStorage.getItem("jwt_token");
   const cookieToken = lerTokenCookie();
   return !!(localStorageToken || cookieToken);
@@ -207,11 +207,16 @@ export async function cadastrar(
  * Logout — remove cookie local e invalida sessão no backend.
  */
 export async function logout(): Promise<void> {
-  removerTokenCookie();
+  // 1. Chama o backend primeiro (enquanto ainda tem o token)
   await fetch(`${API_BASE_URL}/auth/logout`, {
     method: "POST",
     credentials: "include",
-  }).catch(() => {}); // ignora erro de rede no logout
+  }).catch(() => {});
+
+  // 2. Limpa tudo localmente
+  removerTokenCookie();
+  localStorage.clear();
+  sessionStorage.clear();
 }
 
 /**

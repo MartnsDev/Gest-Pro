@@ -116,12 +116,11 @@ function DashboardInner({
   const [nomeAtual, setNomeAtual] = useState(usuario.nome);
   const iniciais = nomeAtual.split(" ").map(n => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2);
 
-  const handleLogout = async () => {
-    try { await logout(); } catch {}
-    resetarContexto();
-    removerTokenCookie();
-    globalThis.location.href = "/";
-  };
+ const handleLogout = async () => {
+  resetarContexto();          // limpa estado React e localStorage do contexto
+  await logout();             // chama backend e limpa storage
+  globalThis.location.href = "/"; 
+};
 
   const tituloSecao: Record<Secao, string> = {
     dashboard: "Visão Geral", produtos: "Produtos", estoque: "Estoque",
@@ -258,32 +257,34 @@ function DashboardLoader() {
 
   useEffect(() => {
     async function inicializarDashboard() {
-      const tokenDaUrl = searchParams.get("token");
+    const tokenDaUrl = searchParams.get("token");
 
-      if (tokenDaUrl) {
-        salvarTokenCookie(tokenDaUrl);
-        localStorage.setItem("jwt_token", tokenDaUrl);
-        window.history.replaceState({}, "", "/dashboard");
-      }
+    if (tokenDaUrl) {
+      salvarTokenCookie(tokenDaUrl);
+      localStorage.setItem("jwt_token", tokenDaUrl);
+      globalThis.history.replaceState({}, "", "/dashboard");
+    }
 
-      const tokenFinal = lerTokenCookie();
+       const tokenFinal = lerTokenCookie() || localStorage.getItem("jwt_token");
 
-      if (!tokenFinal) {
-        window.location.href = "/auth/login";
-        return;
-      }
+        if (!tokenFinal) {
+      globalThis.location.href = "/auth/login";
+      return;
+    }
 
-      try {
-        const data = await getUsuario();
-        if (!data) throw new Error("Usuário inválido");
-        setUsuario(data);
-      } catch (err) {
-        console.error("Erro ao validar usuário:", err);
-        removerTokenCookie();
-        window.location.href = "/auth/login";
-      } finally {
-        setLoading(false);
-      }
+       try {
+      const data = await getUsuario();
+      if (!data) throw new Error("Usuário inválido");
+      setUsuario(data);
+    } catch (err) {
+      // Token inválido/expirado — limpa tudo e redireciona
+      localStorage.clear();
+      sessionStorage.clear();
+      removerTokenCookie();
+      globalThis.location.href = "/auth/login";
+    } finally {
+      setLoading(false);
+    }
     }
 
     inicializarDashboard();
