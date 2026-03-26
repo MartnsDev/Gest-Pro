@@ -695,8 +695,8 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
               <div
                 key={lojista.nome} // KEY única evita repetição de render
                 style={{
-                  width: 24,
-                  height: 24,
+                  width: 28,
+                  height: 28,
                   borderRadius: "50%",
                   border: "2px solid #050608",
                   marginLeft: i === 0 ? 0 : -12,
@@ -1504,17 +1504,20 @@ const Testimonials = () => {
     {
       name: "Gabriela M.",
       role: "Proprietária da SportLife",
-      text: "O GestPro aposentou minhas planilhas infinitas. O que eu levava horas para conferir, hoje resolvo em minutos pelo celular. Sobrou tempo para o que importa: vender!",
+      img: "/logistas-img/gabriela.jpg",
+      text: "Eu vivia escrava de planilhas e sempre ficava aquela dúvida se os números batiam. O GestPro me deu liberdade. Hoje resolvo tudo pelo celular entre um treino e outro na loja. Finalmente sobrou tempo para focar no que eu amo: o atendimento.",
     },
     {
       name: "Jakeline S.",
-      role: "Gerente da Adega Imperial",
-      text: "Minha maior dor era o controle de estoque e o fechamento de caixa. Com o GestPro, o fluxo ficou impecável e eu finalmente parei de perder dinheiro por falta de organização.",
+      role: "Dona de Adega",
+      img: "/logistas-img/jakeline.jpg",
+      text: "Minha maior dor de cabeça era o fechamento de caixa; sempre parecia que estava faltando algo. Com o sistema, o fluxo ficou automático. É um alívio chegar no fim do dia e ver que tudo bateu de primeira, sem estresse.",
     },
     {
-      name: "Ricardo M.",
-      role: "Dono da Rede Mercadinho+",
-      text: "Gerenciar 3 filiais à distância parecia impossível. O GestPro é meus olhos em cada unidade. Consigo ver as vendas em tempo real e tomar decisões sem precisar sair de casa.",
+      name: "Felipe C.",
+      role: "Empreendedor",
+      img: "/logistas-img/felipe.jpg",
+      text: "Cuidar de mais de uma unidade à distância era um caos, eu nunca sabia o que estava acontecendo de verdade. O GestPro virou meus olhos. Consigo ver cada venda em tempo real e tomar decisões de onde eu estiver, sem precisar baixar 10 relatórios.",
     },
   ];
 
