@@ -247,8 +247,9 @@ function PlanosInner() {
   }
 
   // ── Derivações ─────────────────────────────────────────────────────────────
-  const planoAtualIdx =
-    plano ? ORDEM.indexOf(plano.tipoPlano as (typeof ORDEM)[number]) : -1;
+  const planoAtualIdx = plano
+    ? ORDEM.indexOf(plano.tipoPlano as (typeof ORDEM)[number])
+    : -1;
 
   // Para planos pagos, a duração real vem da Stripe (sempre 30 dias/mês).
   // Para EXPERIMENTAL, usa a constante local que espelha o enum do backend.
@@ -407,9 +408,7 @@ function PlanosInner() {
                       background: estaAtivo
                         ? planoAtual.corMuted
                         : "rgba(239,68,68,0.12)",
-                      color: estaAtivo
-                        ? planoAtual.cor
-                        : "var(--destructive)",
+                      color: estaAtivo ? planoAtual.cor : "var(--destructive)",
                     }}
                   >
                     {plano.statusAcesso}
@@ -474,10 +473,7 @@ function PlanosInner() {
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color:
-                    pct < 20
-                      ? "var(--destructive)"
-                      : "var(--foreground)",
+                  color: pct < 20 ? "var(--destructive)" : "var(--foreground)",
                 }}
               >
                 {plano.diasRestantes}{" "}
@@ -605,8 +601,8 @@ function PlanosInner() {
                   isAtual
                     ? p.cor + "66"
                     : p.destaque
-                    ? p.cor + "33"
-                    : "var(--border)"
+                      ? p.cor + "33"
+                      : "var(--border)"
                 }`,
                 borderRadius: 16,
                 padding: "22px 20px",
@@ -765,8 +761,8 @@ function PlanosInner() {
                     isAtual || !p.pagavel
                       ? "var(--surface-overlay)"
                       : isUpgrade
-                      ? p.cor
-                      : "transparent",
+                        ? p.cor
+                        : "transparent",
                   border: `1px solid ${
                     isAtual || !p.pagavel ? "var(--border)" : p.cor
                   }`,
@@ -775,8 +771,8 @@ function PlanosInner() {
                     isAtual || !p.pagavel
                       ? "var(--foreground-subtle)"
                       : isUpgrade
-                      ? "#fff"
-                      : p.cor,
+                        ? "#fff"
+                        : p.cor,
                   fontSize: 13,
                   fontWeight: 600,
                   cursor:
@@ -794,8 +790,7 @@ function PlanosInner() {
                     (e.currentTarget as HTMLButtonElement).style.opacity = "1";
                 }}
                 onClick={() => {
-                  if (!isAtual && !isLoading && p.pagavel)
-                    handleAssinar(p.id);
+                  if (!isAtual && !isLoading && p.pagavel) handleAssinar(p.id);
                 }}
               >
                 {isLoading ? (
@@ -912,9 +907,7 @@ function PlanosInner() {
                   style={{
                     borderBottom: "1px solid var(--border-subtle)",
                     background:
-                      i % 2 === 0
-                        ? "transparent"
-                        : "var(--surface-overlay)",
+                      i % 2 === 0 ? "transparent" : "var(--surface-overlay)",
                   }}
                 >
                   <td

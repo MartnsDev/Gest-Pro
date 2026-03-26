@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  ReactNode,
+} from "react";
 
 export interface Empresa {
   id: number;
@@ -51,7 +58,7 @@ const EmpresaContext = createContext<EmpresaContextType>({
 async function fetchAuth<T>(path: string): Promise<T> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { credentials: "include", headers: { "Content-Type": "application/json" } }
+    { credentials: "include", headers: { "Content-Type": "application/json" } },
   );
   if (!res.ok) throw new Error(`Erro ${res.status}`);
   return res.json();
@@ -61,14 +68,16 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   const [empresaAtiva, setEmpresaAtivaState] = useState<Empresa | null>(null);
   const [caixaAtivo, setCaixaAtivo] = useState<CaixaInfo | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  
+
   // Flag para não sobrescrever no reload
   const inicializado = useRef(false);
 
   const carregarCaixa = async (empresa: Empresa) => {
     setCaixaAtivo(null);
     try {
-      const caixa = await fetchAuth<CaixaInfo>(`/api/v1/caixas/aberto?empresaId=${empresa.id}`);
+      const caixa = await fetchAuth<CaixaInfo>(
+        `/api/v1/caixas/aberto?empresaId=${empresa.id}`,
+      );
       caixa.empresaNome = empresa.nomeFantasia;
       setCaixaAtivo(caixa);
     } catch {
@@ -80,8 +89,8 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   const setEmpresaAtiva = (empresa: Empresa) => {
     setEmpresaAtivaState(empresa);
     // Persiste no localStorage para sobreviver ao reload
-    try { 
-      localStorage.setItem(STORAGE_KEY, String(empresa.id)); 
+    try {
+      localStorage.setItem(STORAGE_KEY, String(empresa.id));
     } catch {}
     carregarCaixa(empresa);
   };
@@ -137,9 +146,9 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   };
 
   // Executa apenas uma vez quando o Provider é montado
-  useEffect(() => { 
-    recarregarEmpresas(); 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    recarregarEmpresas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

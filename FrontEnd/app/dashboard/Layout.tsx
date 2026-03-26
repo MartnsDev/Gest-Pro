@@ -10,7 +10,11 @@ import type { Usuario } from "@/lib/api-v2";
 const UsuarioContext = createContext<Usuario | null>(null);
 export const useUsuarioDashboard = () => useContext(UsuarioContext);
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [verificando, setVerificando] = useState(true);
@@ -18,13 +22,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     async function inicializar() {
       // 1. Captura token do redirect Google OAuth (?token=xyz)
-      const params = new URLSearchParams(window.location.search);
+      const params = new URLSearchParams(globalThis.window.location.search);
       const tokenUrl = params.get("token");
 
       if (tokenUrl) {
         salvarTokenCookie(tokenUrl);
         // Remove o token da URL sem recarregar a página
-        window.history.replaceState({}, "", window.location.pathname);
+        globalThis.window.history.replaceState(
+          {},
+          "",
+          globalThis.window.location.pathname,
+        );
       }
 
       // 2. Se não há token nenhum, vai para login
@@ -56,17 +64,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (verificando) {
     return (
-      <div style={{
-        minHeight: "100vh", background: "#030305",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexDirection: "column", gap: 16,
-      }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#030305",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
         <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ animation: "spin 1s linear infinite" }}>
-          <circle cx="12" cy="12" r="10" stroke="rgba(16,185,129,0.2)" strokeWidth="3"/>
-          <path d="M12 2a10 10 0 0 1 10 10" stroke="#10b981" strokeWidth="3" strokeLinecap="round"/>
+        <svg
+          width="36"
+          height="36"
+          viewBox="0 0 24 24"
+          fill="none"
+          style={{ animation: "spin 1s linear infinite" }}
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="rgba(16,185,129,0.2)"
+            strokeWidth="3"
+          />
+          <path
+            d="M12 2a10 10 0 0 1 10 10"
+            stroke="#10b981"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
         </svg>
-        <span style={{ fontSize: 13, color: "rgba(241,245,249,0.3)", fontFamily: "'DM Mono', monospace" }}>
+        <span
+          style={{
+            fontSize: 13,
+            color: "rgba(241,245,249,0.3)",
+            fontFamily: "'DM Mono', monospace",
+          }}
+        >
           Verificando sessão...
         </span>
       </div>
