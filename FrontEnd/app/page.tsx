@@ -558,7 +558,7 @@ const lojistas = [
   { nome: "Heloisa", img: "/logistas-img/heloisa.png" },
   { nome: "Matheus", img: "/logistas-img/matheus.jpg" },
   { nome: "Ricardo", img: "/logistas-img/matheus.png" },
-  { nome: "Lorena", img: "/logistas-img/lorena.png" },
+  { nome: "Gabriela", img: "/logistas-img/gabriela.png" },
 ];
 
 /* ─────────────────────────────────────────────
