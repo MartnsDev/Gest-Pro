@@ -58,6 +58,7 @@ public class EmailService {
             </body>
             </html>
         """.formatted(titulo, conteudo);
+
     }
 
     // ================= EMAIL GENÉRICO =================
@@ -86,6 +87,14 @@ public class EmailService {
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Erro ao enviar email: " + e.getMessage());
+        }
+
+        if (resendApiKey == null || resendApiKey.isEmpty()) {
+            System.err.println("ERRO: RESEND_API_KEY não encontrada...");
+            return; // ← sai silenciosamente sem lançar exceção
+        }
+        if (resendApiKey == null || resendApiKey.isEmpty()) {
+            throw new RuntimeException("RESEND_API_KEY não configurada");
         }
     }
 
@@ -127,6 +136,14 @@ public class EmailService {
 
         enviarHtml(emailDestino, "Confirme seu e-mail - GestPro",
                 templateBase("🚀 Bem-vindo ao GestPro", conteudo));
+
+        if (resendApiKey == null || resendApiKey.isEmpty()) {
+            System.err.println("ERRO: RESEND_API_KEY não encontrada...");
+            return; // ← sai silenciosamente sem lançar exceção
+        }
+        if (resendApiKey == null || resendApiKey.isEmpty()) {
+            throw new RuntimeException("RESEND_API_KEY não configurada");
+        }
     }
 
     // ================= CÓDIGO =================
@@ -169,6 +186,15 @@ public class EmailService {
 
         enviarHtml(emailDestino, "Código de Confirmação - GestPro",
                 templateBase("🔐 Verificação de Segurança", conteudo));
+
+
+        if (resendApiKey == null || resendApiKey.isEmpty()) {
+            System.err.println("ERRO: RESEND_API_KEY não encontrada...");
+            return; // ← sai silenciosamente sem lançar exceção
+        }
+        if (resendApiKey == null || resendApiKey.isEmpty()) {
+            throw new RuntimeException("RESEND_API_KEY não configurada");
+        }
     }
 
 
@@ -202,6 +228,14 @@ public class EmailService {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (resendApiKey == null || resendApiKey.isEmpty()) {
+                System.err.println("ERRO: RESEND_API_KEY não encontrada...");
+                return; // ← sai silenciosamente sem lançar exceção
+            }
+            if (resendApiKey == null || resendApiKey.isEmpty()) {
+                throw new RuntimeException("RESEND_API_KEY não configurada");
+            }
 
             if (response.statusCode() == 200 || response.statusCode() == 201) {
                 System.out.println(" E-mail enviado via API Resend! Status: " + response.statusCode());
