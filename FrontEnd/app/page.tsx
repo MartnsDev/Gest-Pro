@@ -711,37 +711,31 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
                   }}
                 >
                   <div style={{ display: "flex" }}>
-                    {lojistas.map((lojista, i) => (
+                    {/* O .slice(0, 5) pega apenas os primeiros 5 itens do array */}
+                    {lojistas.slice(0, 5).map((lojista, i) => (
                       <div
                         key={i}
                         style={{
-                          width: 20, // Aumentei um pouco para dar destaque à foto
+                          width: 20,
                           height: 20,
                           borderRadius: "50%",
                           border: "2px solid #050608",
-                          marginLeft: i === 0 ? 0 : -12, // Sobreposição charmosa
-                          overflow: "hidden", // Importante para a imagem não sair do círculo
-                          background: "#1e293b", // Cor de fundo caso a imagem demore a carregar
+                          marginLeft: i === 0 ? 0 : -10,
+                          overflow: "hidden", // Garante que a imagem fique circular
+                          background: "#1e293b",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          position: "relative",
-                          zIndex: 5 - i, // Garante que a primeira foto fique por cima das outras
+                          zIndex: 5 - i, // Efeito de empilhamento (primeiro por cima)
                         }}
                       >
                         <img
                           src={lojista.img}
-                          alt={`Lojista ${lojista.nome}`}
+                          alt={lojista.nome}
                           style={{
                             width: "100%",
                             height: "100%",
-                            objectFit: "cover", // Faz a foto preencher o círculo sem esticar
-                          }}
-                          // Fallback caso a imagem falhe (mostra a primeira letra)
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                            e.currentTarget.parentElement!.innerText =
-                              lojista.nome.charAt(0);
+                            objectFit: "cover", // Não deixa a imagem esticar
                           }}
                         />
                       </div>
