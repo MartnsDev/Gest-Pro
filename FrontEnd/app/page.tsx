@@ -700,7 +700,7 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
                     borderRadius: "50%",
                     background: `linear-gradient(135deg, ${c}, #059669)`,
                     border: "2px solid #050608",
-                    marginLeft: i === 0 ? 0 : -10,
+                    marginLeft: i === 0 ? 0 : -5,
                     fontSize: 12,
                     display: "flex",
                     alignItems: "center",
@@ -720,13 +720,13 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
                           height: 20,
                           borderRadius: "50%",
                           border: "2px solid #050608",
-                          marginLeft: i === 0 ? 0 : -10,
+                          marginLeft: i === 0 ? 0 : -5,
                           overflow: "hidden", // Garante que a imagem fique circular
                           background: "#1e293b",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          zIndex: 5 - i, // Efeito de empilhamento (primeiro por cima)
+                          zIndex: 2 - i, // Efeito de empilhamento (primeiro por cima)
                         }}
                       >
                         <img
