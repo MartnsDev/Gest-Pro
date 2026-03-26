@@ -554,11 +554,11 @@ const DashboardPreview = () => (
 );
 
 const lojistas = [
-  { nome: "Kelly", img: "/images/kelly.png" },
-  { nome: "Heloisa", img: "/images/heloisa.png" },
-  { nome: "Matheus", img: "/images/matheus.png" },
-  { nome: "Ricardo", img: "/images/ricardo.png" },
-  { nome: "Lorena", img: "/images/lorena.png" },
+  { nome: "Kelly", img: "/logistas-img/Kelly.png" },
+  { nome: "Heloisa", img: "/logistas-img/heloisa.png" },
+  { nome: "Matheus", img: "/logistas-img/matheus.png" },
+  { nome: "Ricardo", img: "/logistas-img/ricardo.png" },
+  { nome: "Lorena", img: "/logistas-img/lorena.png" },
 ];
 
 /* ─────────────────────────────────────────────
