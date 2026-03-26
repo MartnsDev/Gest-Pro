@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUsuario, lerTokenCookie, logout, removerTokenCookie, salvarTokenCookie, type Usuario } from "@/lib/api-v2";
-import { removeToken } from "@/lib/auth-v2";
 import styles from "@/app/styles/dashboard.module.css";
 
 import { EmpresaProvider, useEmpresa } from "./context/Empresacontext";
@@ -94,26 +93,34 @@ function DashboardInner({
 }: {
   usuario: Usuario; mostrarToast: boolean; secaoInicial: Secao; cancelado: boolean;
 }) {
-  const { empresaAtiva, caixaAtivo, setCaixaAtivo, setEmpresaAtiva } = useEmpresa();
+  const {
+    empresaAtiva, caixaAtivo, setCaixaAtivo,
+    setEmpresaAtiva, resetarContexto,
+  } = useEmpresa();
+
   const [secao,      setSecao]      = useState<Secao>(secaoInicial);
   const [modalCaixa, setModalCaixa] = useState(false);
   const [toast,      setToast]      = useState(mostrarToast);
 
   const API = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
+
   const resolverFoto = (url?: string | null) => {
     if (!url) return null;
     if (url.startsWith("http") || url.startsWith("blob:")) return url;
     return `${API}${url}`;
   };
 
-  const [fotoAtual, setFotoAtual] = useState<string | null>(resolverFoto(usuario.fotoUpload ?? usuario.foto));
+  const [fotoAtual, setFotoAtual] = useState<string | null>(
+    resolverFoto(usuario.fotoUpload ?? usuario.foto)
+  );
   const [nomeAtual, setNomeAtual] = useState(usuario.nome);
   const iniciais = nomeAtual.split(" ").map(n => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2);
 
   const handleLogout = async () => {
     try { await logout(); } catch {}
-    removeToken();
-    window.location.href = "/";
+    resetarContexto();
+    removerTokenCookie();
+    globalThis.location.href = "/";
   };
 
   const tituloSecao: Record<Secao, string> = {
@@ -146,7 +153,6 @@ function DashboardInner({
 
       {toast && <ToastPagamento onClose={() => setToast(false)} />}
 
-      {/* Banner cancelamento */}
       {cancelado && secao === "planos" && (
         <div style={{
           position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
@@ -193,7 +199,9 @@ function DashboardInner({
             {fotoAtual
               ? <img src={fotoAtual} alt={nomeAtual} className={styles.headerUserAvatar} onError={() => setFotoAtual(null)} />
               : <div className={styles.headerUserInitials}>{iniciais}</div>}
-            <Button onClick={handleLogout} variant="ghost" className="text-white hover:text-gray-300 hover:bg-[#1a3a52]">Sair</Button>
+            <Button onClick={handleLogout} variant="ghost" className="text-white hover:text-gray-300 hover:bg-[#1a3a52]">
+              Sair
+            </Button>
           </div>
         </div>
       </header>
@@ -237,16 +245,16 @@ function DashboardInner({
   );
 }
 
-// ─── Componente de Suporte para Suspense ──────────────────────────────────────
+// ─── DashboardLoader ──────────────────────────────────────────────────────────
 
 function DashboardLoader() {
   const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const mostrarToast = searchParams.get("payment") === "success";
-  const cancelado = searchParams.get("canceled") === "true";
-  const secaoInicial = (searchParams.get("section") as Secao) ?? "dashboard";
+  const mostrarToast  = searchParams.get("payment") === "success";
+  const cancelado     = searchParams.get("canceled") === "true";
+  const secaoInicial  = (searchParams.get("section") as Secao) ?? "dashboard";
 
   useEffect(() => {
     async function inicializarDashboard() {
@@ -293,11 +301,11 @@ function DashboardLoader() {
 
   return (
     <EmpresaProvider>
-      <DashboardInner 
-        usuario={usuario} 
-        mostrarToast={mostrarToast} 
-        secaoInicial={secaoInicial} 
-        cancelado={cancelado} 
+      <DashboardInner
+        usuario={usuario}
+        mostrarToast={mostrarToast}
+        secaoInicial={secaoInicial}
+        cancelado={cancelado}
       />
     </EmpresaProvider>
   );

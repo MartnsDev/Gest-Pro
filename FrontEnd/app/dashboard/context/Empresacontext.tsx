@@ -31,6 +31,7 @@ interface EmpresaContextType {
   setEmpresaAtiva:    (e: Empresa) => void;
   setCaixaAtivo:      (c: CaixaInfo | null) => void;
   recarregarEmpresas: () => Promise<void>;
+  resetarContexto:    () => void; 
 }
 
 const EmpresaContext = createContext<EmpresaContextType>({
@@ -40,6 +41,7 @@ const EmpresaContext = createContext<EmpresaContextType>({
   setEmpresaAtiva:    () => {},
   setCaixaAtivo:      () => {},
   recarregarEmpresas: async () => {},
+  resetarContexto:    () => {},
 });
 
 const STORAGE_KEY = "gestpro_empresa_ativa_id";
