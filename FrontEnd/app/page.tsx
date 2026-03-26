@@ -556,8 +556,8 @@ const DashboardPreview = () => (
 const lojistas = [
   { nome: "Kelly", img: "/logistas-img/Kelly.png" },
   { nome: "Heloisa", img: "/logistas-img/heloisa.png" },
-  { nome: "Matheus", img: "/logistas-img/matheus.png" },
-  { nome: "Ricardo", img: "/logistas-img/ricardo.png" },
+  { nome: "Matheus", img: "/logistas-img/matheus.jpg" },
+  { nome: "Ricardo", img: "/logistas-img/matheus.png" },
   { nome: "Lorena", img: "/logistas-img/lorena.png" },
 ];
 
@@ -690,7 +690,7 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
           }}
         >
           <div style={{ display: "flex", alignItems: "center" }}>
-            {/* Limitamos estritamente a 5 fotos */}
+            {/* Limite estritamente a 5 fotos */}
             {lojistas.slice(0, 5).map((lojista, i) => (
               <div
                 key={lojista.nome} // KEY única evita repetição de render
