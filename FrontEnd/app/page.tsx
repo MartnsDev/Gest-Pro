@@ -695,8 +695,8 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
                 <div
                   key={i}
                   style={{
-                    width: 32,
-                    height: 32,
+                    width: 20,
+                    height: 20,
                     borderRadius: "50%",
                     background: `linear-gradient(135deg, ${c}, #059669)`,
                     border: "2px solid #050608",
@@ -715,8 +715,8 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
                       <div
                         key={i}
                         style={{
-                          width: 34, // Aumentei um pouco para dar destaque à foto
-                          height: 34,
+                          width: 20, // Aumentei um pouco para dar destaque à foto
+                          height: 20,
                           borderRadius: "50%",
                           border: "2px solid #050608",
                           marginLeft: i === 0 ? 0 : -12, // Sobreposição charmosa
