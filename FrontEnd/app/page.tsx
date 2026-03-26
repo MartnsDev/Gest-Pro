@@ -554,11 +554,11 @@ const DashboardPreview = () => (
 );
 
 const lojistas = [
-  { nome: "Mariana", img: "/uploads/fotos/foto1.jpg" },
-  { nome: "João", img: "/uploads/fotos/foto2.jpg" },
-  { nome: "Ana", img: "/uploads/fotos/foto3.jpg" },
-  { nome: "Ricardo", img: "/uploads/fotos/foto4.jpg" },
-  { nome: "Lúcia", img: "/uploads/fotos/foto5.jpg" },
+  { nome: "Kelly", img: "/images/kelly.png" },
+  { nome: "Heloisa", img: "/images/heloisa.png" },
+  { nome: "Matheus", img: "/images/matheus.png" },
+  { nome: "Ricardo", img: "/images/ricardo.png" },
+  { nome: "Lorena", img: "/images/lorena.png" },
 ];
 
 /* ─────────────────────────────────────────────
@@ -712,7 +712,7 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
                 >
                   <div style={{ display: "flex" }}>
                     {/* O .slice(0, 5) pega apenas os primeiros 5 itens do array */}
-                    {lojistas.slice(0, 5).map((lojista, i) => (
+                    {lojistas.slice(0, 3).map((lojista, i) => (
                       <div
                         key={i}
                         style={{
