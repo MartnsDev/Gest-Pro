@@ -176,7 +176,6 @@ public class EmailService {
     private String resendApiKey;
 
     // ================= ENVIO CENTRAL =================
-    // ================= ENVIO CENTRAL =================
     private void enviarHtml(String to, String subject, String html) {
         try {
             if (resendApiKey == null || resendApiKey.isEmpty()) {

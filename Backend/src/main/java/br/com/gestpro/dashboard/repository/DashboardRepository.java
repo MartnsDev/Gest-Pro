@@ -49,22 +49,32 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
 
     // ── Lucro do dia por empresa ───────────────────────────────────────────
     @Query(value =
-            "SELECT COALESCE(SUM(iv.subtotal - (COALESCE(p.preco_custo, 0) * iv.quantidade)), 0) " +
-                    "FROM item_venda iv " +
-                    "JOIN venda v   ON v.id = iv.venda_id " +
-                    "JOIN produto p ON p.id = iv.produto_id " +
-                    "WHERE v.empresa_id = :empresaId AND DATE(v.data_venda) = CURDATE()",
-            nativeQuery = true)
-    Object lucroDia(@Param("empresaId") Long empresaId);
-
-    // ── Lucro do mês por empresa ───────────────────────────────────────────
-    @Query(value =
-            "SELECT COALESCE(SUM(iv.subtotal - (COALESCE(p.preco_custo, 0) * iv.quantidade)), 0) " +
+            "SELECT COALESCE(SUM(" +
+                    "  (iv.subtotal - (COALESCE(p.preco_custo, 0) * iv.quantidade)) " +
+                    "  * (v.valor_final / NULLIF(v.total, 0))" +   // ← fator de desconto proporcional
+                    "), 0) " +
                     "FROM item_venda iv " +
                     "JOIN venda v   ON v.id = iv.venda_id " +
                     "JOIN produto p ON p.id = iv.produto_id " +
                     "WHERE v.empresa_id = :empresaId " +
-                    "AND YEAR(v.data_venda) = YEAR(NOW()) AND MONTH(v.data_venda) = MONTH(NOW())",
+                    "AND v.cancelada = 0 " +                        // ← também ignorava canceladas
+                    "AND DATE(v.data_venda) = CURDATE()",
+            nativeQuery = true)
+    Object lucroDia(@Param("empresaId") Long empresaId);
+
+    // ── Lucro do mês ───────────────────────────────────────────────────────────
+    @Query(value =
+            "SELECT COALESCE(SUM(" +
+                    "  (iv.subtotal - (COALESCE(p.preco_custo, 0) * iv.quantidade)) " +
+                    "  * (v.valor_final / NULLIF(v.total, 0))" +
+                    "), 0) " +
+                    "FROM item_venda iv " +
+                    "JOIN venda v   ON v.id = iv.venda_id " +
+                    "JOIN produto p ON p.id = iv.produto_id " +
+                    "WHERE v.empresa_id = :empresaId " +
+                    "AND v.cancelada = 0 " +
+                    "AND YEAR(v.data_venda) = YEAR(NOW()) " +
+                    "AND MONTH(v.data_venda) = MONTH(NOW())",
             nativeQuery = true)
     Object lucroMes(@Param("empresaId") Long empresaId);
 }
