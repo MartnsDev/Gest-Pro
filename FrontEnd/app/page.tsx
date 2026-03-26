@@ -1499,121 +1499,108 @@ const Plans = ({ onRegister }: PlansProps) => {
 /* ────���────────────────────────────────────────
    TESTIMONIALS
 ───────────────────────────────────────────── */
-const Testimonials = () => {
-  const quotes = [
-    {
-      name: "Gabriela M.",
-      role: "Proprietária da SportLife",
-      img: "/logistas-img/gabriela.jpg",
-      text: "Eu vivia escrava de planilhas e sempre ficava aquela dúvida se os números batiam. O GestPro me deu liberdade. Hoje resolvo tudo pelo celular entre um treino e outro na loja. Finalmente sobrou tempo para focar no que eu amo: o atendimento.",
-    },
-    {
-      name: "Jakeline S.",
-      role: "Dona de Adega",
-      img: "/logistas-img/jakeline.jpg",
-      text: "Minha maior dor de cabeça era o fechamento de caixa; sempre parecia que estava faltando algo. Com o sistema, o fluxo ficou automático. É um alívio chegar no fim do dia e ver que tudo bateu de primeira, sem estresse.",
-    },
-    {
-      name: "Felipe C.",
-      role: "Empreendedor",
-      img: "/logistas-img/felipe.jpg",
-      text: "Cuidar de mais de uma unidade à distância era um caos, eu nunca sabia o que estava acontecendo de verdade. O GestPro virou meus olhos. Consigo ver cada venda em tempo real e tomar decisões de onde eu estiver, sem precisar baixar 10 relatórios.",
-    },
-  ];
-
-  return (
-    <section style={{ position: "relative", zIndex: 10, padding: "80px 28px" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <div className="section-tag">Depoimentos</div>
-          <h2
-            className="section-heading"
-            style={{ fontSize: "clamp(30px,4vw,48px)" }}
+const quotes = [
+  {
+    name: "Gabriela M.",
+    role: "Proprietária da SportLife",
+    img: "/logistas-img/gabriela.jpg",
+    text: "Eu vivia escrava de planilhas e sempre ficava aquela dúvida se os números batiam. O GestPro me deu liberdade. Hoje resolvo tudo pelo celular entre um treino e outro na loja. Finalmente sobrou tempo para focar no que eu amo: o atendimento.",
+  },
+  {
+    name: "Jakeline S.",
+    role: "Dona de Adega",
+    img: "/logistas-img/jakeline.jpg",
+    text: "Minha maior dor de cabeça era o fechamento de caixa; sempre parecia que estava faltando algo. Com o sistema, o fluxo ficou automático. É um alívio chegar no fim do dia e ver que tudo bateu de primeira, sem estresse.",
+  },
+  {
+    name: "Felipe C.",
+    role: "Empreendedor",
+    img: "/logistas-img/felipe.jpg",
+    text: "Cuidar de mais de uma unidade à distância era um caos, eu nunca sabia o que estava acontecendo de verdade. O GestPro virou meus olhos. Consigo ver cada venda em tempo real e tomar decisões de onde eu estiver, sem precisar baixar 10 relatórios.",
+  },
+];
+const Testimonials = () => (
+  <section style={{ position: "relative", zIndex: 10, padding: "80px 28px" }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: 24,
+        }}
+      >
+        {quotes.map((q, i) => (
+          <div
+            key={i}
+            className="glass"
+            style={{ padding: 32, borderRadius: 24 }}
           >
-            Quem usa, recomenda
-          </h2>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: 18,
-          }}
-        >
-          {quotes.map((q, i) => (
             <div
-              key={i}
-              className="glass hover-lift"
-              style={{ padding: "28px 24px" }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                marginBottom: 20,
+              }}
             >
+              {/* CONTAINER DA IMAGEM - MESMO TAMANHO DO HERO */}
               <div
                 style={{
-                  fontSize: 24,
-                  color: "#10b981",
-                  marginBottom: 14,
-                  fontFamily: "var(--font-syne), 'Syne', sans-serif",
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "2px solid rgba(16,185,129,0.3)",
+                  overflow: "hidden",
+                  background: "#1e293b",
+                  flexShrink: 0, // Impede que a imagem esmague
                 }}
               >
-                "
+                <img
+                  src={`${q.img}?v=${Date.now()}`}
+                  alt={q.name}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
               </div>
-              <p
-                style={{
-                  fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                  fontSize: 14,
-                  color: "rgba(241,245,249,0.65)",
-                  lineHeight: 1.75,
-                  marginBottom: 20,
-                }}
-              >
-                {q.text}
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
+
+              <div>
+                <h4
                   style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg, #10b981, #059669)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontFamily: "var(--font-syne), 'Syne', sans-serif",
+                    fontFamily: "var(--font-syne)",
+                    color: "#f1f5f9",
+                    fontSize: 15,
                     fontWeight: 700,
-                    fontSize: 14,
-                    color: "#fff",
                   }}
                 >
-                  {q.name[0]}
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-syne), 'Syne', sans-serif",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      color: "#f1f5f9",
-                    }}
-                  >
-                    {q.name}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                      fontSize: 11,
-                      color: "rgba(241,245,249,0.35)",
-                    }}
-                  >
-                    {q.role}
-                  </div>
-                </div>
+                  {q.name}
+                </h4>
+                <p
+                  style={{
+                    fontFamily: "var(--font-manrope)",
+                    color: "#10b981",
+                    fontSize: 12,
+                  }}
+                >
+                  {q.role}
+                </p>
               </div>
             </div>
-          ))}
-        </div>
+            <p
+              style={{
+                fontFamily: "var(--font-manrope)",
+                color: "rgba(241,245,249,0.6)",
+                fontSize: 15,
+                lineHeight: 1.6,
+                fontStyle: "italic",
+              }}
+            >
+              "{q.text}"
+            </p>
+          </div>
+        ))}
       </div>
-    </section>
-  );
-};
+    </div>
+  </section>
+);
 
 /* ─────────────────────────────────────────────
    CTA FINAL
