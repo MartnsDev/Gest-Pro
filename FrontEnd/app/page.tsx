@@ -689,40 +689,39 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
             gap: 16,
           }}
         >
-         <div style={{ display: "flex", alignItems: "center" }}>
-  {/* Limitamos estritamente a 5 fotos */}
-  {lojistas.slice(0, 5).map((lojista, i) => (
-    <div
-      key={lojista.nome} // KEY única evita repetição de render
-      style={{
-        width: 24, 
-        height: 24,
-        borderRadius: "50%",
-        border: "2px solid #050608",
-        marginLeft: i === 0 ? 0 : -12,
-        overflow: "hidden",
-        background: "#1e293b",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 10 - i, 
-      }}
-    >
-      <img
-        // O timestamp Date.now() força o navegador a carregar o arquivo real do disco
-        src={`${lojista.img}?v=${Date.now()}`} 
-        alt={lojista.nome}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-        }}
-      />
-    </div>
-  ))}
-</div>
-          
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {/* Limitamos estritamente a 5 fotos */}
+            {lojistas.slice(0, 5).map((lojista, i) => (
+              <div
+                key={lojista.nome} // KEY única evita repetição de render
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  border: "2px solid #050608",
+                  marginLeft: i === 0 ? 0 : -12,
+                  overflow: "hidden",
+                  background: "#1e293b",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 10 - i,
+                }}
+              >
+                <img
+                  // O timestamp Date.now() força o navegador a carregar o arquivo real do disco
+                  src={`${lojista.img}?v=${Date.now()}`}
+                  alt={lojista.nome}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              </div>
+            ))}
           </div>
+
           <div>
             <div
               style={{
