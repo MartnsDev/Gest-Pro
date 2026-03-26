@@ -140,9 +140,9 @@ public class CadastroManualOperation {
         try {
             String linkConfirmacao = baseUrl + "/auth/confirmar?token=" + usuario.getTokenConfirmacao();
             // Produção
-            // emailService.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
+              emailService.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
             // Testes
-            mailTrapEmail.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
+            // mailTrapEmail.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
         } catch (Exception e) {
             throw new ApiException(
                     "Erro ao enviar e-mail de confirmação.",
