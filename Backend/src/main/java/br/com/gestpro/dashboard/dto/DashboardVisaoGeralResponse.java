@@ -25,6 +25,8 @@ public class DashboardVisaoGeralResponse {
     private BigDecimal lucroDia;
     private BigDecimal lucroMes;
 
+    private BigDecimal custos;
+
     private PlanoDTO      planoUsuario;
     private List<String>  alertas;
 

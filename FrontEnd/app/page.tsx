@@ -553,6 +553,14 @@ const DashboardPreview = () => (
   </div>
 );
 
+const lojistas = [
+  { nome: "Mariana", img: "/uploads/fotos/foto1.jpg" },
+  { nome: "João", img: "/uploads/fotos/foto2.jpg" },
+  { nome: "Ana", img: "/uploads/fotos/foto3.jpg" },
+  { nome: "Ricardo", img: "/uploads/fotos/foto4.jpg" },
+  { nome: "Lúcia", img: "/uploads/fotos/foto5.jpg" },
+];
+
 /* ─────────────────────────────────────────────
    HERO
 ───────────────────────────────────────────── */
@@ -702,7 +710,43 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
                     color: "#fff",
                   }}
                 >
-                  {["M", "J", "A", "R", "L"][i]}
+                  <div style={{ display: "flex" }}>
+                    {lojistas.map((lojista, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: 34, // Aumentei um pouco para dar destaque à foto
+                          height: 34,
+                          borderRadius: "50%",
+                          border: "2px solid #050608",
+                          marginLeft: i === 0 ? 0 : -12, // Sobreposição charmosa
+                          overflow: "hidden", // Importante para a imagem não sair do círculo
+                          background: "#1e293b", // Cor de fundo caso a imagem demore a carregar
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          position: "relative",
+                          zIndex: 5 - i, // Garante que a primeira foto fique por cima das outras
+                        }}
+                      >
+                        <img
+                          src={lojista.img}
+                          alt={`Lojista ${lojista.nome}`}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover", // Faz a foto preencher o círculo sem esticar
+                          }}
+                          // Fallback caso a imagem falhe (mostra a primeira letra)
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget.parentElement!.innerText =
+                              lojista.nome.charAt(0);
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ),
             )}
