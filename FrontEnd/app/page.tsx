@@ -710,32 +710,31 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
                     color: "#fff",
                   }}
                 >
-                  <div style={{ display: "flex" }}>
-                    {/* O .slice(0, 5) pega apenas os primeiros 5 itens do array */}
-                    {lojistas.slice(0, 3).map((lojista, i) => (
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    {lojistas.slice(0, 5).map((lojista, i) => (
                       <div
-                        key={i}
+                        key={lojista.nome}
                         style={{
-                          width: 20,
-                          height: 20,
+                          width: 32,
+                          height: 32,
                           borderRadius: "50%",
                           border: "2px solid #050608",
-                          marginLeft: i === 0 ? 0 : -10,
-                          overflow: "hidden", // Garante que a imagem fique circular
+                          marginLeft: i === 0 ? 0 : -12, // Sobreposição
+                          overflow: "hidden",
                           background: "#1e293b",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          zIndex: 7 - i, // Efeito de empilhamento (primeiro por cima)
+                          zIndex: 10 - i, // Garante o empilhamento correto
                         }}
                       >
                         <img
-                          src={lojista.img}
+                          src={`${lojista.img}?v=${i}`} // O ?v= ajuda a forçar o navegador a não repetir cache
                           alt={lojista.nome}
                           style={{
                             width: "100%",
                             height: "100%",
-                            objectFit: "cover", // Não deixa a imagem esticar
+                            objectFit: "cover",
                           }}
                         />
                       </div>
