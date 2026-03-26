@@ -1502,7 +1502,7 @@ const Plans = ({ onRegister }: PlansProps) => {
 const quotes = [
   {
     name: "Gabriela M.",
-    role: "Proprietária da SportLife",
+    role: "Proprietária da GM Black Sports",
     img: "/logistas-img/gabriela.jpg",
     text: "Eu vivia escrava de planilhas e sempre ficava aquela dúvida se os números batiam. O GestPro me deu liberdade. Hoje resolvo tudo pelo celular entre um treino e outro na loja. Finalmente sobrou tempo para focar no que eu amo: o atendimento.",
   },
