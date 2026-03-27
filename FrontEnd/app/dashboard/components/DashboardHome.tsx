@@ -2171,12 +2171,17 @@ export default function DashboardHome({
       icon: <Receipt size={16} />,
       accent: "warning" as const,
     },
+    
+    /*
+
     {
       title: "Total Investido",
       value: loading ? "—" : fmt(visao?.totalInvestido),
       icon: <DollarSign size={16} />,
       accent: "secondary" as const,
     },
+    
+    */
   ];
 
   const alertas: string[] = [
