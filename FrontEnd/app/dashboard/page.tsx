@@ -175,13 +175,18 @@ function DashboardInner({
     "https://gestpro-backend-production.up.railway.app";
 
   const resolverFoto = (url?: string | null) => {
-    if (!url) return null;
-    if (url.startsWith("http") || url.startsWith("blob:")) return url;
-    return `${API}${url}`;
+    if (!url || url.trim() === "") return null;
+    if (
+      url.startsWith("http") ||
+      url.startsWith("blob:") ||
+      url.startsWith("data:")
+    )
+      return url;
+    return `${API}${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
   const [fotoAtual, setFotoAtual] = useState<string | null>(
-    resolverFoto(usuario.fotoUpload ?? usuario.foto),
+    resolverFoto(usuario.fotoUpload || usuario.foto || null),
   );
   const [nomeAtual, setNomeAtual] = useState(usuario.nome);
   const iniciais = nomeAtual
@@ -371,10 +376,12 @@ function DashboardInner({
             </span>
             {fotoAtual ? (
               <img
+                key={fotoAtual}
                 src={fotoAtual}
                 alt={nomeAtual}
                 className={styles.headerUserAvatar}
                 onError={() => setFotoAtual(null)}
+                referrerPolicy="no-referrer"
               />
             ) : (
               <div className={styles.headerUserInitials}>{iniciais}</div>
