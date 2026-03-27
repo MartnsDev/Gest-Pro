@@ -15,4 +15,6 @@ public interface DashboardServiceInterface {
     List<VendasDiariasDTO> vendasDiariasSemana(Long empresaId, String email);
 
     DashboardVisaoGeralResponse visaoGeral(Long empresaId, String email);
+
+
 }

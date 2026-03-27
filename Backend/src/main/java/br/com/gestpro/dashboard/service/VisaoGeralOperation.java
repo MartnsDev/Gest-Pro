@@ -64,6 +64,11 @@ public class VisaoGeralOperation {
     }
 
     @Transactional(readOnly = true)
+    public BigDecimal custoTotalEstoque(Long empresaId) {
+        return parseBD(dashboardRepository.custoTotalEstoque(empresaId));
+    }
+
+    @Transactional(readOnly = true)
     public List<String> alertasProdutosZerados(Long empresaId) {
         return produtoRepository.findByQuantidadeEstoqueAndEmpresaId(0, empresaId)
                 .stream()

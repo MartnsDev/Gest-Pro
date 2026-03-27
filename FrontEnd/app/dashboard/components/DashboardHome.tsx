@@ -2163,6 +2163,12 @@ export default function DashboardHome({
       icon: <Users size={16} />,
       accent: "warning" as const,
     },
+    {
+      title: "Custo do Estoque",
+      value: loading ? "—" : fmt(visao?.custos),
+      icon: <Receipt size={16} />,
+      accent: "warning" as const,
+    },
   ];
 
   const alertas: string[] = [

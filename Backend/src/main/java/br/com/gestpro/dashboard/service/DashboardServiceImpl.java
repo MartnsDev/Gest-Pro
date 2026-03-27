@@ -59,6 +59,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         return graficoServiceOperation.vendasDiariasSemana(empresaId);
     }
 
+
     @Override
     @Transactional(readOnly = true)
     public DashboardVisaoGeralResponse visaoGeral(Long empresaId, String email) {
@@ -81,6 +82,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         BigDecimal vendasMes    = visaoGeralOperation.vendasMes(empresaId);
         BigDecimal lucroDia     = visaoGeralOperation.lucroDia(empresaId);
         BigDecimal lucroMes     = visaoGeralOperation.lucroMes(empresaId);
+        BigDecimal custos = visaoGeralOperation.custoTotalEstoque(empresaId);
 
         List<String> alertas = Stream.concat(
                 visaoGeralOperation.alertasProdutosZerados(empresaId).stream(),
@@ -89,10 +91,12 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
                         : Stream.empty()
         ).toList();
 
-        return new DashboardVisaoGeralResponse(
+        DashboardVisaoGeralResponse response = new DashboardVisaoGeralResponse(
                 vHoje, pCom, pSem, cAtivos,
                 vendasSemana, vendasMes, lucroDia, lucroMes,
                 plano, alertas
         );
+        response.setCustos(custos); 
+        return response;
     }
 }

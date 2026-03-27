@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -77,4 +78,10 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
                     "AND MONTH(v.data_venda) = MONTH(NOW())",
             nativeQuery = true)
     Object lucroMes(@Param("empresaId") Long empresaId);
+
+
+    @Query("SELECT COALESCE(SUM(p.precoCusto * p.quantidadeEstoque), 0) " +
+            "FROM Produto p WHERE p.empresa.id = :empresaId " +
+            "AND p.precoCusto IS NOT NULL AND p.quantidadeEstoque > 0")
+    BigDecimal custoTotalEstoque(@Param("empresaId") Long empresaId);
 }
