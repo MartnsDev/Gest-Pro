@@ -87,7 +87,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
     BigDecimal custoTotalEstoque(@Param("empresaId") Long empresaId);
 
     // Total já cadastrado com custo (incluindo zerados)
-    @Query("SELECT COALESCE(SUM(p.precoCusto * p.quantidadeEstoque), 0) " +
+    @Query("SELECT COALESCE(SUM(p.precoCusto), 0) " +
             "FROM Produto p WHERE p.empresa.id = :empresaId " +
             "AND p.precoCusto IS NOT NULL")
     BigDecimal totalInvestidoCadastrado(@Param("empresaId") Long empresaId);
