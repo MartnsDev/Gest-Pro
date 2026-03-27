@@ -1,8 +1,8 @@
 /* ============================================
-   DASHBOARD - Mobile-first, totalmente responsivo
+   DASHBOARD - Cores alinhadas com globals.css
    ============================================ */
 
-/* ── Layout Principal ── */
+/* Layout Principal */
 .dashboardContainer {
   min-height: 100vh;
   background: var(--background);
@@ -20,306 +20,215 @@
   font-size: 1.2rem;
 }
 
-/* ── Header ── */
+/* Header */
 .dashboardHeader {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 52px;
+  height: 56px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 0 10px;
+  padding: 0 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   z-index: 1000;
-  gap: 8px;
-  box-sizing: border-box;
 }
 
 .headerBrand {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex-shrink: 1;
+  gap: 0.75rem;
 }
 
 .headerLogo {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.headerLogo img {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  object-fit: cover;
-  display: block;
+  color: var(--foreground);
 }
 
 .headerTitle {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--foreground);
-  white-space: nowrap;
-}
-
-/* Separador "GESTPRO / seção" — só desktop */
-.headerBrand > div:last-child {
-  display: none;
 }
 
 .headerUser {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  gap: 0.75rem;
 }
 
 .headerUserName {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   color: var(--foreground-muted);
-  white-space: nowrap;
-  display: none; /* escondido no mobile, aparece no desktop */
 }
 
-/* ── Avatar / Iniciais ── */
-.headerUserAvatar {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  min-height: 30px;
+.headerUserAvatar,
+.headerUserInitials {
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--primary);
-  display: block;
-  flex-shrink: 0;
-  /* Garante que a imagem não quebre */
-  image-rendering: auto;
-  background: var(--primary);
-}
-
-.headerUserInitials {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  min-height: 30px;
-  border-radius: 50%;
-  background: var(--primary);
   border: 2px solid var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 0.65rem;
+  font-weight: 600;
+  font-size: 1rem;
   color: white;
   flex-shrink: 0;
-  letter-spacing: 0.03em;
-  user-select: none;
 }
 
-/* ── Botão Caixa (header) — compacto no mobile ── */
-.dashboardHeader button[class*="caixa"],
-.dashboardHeader > div > button {
-  font-size: 11px !important;
+.headerUserInitials {
+  background: var(--primary);
 }
 
-/* ── Layout com Sidebar ── */
+/* Layout com Sidebar */
 .dashboardLayout {
   display: flex;
-  margin-top: 52px;
+  margin-top: 56px;
 }
 
-/* ── Sidebar — nav inferior no mobile ── */
+/* Sidebar */
 .sidebar {
   position: fixed;
-  bottom: 0;
+  top: 56px;
   left: 0;
-  right: 0;
-  width: 100%;
-  height: 60px;
+  width: 15rem;
+  height: calc(100vh - 56px);
   background: var(--surface);
-  border-top: 1px solid var(--border);
-  border-right: none;
-  padding: 0 4px;
+  border-right: 1px solid var(--border);
+  padding: 1rem 0.75rem;
   display: flex;
-  flex-direction: row;
-  align-items: stretch;
+  flex-direction: column;
   z-index: 900;
-  overflow: visible;
-  top: auto;
+  overflow-y: auto;
 }
 
 .sidebarNav {
   display: flex;
-  flex-direction: row;
-  gap: 0;
-  width: 100%;
-  align-items: stretch;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .sidebarNavItem {
-  flex: 1;
+  width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 5px 2px;
-  border-radius: 10px;
+  gap: 0.75rem;
+  padding: 0.6rem 0.875rem;
+  border-radius: var(--radius-md);
   color: var(--foreground-muted);
-  background: transparent;
+  transition: background-color 0.15s, color 0.15s;
   border: none;
+  background: transparent;
   cursor: pointer;
-  font-size: 0.55rem;
-  text-align: center;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 0.15s, background 0.15s;
-  min-width: 0;
-}
-
-.sidebarNavItem svg {
-  width: 19px;
-  height: 19px;
-  flex-shrink: 0;
-}
-
-.sidebarNavItem span {
-  display: block;
-  line-height: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
+  font-size: 0.9rem;
+  text-align: left;
 }
 
 .sidebarNavItem:hover {
-  color: var(--foreground);
   background: var(--sidebar-hover-bg);
+  color: var(--foreground);
 }
 
 .sidebarNavItemActive {
-  color: var(--sidebar-active-fg);
   background: var(--sidebar-active-bg);
-  font-weight: 600;
+  color: var(--sidebar-active-fg);
+  font-weight: 500;
 }
 
-/* Itens 6, 7 e 8 (Relatórios, Empresas, Config) somem no mobile */
-.sidebarNavItem:nth-child(6),
-.sidebarNavItem:nth-child(7),
-.sidebarNavItem:nth-child(8) {
-  display: none;
-}
-
-/* Último item (Planos) vira "Mais" */
-.sidebarNavItem:last-child span {
-  visibility: hidden;
-  position: relative;
-}
-
-.sidebarNavItem:last-child span::after {
-  content: "Mais";
-  visibility: visible;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-
-/* ── Conteúdo Principal ── */
+/* Main Content */
 .mainContent {
   flex: 1;
-  margin-left: 0;
-  margin-bottom: 60px; /* espaço para o nav inferior */
-  min-height: calc(100vh - 52px - 60px);
+  margin-left: 15rem;
+  min-height: calc(100vh - 56px);
   overflow-y: auto;
   background: var(--background);
-  box-sizing: border-box;
-  width: 100%;
 }
 
-/* ── Seção de boas-vindas ── */
+/* Inner wrapper */
+.mainContentInner {
+  max-width: 90rem;
+  margin: 0 auto;
+}
+
+/* Welcome Section */
 .welcomeSection {
-  margin-bottom: 1.25rem;
+  margin-bottom: 2rem;
 }
 
 .welcomeTitle {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
   color: var(--foreground);
-  line-height: 1.3;
 }
 
 .welcomeSubtitle {
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--foreground-muted);
 }
 
-/* ── Métricas ── */
+/* Metrics Grid */
 .metricsGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 1rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .metricCard {
   border-radius: var(--radius-lg);
-  padding: 1rem;
+  padding: 1.25rem;
   background: var(--surface-elevated);
   border: 1px solid var(--border);
   color: var(--foreground);
 }
 
-/* ── Content Grid ── */
+/* Content Grid */
 .contentGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
-/* ── Chart Card ── */
+/* Chart Card */
 .chartCard {
   background: var(--surface-elevated);
   border-radius: var(--radius-lg);
-  padding: 1rem;
+  padding: 1.5rem;
   border: 1px solid var(--border);
 }
 
 .chartTitle {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--foreground);
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .chartContainer {
   position: relative;
-  height: 160px;
+  height: 16rem;
 }
 
-/* ── Product Table ── */
+/* Product Table */
 .productTable {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   background: var(--surface-elevated);
   border-radius: var(--radius-lg);
-  padding: 1rem;
+  padding: 1.5rem;
   border: 1px solid var(--border);
 }
 
 .tableContainer {
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
 }
 
 .tableHead {
@@ -328,13 +237,12 @@
 
 .tableHeadCell {
   text-align: left;
-  padding: 0.6rem 0.75rem;
+  padding: 0.75rem 1rem;
   color: var(--foreground-muted);
   font-weight: 500;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  white-space: nowrap;
 }
 
 .tableRow {
@@ -347,210 +255,172 @@
 }
 
 .tableCell {
-  padding: 0.7rem 0.75rem;
-  font-size: 0.82rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.9rem;
   color: var(--foreground);
 }
 
 .statusBadge {
   background: var(--success-muted);
   color: var(--success);
-  padding: 0.15rem 0.55rem;
+  padding: 0.2rem 0.65rem;
   border-radius: 9999px;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 500;
   display: inline-block;
-  white-space: nowrap;
-}
-
-/* ── Inner wrapper ── */
-.mainContentInner {
-  max-width: 90rem;
-  margin: 0 auto;
 }
 
 /* ══════════════════════════════════════════
-   TABLET — 600px+
+   MOBILE — apenas até 767px
+   Apenas CSS, sem alterar JSX
 ══════════════════════════════════════════ */
-@media (min-width: 600px) {
-  .metricsGrid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
+@media (max-width: 767px) {
 
+  /* ── Header ── */
   .dashboardHeader {
-    padding: 0 14px;
-    height: 54px;
+    padding: 0 10px;
+    gap: 6px;
   }
 
-  .headerLogo img {
-    width: 32px;
-    height: 32px;
+  /* Esconde separador "GESTPRO / seção" */
+  .headerBrand > div:last-child {
+    display: none;
   }
 
-  .headerTitle {
-    font-size: 1.1rem;
+  /* Esconde só o span do nome, mantém botão Sair e avatar */
+  .headerUserName {
+    display: none;
   }
 
   .headerUserAvatar,
   .headerUserInitials {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    min-height: 34px;
-    font-size: 0.72rem;
-  }
-}
-
-/* ══════════════════════════════════════════
-   DESKTOP — 768px+
-══════════════════════════════════════════ */
-@media (min-width: 768px) {
-  /* Header */
-  .dashboardHeader {
-    padding: 0 1.5rem;
-    height: 56px;
+    width: 30px;
+    height: 30px;
+    font-size: 0.7rem;
   }
 
-  .headerLogo img {
-    width: 40px;
-    height: 40px;
+  /* Botão Sair menor mas visível */
+  .headerUser button {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
   }
 
-  .headerTitle {
-    font-size: 1.25rem;
-  }
-
-  .headerBrand > div:last-child {
-    display: block; /* mostra separador "GESTPRO / seção" */
-    margin-left: 16px;
-    padding-left: 16px;
-    border-left: 1px solid var(--border);
-  }
-
-  .headerUserName {
-    display: block;
-    font-size: 0.95rem;
-  }
-
-  .headerUserAvatar {
-    width: 2.5rem;
-    height: 2.5rem;
-    min-width: 2.5rem;
-    min-height: 2.5rem;
-  }
-
-  .headerUserInitials {
-    width: 2.5rem;
-    height: 2.5rem;
-    min-width: 2.5rem;
-    min-height: 2.5rem;
-    font-size: 1rem;
-  }
-
-  /* Layout */
+  /* ── Layout ── */
   .dashboardLayout {
-    flex-direction: row;
-    margin-top: 56px;
+    flex-direction: column;
+    padding-bottom: 64px;
   }
 
-  /* Sidebar lateral */
+  /* ── Sidebar → nav inferior fixa ── */
   .sidebar {
     position: fixed;
-    top: 56px;
+    top: auto;
+    bottom: 0;
     left: 0;
-    bottom: auto;
-    right: auto;
-    width: 15rem;
-    height: calc(100vh - 56px);
-    border-top: none;
-    border-right: 1px solid var(--border);
-    padding: 1rem 0.75rem;
-    flex-direction: column;
+    right: 0;
+    width: 100%;
+    height: 64px;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    padding: 0 4px;
+    flex-direction: row;
     align-items: stretch;
-    overflow-y: auto;
+    overflow: visible;
   }
 
   .sidebarNav {
-    flex-direction: column;
-    gap: 0.25rem;
+    flex-direction: row;
+    gap: 0;
+    width: 100%;
     align-items: stretch;
   }
 
   .sidebarNavItem {
-    flex-direction: row;
+    flex: 1;
+    flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    gap: 0.75rem;
-    padding: 0.6rem 0.875rem;
-    font-size: 0.9rem;
-    border-radius: var(--radius-md);
-    flex: initial;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 2px;
+    font-size: 0.6rem;
+    border-radius: 10px;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .sidebarNavItem svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
 
   .sidebarNavItem span {
-    visibility: visible !important;
-    position: static !important;
-    white-space: normal;
-    overflow: visible;
+    display: block;
+    line-height: 1;
   }
 
-  /* Reexibe todos os itens */
+  /* Itens 5, 6 e 7 somem (Empresas, Config, Planos) */
+  .sidebarNavItem:nth-child(5),
   .sidebarNavItem:nth-child(6),
-  .sidebarNavItem:nth-child(7),
-  .sidebarNavItem:nth-child(8) {
-    display: flex;
+  .sidebarNavItem:nth-child(7) {
+    display: none;
   }
 
-  /* Desfaz o truque "Mais" do último item */
+  /*
+    Item 8 (último = Planos) vira botão "Mais"
+    — esconde o label original e mostra "Mais"
+    — o ícone fica, só troca o texto via CSS
+  */
+  .sidebarNavItem:last-child span {
+    visibility: hidden;
+    position: relative;
+  }
+
   .sidebarNavItem:last-child span::after {
-    content: none;
+    content: "Mais";
+    visibility: visible;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
   }
 
-  /* Conteúdo */
+  /* ── Conteúdo principal ── */
   .mainContent {
-    margin-left: 15rem;
-    margin-bottom: 0;
-    min-height: calc(100vh - 56px);
+    margin-left: 0;
+    min-height: calc(100vh - 56px - 64px);
   }
 
-  /* Métricas */
+  /* Métricas 2 colunas */
   .metricsGrid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 10px;
   }
 
-  .metricCard {
-    padding: 1.25rem;
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .chartContainer {
+    height: 180px;
   }
 
   .chartCard,
   .productTable {
-    padding: 1.5rem;
-  }
-
-  .chartContainer {
-    height: 16rem;
-  }
-
-  .welcomeTitle {
-    font-size: 1.75rem;
-  }
-
-  .welcomeSubtitle {
-    font-size: 1rem;
+    padding: 14px;
   }
 }
 
-/* ══════════════════════════════════════════
-   DESKTOP LARGO — 1024px+
-══════════════════════════════════════════ */
+/* TABLET */
+@media (min-width: 768px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .contentGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* DESKTOP */
 @media (min-width: 1024px) {
   .metricsGrid {
     grid-template-columns: repeat(4, 1fr);
@@ -562,13 +432,5 @@
 
   .chartCard {
     grid-column: span 2;
-  }
-
-  .welcomeTitle {
-    font-size: 2rem;
-  }
-
-  .welcomeSubtitle {
-    font-size: 1rem;
   }
 }
