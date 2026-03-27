@@ -58,22 +58,8 @@ type Secao =
   | "cliente-rapido"
   | "caixa-rapido";
 
-// ─── Todos os itens de navegação ─────────────────────────────────────────────
-const NAV_ITEMS: { id: Secao; label: string; icon: React.ReactNode }[] = [
-  { id: "dashboard", label: "Dashboard", icon: <Home size={18} /> },
-  { id: "produtos", label: "Produtos", icon: <Package size={18} /> },
-  { id: "vendas", label: "Vendas", icon: <CreditCard size={18} /> },
-  { id: "clientes", label: "Clientes", icon: <Users size={18} /> },
-  { id: "relatorios", label: "Relatórios", icon: <BarChart3 size={18} /> },
-  { id: "empresas", label: "Empresas", icon: <Building2 size={18} /> },
-  { id: "configuracoes", label: "Configurações", icon: <Settings size={18} /> },
-  { id: "planos", label: "Planos", icon: <Zap size={18} /> },
-];
-
-// Itens que aparecem no nav bar inferior do mobile (primeiros 4)
-const NAV_MOBILE_VISIBLE = 4;
-
 // ─── Toast de pagamento confirmado ────────────────────────────────────────────
+
 function ToastPagamento({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const t = setTimeout(onClose, 6000);
@@ -160,6 +146,7 @@ function ToastPagamento({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Dashboard interno ────────────────────────────────────────────────────────
+
 function DashboardInner({
   usuario,
   mostrarToast,
@@ -182,7 +169,6 @@ function DashboardInner({
   const [secao, setSecao] = useState<Secao>(secaoInicial);
   const [modalCaixa, setModalCaixa] = useState(false);
   const [toast, setToast] = useState(mostrarToast);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const API =
     process.env.NEXT_PUBLIC_API_URL ??
@@ -211,32 +197,9 @@ function DashboardInner({
     .toUpperCase()
     .slice(0, 2);
 
-  // Fecha drawer ao trocar de seção
-  const navegarPara = (id: Secao) => {
-    setSecao(id);
-    setDrawerOpen(false);
-  };
-
-  // Fecha drawer ao pressionar Esc
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDrawerOpen(false);
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
-
-  // Trava scroll do body quando drawer aberto
-  useEffect(() => {
-    document.body.style.overflow = drawerOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [drawerOpen]);
-
   const handleLogout = async () => {
-    resetarContexto();
-    await logout();
+    resetarContexto(); // limpa estado React e localStorage do contexto
+    await logout(); // chama backend e limpa storage
     globalThis.location.href = "/";
   };
 
@@ -312,9 +275,6 @@ function DashboardInner({
     }
   };
 
-  // Itens escondidos no mobile (vão para o drawer)
-  const drawerItems = NAV_ITEMS.slice(NAV_MOBILE_VISIBLE);
-
   return (
     <div className={styles.dashboardContainer}>
       {toast && <ToastPagamento onClose={() => setToast(false)} />}
@@ -345,7 +305,6 @@ function DashboardInner({
         </div>
       )}
 
-      {/* ── Header ── */}
       <header className={styles.dashboardHeader}>
         <div className={styles.headerBrand}>
           <div className={styles.headerLogo}>
@@ -383,7 +342,7 @@ function DashboardInner({
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <SeletorEmpresa
             empresaAtiva={empresaAtiva}
             onSelecionar={setEmpresaAtiva}
@@ -394,25 +353,22 @@ function DashboardInner({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 5,
-              padding: "6px 10px",
+              gap: 7,
+              padding: "7px 14px",
               background: caixaAtivo ? "rgba(16,185,129,0.12)" : "transparent",
               border: `1px solid ${caixaAtivo ? "rgba(16,185,129,0.4)" : "var(--border)"}`,
               borderRadius: 8,
               color: caixaAtivo ? "var(--primary)" : "var(--foreground-muted)",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 500,
               cursor: "pointer",
               transition: "all .15s",
-              whiteSpace: "nowrap",
             }}
           >
-            {caixaAtivo ? <DollarSign size={13} /> : <Lock size={13} />}
-            <span style={{ display: "none" }} className="caixaLabel">
-              {caixaAtivo
-                ? `Caixa · ${empresaAtiva?.nomeFantasia ?? ""}`
-                : "Caixa"}
-            </span>
+            {caixaAtivo ? <DollarSign size={14} /> : <Lock size={14} />}
+            {caixaAtivo
+              ? `Caixa Aberto · ${empresaAtiva?.nomeFantasia ?? ""}`
+              : "Abrir Caixa"}
           </button>
           <div className={styles.headerUser}>
             <span className={styles.headerUserName}>
@@ -434,7 +390,6 @@ function DashboardInner({
               onClick={handleLogout}
               variant="ghost"
               className="text-white hover:text-gray-300 hover:bg-[#1a3a52]"
-              style={{ fontSize: 12, padding: "4px 8px" }}
             >
               Sair
             </Button>
@@ -442,15 +397,28 @@ function DashboardInner({
         </div>
       </header>
 
-      {/* ── Layout ── */}
       <div className={styles.dashboardLayout}>
-        {/* Sidebar desktop */}
         <aside className={styles.sidebar}>
           <nav className={styles.sidebarNav}>
-            {NAV_ITEMS.map((item) => (
+            {(
+              [
+                { id: "dashboard", label: "Dashboard", icon: <Home /> },
+                { id: "produtos", label: "Produtos", icon: <Package /> },
+                { id: "vendas", label: "Vendas", icon: <CreditCard /> },
+                { id: "clientes", label: "Clientes", icon: <Users /> },
+                { id: "relatorios", label: "Relatórios", icon: <BarChart3 /> },
+                { id: "empresas", label: "Empresas", icon: <Building2 /> },
+                {
+                  id: "configuracoes",
+                  label: "Configurações",
+                  icon: <Settings />,
+                },
+                { id: "planos", label: "Planos", icon: <Zap /> },
+              ] as { id: Secao; label: string; icon: React.ReactNode }[]
+            ).map((item) => (
               <button
                 key={item.id}
-                onClick={() => navegarPara(item.id)}
+                onClick={() => setSecao(item.id)}
                 className={`${styles.sidebarNavItem} ${secao === item.id ? styles.sidebarNavItemActive : ""}`}
               >
                 {item.icon}
@@ -458,117 +426,10 @@ function DashboardInner({
               </button>
             ))}
           </nav>
-
-          {/* ── Nav bar inferior mobile (dentro do aside) ── */}
-          {/* Os primeiros 4 itens ficam visíveis; o 5º é o hambúrguer */}
-          <nav
-            className={`${styles.sidebarNav} ${styles.mobileOnlyNav}`}
-            style={{ display: "none" }}
-          >
-            {/* Este nav é apenas para referência — o layout usa o aside com CSS */}
-          </nav>
         </aside>
-
         <main className={styles.mainContent}>{renderSection()}</main>
       </div>
 
-      {/* ── Nav inferior mobile: os 4 primeiros itens + botão hambúrguer ── */}
-      {/* Renderizado fora do dashboardLayout para ficar independente */}
-      <nav
-        className={styles.sidebar}
-        style={{ zIndex: 901 }}
-        aria-label="Navegação mobile"
-      >
-        <div className={styles.sidebarNav} style={{ display: "flex" }}>
-          {NAV_ITEMS.slice(0, NAV_MOBILE_VISIBLE).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => navegarPara(item.id)}
-              className={`${styles.sidebarNavItem} ${secao === item.id ? styles.sidebarNavItemActive : ""}`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
-          ))}
-
-          {/* Botão hambúrguer como último item */}
-          <button
-            className={`${styles.hamburgerBtn} ${drawerOpen ? styles.open : ""} ${
-              drawerItems.some((i) => i.id === secao)
-                ? styles.sidebarNavItemActive
-                : ""
-            }`}
-            onClick={() => setDrawerOpen((v) => !v)}
-            aria-label={drawerOpen ? "Fechar menu" : "Abrir menu"}
-            aria-expanded={drawerOpen}
-          >
-            <div className={styles.hamburgerLines}>
-              <span />
-              <span />
-              <span />
-            </div>
-            <span className={styles.hamburgerLabel}>Mais</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* ── Overlay ── */}
-      <div
-        className={`${styles.drawerOverlay} ${drawerOpen ? styles.visible : ""}`}
-        onClick={() => setDrawerOpen(false)}
-        aria-hidden="true"
-      />
-
-      {/* ── Drawer lateral ── */}
-      <div
-        className={`${styles.drawer} ${drawerOpen ? styles.open : ""}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Menu de navegação"
-      >
-        <div className={styles.drawerHeader}>
-          <p className={styles.drawerTitle}>Menu</p>
-          <button
-            className={styles.drawerCloseBtn}
-            onClick={() => setDrawerOpen(false)}
-            aria-label="Fechar menu"
-          >
-            <X size={13} />
-          </button>
-        </div>
-
-        <nav className={styles.drawerNav}>
-          {/* Seção principal — itens ocultos no mobile */}
-          {drawerItems.map((item, idx) => (
-            <button
-              key={item.id}
-              onClick={() => navegarPara(item.id)}
-              className={`${styles.drawerNavItem} ${secao === item.id ? styles.drawerNavItemActive : ""}`}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-
-          <div className={styles.drawerDivider} />
-
-          {/* Caixa */}
-          <button
-            onClick={() => {
-              setModalCaixa(true);
-              setDrawerOpen(false);
-            }}
-            className={styles.drawerNavItem}
-          >
-            {caixaAtivo ? <DollarSign size={17} /> : <Lock size={17} />}
-            {caixaAtivo
-              ? `Caixa Aberto · ${empresaAtiva?.nomeFantasia ?? ""}`
-              : "Abrir Caixa"}
-          </button>
-        </nav>
-      </div>
-
-      {/* ── Modal Caixa ── */}
       {modalCaixa && (
         <ModalCaixa
           onClose={() => setModalCaixa(false)}
@@ -585,6 +446,7 @@ function DashboardInner({
 }
 
 // ─── DashboardLoader ──────────────────────────────────────────────────────────
+
 function DashboardLoader() {
   const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
@@ -616,6 +478,7 @@ function DashboardLoader() {
         if (!data) throw new Error("Usuário inválido");
         setUsuario(data);
       } catch (err) {
+        // Token inválido/expirado — limpa tudo e redireciona
         localStorage.clear();
         sessionStorage.clear();
         removerTokenCookie();
@@ -659,6 +522,7 @@ function DashboardLoader() {
 }
 
 // ─── Página raiz ──────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   return (
     <Suspense fallback={<div>Carregando...</div>}>
