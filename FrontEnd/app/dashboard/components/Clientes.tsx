@@ -79,7 +79,7 @@ interface Divida {
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
   const token =
-    (typeof window !== "undefined"
+    (typeof globalThis.window !== "undefined"
       ? localStorage.getItem("jwt_token")
       : null) ?? "";
   const res = await fetch(
