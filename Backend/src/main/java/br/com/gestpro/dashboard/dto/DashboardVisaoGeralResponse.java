@@ -27,6 +27,8 @@ public class DashboardVisaoGeralResponse {
 
     private BigDecimal custos;
 
+    private BigDecimal totalInvestido; // custo de TODOS os produtos cadastrados (sem filtro de estoque)
+
     private PlanoDTO      planoUsuario;
     private List<String>  alertas;
 

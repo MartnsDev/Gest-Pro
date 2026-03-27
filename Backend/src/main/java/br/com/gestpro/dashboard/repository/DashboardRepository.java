@@ -80,8 +80,15 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
     Object lucroMes(@Param("empresaId") Long empresaId);
 
 
+    // Custo imobilizado (só quem tem estoque)
     @Query("SELECT COALESCE(SUM(p.precoCusto * p.quantidadeEstoque), 0) " +
             "FROM Produto p WHERE p.empresa.id = :empresaId " +
             "AND p.precoCusto IS NOT NULL AND p.quantidadeEstoque > 0")
     BigDecimal custoTotalEstoque(@Param("empresaId") Long empresaId);
+
+    // Total já cadastrado com custo (incluindo zerados)
+    @Query("SELECT COALESCE(SUM(p.precoCusto * p.quantidadeEstoque), 0) " +
+            "FROM Produto p WHERE p.empresa.id = :empresaId " +
+            "AND p.precoCusto IS NOT NULL")
+    BigDecimal totalInvestidoCadastrado(@Param("empresaId") Long empresaId);
 }

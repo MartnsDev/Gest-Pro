@@ -83,6 +83,9 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         BigDecimal lucroDia     = visaoGeralOperation.lucroDia(empresaId);
         BigDecimal lucroMes     = visaoGeralOperation.lucroMes(empresaId);
         BigDecimal custos = visaoGeralOperation.custoTotalEstoque(empresaId);
+        BigDecimal totalInvestido = visaoGeralOperation.totalInvestido(empresaId);
+
+
 
         List<String> alertas = Stream.concat(
                 visaoGeralOperation.alertasProdutosZerados(empresaId).stream(),
@@ -96,7 +99,8 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
                 vendasSemana, vendasMes, lucroDia, lucroMes,
                 plano, alertas
         );
-        response.setCustos(custos); 
+        response.setCustos(custos);
+        response.setTotalInvestido(totalInvestido);
         return response;
     }
 }

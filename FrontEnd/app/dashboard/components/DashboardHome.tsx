@@ -66,6 +66,8 @@ interface VisaoGeral {
   lucroDia: number;
   lucroMes: number;
   planoUsuario: PlanoDTO | null;
+  custos: number;
+  totalInvestido: number;
   alertas: string[];
 }
 interface MetodoPagamentoData {
@@ -2163,11 +2165,17 @@ export default function DashboardHome({
       icon: <Users size={16} />,
       accent: "warning" as const,
     },
-    {
-      title: "Custo do Estoque",
+   {
+      title: "Custo em Estoque",
       value: loading ? "—" : fmt(visao?.custos),
       icon: <Receipt size={16} />,
       accent: "warning" as const,
+    },
+    {
+      title: "Total Investido",
+      value: loading ? "—" : fmt(visao?.totalInvestido),
+      icon: <DollarSign size={16} />,
+      accent: "secondary" as const,
     },
   ];
 

@@ -69,6 +69,11 @@ public class VisaoGeralOperation {
     }
 
     @Transactional(readOnly = true)
+    public BigDecimal totalInvestido(Long empresaId) {
+        return parseBD(dashboardRepository.totalInvestidoCadastrado(empresaId));
+    }
+
+    @Transactional(readOnly = true)
     public List<String> alertasProdutosZerados(Long empresaId) {
         return produtoRepository.findByQuantidadeEstoqueAndEmpresaId(0, empresaId)
                 .stream()
