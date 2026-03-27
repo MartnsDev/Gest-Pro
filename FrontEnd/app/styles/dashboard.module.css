@@ -83,7 +83,7 @@
   font-size: 0.85rem;
   color: var(--foreground-muted);
   white-space: nowrap;
-  display: none; /* escondido no mobile, aparece no desktop */
+  display: none;
 }
 
 /* ── Avatar / Iniciais ── */
@@ -97,7 +97,6 @@
   border: 2px solid var(--primary);
   display: block;
   flex-shrink: 0;
-  /* Garante que a imagem não quebre */
   image-rendering: auto;
   background: var(--primary);
 }
@@ -119,12 +118,6 @@
   flex-shrink: 0;
   letter-spacing: 0.03em;
   user-select: none;
-}
-
-/* ── Botão Caixa (header) — compacto no mobile ── */
-.dashboardHeader button[class*="caixa"],
-.dashboardHeader > div > button {
-  font-size: 11px !important;
 }
 
 /* ── Layout com Sidebar ── */
@@ -214,26 +207,11 @@
   display: none;
 }
 
-/* Último item (Planos) vira "Mais" */
-.sidebarNavItem:last-child span {
-  visibility: hidden;
-  position: relative;
-}
-
-.sidebarNavItem:last-child span::after {
-  content: "Mais";
-  visibility: visible;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-
 /* ── Conteúdo Principal ── */
 .mainContent {
   flex: 1;
   margin-left: 0;
-  margin-bottom: 60px; /* espaço para o nav inferior */
+  margin-bottom: 60px;
   min-height: calc(100vh - 52px - 60px);
   overflow-y: auto;
   background: var(--background);
@@ -286,20 +264,25 @@
 .chartCard {
   background: var(--surface-elevated);
   border-radius: var(--radius-lg);
-  padding: 1rem;
+  padding: 12px;
   border: 1px solid var(--border);
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .chartTitle {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--foreground);
-  margin-bottom: 1rem;
+  margin-bottom: 10px;
 }
 
 .chartContainer {
   position: relative;
-  height: 160px;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
 }
 
 /* ── Product Table ── */
@@ -369,6 +352,231 @@
   margin: 0 auto;
 }
 
+/* ═══════════════════════════════════════════════
+   HAMBÚRGUER — botão no nav inferior (mobile)
+═══════════════════════════════════════════════ */
+
+/* O botão fica como mais um item na nav bar inferior */
+.hamburgerBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px 2px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.55rem;
+  color: var(--foreground-muted);
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s, background 0.15s;
+  min-width: 0;
+}
+
+.hamburgerBtn:hover {
+  color: var(--foreground);
+  background: var(--sidebar-hover-bg);
+}
+
+.hamburgerBtn.open {
+  color: var(--sidebar-active-fg);
+  background: var(--sidebar-active-bg);
+}
+
+/* As 3 barras */
+.hamburgerLines {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5px;
+  width: 19px;
+  align-items: center;
+}
+
+.hamburgerLines span {
+  display: block;
+  height: 1.8px;
+  background: currentColor;
+  border-radius: 2px;
+  transition: transform 0.22s ease, opacity 0.18s ease, width 0.18s ease;
+  transform-origin: center;
+}
+
+.hamburgerLines span:nth-child(1) { width: 14px; }
+.hamburgerLines span:nth-child(2) { width: 19px; }
+.hamburgerLines span:nth-child(3) { width: 11px; }
+
+/* Animação → X quando aberto */
+.hamburgerBtn.open .hamburgerLines span:nth-child(1) {
+  width: 16px;
+  transform: translateY(5.3px) rotate(45deg);
+}
+.hamburgerBtn.open .hamburgerLines span:nth-child(2) {
+  opacity: 0;
+  width: 0;
+}
+.hamburgerBtn.open .hamburgerLines span:nth-child(3) {
+  width: 16px;
+  transform: translateY(-5.3px) rotate(-45deg);
+}
+
+/* Label abaixo do ícone */
+.hamburgerLabel {
+  display: block;
+  line-height: 1;
+  font-size: 0.55rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Overlay ─── */
+.drawerOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1100;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: fadeOverlay 0.2s ease;
+}
+
+.drawerOverlay.visible {
+  display: block;
+}
+
+@keyframes fadeOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Drawer desliza da direita ─── */
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(270px, 80vw);
+  height: 100dvh; /* dvh = considera barra do browser no celular */
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.28);
+}
+
+.drawer.open {
+  transform: translateX(0);
+}
+
+/* ─── Header do drawer ─── */
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+
+.drawerTitle {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--foreground-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin: 0;
+}
+
+.drawerCloseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--foreground-muted);
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ─── Itens do drawer ─── */
+.drawerNav {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 8px 24px;
+  gap: 2px;
+  flex: 1;
+}
+
+.drawerNavItem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--foreground-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-align: left;
+  width: 100%;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drawerNavItem svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.drawerNavItem:hover {
+  background: var(--sidebar-hover-bg);
+  color: var(--foreground);
+}
+
+.drawerNavItem:hover svg {
+  opacity: 1;
+}
+
+.drawerNavItemActive {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-fg);
+  font-weight: 600;
+}
+
+.drawerNavItemActive svg {
+  opacity: 1;
+}
+
+/* Divisor */
+.drawerDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 4px;
+  flex-shrink: 0;
+}
+
 /* ══════════════════════════════════════════
    TABLET — 600px+
 ══════════════════════════════════════════ */
@@ -400,12 +608,24 @@
     min-height: 34px;
     font-size: 0.72rem;
   }
+
+  .chartContainer {
+    height: 220px;
+  }
 }
 
 /* ══════════════════════════════════════════
    DESKTOP — 768px+
+   Hambúrguer e drawer somem, sidebar lateral volta
 ══════════════════════════════════════════ */
 @media (min-width: 768px) {
+  /* Esconde hambúrguer, overlay e drawer */
+  .hamburgerBtn,
+  .drawerOverlay,
+  .drawer {
+    display: none !important;
+  }
+
   /* Header */
   .dashboardHeader {
     padding: 0 1.5rem;
@@ -422,7 +642,7 @@
   }
 
   .headerBrand > div:last-child {
-    display: block; /* mostra separador "GESTPRO / seção" */
+    display: block;
     margin-left: 16px;
     padding-left: 16px;
     border-left: 1px solid var(--border);
@@ -494,10 +714,12 @@
   }
 
   .sidebarNavItem span {
+    display: block !important;
     visibility: visible !important;
     position: static !important;
     white-space: normal;
     overflow: visible;
+    font-size: 0.9rem;
   }
 
   /* Reexibe todos os itens */
@@ -505,11 +727,6 @@
   .sidebarNavItem:nth-child(7),
   .sidebarNavItem:nth-child(8) {
     display: flex;
-  }
-
-  /* Desfaz o truque "Mais" do último item */
-  .sidebarNavItem:last-child span::after {
-    content: none;
   }
 
   /* Conteúdo */
@@ -530,7 +747,10 @@
     padding: 1.25rem;
   }
 
-  .chartCard,
+  .chartCard {
+    padding: 1.5rem;
+  }
+
   .productTable {
     padding: 1.5rem;
   }
@@ -545,6 +765,11 @@
 
   .welcomeSubtitle {
     font-size: 1rem;
+  }
+
+  .chartTitle {
+    font-size: 1rem;
+    margin-bottom: 1.25rem;
   }
 }
 
@@ -566,9 +791,5 @@
 
   .welcomeTitle {
     font-size: 2rem;
-  }
-
-  .welcomeSubtitle {
-    font-size: 1rem;
   }
 }
