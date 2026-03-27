@@ -60,7 +60,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/payments/webhook", "/api/payments/create-checkout-session").permitAll()
                         .requestMatchers("/favicon.ico").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/v1/dividas/**").permitAll() // só para teste
+                        .requestMatchers("/api/v1/dividas/**").authenticated()
                         .anyRequest().authenticated()
                 )
 

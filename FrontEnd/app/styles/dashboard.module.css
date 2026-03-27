@@ -1,8 +1,8 @@
 /* ============================================
-   DASHBOARD - Cores alinhadas com globals.css
+   DASHBOARD - Mobile-first, totalmente responsivo
    ============================================ */
 
-/* Layout Principal */
+/* ── Layout Principal ── */
 .dashboardContainer {
   min-height: 100vh;
   background: var(--background);
@@ -20,215 +20,306 @@
   font-size: 1.2rem;
 }
 
-/* Header */
+/* ── Header ── */
 .dashboardHeader {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 56px;
+  height: 52px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 0 1.5rem;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   z-index: 1000;
+  gap: 8px;
+  box-sizing: border-box;
 }
 
 .headerBrand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .headerLogo {
-  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.headerLogo img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  display: block;
 }
 
 .headerTitle {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--foreground);
+  white-space: nowrap;
+}
+
+/* Separador "GESTPRO / seção" — só desktop */
+.headerBrand > div:last-child {
+  display: none;
 }
 
 .headerUser {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .headerUserName {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: var(--foreground-muted);
+  white-space: nowrap;
+  display: none; /* escondido no mobile, aparece no desktop */
 }
 
-.headerUserAvatar,
-.headerUserInitials {
-  width: 2.5rem;
-  height: 2.5rem;
+/* ── Avatar / Iniciais ── */
+.headerUserAvatar {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
   border-radius: 50%;
   object-fit: cover;
+  border: 2px solid var(--primary);
+  display: block;
+  flex-shrink: 0;
+  /* Garante que a imagem não quebre */
+  image-rendering: auto;
+  background: var(--primary);
+}
+
+.headerUserInitials {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 50%;
+  background: var(--primary);
   border: 2px solid var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 1rem;
+  font-weight: 700;
+  font-size: 0.65rem;
   color: white;
   flex-shrink: 0;
+  letter-spacing: 0.03em;
+  user-select: none;
 }
 
-.headerUserInitials {
-  background: var(--primary);
+/* ── Botão Caixa (header) — compacto no mobile ── */
+.dashboardHeader button[class*="caixa"],
+.dashboardHeader > div > button {
+  font-size: 11px !important;
 }
 
-/* Layout com Sidebar */
+/* ── Layout com Sidebar ── */
 .dashboardLayout {
   display: flex;
-  margin-top: 56px;
+  margin-top: 52px;
 }
 
-/* Sidebar */
+/* ── Sidebar — nav inferior no mobile ── */
 .sidebar {
   position: fixed;
-  top: 56px;
+  bottom: 0;
   left: 0;
-  width: 15rem;
-  height: calc(100vh - 56px);
+  right: 0;
+  width: 100%;
+  height: 60px;
   background: var(--surface);
-  border-right: 1px solid var(--border);
-  padding: 1rem 0.75rem;
+  border-top: 1px solid var(--border);
+  border-right: none;
+  padding: 0 4px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: stretch;
   z-index: 900;
-  overflow-y: auto;
+  overflow: visible;
+  top: auto;
 }
 
 .sidebarNav {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-direction: row;
+  gap: 0;
+  width: 100%;
+  align-items: stretch;
 }
 
 .sidebarNavItem {
-  width: 100%;
+  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.875rem;
-  border-radius: var(--radius-md);
+  justify-content: center;
+  gap: 3px;
+  padding: 5px 2px;
+  border-radius: 10px;
   color: var(--foreground-muted);
-  transition: background-color 0.15s, color 0.15s;
-  border: none;
   background: transparent;
+  border: none;
   cursor: pointer;
-  font-size: 0.9rem;
-  text-align: left;
+  font-size: 0.55rem;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s, background 0.15s;
+  min-width: 0;
+}
+
+.sidebarNavItem svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.sidebarNavItem span {
+  display: block;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .sidebarNavItem:hover {
-  background: var(--sidebar-hover-bg);
   color: var(--foreground);
+  background: var(--sidebar-hover-bg);
 }
 
 .sidebarNavItemActive {
-  background: var(--sidebar-active-bg);
   color: var(--sidebar-active-fg);
-  font-weight: 500;
+  background: var(--sidebar-active-bg);
+  font-weight: 600;
 }
 
-/* Main Content */
+/* Itens 6, 7 e 8 (Relatórios, Empresas, Config) somem no mobile */
+.sidebarNavItem:nth-child(6),
+.sidebarNavItem:nth-child(7),
+.sidebarNavItem:nth-child(8) {
+  display: none;
+}
+
+/* Último item (Planos) vira "Mais" */
+.sidebarNavItem:last-child span {
+  visibility: hidden;
+  position: relative;
+}
+
+.sidebarNavItem:last-child span::after {
+  content: "Mais";
+  visibility: visible;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* ── Conteúdo Principal ── */
 .mainContent {
   flex: 1;
-  margin-left: 15rem;
-  min-height: calc(100vh - 56px);
+  margin-left: 0;
+  margin-bottom: 60px; /* espaço para o nav inferior */
+  min-height: calc(100vh - 52px - 60px);
   overflow-y: auto;
   background: var(--background);
+  box-sizing: border-box;
+  width: 100%;
 }
 
-/* Inner wrapper */
-.mainContentInner {
-  max-width: 90rem;
-  margin: 0 auto;
-}
-
-/* Welcome Section */
+/* ── Seção de boas-vindas ── */
 .welcomeSection {
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .welcomeTitle {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
   color: var(--foreground);
+  line-height: 1.3;
 }
 
 .welcomeSubtitle {
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: var(--foreground-muted);
 }
 
-/* Metrics Grid */
+/* ── Métricas ── */
 .metricsGrid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 1rem;
 }
 
 .metricCard {
   border-radius: var(--radius-lg);
-  padding: 1.25rem;
+  padding: 1rem;
   background: var(--surface-elevated);
   border: 1px solid var(--border);
   color: var(--foreground);
 }
 
-/* Content Grid */
+/* ── Content Grid ── */
 .contentGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
-/* Chart Card */
+/* ── Chart Card ── */
 .chartCard {
   background: var(--surface-elevated);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1rem;
   border: 1px solid var(--border);
 }
 
 .chartTitle {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--foreground);
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .chartContainer {
   position: relative;
-  height: 16rem;
+  height: 160px;
 }
 
-/* Product Table */
+/* ── Product Table ── */
 .productTable {
-  margin-top: 1.5rem;
+  margin-top: 1rem;
   background: var(--surface-elevated);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1rem;
   border: 1px solid var(--border);
 }
 
 .tableContainer {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 0.82rem;
 }
 
 .tableHead {
@@ -237,12 +328,13 @@
 
 .tableHeadCell {
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.75rem;
   color: var(--foreground-muted);
   font-weight: 500;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .tableRow {
@@ -255,172 +347,210 @@
 }
 
 .tableCell {
-  padding: 0.875rem 1rem;
-  font-size: 0.9rem;
+  padding: 0.7rem 0.75rem;
+  font-size: 0.82rem;
   color: var(--foreground);
 }
 
 .statusBadge {
   background: var(--success-muted);
   color: var(--success);
-  padding: 0.2rem 0.65rem;
+  padding: 0.15rem 0.55rem;
   border-radius: 9999px;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 500;
   display: inline-block;
+  white-space: nowrap;
+}
+
+/* ── Inner wrapper ── */
+.mainContentInner {
+  max-width: 90rem;
+  margin: 0 auto;
 }
 
 /* ══════════════════════════════════════════
-   MOBILE — apenas até 767px
-   Apenas CSS, sem alterar JSX
+   TABLET — 600px+
 ══════════════════════════════════════════ */
-@media (max-width: 767px) {
+@media (min-width: 600px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
 
-  /* ── Header ── */
   .dashboardHeader {
-    padding: 0 10px;
-    gap: 6px;
+    padding: 0 14px;
+    height: 54px;
   }
 
-  /* Esconde separador "GESTPRO / seção" */
-  .headerBrand > div:last-child {
-    display: none;
+  .headerLogo img {
+    width: 32px;
+    height: 32px;
   }
 
-  /* Esconde só o span do nome, mantém botão Sair e avatar */
-  .headerUserName {
-    display: none;
+  .headerTitle {
+    font-size: 1.1rem;
   }
 
   .headerUserAvatar,
   .headerUserInitials {
-    width: 30px;
-    height: 30px;
-    font-size: 0.7rem;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    font-size: 0.72rem;
+  }
+}
+
+/* ══════════════════════════════════════════
+   DESKTOP — 768px+
+══════════════════════════════════════════ */
+@media (min-width: 768px) {
+  /* Header */
+  .dashboardHeader {
+    padding: 0 1.5rem;
+    height: 56px;
   }
 
-  /* Botão Sair menor mas visível */
-  .headerUser button {
-    font-size: 11px !important;
-    padding: 4px 8px !important;
+  .headerLogo img {
+    width: 40px;
+    height: 40px;
   }
 
-  /* ── Layout ── */
+  .headerTitle {
+    font-size: 1.25rem;
+  }
+
+  .headerBrand > div:last-child {
+    display: block; /* mostra separador "GESTPRO / seção" */
+    margin-left: 16px;
+    padding-left: 16px;
+    border-left: 1px solid var(--border);
+  }
+
+  .headerUserName {
+    display: block;
+    font-size: 0.95rem;
+  }
+
+  .headerUserAvatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  .headerUserInitials {
+    width: 2.5rem;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    font-size: 1rem;
+  }
+
+  /* Layout */
   .dashboardLayout {
-    flex-direction: column;
-    padding-bottom: 64px;
+    flex-direction: row;
+    margin-top: 56px;
   }
 
-  /* ── Sidebar → nav inferior fixa ── */
+  /* Sidebar lateral */
   .sidebar {
     position: fixed;
-    top: auto;
-    bottom: 0;
+    top: 56px;
     left: 0;
-    right: 0;
-    width: 100%;
-    height: 64px;
-    border-right: none;
-    border-top: 1px solid var(--border);
-    padding: 0 4px;
-    flex-direction: row;
+    bottom: auto;
+    right: auto;
+    width: 15rem;
+    height: calc(100vh - 56px);
+    border-top: none;
+    border-right: 1px solid var(--border);
+    padding: 1rem 0.75rem;
+    flex-direction: column;
     align-items: stretch;
-    overflow: visible;
+    overflow-y: auto;
   }
 
   .sidebarNav {
-    flex-direction: row;
-    gap: 0;
-    width: 100%;
+    flex-direction: column;
+    gap: 0.25rem;
     align-items: stretch;
   }
 
   .sidebarNavItem {
-    flex: 1;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: 6px 2px;
-    font-size: 0.6rem;
-    border-radius: 10px;
-    -webkit-tap-highlight-color: transparent;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    padding: 0.6rem 0.875rem;
+    font-size: 0.9rem;
+    border-radius: var(--radius-md);
+    flex: initial;
   }
 
   .sidebarNavItem svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
 
   .sidebarNavItem span {
-    display: block;
-    line-height: 1;
+    visibility: visible !important;
+    position: static !important;
+    white-space: normal;
+    overflow: visible;
   }
 
-  /* Itens 5, 6 e 7 somem (Empresas, Config, Planos) */
-  .sidebarNavItem:nth-child(5),
+  /* Reexibe todos os itens */
   .sidebarNavItem:nth-child(6),
-  .sidebarNavItem:nth-child(7) {
-    display: none;
+  .sidebarNavItem:nth-child(7),
+  .sidebarNavItem:nth-child(8) {
+    display: flex;
   }
 
-  /*
-    Item 8 (último = Planos) vira botão "Mais"
-    — esconde o label original e mostra "Mais"
-    — o ícone fica, só troca o texto via CSS
-  */
-  .sidebarNavItem:last-child span {
-    visibility: hidden;
-    position: relative;
-  }
-
+  /* Desfaz o truque "Mais" do último item */
   .sidebarNavItem:last-child span::after {
-    content: "Mais";
-    visibility: visible;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    white-space: nowrap;
+    content: none;
   }
 
-  /* ── Conteúdo principal ── */
+  /* Conteúdo */
   .mainContent {
-    margin-left: 0;
-    min-height: calc(100vh - 56px - 64px);
+    margin-left: 15rem;
+    margin-bottom: 0;
+    min-height: calc(100vh - 56px);
   }
 
-  /* Métricas 2 colunas */
+  /* Métricas */
   .metricsGrid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
   }
 
-  .contentGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .chartContainer {
-    height: 180px;
+  .metricCard {
+    padding: 1.25rem;
   }
 
   .chartCard,
   .productTable {
-    padding: 14px;
+    padding: 1.5rem;
+  }
+
+  .chartContainer {
+    height: 16rem;
+  }
+
+  .welcomeTitle {
+    font-size: 1.75rem;
+  }
+
+  .welcomeSubtitle {
+    font-size: 1rem;
   }
 }
 
-/* TABLET */
-@media (min-width: 768px) {
-  .metricsGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .contentGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* DESKTOP */
+/* ══════════════════════════════════════════
+   DESKTOP LARGO — 1024px+
+══════════════════════════════════════════ */
 @media (min-width: 1024px) {
   .metricsGrid {
     grid-template-columns: repeat(4, 1fr);
@@ -432,5 +562,13 @@
 
   .chartCard {
     grid-column: span 2;
+  }
+
+  .welcomeTitle {
+    font-size: 2rem;
+  }
+
+  .welcomeSubtitle {
+    font-size: 1rem;
   }
 }
