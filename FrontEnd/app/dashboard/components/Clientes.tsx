@@ -20,6 +20,7 @@ import {
   Building2,
   FileText,
   User,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,11 +34,12 @@ interface Contato {
   telefone?: string;
   cpf?: string;
   cnpj?: string;
-  contato?: string; // nome do contato (fornecedor)
+  contato?: string;
   observacoes?: string;
   tipo: Tipo;
   ativo: boolean;
   empresaId: number;
+  deveAlgo?: boolean;
 }
 
 interface ContatoForm {
@@ -61,6 +63,18 @@ const FORM_VAZIO: ContatoForm = {
   observacoes: "",
   tipo: "CLIENTE",
 };
+
+interface Divida {
+  id: number;
+  descricao: string;
+  valor: number;
+  valorPago: number;
+  saldoRestante: number;
+  status: "ABERTA" | "PARCIAL" | "QUITADA";
+  vencimento?: string;
+  criadoEm: string;
+  quitadoEm?: string;
+}
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
@@ -470,6 +484,496 @@ function ModalContato({
   );
 }
 
+/* ─── Modal de Dívidas ───────────────────────────────────────────────────── */
+function ModalDividas({
+  cliente,
+  empresaId,
+  onClose,
+}: {
+  cliente: Contato;
+  empresaId: number;
+  onClose: () => void;
+}) {
+  const [dividas, setDividas] = useState<Divida[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [novaDesc, setNovaDesc] = useState("");
+  const [novoValor, setNovoValor] = useState("");
+  const [novoVenc, setNovoVenc] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [pagandoId, setPagandoId] = useState<number | null>(null);
+  const [valorPag, setValorPag] = useState("");
+
+  const fmt = (v?: number | null) =>
+    new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(v ?? 0);
+
+  const carregar = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchAuth<Divida[]>(
+        `/api/v1/dividas/cliente/${cliente.id}`,
+      );
+      setDividas(data);
+    } catch {
+      toast.error("Erro ao carregar dívidas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    carregar();
+  }, [cliente.id]);
+
+  const abertas = dividas.filter((d) => d.status !== "QUITADA");
+  const quitadas = dividas.filter((d) => d.status === "QUITADA");
+  const totalDevido = abertas.reduce((s, d) => s + d.saldoRestante, 0);
+
+  const criarDivida = async () => {
+    if (!novaDesc.trim() || !novoValor) {
+      toast.error("Preencha descrição e valor");
+      return;
+    }
+    setSalvando(true);
+    try {
+      const nova = await fetchAuth<Divida>("/api/v1/dividas", {
+        method: "POST",
+        body: JSON.stringify({
+          clienteId: cliente.id,
+          empresaId,
+          descricao: novaDesc,
+          valor: parseFloat(novoValor),
+          vencimento: novoVenc || null,
+        }),
+      });
+      setDividas((p) => [nova, ...p]);
+      setNovaDesc("");
+      setNovoValor("");
+      setNovoVenc("");
+      toast.success("Dívida registrada!");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const registrarPagamento = async (id: number) => {
+    const v = parseFloat(valorPag);
+    if (!v || v <= 0) {
+      toast.error("Valor inválido");
+      return;
+    }
+    try {
+      const atualizada = await fetchAuth<Divida>(
+        `/api/v1/dividas/${id}/pagamento?valor=${v}`,
+        { method: "PATCH" },
+      );
+      setDividas((p) => p.map((d) => (d.id === id ? atualizada : d)));
+      setPagandoId(null);
+      setValorPag("");
+      toast.success(
+        atualizada.status === "QUITADA"
+          ? "Dívida quitada! ✅"
+          : "Pagamento registrado!",
+      );
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const STATUS_COLOR = {
+    ABERTA: {
+      bg: "rgba(239,68,68,.1)",
+      color: "#ef4444",
+      label: "Em aberto",
+    },
+    PARCIAL: {
+      bg: "rgba(245,158,11,.1)",
+      color: "#f59e0b",
+      label: "Parcial",
+    },
+    QUITADA: {
+      bg: "rgba(16,185,129,.1)",
+      color: "#10b981",
+      label: "Quitada",
+    },
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.78)",
+        backdropFilter: "blur(5px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 100,
+        padding: 16,
+      }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        style={{
+          background: "var(--surface-elevated)",
+          border: "1px solid var(--border)",
+          borderRadius: 14,
+          width: "100%",
+          maxWidth: 560,
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
+          <div>
+            <h2
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: "var(--foreground)",
+                margin: 0,
+              }}
+            >
+              Dívidas — {cliente.nome}
+            </h2>
+            <p
+              style={{
+                fontSize: 12,
+                color: "var(--foreground-muted)",
+                margin: "3px 0 0",
+              }}
+            >
+              {abertas.length} pendente(s) · Total:{" "}
+              <span
+                style={{
+                  color: totalDevido > 0 ? "#ef4444" : "#10b981",
+                  fontWeight: 700,
+                }}
+              >
+                {fmt(totalDevido)}
+              </span>
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--foreground-muted)",
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div
+          style={{
+            padding: 20,
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
+          {/* Nova dívida */}
+          <div
+            style={{
+              background: "var(--surface-overlay)",
+              borderRadius: 10,
+              padding: "14px 16px",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--foreground-muted)",
+                textTransform: "uppercase",
+                letterSpacing: ".07em",
+                margin: "0 0 12px",
+              }}
+            >
+              Registrar Nova Dívida
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <input
+                style={inp}
+                placeholder="Descrição (ex: compra fiado, empréstimo...)"
+                value={novaDesc}
+                onChange={(e) => setNovaDesc(e.target.value)}
+              />
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 8,
+                }}
+              >
+                <input
+                  style={inp}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Valor R$"
+                  value={novoValor}
+                  onChange={(e) => setNovoValor(e.target.value)}
+                />
+                <input
+                  style={inp}
+                  type="date"
+                  value={novoVenc}
+                  onChange={(e) => setNovoVenc(e.target.value)}
+                />
+              </div>
+              <button
+                onClick={criarDivida}
+                disabled={salvando}
+                style={{ ...btnP, opacity: salvando ? 0.7 : 1 }}
+              >
+                <Plus size={14} />{" "}
+                {salvando ? "Salvando..." : "Adicionar Dívida"}
+              </button>
+            </div>
+          </div>
+
+          {/* Dívidas abertas */}
+          {abertas.length > 0 && (
+            <div>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--foreground-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: ".07em",
+                  marginBottom: 8,
+                }}
+              >
+                Pendentes ({abertas.length})
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {abertas.map((d) => {
+                  const sc = STATUS_COLOR[d.status];
+                  return (
+                    <div
+                      key={d.id}
+                      style={{
+                        background: "var(--surface-overlay)",
+                        borderRadius: 10,
+                        padding: "12px 14px",
+                        border: `1px solid ${sc.bg}`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: "var(--foreground)",
+                          }}
+                        >
+                          {d.descricao}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            padding: "2px 8px",
+                            borderRadius: 99,
+                            background: sc.bg,
+                            color: sc.color,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {sc.label}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: 12,
+                          color: "var(--foreground-muted)",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span>Total: {fmt(d.valor)}</span>
+                        {d.valorPago > 0 && (
+                          <span>Pago: {fmt(d.valorPago)}</span>
+                        )}
+                        <span style={{ color: sc.color, fontWeight: 700 }}>
+                          Restante: {fmt(d.saldoRestante)}
+                        </span>
+                      </div>
+                      {d.vencimento && (
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "var(--foreground-subtle)",
+                            margin: "0 0 8px",
+                          }}
+                        >
+                          Vence:{" "}
+                          {new Date(d.vencimento).toLocaleDateString("pt-BR")}
+                        </p>
+                      )}
+                      {pagandoId === d.id ? (
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <input
+                            style={{ ...inp, flex: 1 }}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Valor pago R$"
+                            value={valorPag}
+                            onChange={(e) => setValorPag(e.target.value)}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => registrarPagamento(d.id)}
+                            style={{ ...btnP, padding: "9px 14px" }}
+                          >
+                            <Check size={13} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setPagandoId(null);
+                              setValorPag("");
+                            }}
+                            style={{ ...btnG, padding: "9px 10px" }}
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setPagandoId(d.id);
+                            setValorPag(String(d.saldoRestante));
+                          }}
+                          style={{
+                            ...btnP,
+                            fontSize: 12,
+                            padding: "7px 12px",
+                            background: "var(--primary)",
+                          }}
+                        >
+                          <DollarSign size={13} /> Registrar Pagamento
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Histórico quitadas */}
+          {quitadas.length > 0 && (
+            <div>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--foreground-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: ".07em",
+                  marginBottom: 8,
+                }}
+              >
+                Histórico Quitado ({quitadas.length})
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {quitadas.map((d) => (
+                  <div
+                    key={d.id}
+                    style={{
+                      background: "rgba(16,185,129,.04)",
+                      borderRadius: 9,
+                      padding: "10px 14px",
+                      border: "1px solid rgba(16,185,129,.15)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <p
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: "var(--foreground)",
+                          margin: 0,
+                        }}
+                      >
+                        {d.descricao}
+                      </p>
+                      {d.quitadoEm && (
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "var(--foreground-muted)",
+                            margin: "2px 0 0",
+                          }}
+                        >
+                          Quitado em{" "}
+                          {new Date(d.quitadoEm).toLocaleDateString("pt-BR")}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "#10b981",
+                      }}
+                    >
+                      {fmt(d.valor)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!loading && dividas.length === 0 && (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "24px 0",
+                color: "var(--foreground-muted)",
+              }}
+            >
+              <p style={{ fontSize: 14 }}>
+                Nenhuma dívida registrada para este cliente.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Card de detalhe ────────────────────────────────────────────────────── */
 function DetalheContato({
   item,
@@ -650,6 +1154,7 @@ export default function Clientes() {
     item?: Contato;
   } | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [modalDividas, setModalDividas] = useState<Contato | null>(null);
 
   const carregar = async () => {
     if (!empresaAtiva) return;
@@ -744,7 +1249,7 @@ export default function Clientes() {
         toast.success(
           `${form.tipo === "CLIENTE" ? "Cliente" : "Fornecedor"} cadastrado!`,
         );
-        setAba(form.tipo); // vai para a aba do tipo criado
+        setAba(form.tipo);
       }
       setModal(null);
     } catch (e: any) {
@@ -1130,7 +1635,9 @@ export default function Clientes() {
                     >
                       {c.telefone ? (
                         <a
-                          href={`tel:${c.telefone}`}
+                          href={`https://wa.me/55${c.telefone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           style={{
                             color: "var(--foreground-muted)",
                             textDecoration: "none",
@@ -1139,8 +1646,7 @@ export default function Clientes() {
                             gap: 5,
                           }}
                           onMouseEnter={(e) =>
-                            ((e.currentTarget as any).style.color =
-                              "var(--primary)")
+                            ((e.currentTarget as any).style.color = "#25D366")
                           }
                           onMouseLeave={(e) =>
                             ((e.currentTarget as any).style.color =
@@ -1231,6 +1737,25 @@ export default function Clientes() {
 
                     <td style={{ padding: "11px 14px" }}>
                       <div style={{ display: "flex", gap: 6 }}>
+                        {/* Botão de dívidas — apenas para clientes */}
+                        {aba === "CLIENTE" && (
+                          <button
+                            onClick={() => setModalDividas(c)}
+                            style={{
+                              ...btnG,
+                              padding: "6px 8px",
+                              borderColor: c.deveAlgo
+                                ? "rgba(239,68,68,0.3)"
+                                : "var(--border)",
+                              color: c.deveAlgo
+                                ? "var(--destructive)"
+                                : "var(--foreground-muted)",
+                            }}
+                            title="Ver dívidas"
+                          >
+                            <DollarSign size={14} />
+                          </button>
+                        )}
                         <button
                           onClick={() => setModal({ tipo: "editar", item: c })}
                           style={{ ...btnG, padding: "6px 8px" }}
@@ -1272,6 +1797,7 @@ export default function Clientes() {
         )}
       </div>
 
+      {/* Modais */}
       {(modal?.tipo === "novo" || modal?.tipo === "editar") && (
         <ModalContato
           item={modal.item}
@@ -1286,6 +1812,13 @@ export default function Clientes() {
           item={modal.item}
           onEditar={() => setModal({ tipo: "editar", item: modal.item })}
           onClose={() => setModal(null)}
+        />
+      )}
+      {modalDividas && empresaAtiva && (
+        <ModalDividas
+          cliente={modalDividas}
+          empresaId={empresaAtiva.id}
+          onClose={() => setModalDividas(null)}
         />
       )}
     </div>
