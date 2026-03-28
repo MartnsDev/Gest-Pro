@@ -103,7 +103,13 @@ public class VerificarPlanoOperation {
         }
 
         // dataVencimento = current_period_end da Stripe (atualizado a cada renovação)
-        if (LocalDate.now().isAfter(assinatura.getDataVencimento())) {
+       // if (LocalDate.now().isAfter(assinatura.getDataVencimento())) {
+
+
+            // Só bloqueia se a data de vencimento for ANTERIOR a hoje
+            if (assinatura.getDataVencimento().isBefore(LocalDate.now())) {
+
+
             bloquearUsuario(usuario);
             // Marca como VENCIDO no banco também (webhook pode ter atrasado)
             assinatura.setStatus("VENCIDO");
