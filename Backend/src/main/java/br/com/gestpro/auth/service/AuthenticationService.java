@@ -64,6 +64,6 @@ public class AuthenticationService implements IAuthenticationService {
 
     @Override
     public String salvarFoto(MultipartFile foto) throws IOException {
-        return uploadFotoOperation.salvarFoto(foto);
+        return uploadFotoOperation.salvarFoto(foto, "perfil");
     }
 }

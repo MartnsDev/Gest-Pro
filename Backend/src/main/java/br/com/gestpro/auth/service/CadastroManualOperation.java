@@ -97,7 +97,7 @@ public class CadastroManualOperation {
         usuario.setDataPrimeiroLogin(LocalDateTime.now());
 
         if (foto != null && !foto.isEmpty()) {
-            usuario.setFotoUpload(uploadFotoOperation.salvarFoto(foto));
+            usuario.setFotoUpload(uploadFotoOperation.salvarFoto(foto, "usuarios"));
         }
 
         gerarTokenConfirmacao(usuario);
@@ -118,7 +118,7 @@ public class CadastroManualOperation {
         }
 
         if (foto != null && !foto.isEmpty()) {
-            usuario.setFotoUpload(uploadFotoOperation.salvarFoto(foto));
+            usuario.setFotoUpload(uploadFotoOperation.salvarFoto(foto, "usuarios"));
         }
 
         gerarTokenConfirmacao(usuario);
