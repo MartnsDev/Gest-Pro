@@ -10,9 +10,9 @@ package br.com.gestpro.plano.stripe.dto;
  */
 public enum PlanoTipo {
 
-    BASICO  ("price_1TDnfQDclXzxI403gm63pKl2", 1,  1),
-    PRO     ("price_1TDnmuDclXzxI403u86yx5Fp",  5,  3),
-    PREMIUM ("price_1TDnnSDclXzxI403l0d9hAk0", 99, 99);
+    BASICO  ("price_1TFsKSDiO7eZ8iIh93V2Nck3",   1,  1),
+    PRO     ("price_1TFsKrDiO7eZ8iIhczPJhCJ1",      5,  3),
+    PREMIUM ("price_1TFsLGDiO7eZ8iIhqeBFTRWd", 99, 99);
 
     private final String stripePriceId;
     private final int    limiteEmpresas;
@@ -28,17 +28,19 @@ public enum PlanoTipo {
     public int    getLimiteEmpresas() { return limiteEmpresas; }
     public int    getLimiteCaixas()   { return limiteCaixas; }
 
-    /**
-     * Encontra o PlanoTipo pelo Stripe Price ID.
-     * Lança IllegalArgumentException se não encontrar — nunca mascara price IDs
-     * desconhecidos com um fallback silencioso.
-     */
     public static PlanoTipo fromPriceId(String priceId) {
         for (PlanoTipo tipo : values()) {
             if (tipo.stripePriceId.equals(priceId)) {
                 return tipo;
             }
         }
-        throw new IllegalArgumentException("Price ID desconhecido: " + priceId);
+        //  Log detalhado para facilitar debug futuro
+        throw new IllegalArgumentException(
+                "Price ID desconhecido: " + priceId +
+                        ". IDs configurados: " +
+                        java.util.Arrays.stream(values())
+                                .map(t -> t.name() + "=" + t.stripePriceId)
+                                .collect(java.util.stream.Collectors.joining(", "))
+        );
     }
 }
