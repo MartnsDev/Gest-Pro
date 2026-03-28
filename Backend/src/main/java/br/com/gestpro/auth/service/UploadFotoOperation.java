@@ -2,6 +2,7 @@ package br.com.gestpro.auth.service;
 
 import br.com.gestpro.infra.exception.ApiException;
 import com.cloudinary.Cloudinary;
+import com.cloudinary.Transformation; // Importação necessária
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,14 +20,6 @@ public class UploadFotoOperation {
 
     private final Cloudinary cloudinary;
 
-    /**
-     * Faz upload da foto para o Cloudinary e retorna a URL pública permanente.
-     * Substitui qualquer foto anterior do mesmo usuário automaticamente (overwrite=true).
-     *
-     * @param foto           MultipartFile enviado pelo cliente
-     * @param emailUsuario   E-mail do usuário (usado como public_id único)
-     * @return URL HTTPS permanente da imagem no Cloudinary
-     */
     public String salvarFoto(MultipartFile foto, String emailUsuario) throws IOException {
         if (foto == null || foto.isEmpty()) {
             return null;
@@ -51,40 +44,34 @@ public class UploadFotoOperation {
             );
         }
 
-        // Public ID único por usuário — sobrescreve foto anterior automaticamente
+        // Public ID único por usuário
         String publicId = "gestpro/fotos/usuario_"
                 + emailUsuario.replace("@", "_at_").replace(".", "_");
 
         log.info("Fazendo upload de foto para Cloudinary | publicId={}", publicId);
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> resultado = cloudinary.uploader().upload(
-                foto.getBytes(),
-                ObjectUtils.asMap(
-                        "public_id",      publicId,
-                        "overwrite",      true,
-                        "invalidate",     true,        // invalida CDN cache da foto antiga
-                        "folder",         "",          // pasta já está no public_id
-                        "transformation", ObjectUtils.asMap(
-                                "width",   200,
-                                "height",  200,
-                                "crop",    "fill",
-                                "gravity", "face",     // centraliza no rosto automaticamente
-                                "quality", "auto",
-                                "fetch_format", "auto" // entrega webp quando suportado
-                        )
-                )
+        // CORREÇÃO AQUI: Usando a classe Transformation em vez de um Map aninhado
+        Map params = ObjectUtils.asMap(
+                "public_id",      publicId,
+                "overwrite",      true,
+                "invalidate",     true,
+                "transformation", new Transformation()
+                        .width(200)
+                        .height(200)
+                        .crop("fill")
+                        .gravity("face") // Foca no rosto se detectado
+                        .quality("auto")
+                        .fetchFormat("auto")
         );
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resultado = cloudinary.uploader().upload(foto.getBytes(), params);
 
         String url = (String) resultado.get("secure_url");
         log.info("Upload concluído | url={}", url);
         return url;
     }
 
-    /**
-     * Remove a foto do Cloudinary.
-     * Chamado quando o usuário quer remover a foto de perfil.
-     */
     public void removerFoto(String emailUsuario) {
         String publicId = "gestpro/fotos/usuario_"
                 + emailUsuario.replace("@", "_at_").replace(".", "_");
