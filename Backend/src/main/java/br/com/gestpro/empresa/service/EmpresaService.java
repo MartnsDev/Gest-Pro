@@ -34,8 +34,7 @@ public class EmpresaService {
     private final VerificarPlanoOperation verificarPlano;
     private final JavaMailSender          mailSender;
 
-    // ─── Cache em memória para códigos de exclusão ────────────────────────
-    // Chave: "empresaId:email" → {codigo, expiracao}
+    // Cache em memória: chave = "empresaId:email" → {codigo, expiracao}
     private final Map<String, CodigoExclusao> codigosExclusao = new ConcurrentHashMap<>();
 
     private record CodigoExclusao(String codigo, LocalDateTime expiracao) {
@@ -47,7 +46,8 @@ public class EmpresaService {
     @Transactional
     public EmpresaResponse criar(CriarEmpresaRequest req) {
         Usuario dono = usuarioRepository.findByEmail(req.getEmailUsuario())
-                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
+                .orElseThrow(() -> new ApiException(
+                        "Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
 
         Object rawCount = empresaRepository.countByDonoId(dono.getId());
         long totalEmpresasDono = rawCount instanceof Number n ? n.longValue() : 0L;
@@ -66,11 +66,13 @@ public class EmpresaService {
 
     @Transactional
     public EmpresaResponse atualizar(Long id, CriarEmpresaRequest req) {
-        Empresa empresa = empresaRepository.findById(id)
+        Empresa empresa = empresaRepository.findByIdWithDono(id)
                 .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada"));
 
         if (!empresa.getDono().getEmail().equals(req.getEmailUsuario()))
-            throw new ApiException("Você não tem permissão para editar esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
+            throw new ApiException(
+                    "Você não tem permissão para editar esta empresa.",
+                    HttpStatus.FORBIDDEN, "/empresas");
 
         verificarPlano.validarAcesso(empresa.getDono());
 
@@ -80,16 +82,15 @@ public class EmpresaService {
         return mapToResponse(empresaRepository.save(empresa));
     }
 
-    /**
-     * Exclusão simples (rota legada) — sem código de confirmação.
-     */
     @Transactional
     public void excluir(Long id, String emailUsuario) {
-        Empresa empresa = empresaRepository.findById(id)
+        Empresa empresa = empresaRepository.findByIdWithDono(id)
                 .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada"));
 
         if (!empresa.getDono().getEmail().equals(emailUsuario))
-            throw new ApiException("Você não tem permissão para excluir esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
+            throw new ApiException(
+                    "Você não tem permissão para excluir esta empresa.",
+                    HttpStatus.FORBIDDEN, "/empresas");
 
         empresaRepository.deleteById(id);
     }
@@ -97,7 +98,8 @@ public class EmpresaService {
     @Transactional(readOnly = true)
     public List<EmpresaResponse> listarPorUsuario(String emailUsuario) {
         Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
-                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
+                .orElseThrow(() -> new ApiException(
+                        "Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
 
         return empresaRepository.findByDonoId(usuario.getId()).stream()
                 .map(this::mapToResponse)
@@ -106,26 +108,22 @@ public class EmpresaService {
 
     @Transactional(readOnly = true)
     public EmpresaResponse buscarPorIdDto(Long id) {
-        return mapToResponse(empresaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada com o ID: " + id)));
+        return mapToResponse(empresaRepository.findByIdWithDono(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Empresa não encontrada com o ID: " + id)));
     }
 
     // ─── Exclusão com confirmação por e-mail ──────────────────────────────
 
-    /**
-     * PASSO 1 — Gera um código de 6 dígitos, salva em memória (10 min) e envia por e-mail.
-     */
-    // ── solicitarCodigoExclusao ────────────────────────────────────────────────
-    @Transactional  // ← ADICIONE ISSO
+    @Transactional
     public void solicitarCodigoExclusao(Long empresaId, String emailUsuario) {
-        // Usa findByIdWithDono em vez de findById
         Empresa empresa = empresaRepository.findByIdWithDono(empresaId)
-                .orElseThrow(() -> new ApiException("Empresa não encontrada",
-                        HttpStatus.NOT_FOUND, "/empresas"));
+                .orElseThrow(() -> new ApiException(
+                        "Empresa não encontrada", HttpStatus.NOT_FOUND, "/empresas"));
 
         if (!empresa.getDono().getEmail().equals(emailUsuario))
-            throw new ApiException("Sem permissão para esta empresa.",
-                    HttpStatus.FORBIDDEN, "/empresas");
+            throw new ApiException(
+                    "Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
 
         String codigo = String.format("%06d", new Random().nextInt(999999));
         String chave  = empresaId + ":" + emailUsuario;
@@ -134,21 +132,20 @@ public class EmpresaService {
                 LocalDateTime.now().plusMinutes(10)));
 
         enviarEmailExclusao(emailUsuario, empresa.getNomeFantasia(), codigo);
+
         log.info("Código de exclusão gerado para empresa {} | usuario={}",
                 empresaId, emailUsuario);
     }
 
-    // ── confirmarExclusao ─────────────────────────────────────────────────────
     @Transactional
     public void confirmarExclusao(Long empresaId, String emailUsuario, String codigoInformado) {
-        // Usa findByIdWithDono em vez de findById
         Empresa empresa = empresaRepository.findByIdWithDono(empresaId)
-                .orElseThrow(() -> new ApiException("Empresa não encontrada",
-                        HttpStatus.NOT_FOUND, "/empresas"));
+                .orElseThrow(() -> new ApiException(
+                        "Empresa não encontrada", HttpStatus.NOT_FOUND, "/empresas"));
 
         if (!empresa.getDono().getEmail().equals(emailUsuario))
-            throw new ApiException("Sem permissão para esta empresa.",
-                    HttpStatus.FORBIDDEN, "/empresas");
+            throw new ApiException(
+                    "Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
 
         String chave = empresaId + ":" + emailUsuario;
         CodigoExclusao registro = codigosExclusao.get(chave);
@@ -160,12 +157,14 @@ public class EmpresaService {
 
         if (registro.expirado()) {
             codigosExclusao.remove(chave);
-            throw new ApiException("Código expirado. Solicite um novo.",
+            throw new ApiException(
+                    "Código expirado. Solicite um novo.",
                     HttpStatus.BAD_REQUEST, "/empresas");
         }
 
         if (!registro.codigo().equals(codigoInformado.trim()))
-            throw new ApiException("Código incorreto. Tente novamente.",
+            throw new ApiException(
+                    "Código incorreto. Tente novamente.",
                     HttpStatus.BAD_REQUEST, "/empresas");
 
         codigosExclusao.remove(chave);
@@ -188,7 +187,7 @@ public class EmpresaService {
                             "   " + nomeEmpresa + "\n\n" +
                             "Seu código de confirmação é:\n\n" +
                             "   " + codigo + "\n\n" +
-                            "⚠️  ATENÇÃO: Esta ação é irreversível. Todos os produtos, vendas,\n" +
+                            "ATENÇÃO: Esta ação é irreversível. Todos os produtos, vendas,\n" +
                             "clientes e relatórios desta empresa serão excluídos permanentemente.\n\n" +
                             "O código é válido por 10 minutos.\n\n" +
                             "Se você não solicitou isso, ignore este e-mail.\n\n" +
@@ -197,8 +196,11 @@ public class EmpresaService {
             mailSender.send(msg);
             log.info("E-mail de exclusão enviado para {}", destinatario);
         } catch (Exception e) {
-            log.error("Falha ao enviar e-mail de exclusão para {}: {}", destinatario, e.getMessage());
-            throw new ApiException("Falha ao enviar e-mail. Tente novamente.", HttpStatus.INTERNAL_SERVER_ERROR, "/empresas");
+            log.error("Falha ao enviar e-mail de exclusão para {}: {}",
+                    destinatario, e.getMessage());
+            throw new ApiException(
+                    "Falha ao enviar e-mail. Tente novamente.",
+                    HttpStatus.INTERNAL_SERVER_ERROR, "/empresas");
         }
     }
 
