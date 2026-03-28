@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Loader2,
   Mail,
-  Phone,
   Zap,
   Star,
   Crown,
@@ -46,22 +45,25 @@ interface Perfil {
 }
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
+const API =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://gestpro-backend-production.up.railway.app";
+
+function getToken(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("jwt_token") ?? "";
+}
+
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const token =
-    (typeof globalThis.window !== "undefined"
-      ? localStorage.getItem("jwt_token")
-      : null) ?? "";
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
-    {
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      ...opts,
+  const token = getToken();
+  const res = await fetch(`${API}${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-  );
+    ...opts,
+  });
   if (!res.ok) {
     const e = await res.json().catch(() => null);
     throw new Error(e?.mensagem ?? `Erro ${res.status}`);
@@ -69,27 +71,7 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
-async function fetchFormData<T>(path: string, body: FormData): Promise<T> {
-  const token =
-    (typeof globalThis.window !== "undefined"
-      ? localStorage.getItem("jwt_token")
-      : null) ?? "";
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
-    {
-      method: "POST",
-      credentials: "include",
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body,
-    },
-  );
-  if (!res.ok) {
-    const e = await res.json().catch(() => null);
-    throw new Error(e?.mensagem ?? `Erro ${res.status}`);
-  }
-  return res.json();
-}
-
+/* ─── Plano info ─────────────────────────────────────────────────────────── */
 const PLANO_INFO: Record<
   string,
   { label: string; cor: string; icon: ReactNode; beneficios: string[] }
@@ -103,7 +85,6 @@ const PLANO_INFO: Record<
       "1 caixa",
       "Relatórios básicos",
       "Exportação PDF/CSV",
-      "Nota fiscal",
       "30 dias de acesso",
     ],
   },
@@ -116,7 +97,6 @@ const PLANO_INFO: Record<
       "1 caixa",
       "Relatórios básicos",
       "Suporte por e-mail",
-      "30 dias",
     ],
   },
   PRO: {
@@ -128,9 +108,7 @@ const PLANO_INFO: Record<
       "5 caixas simultâneos",
       "Relatórios completos",
       "Exportação PDF/CSV",
-      "Nota fiscal",
       "Suporte prioritário",
-      "30 dias",
     ],
   },
   PREMIUM: {
@@ -141,11 +119,8 @@ const PLANO_INFO: Record<
       "Empresas ilimitadas",
       "Caixas ilimitados",
       "Todos os relatórios",
-      "Nota fiscal",
       "Suporte 24/7",
       "API access",
-      "API mercado livre, amazon, shopee",
-      "30 dias",
     ],
   },
 };
@@ -161,6 +136,7 @@ const inp: React.CSSProperties = {
   outline: "none",
   transition: "border-color .15s",
 };
+
 const card: React.CSSProperties = {
   background: "var(--surface-elevated)",
   border: "1px solid var(--border)",
@@ -235,19 +211,6 @@ function Secao({
 }
 
 /* ─── Foto de perfil ─────────────────────────────────────────────────────── */
-const API =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "https://gestpro-backend-production.up.railway.app";
-
-// Garante que a URL da foto aponta para o backend, não para o Next.js
-function resolverFotoUrl(url?: string | null): string | null {
-  if (!url) return null;
-  // Se já é uma URL completa (http/https/blob), usa diretamente
-  if (url.startsWith("http") || url.startsWith("blob:")) return url;
-  // Se começa com / (path relativo), prefixar com o endereço do backend
-  return `${API}${url}`;
-}
-
 function FotoPerfil({
   perfil,
   onAtualizado,
@@ -257,9 +220,17 @@ function FotoPerfil({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(
-    resolverFotoUrl(perfil.fotoUrl),
-  );
+
+  // Usa fotoUrl diretamente — já é URL completa (Cloudinary ou Google)
+  const [preview, setPreview] = useState<string | null>(perfil.fotoUrl || null);
+
+  const iniciais = perfil.nome
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -274,47 +245,48 @@ function FotoPerfil({
       return;
     }
 
-    // Preview instantâneo com blob local
+    // Preview instantâneo com blob local enquanto faz upload
     const localUrl = URL.createObjectURL(file);
     setPreview(localUrl);
-
     setUploading(true);
+
     try {
+      const token = getToken();
       const fd = new FormData();
       fd.append("foto", file);
+
       const res = await fetch(`${API}/api/v1/configuracoes/perfil/foto`, {
         method: "POST",
         credentials: "include",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          // NÃO inclua Content-Type aqui — o browser define automaticamente com boundary
+        },
         body: fd,
       });
+
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         throw new Error(err?.mensagem ?? `Erro ${res.status}`);
       }
+
       const data = await res.json();
       URL.revokeObjectURL(localUrl);
-      // Resolve a URL retornada pelo backend
-      const urlFinal = resolverFotoUrl(data.fotoUrl) ?? localUrl;
+
+      // data.fotoUrl é a URL permanente do Cloudinary
+      const urlFinal = data.fotoUrl as string;
       setPreview(urlFinal);
-      onAtualizado(data.fotoUrl); // guarda o path relativo no state do pai
+      onAtualizado(urlFinal);
       toast.success("Foto atualizada!");
     } catch (e: any) {
       toast.error(e.message);
       URL.revokeObjectURL(localUrl);
-      setPreview(resolverFotoUrl(perfil.fotoUrl));
+      setPreview(perfil.fotoUrl || null);
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
     }
   };
-
-  const iniciais = perfil.nome
-    .split(" ")
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
@@ -337,6 +309,7 @@ function FotoPerfil({
             <img
               src={preview}
               alt="Foto"
+              referrerPolicy="no-referrer"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
               onError={() => setPreview(null)}
             />
@@ -348,7 +321,8 @@ function FotoPerfil({
             </span>
           )}
         </div>
-        {/* Spinner overlay durante upload */}
+
+        {/* Spinner durante upload */}
         {uploading && (
           <div
             style={{
@@ -368,6 +342,7 @@ function FotoPerfil({
             />
           </div>
         )}
+
         <button
           onClick={() => !uploading && inputRef.current?.click()}
           disabled={uploading}
@@ -457,10 +432,218 @@ function FotoPerfil({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
+        accept="image/jpeg,image/png,image/webp"
         style={{ display: "none" }}
         onChange={handleFile}
       />
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+/* ─── FAQ Item ───────────────────────────────────────────────────────────── */
+function FaqItem({
+  pergunta,
+  resposta,
+}: {
+  pergunta: string;
+  resposta: string;
+}) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <div style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+      <button
+        onClick={() => setAberto((v) => !v)}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "13px 0",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+      >
+        <span
+          style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)" }}
+        >
+          {pergunta}
+        </span>
+        <ChevronRight
+          size={16}
+          color="var(--foreground-muted)"
+          style={{
+            transform: aberto ? "rotate(90deg)" : "none",
+            transition: "transform .2s",
+            flexShrink: 0,
+          }}
+        />
+      </button>
+      {aberto && (
+        <p
+          style={{
+            fontSize: 13,
+            color: "var(--foreground-muted)",
+            margin: "0 0 13px",
+            paddingRight: 24,
+          }}
+        >
+          {resposta}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ─── Formulário suporte ─────────────────────────────────────────────────── */
+function FormularioSuporte({
+  nomeUsuario,
+  emailUsuario,
+}: {
+  nomeUsuario: string;
+  emailUsuario: string;
+}) {
+  const [assunto, setAssunto] = useState("");
+  const [categoria, setCategoria] = useState("Suporte técnico");
+  const [mensagem, setMensagem] = useState("");
+  const [enviado, setEnviado] = useState(false);
+
+  const CATEGORIAS = [
+    "Suporte técnico",
+    "Dúvida sobre plano",
+    "Problema com pagamento",
+    "Bug / Erro",
+    "Outro",
+  ];
+
+  const enviar = () => {
+    if (!assunto.trim() || !mensagem.trim()) {
+      toast.error("Preencha o assunto e a mensagem");
+      return;
+    }
+    const assuntoFull = `[GestPro - ${categoria}] ${assunto}`;
+    const corpo = [
+      `Nome: ${nomeUsuario}`,
+      `E-mail: ${emailUsuario}`,
+      `Categoria: ${categoria}`,
+      ``,
+      `Mensagem:`,
+      mensagem,
+      ``,
+      `---`,
+      `Enviado via GestPro`,
+    ].join("\n");
+    globalThis.window.location.href = `mailto:gestprosuporte@gmail.com?subject=${encodeURIComponent(assuntoFull)}&body=${encodeURIComponent(corpo)}`;
+    setEnviado(true);
+    setTimeout(() => setEnviado(false), 4000);
+  };
+
+  const inp2: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 13px",
+    background: "var(--surface-overlay)",
+    border: "1px solid var(--border)",
+    borderRadius: 9,
+    color: "var(--foreground)",
+    fontSize: 13,
+    outline: "none",
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div>
+        <label
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--foreground-muted)",
+            display: "block",
+            marginBottom: 6,
+          }}
+        >
+          Categoria
+        </label>
+        <select
+          style={{ ...inp2, cursor: "pointer" }}
+          value={categoria}
+          onChange={(e) => setCategoria(e.target.value)}
+        >
+          {CATEGORIAS.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--foreground-muted)",
+            display: "block",
+            marginBottom: 6,
+          }}
+        >
+          Assunto *
+        </label>
+        <input
+          style={inp2}
+          value={assunto}
+          onChange={(e) => setAssunto(e.target.value)}
+          placeholder="Descreva brevemente..."
+        />
+      </div>
+      <div>
+        <label
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--foreground-muted)",
+            display: "block",
+            marginBottom: 6,
+          }}
+        >
+          Mensagem *
+        </label>
+        <textarea
+          style={{ ...inp2, resize: "vertical", minHeight: 110 }}
+          value={mensagem}
+          onChange={(e) => setMensagem(e.target.value)}
+          placeholder="Descreva em detalhes..."
+        />
+      </div>
+      <button
+        onClick={enviar}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          padding: "12px 0",
+          background: enviado ? "rgba(16,185,129,.15)" : "var(--primary)",
+          border: `1px solid ${enviado ? "var(--primary)" : "transparent"}`,
+          borderRadius: 9,
+          color: enviado ? "var(--primary)" : "#fff",
+          fontSize: 14,
+          fontWeight: 700,
+          cursor: "pointer",
+          transition: "all .2s",
+        }}
+      >
+        {enviado ? (
+          <>
+            <CheckCircle size={15} /> E-mail aberto
+          </>
+        ) : (
+          <>
+            <Mail size={15} /> Abrir no Gmail
+          </>
+        )}
+      </button>
     </div>
   );
 }
@@ -481,21 +664,18 @@ export default function Configuracoes({
     "perfil" | "senha" | "plano" | "notificacoes" | "suporte"
   >("perfil");
 
-  // Perfil
   const [novoNome, setNovoNome] = useState("");
   const [salvandoNome, setSalvandoNome] = useState(false);
 
-  // Senha
-  const [etapaSenha, setEtapaSenha] = useState<
-    "idle" | "enviando" | "codigo" | "nova"
-  >("idle");
+  const [etapaSenha, setEtapaSenha] = useState<"idle" | "enviando" | "codigo">(
+    "idle",
+  );
   const [codigo, setCodigo] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmar, setConfirmar] = useState("");
   const [showSenha, setShowSenha] = useState(false);
   const [salvandoSenha, setSalvandoSenha] = useState(false);
 
-  // Notificações
   const [notif, setNotif] = useState({
     emailVendas: true,
     emailRelatorios: false,
@@ -503,8 +683,6 @@ export default function Configuracoes({
     alertaVencimentoPlano: true,
   });
   const [salvandoNotif, setSalvandoNotif] = useState(false);
-
-  // Copiado
   const [copiado, setCopiado] = useState<string | null>(null);
 
   useEffect(() => {
@@ -624,6 +802,7 @@ export default function Configuracoes({
       >
         <Loader2 size={22} style={{ animation: "spin 1s linear infinite" }} />{" "}
         Carregando...
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
 
@@ -638,7 +817,8 @@ export default function Configuracoes({
         margin: "0 auto",
       }}
     >
-      {/* Header */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
       <div>
         <h2
           style={{
@@ -698,7 +878,7 @@ export default function Configuracoes({
         ))}
       </div>
 
-      {/* ── PERFIL ─────────────────────────────────────────────────────────── */}
+      {/* ── PERFIL ─────────────────────────────────────────────────────── */}
       {abaAtiva === "perfil" && perfil && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Secao
@@ -713,7 +893,6 @@ export default function Configuracoes({
                 onFotoAtualizada?.(url);
               }}
             />
-
             <div
               style={{
                 height: 1,
@@ -721,8 +900,6 @@ export default function Configuracoes({
                 margin: "20px 0",
               }}
             />
-
-            {/* Nome */}
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <label
                 style={{
@@ -766,13 +943,11 @@ export default function Configuracoes({
                     />
                   ) : (
                     <Check size={13} />
-                  )}
+                  )}{" "}
                   Salvar
                 </button>
               </div>
             </div>
-
-            {/* E-mail (só leitura) */}
             <div
               style={{
                 marginTop: 14,
@@ -835,14 +1010,14 @@ export default function Configuracoes({
                   margin: 0,
                 }}
               >
-                O e-mail não pode ser alterado diretamente. Contate o suporte.
+                O e-mail não pode ser alterado. Contate o suporte.
               </p>
             </div>
           </Secao>
         </div>
       )}
 
-      {/* ── SENHA ──────────────────────────────────────────────────────────── */}
+      {/* ── SENHA ──────────────────────────────────────────────────────── */}
       {abaAtiva === "senha" && (
         <Secao
           titulo="Alterar Senha"
@@ -865,29 +1040,12 @@ export default function Configuracoes({
                   margin: 0,
                 }}
               >
-                Para alterar sua senha, primeiro precisamos verificar sua
-                identidade enviando um código para{" "}
+                Para alterar sua senha, enviaremos um código para{" "}
                 <strong style={{ color: "var(--foreground)" }}>
                   {perfil?.email}
                 </strong>
                 .
               </p>
-              <div
-                style={{
-                  padding: "14px 16px",
-                  background: "rgba(59,130,246,.07)",
-                  border: "1px solid rgba(59,130,246,.2)",
-                  borderRadius: 10,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                }}
-              >
-                <Shield size={18} color="#3b82f6" />
-                <p style={{ fontSize: 13, color: "#3b82f6", margin: 0 }}>
-                  Código válido por 10 minutos após o envio.
-                </p>
-              </div>
               <button
                 onClick={solicitarCodigo}
                 style={{
@@ -908,7 +1066,6 @@ export default function Configuracoes({
               </button>
             </div>
           )}
-
           {etapaSenha === "enviando" && (
             <div
               style={{
@@ -926,7 +1083,6 @@ export default function Configuracoes({
               Enviando código...
             </div>
           )}
-
           {etapaSenha === "codigo" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div
@@ -945,7 +1101,6 @@ export default function Configuracoes({
                   Código enviado! Verifique seu e-mail.
                 </p>
               </div>
-
               <div>
                 <label
                   style={{
@@ -972,7 +1127,6 @@ export default function Configuracoes({
                   maxLength={6}
                 />
               </div>
-
               <div>
                 <label
                   style={{
@@ -1009,58 +1163,7 @@ export default function Configuracoes({
                     {showSenha ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {/* Força da senha */}
-                {novaSenha.length > 0 && (
-                  <div style={{ marginTop: 8, display: "flex", gap: 4 }}>
-                    {[1, 2, 3, 4].map((n) => {
-                      const forca =
-                        novaSenha.length >= 12
-                          ? 4
-                          : novaSenha.length >= 8
-                            ? 3
-                            : novaSenha.length >= 6
-                              ? 2
-                              : 1;
-                      const cor =
-                        forca >= 4
-                          ? "#10b981"
-                          : forca >= 3
-                            ? "#3b82f6"
-                            : forca >= 2
-                              ? "#f59e0b"
-                              : "#ef4444";
-                      return (
-                        <div
-                          key={n}
-                          style={{
-                            flex: 1,
-                            height: 4,
-                            borderRadius: 99,
-                            background: n <= forca ? cor : "var(--border)",
-                            transition: "background .2s",
-                          }}
-                        />
-                      );
-                    })}
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: "var(--foreground-muted)",
-                        marginLeft: 4,
-                      }}
-                    >
-                      {novaSenha.length >= 12
-                        ? "Forte"
-                        : novaSenha.length >= 8
-                          ? "Boa"
-                          : novaSenha.length >= 6
-                            ? "Fraca"
-                            : "Muito fraca"}
-                    </span>
-                  </div>
-                )}
               </div>
-
               <div>
                 <label
                   style={{
@@ -1086,19 +1189,7 @@ export default function Configuracoes({
                   onChange={(e) => setConfirmar(e.target.value)}
                   placeholder="Repita a nova senha"
                 />
-                {confirmar && confirmar !== novaSenha && (
-                  <p
-                    style={{
-                      fontSize: 12,
-                      color: "var(--destructive)",
-                      margin: "4px 0 0",
-                    }}
-                  >
-                    As senhas não coincidem
-                  </p>
-                )}
               </div>
-
               <div style={{ display: "flex", gap: 10 }}>
                 <button
                   onClick={() => {
@@ -1157,35 +1248,18 @@ export default function Configuracoes({
                     />
                   ) : (
                     <Check size={14} />
-                  )}
+                  )}{" "}
                   Confirmar nova senha
                 </button>
               </div>
-
-              <button
-                onClick={solicitarCodigo}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--foreground-muted)",
-                  fontSize: 12,
-                  textDecoration: "underline",
-                  textAlign: "left",
-                  padding: 0,
-                }}
-              >
-                Não recebeu? Reenviar código
-              </button>
             </div>
           )}
         </Secao>
       )}
 
-      {/* ── PLANO ──────────────────────────────────────────────────────────── */}
+      {/* ── PLANO ──────────────────────────────────────────────────────── */}
       {abaAtiva === "plano" && perfil && plano && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Card do plano atual */}
           <div
             style={{
               ...card,
@@ -1195,17 +1269,6 @@ export default function Configuracoes({
               overflow: "hidden",
             }}
           >
-            <div
-              style={{
-                position: "absolute",
-                top: -20,
-                right: -20,
-                width: 100,
-                height: 100,
-                borderRadius: "50%",
-                background: `${plano.cor}12`,
-              }}
-            />
             <div
               style={{
                 display: "flex",
@@ -1246,21 +1309,7 @@ export default function Configuracoes({
                 >
                   {plano.label}
                 </h3>
-                {perfil.dataAssinatura && (
-                  <p
-                    style={{
-                      fontSize: 12,
-                      color: "var(--foreground-muted)",
-                      margin: "0 0 4px",
-                    }}
-                  >
-                    <Calendar size={11} style={{ marginRight: 4 }} />
-                    Ativo desde {perfil.dataAssinatura}
-                  </p>
-                )}
               </div>
-
-              {/* Dias restantes */}
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <div
                   style={{
@@ -1280,7 +1329,6 @@ export default function Configuracoes({
                       fontWeight: 600,
                     }}
                   >
-                    <Clock size={10} style={{ marginRight: 3 }} />
                     Restam
                   </p>
                   <p
@@ -1306,7 +1354,6 @@ export default function Configuracoes({
                 </div>
               </div>
             </div>
-
             {urgente && (
               <div
                 style={{
@@ -1334,8 +1381,6 @@ export default function Configuracoes({
               </div>
             )}
           </div>
-
-          {/* Benefícios */}
           <Secao titulo="Benefícios do seu plano" icon={<Sparkles size={18} />}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {plano.beneficios.map((b) => (
@@ -1364,101 +1409,37 @@ export default function Configuracoes({
               ))}
             </div>
           </Secao>
-
-          {/* Outros planos */}
-          <Secao
-            titulo="Outros planos disponíveis"
-            sub="Faça upgrade para desbloquear mais recursos"
-            icon={<Crown size={18} />}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {Object.entries(PLANO_INFO)
-                .filter(([k]) => k !== perfil.tipoPlano)
-                .map(([k, p]) => (
-                  <div
-                    key={k}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "13px 16px",
-                      background: "var(--surface-overlay)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 10,
-                    }}
-                  >
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 12 }}
-                    >
-                      <span style={{ color: p.cor }}>{p.icon}</span>
-                      <div>
-                        <p
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 600,
-                            color: "var(--foreground)",
-                            margin: 0,
-                          }}
-                        >
-                          Plano {p.label}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: 12,
-                            color: "var(--foreground-muted)",
-                            margin: "2px 0 0",
-                          }}
-                        >
-                          {p.beneficios.slice(0, 2).join(" · ")}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight size={16} color="var(--foreground-subtle)" />
-                  </div>
-                ))}
-            </div>
-            <p
-              style={{
-                fontSize: 12,
-                color: "var(--foreground-muted)",
-                margin: "14px 0 0",
-              }}
-            >
-              Para fazer upgrade, entre em contato com o suporte:{" "}
-              <strong>gestprosuporte@gmail.com</strong>
-            </p>
-          </Secao>
         </div>
       )}
 
-      {/* ── NOTIFICAÇÕES ───────────────────────────────────────────────────── */}
+      {/* ── NOTIFICAÇÕES ───────────────────────────────────────────────── */}
       {abaAtiva === "notificacoes" && (
         <Secao
           titulo="Preferências de Notificação"
           sub="Escolha quando e como ser notificado"
-          icon={<Bell size={18} />}
+          icon={<Bell size={15} />}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {[
               {
                 k: "emailVendas",
                 l: "E-mail ao registrar venda",
-                sub: "Receba um resumo a cada venda concluída",
+                sub: "Receba um resumo a cada venda",
               },
               {
                 k: "emailRelatorios",
                 l: "Relatório semanal por e-mail",
-                sub: "Resumo automático toda segunda-feira",
+                sub: "Resumo automático toda segunda",
               },
               {
                 k: "alertaEstoqueZerado",
                 l: "Alerta de estoque zerado",
-                sub: "Notificação quando produto fica sem estoque",
+                sub: "Notificação quando produto zera",
               },
               {
                 k: "alertaVencimentoPlano",
                 l: "Aviso de vencimento do plano",
-                sub: "Alerta 7 e 3 dias antes do vencimento",
+                sub: "Alerta 7 e 3 dias antes",
               },
             ].map((item, i) => (
               <div
@@ -1557,18 +1538,18 @@ export default function Configuracoes({
               />
             ) : (
               <Check size={14} />
-            )}
+            )}{" "}
             Salvar preferências
           </button>
         </Secao>
       )}
 
-      {/* ── SUPORTE ────────────────────────────────────────────────────────── */}
+      {/* ── SUPORTE ────────────────────────────────────────────────────── */}
       {abaAtiva === "suporte" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Secao
             titulo="Enviar mensagem"
-            sub="Preencha abaixo — abriremos direto no seu Gmail"
+            sub="Abriremos direto no seu Gmail"
             icon={<Mail size={18} />}
           >
             <FormularioSuporte
@@ -1576,279 +1557,182 @@ export default function Configuracoes({
               emailUsuario={perfil?.email ?? ""}
             />
           </Secao>
-
           <Secao
             titulo="Outros canais"
             sub="Prefere falar diretamente?"
             icon={<HeadphonesIcon size={18} />}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* E-mail direto */}
-              <div
-                style={{
-                  padding: "14px 16px",
-                  background: "var(--surface-overlay)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {[
+                {
+                  chave: "email",
+                  label: "E-mail",
+                  valor: "gestprosuporte@gmail.com",
+                  cor: "#3b82f6",
+                  href: "mailto:gestprosuporte@gmail.com",
+                  sub: "Respondemos em até 24h úteis",
+                  btnLabel: "Abrir",
+                  icon: <Mail size={18} color="#3b82f6" />,
+                },
+                {
+                  chave: "whatsapp",
+                  label: "WhatsApp",
+                  valor: "(11) 93264-9629",
+                  cor: "#25d366",
+                  href: `https://wa.me/5511932649629?text=${encodeURIComponent("Olá! Preciso de suporte no GestPro.")}`,
+                  sub: "Seg–Sáb, das 9h às 18h",
+                  btnLabel: "Abrir chat",
+                  icon: <MessageCircle size={18} color="#25d366" />,
+                },
+              ].map((canal) => (
+                <div
+                  key={canal.chave}
+                  style={{
+                    padding: "14px 16px",
+                    background: "var(--surface-overlay)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
                   <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 10,
-                      background: "rgba(59,130,246,.1)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
+                    style={{ display: "flex", alignItems: "center", gap: 12 }}
                   >
-                    <Mail size={18} color="#3b82f6" />
-                  </div>
-                  <div>
-                    <p
+                    <div
                       style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: `${canal.cor}18`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {canal.icon}
+                    </div>
+                    <div>
+                      <p
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "var(--foreground-muted)",
+                          textTransform: "uppercase",
+                          letterSpacing: ".06em",
+                          margin: "0 0 3px",
+                        }}
+                      >
+                        {canal.label}
+                      </p>
+                      <p
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "var(--foreground)",
+                          margin: 0,
+                        }}
+                      >
+                        {canal.valor}
+                      </p>
+                      <p
+                        style={{
+                          fontSize: 11,
+                          color: "var(--foreground-muted)",
+                          margin: "2px 0 0",
+                        }}
+                      >
+                        {canal.sub}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    <button
+                      onClick={() => copiar(canal.valor, canal.chave)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "7px 11px",
+                        background:
+                          copiado === canal.chave
+                            ? "var(--primary-muted)"
+                            : "transparent",
+                        border: `1px solid ${copiado === canal.chave ? "var(--primary)" : "var(--border)"}`,
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        fontSize: 12,
+                        color:
+                          copiado === canal.chave
+                            ? "var(--primary)"
+                            : "var(--foreground-muted)",
+                      }}
+                    >
+                      {copiado === canal.chave ? (
+                        <>
+                          <Check size={12} />
+                          Copiado
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} />
+                          Copiar
+                        </>
+                      )}
+                    </button>
+                    <a
+                      href={canal.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "7px 11px",
+                        background: canal.cor,
+                        borderRadius: 8,
+                        color: "#fff",
                         fontSize: 12,
                         fontWeight: 600,
-                        color: "var(--foreground-muted)",
-                        textTransform: "uppercase",
-                        letterSpacing: ".06em",
-                        margin: "0 0 3px",
+                        textDecoration: "none",
                       }}
                     >
-                      E-mail
-                    </p>
-                    <p
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: "var(--foreground)",
-                        margin: 0,
-                      }}
-                    >
-                      gestprosuporte@gmail.com
-                    </p>
-                    <p
-                      style={{
-                        fontSize: 11,
-                        color: "var(--foreground-muted)",
-                        margin: "2px 0 0",
-                      }}
-                    >
-                      Respondemos em até 24h úteis
-                    </p>
+                      {canal.btnLabel}
+                    </a>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                  <button
-                    onClick={() => copiar("gestprosuporte@gmail.com", "email")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                      padding: "7px 11px",
-                      background:
-                        copiado === "email"
-                          ? "var(--primary-muted)"
-                          : "transparent",
-                      border: `1px solid ${copiado === "email" ? "var(--primary)" : "var(--border)"}`,
-                      borderRadius: 8,
-                      cursor: "pointer",
-                      fontSize: 12,
-                      color:
-                        copiado === "email"
-                          ? "var(--primary)"
-                          : "var(--foreground-muted)",
-                    }}
-                  >
-                    {copiado === "email" ? (
-                      <>
-                        <Check size={12} />
-                        Copiado
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={12} />
-                        Copiar
-                      </>
-                    )}
-                  </button>
-                  <a
-                    href="mailto:gestprosuporte@gmail.com"
-                    target="_blank"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                      padding: "7px 11px",
-                      background: "#3b82f6",
-                      borderRadius: 8,
-                      color: "#fff",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textDecoration: "none",
-                    }}
-                  >
-                    <Mail size={12} /> Abrir
-                  </a>
-                </div>
-              </div>
-
-              {/* WhatsApp */}
-              <div
-                style={{
-                  padding: "14px 16px",
-                  background: "var(--surface-overlay)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 10,
-                      background: "rgba(37,211,102,.1)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <MessageCircle size={18} color="#25d366" />
-                  </div>
-                  <div>
-                    <p
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "var(--foreground-muted)",
-                        textTransform: "uppercase",
-                        letterSpacing: ".06em",
-                        margin: "0 0 3px",
-                      }}
-                    >
-                      WhatsApp
-                    </p>
-                    <p
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: "var(--foreground)",
-                        margin: 0,
-                      }}
-                    >
-                      (11) 93264-9629
-                    </p>
-                    <p
-                      style={{
-                        fontSize: 11,
-                        color: "var(--foreground-muted)",
-                        margin: "2px 0 0",
-                      }}
-                    >
-                      Seg–Sáb, das 9h às 18h
-                    </p>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                  <button
-                    onClick={() => copiar("11932649629", "whatsapp")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                      padding: "7px 11px",
-                      background:
-                        copiado === "whatsapp"
-                          ? "var(--primary-muted)"
-                          : "transparent",
-                      border: `1px solid ${copiado === "whatsapp" ? "var(--primary)" : "var(--border)"}`,
-                      borderRadius: 8,
-                      cursor: "pointer",
-                      fontSize: 12,
-                      color:
-                        copiado === "whatsapp"
-                          ? "var(--primary)"
-                          : "var(--foreground-muted)",
-                    }}
-                  >
-                    {copiado === "whatsapp" ? (
-                      <>
-                        <Check size={12} />
-                        Copiado
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={12} />
-                        Copiar
-                      </>
-                    )}
-                  </button>
-                  <a
-                    href={`https://wa.me/5511932649629?text=${encodeURIComponent("Olá! Preciso de suporte no GestPro.")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                      padding: "7px 11px",
-                      background: "#25d366",
-                      borderRadius: 8,
-                      color: "#fff",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textDecoration: "none",
-                    }}
-                  >
-                    <MessageCircle size={12} /> Abrir chat
-                  </a>
-                </div>
-              </div>
+              ))}
             </div>
           </Secao>
-
-          {/* FAQ */}
           <Secao titulo="Perguntas Frequentes" icon={<Shield size={18} />}>
             {[
               {
                 p: "Como faço upgrade de plano?",
-                r: "Entre em contato via e-mail ou WhatsApp e nossa equipe vai te orientar.",
+                r: "Entre em contato via e-mail ou WhatsApp.",
               },
               {
                 p: "Posso cancelar meu plano?",
-                r: "Sim. O cancelamento é imediato, sem multas. Você continua com acesso até o vencimento.",
+                r: "Sim. Sem multas. Acesso até o vencimento.",
               },
               {
                 p: "Meus dados são seguros?",
-                r: "Sim. Todos os dados são criptografados e armazenados com segurança em servidores no Brasil.",
+                r: "Sim. Dados criptografados em servidores no Brasil.",
               },
               {
                 p: "Como exporto meus dados?",
-                r: "Na aba Relatórios você pode exportar tudo em CSV, PDF ou HTML a qualquer momento.",
+                r: "Na aba Relatórios — CSV, PDF ou HTML.",
               },
               {
                 p: "Esqueci minha senha, o que fazer?",
-                r: "Na tela de login clique em 'Esqueci minha senha' ou vá em Configurações > Senha.",
+                r: "Na tela de login clique em 'Esqueci minha senha'.",
               },
             ].map((item, i) => (
               <FaqItem key={i} pergunta={item.p} resposta={item.r} />
             ))}
           </Secao>
-
-          {/* Versão */}
           <div style={{ textAlign: "center", padding: "12px 0" }}>
             <p
               style={{
@@ -1861,250 +1745,6 @@ export default function Configuracoes({
             </p>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Formulário de suporte com mailto: ─────────────────────────────────── */
-function FormularioSuporte({
-  nomeUsuario,
-  emailUsuario,
-}: {
-  nomeUsuario: string;
-  emailUsuario: string;
-}) {
-  const [assunto, setAssunto] = useState("");
-  const [categoria, setCategoria] = useState("Suporte técnico");
-  const [mensagem, setMensagem] = useState("");
-  const [enviado, setEnviado] = useState(false);
-
-  const CATEGORIAS = [
-    "Suporte técnico",
-    "Dúvida sobre plano",
-    "Problema com pagamento",
-    "Solicitação de upgrade",
-    "Bug / Erro",
-    "Outro",
-  ];
-
-  const enviar = () => {
-    if (!assunto.trim() || !mensagem.trim()) {
-      toast.error("Preencha o assunto e a mensagem");
-      return;
-    }
-
-    const assuntoFull = `[GestPro - ${categoria}] ${assunto}`;
-    const corpo = [
-      `Nome: ${nomeUsuario}`,
-      `E-mail: ${emailUsuario}`,
-      `Categoria: ${categoria}`,
-      ``,
-      `Mensagem:`,
-      mensagem,
-      ``,
-      `---`,
-      `Enviado via GestPro`,
-    ].join("\n");
-
-    // mailto: abre o cliente de e-mail padrão (Gmail no desktop, app no mobile)
-    const url = `mailto:gestprosuporte@gmail.com?subject=${encodeURIComponent(assuntoFull)}&body=${encodeURIComponent(corpo)}`;
-    globalThis.window.location.href = url;
-
-    setEnviado(true);
-    setTimeout(() => setEnviado(false), 4000);
-  };
-
-  const inp2: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 13px",
-    background: "var(--surface-overlay)",
-    border: "1px solid var(--border)",
-    borderRadius: 9,
-    color: "var(--foreground)",
-    fontSize: 13,
-    outline: "none",
-  };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Categoria */}
-      <div>
-        <label
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: "var(--foreground-muted)",
-            display: "block",
-            marginBottom: 6,
-          }}
-        >
-          Categoria
-        </label>
-        <select
-          style={{ ...inp2, cursor: "pointer" }}
-          value={categoria}
-          onChange={(e) => setCategoria(e.target.value)}
-        >
-          {CATEGORIAS.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Assunto */}
-      <div>
-        <label
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: "var(--foreground-muted)",
-            display: "block",
-            marginBottom: 6,
-          }}
-        >
-          Assunto *
-        </label>
-        <input
-          style={inp2}
-          value={assunto}
-          onChange={(e) => setAssunto(e.target.value)}
-          placeholder="Descreva brevemente o problema..."
-        />
-      </div>
-
-      {/* Mensagem */}
-      <div>
-        <label
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: "var(--foreground-muted)",
-            display: "block",
-            marginBottom: 6,
-          }}
-        >
-          Mensagem *
-        </label>
-        <textarea
-          style={{ ...inp2, resize: "vertical", minHeight: 110 }}
-          value={mensagem}
-          onChange={(e) => setMensagem(e.target.value)}
-          placeholder="Descreva em detalhes sua dúvida ou problema. Quanto mais informações, mais rápido conseguimos ajudar!"
-        />
-      </div>
-
-      {/* Info */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 8,
-          padding: "10px 13px",
-          background: "rgba(59,130,246,.07)",
-          border: "1px solid rgba(59,130,246,.18)",
-          borderRadius: 9,
-        }}
-      >
-        <Mail
-          size={14}
-          color="#3b82f6"
-          style={{ flexShrink: 0, marginTop: 1 }}
-        />
-        <p style={{ fontSize: 12, color: "#3b82f6", margin: 0 }}>
-          Ao clicar em enviar, seu cliente de e-mail abrirá com a mensagem
-          pronta para enviar ao suporte. Se estiver no Gmail, o compose abrirá
-          automaticamente.
-        </p>
-      </div>
-
-      <button
-        onClick={enviar}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          padding: "12px 0",
-          background: enviado ? "rgba(16,185,129,.15)" : "var(--primary)",
-          border: `1px solid ${enviado ? "var(--primary)" : "transparent"}`,
-          borderRadius: 9,
-          color: enviado ? "var(--primary)" : "#fff",
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: "pointer",
-          transition: "all .2s",
-        }}
-      >
-        {enviado ? (
-          <>
-            <CheckCircle size={15} />
-            E-mail aberto — aguardando envio
-          </>
-        ) : (
-          <>
-            <Mail size={15} />
-            Abrir e-mail no Gmail
-          </>
-        )}
-      </button>
-    </div>
-  );
-}
-
-/* ─── FAQ Item com expand/collapse ──────────────────────────────────────── */
-function FaqItem({
-  pergunta,
-  resposta,
-}: {
-  pergunta: string;
-  resposta: string;
-}) {
-  const [aberto, setAberto] = useState(false);
-  return (
-    <div style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-      <button
-        onClick={() => setAberto((v) => !v)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "13px 0",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          textAlign: "left",
-        }}
-      >
-        <span
-          style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)" }}
-        >
-          {pergunta}
-        </span>
-        <ChevronRight
-          size={16}
-          color="var(--foreground-muted)"
-          style={{
-            transform: aberto ? "rotate(90deg)" : "none",
-            transition: "transform .2s",
-            flexShrink: 0,
-          }}
-        />
-      </button>
-      {aberto && (
-        <p
-          style={{
-            fontSize: 13,
-            color: "var(--foreground-muted)",
-            margin: "0 0 13px",
-            paddingRight: 24,
-          }}
-        >
-          {resposta}
-        </p>
       )}
     </div>
   );
