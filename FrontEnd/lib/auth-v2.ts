@@ -18,7 +18,7 @@ export function saveToken(token: string) {
 }
 
 export function removeToken() {
-  if (typeof window === "undefined") return;
+  if (typeof globalThis.window === "undefined") return;
   removerTokenCookie();
   localStorage.removeItem("jwt_token");
 }
@@ -40,7 +40,7 @@ export async function checkAuth(): Promise<Usuario | null> {
 export async function requireAuth(): Promise<Usuario> {
   const usuario = await checkAuth();
   if (!usuario) {
-    if (typeof window !== "undefined") window.location.href = "/auth/login";
+    if (typeof globalThis.window !== "undefined") window.location.href = "/auth/login";
     throw new Error("Não autenticado");
   }
   return usuario;

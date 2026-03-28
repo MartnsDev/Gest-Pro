@@ -58,8 +58,7 @@ type Secao =
   | "cliente-rapido"
   | "caixa-rapido";
 
-// ─── Toast de pagamento confirmado ────────────────────────────────────────────
-
+/* ─── Toast de pagamento confirmado ─────────────────────────────────────── */
 function ToastPagamento({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const t = setTimeout(onClose, 6000);
@@ -145,8 +144,7 @@ function ToastPagamento({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── Dashboard interno ────────────────────────────────────────────────────────
-
+/* ─── Dashboard interno ──────────────────────────────────────────────────── */
 function DashboardInner({
   usuario,
   mostrarToast,
@@ -189,6 +187,7 @@ function DashboardInner({
     resolverFoto(usuario.fotoUpload || usuario.foto || null),
   );
   const [nomeAtual, setNomeAtual] = useState(usuario.nome);
+
   const iniciais = nomeAtual
     .split(" ")
     .map((n) => n[0])
@@ -198,8 +197,8 @@ function DashboardInner({
     .slice(0, 2);
 
   const handleLogout = async () => {
-    resetarContexto(); // limpa estado React e localStorage do contexto
-    await logout(); // chama backend e limpa storage
+    resetarContexto(); // limpa empresa/caixa vinculados a este usuário
+    await logout(); // limpa cookies e storage
     globalThis.location.href = "/";
   };
 
@@ -305,6 +304,7 @@ function DashboardInner({
         </div>
       )}
 
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <header className={styles.dashboardHeader}>
         <div className={styles.headerBrand}>
           <div className={styles.headerLogo}>
@@ -397,6 +397,7 @@ function DashboardInner({
         </div>
       </header>
 
+      {/* ── Layout ─────────────────────────────────────────────────────── */}
       <div className={styles.dashboardLayout}>
         <aside className={styles.sidebar}>
           <nav className={styles.sidebarNav}>
@@ -419,7 +420,9 @@ function DashboardInner({
               <button
                 key={item.id}
                 onClick={() => setSecao(item.id)}
-                className={`${styles.sidebarNavItem} ${secao === item.id ? styles.sidebarNavItemActive : ""}`}
+                className={`${styles.sidebarNavItem} ${
+                  secao === item.id ? styles.sidebarNavItemActive : ""
+                }`}
               >
                 {item.icon}
                 <span>{item.label}</span>
@@ -430,6 +433,7 @@ function DashboardInner({
         <main className={styles.mainContent}>{renderSection()}</main>
       </div>
 
+      {/* ── Modal Caixa ────────────────────────────────────────────────── */}
       {modalCaixa && (
         <ModalCaixa
           onClose={() => setModalCaixa(false)}
@@ -445,10 +449,14 @@ function DashboardInner({
   );
 }
 
-// ─── DashboardLoader ──────────────────────────────────────────────────────────
-
+/* ─── DashboardLoader ────────────────────────────────────────────────────── */
 function DashboardLoader() {
   const searchParams = useSearchParams();
+
+  // ✅ Agora o EmpresaProvider está FORA (em DashboardPage),
+  //    então useEmpresa() funciona aqui dentro.
+  const { setUsuarioId } = useEmpresa();
+
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -476,8 +484,14 @@ function DashboardLoader() {
       try {
         const data = await getUsuario();
         if (!data) throw new Error("Usuário inválido");
+
         setUsuario(data);
-      } catch (err) {
+
+        // ✅ CORREÇÃO PRINCIPAL:
+        // Vincula o contexto ao ID deste usuário específico.
+        // Isso garante que cada conta tenha seu próprio localStorage isolado.
+        setUsuarioId(String(data.id));
+      } catch {
         // Token inválido/expirado — limpa tudo e redireciona
         localStorage.clear();
         sessionStorage.clear();
@@ -489,7 +503,7 @@ function DashboardLoader() {
     }
 
     inicializarDashboard();
-  }, [searchParams]);
+  }, [searchParams, setUsuarioId]);
 
   if (loading) {
     return (
@@ -499,10 +513,12 @@ function DashboardLoader() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#fff",
+          background: "var(--background, #0a0a0a)",
         }}
       >
-        <p style={{ color: "#000" }}>Carregando GestPro...</p>
+        <p style={{ color: "var(--foreground-muted, #888)", fontSize: 14 }}>
+          Carregando GestPro...
+        </p>
       </div>
     );
   }
@@ -510,23 +526,39 @@ function DashboardLoader() {
   if (!usuario) return null;
 
   return (
-    <EmpresaProvider>
-      <DashboardInner
-        usuario={usuario}
-        mostrarToast={mostrarToast}
-        secaoInicial={secaoInicial}
-        cancelado={cancelado}
-      />
-    </EmpresaProvider>
+    <DashboardInner
+      usuario={usuario}
+      mostrarToast={mostrarToast}
+      secaoInicial={secaoInicial}
+      cancelado={cancelado}
+    />
   );
 }
 
-// ─── Página raiz ──────────────────────────────────────────────────────────────
-
+/* ─── Página raiz ────────────────────────────────────────────────────────── */
+// Isso permite que DashboardLoader use useEmpresa() para chamar setUsuarioId().
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
-      <DashboardLoader />
-    </Suspense>
+    <EmpresaProvider>
+      <Suspense
+        fallback={
+          <div
+            style={{
+              height: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "var(--background, #0a0a0a)",
+            }}
+          >
+            <p style={{ color: "var(--foreground-muted, #888)", fontSize: 14 }}>
+              Carregando...
+            </p>
+          </div>
+        }
+      >
+        <DashboardLoader />
+      </Suspense>
+    </EmpresaProvider>
   );
 }
