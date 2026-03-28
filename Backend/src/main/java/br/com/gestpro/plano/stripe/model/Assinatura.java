@@ -2,6 +2,7 @@ package br.com.gestpro.plano.stripe.model;
 
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.plano.stripe.dto.PlanoTipo;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -39,6 +40,7 @@ public class Assinatura {
      * É atualizada a cada renovação pelo webhook invoice.payment_succeeded.
      */
     @Column(nullable = false)
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dataVencimento;
 
     /**

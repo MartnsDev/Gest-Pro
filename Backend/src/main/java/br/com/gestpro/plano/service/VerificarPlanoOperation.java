@@ -168,7 +168,7 @@ public class VerificarPlanoOperation {
 
     private LocalDate extrairVencimento(Subscription subscription) {
         return Instant.ofEpochSecond(subscription.getCurrentPeriodEnd())
-                .atZone(ZoneId.of("America/Sao_Paulo")) // Força o fuso de Brasília
+                .atZone(ZoneId.of("America/Sao_Paulo")) // Força o fuso correto
                 .toLocalDate();
     }
     // ─── Consultas informativas ───────────────────────────────────────────────
