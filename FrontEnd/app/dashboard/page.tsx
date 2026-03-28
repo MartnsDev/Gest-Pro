@@ -487,9 +487,10 @@ function DashboardLoader() {
 
         setUsuario(data);
 
-        // ✅ CORREÇÃO PRINCIPAL:
+        //  CORREÇÃO PRINCIPAL:
         // Vincula o contexto ao ID deste usuário específico.
         // Isso garante que cada conta tenha seu próprio localStorage isolado.
+        // Talvez seja melhor eu deixar data.email, mas data.id aparentemente está funcionando.
         setUsuarioId(String(data.id));
       } catch {
         // Token inválido/expirado — limpa tudo e redireciona
