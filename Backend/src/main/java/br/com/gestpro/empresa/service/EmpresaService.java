@@ -115,6 +115,7 @@ public class EmpresaService {
     /**
      * PASSO 1 — Gera um código de 6 dígitos, salva em memória (10 min) e envia por e-mail.
      */
+    @Transactional
     public void solicitarCodigoExclusao(Long empresaId, String emailUsuario) {
         Empresa empresa = empresaRepository.findById(empresaId)
                 .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/empresas"));
