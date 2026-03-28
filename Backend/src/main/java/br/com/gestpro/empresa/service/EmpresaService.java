@@ -115,61 +115,64 @@ public class EmpresaService {
     /**
      * PASSO 1 — Gera um código de 6 dígitos, salva em memória (10 min) e envia por e-mail.
      */
-    @Transactional
+    // ── solicitarCodigoExclusao ────────────────────────────────────────────────
+    @Transactional  // ← ADICIONE ISSO
     public void solicitarCodigoExclusao(Long empresaId, String emailUsuario) {
-        Empresa empresa = empresaRepository.findById(empresaId)
-                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/empresas"));
+        // Usa findByIdWithDono em vez de findById
+        Empresa empresa = empresaRepository.findByIdWithDono(empresaId)
+                .orElseThrow(() -> new ApiException("Empresa não encontrada",
+                        HttpStatus.NOT_FOUND, "/empresas"));
 
         if (!empresa.getDono().getEmail().equals(emailUsuario))
-            throw new ApiException("Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
+            throw new ApiException("Sem permissão para esta empresa.",
+                    HttpStatus.FORBIDDEN, "/empresas");
 
         String codigo = String.format("%06d", new Random().nextInt(999999));
         String chave  = empresaId + ":" + emailUsuario;
 
-        codigosExclusao.put(chave, new CodigoExclusao(codigo, LocalDateTime.now().plusMinutes(10)));
+        codigosExclusao.put(chave, new CodigoExclusao(codigo,
+                LocalDateTime.now().plusMinutes(10)));
 
         enviarEmailExclusao(emailUsuario, empresa.getNomeFantasia(), codigo);
-        log.info("Código de exclusão gerado para empresa {} | usuario={}", empresaId, emailUsuario);
+        log.info("Código de exclusão gerado para empresa {} | usuario={}",
+                empresaId, emailUsuario);
     }
 
-    /**
-     * PASSO 2 — Valida o código e, se correto, exclui a empresa e todos os dados relacionados.
-     */
+    // ── confirmarExclusao ─────────────────────────────────────────────────────
     @Transactional
     public void confirmarExclusao(Long empresaId, String emailUsuario, String codigoInformado) {
-        Empresa empresa = empresaRepository.findById(empresaId)
-                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/empresas"));
+        // Usa findByIdWithDono em vez de findById
+        Empresa empresa = empresaRepository.findByIdWithDono(empresaId)
+                .orElseThrow(() -> new ApiException("Empresa não encontrada",
+                        HttpStatus.NOT_FOUND, "/empresas"));
 
         if (!empresa.getDono().getEmail().equals(emailUsuario))
-            throw new ApiException("Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
+            throw new ApiException("Sem permissão para esta empresa.",
+                    HttpStatus.FORBIDDEN, "/empresas");
 
-        String chave  = empresaId + ":" + emailUsuario;
+        String chave = empresaId + ":" + emailUsuario;
         CodigoExclusao registro = codigosExclusao.get(chave);
 
         if (registro == null)
-            throw new ApiException("Nenhum código solicitado. Clique em 'Solicitar código' primeiro.",
+            throw new ApiException(
+                    "Nenhum código solicitado. Clique em 'Solicitar código' primeiro.",
                     HttpStatus.BAD_REQUEST, "/empresas");
 
         if (registro.expirado()) {
             codigosExclusao.remove(chave);
-            throw new ApiException("Código expirado. Solicite um novo.", HttpStatus.BAD_REQUEST, "/empresas");
+            throw new ApiException("Código expirado. Solicite um novo.",
+                    HttpStatus.BAD_REQUEST, "/empresas");
         }
 
         if (!registro.codigo().equals(codigoInformado.trim()))
-            throw new ApiException("Código incorreto. Tente novamente.", HttpStatus.BAD_REQUEST, "/empresas");
+            throw new ApiException("Código incorreto. Tente novamente.",
+                    HttpStatus.BAD_REQUEST, "/empresas");
 
-        // Código válido — remove do cache e exclui tudo
         codigosExclusao.remove(chave);
-
-        // O cascade no relacionamento cuida dos dados filhos (produtos, vendas, clientes, etc.)
-        // Se não tiver cascade configurado, exclua manualmente aqui na ordem correta:
-        // produtoRepository.deleteByEmpresaId(empresaId);
-        // vendaRepository.deleteByEmpresaId(empresaId);
-        // clienteRepository.deleteByEmpresaId(empresaId);
-        // caixaRepository.deleteByEmpresaId(empresaId);
         empresaRepository.deleteById(empresaId);
 
-        log.info("Empresa {} excluída com sucesso pelo usuário {}", empresaId, emailUsuario);
+        log.info("Empresa {} excluída com sucesso pelo usuário {}",
+                empresaId, emailUsuario);
     }
 
     // ─── Helpers privados ─────────────────────────────────────────────────
