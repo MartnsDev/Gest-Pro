@@ -49,14 +49,12 @@ public class VerificarPlanoOperation {
     }
 
     // Em VerificarPlanoOperation.java — adicione este método:
-
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void validarAcessoIsolado(Usuario usuario) {
         validarAcesso(usuario);
     }
 
     // ─── Fluxo EXPERIMENTAL ───────────────────────────────────────────────────
-
     private void validarAcessoExperimental(Usuario usuario) {
         LocalDateTime inicio = (usuario.getDataPrimeiroLogin() != null)
                 ? usuario.getDataPrimeiroLogin()
@@ -75,7 +73,6 @@ public class VerificarPlanoOperation {
     }
 
     // ─── Fluxo PAGO (Básico / Pro / Premium) ─────────────────────────────────
-
     private void validarAcessoPago(Usuario usuario) {
         Optional<Assinatura> assinaturaOpt = assinaturaRepository.findByUsuarioEmail(usuario.getEmail());
 
@@ -108,8 +105,6 @@ public class VerificarPlanoOperation {
 
             // Só bloqueia se a data de vencimento for ANTERIOR a hoje
             if (assinatura.getDataVencimento().isBefore(LocalDate.now())) {
-
-
             bloquearUsuario(usuario);
             // Marca como VENCIDO no banco também (webhook pode ter atrasado)
             assinatura.setStatus("VENCIDO");

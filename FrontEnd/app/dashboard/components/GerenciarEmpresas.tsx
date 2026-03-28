@@ -11,8 +11,14 @@ import {
   Pencil,
   X,
   Check,
+  Trash2,
+  Mail,
+  Loader2,
+  ShieldAlert,
 } from "lucide-react";
+import { toast } from "sonner";
 
+/* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Empresa {
   id: number;
   nomeFantasia: string;
@@ -26,6 +32,7 @@ interface Props {
   modoSelecao?: boolean;
 }
 
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
   const token =
     (typeof window !== "undefined"
@@ -46,6 +53,8 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
     const err = await res.json().catch(() => null);
     throw new Error(err?.mensagem ?? `Erro ${res.status}`);
   }
+  // 204 No Content não tem body
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
@@ -60,6 +69,436 @@ const inp: React.CSSProperties = {
   outline: "none",
 };
 
+/* ─── Modal de exclusão com código ──────────────────────────────────────── */
+type EtapaExclusao = "confirmar" | "enviando" | "codigo" | "excluindo";
+
+function ModalExclusao({
+  empresa,
+  onClose,
+  onExcluida,
+}: {
+  empresa: Empresa;
+  onClose: () => void;
+  onExcluida: () => void;
+}) {
+  const [etapa, setEtapa] = useState<EtapaExclusao>("confirmar");
+  const [codigo, setCodigo] = useState("");
+  const [erro, setErro] = useState("");
+
+  const solicitarCodigo = async () => {
+    setEtapa("enviando");
+    setErro("");
+    try {
+      await fetchAuth(`/api/v1/empresas/${empresa.id}/solicitar-exclusao`, {
+        method: "POST",
+      });
+      setEtapa("codigo");
+      toast.success("Código enviado para seu e-mail!");
+    } catch (e: any) {
+      setErro(e.message);
+      setEtapa("confirmar");
+    }
+  };
+
+  const confirmarExclusao = async () => {
+    if (!codigo.trim() || codigo.length < 6) {
+      setErro("Digite o código de 6 dígitos");
+      return;
+    }
+    setEtapa("excluindo");
+    setErro("");
+    try {
+      await fetchAuth(
+        `/api/v1/empresas/${empresa.id}/confirmar-exclusao?codigo=${codigo.trim()}`,
+        { method: "DELETE" },
+      );
+      toast.success(`"${empresa.nomeFantasia}" excluída com sucesso.`);
+      onExcluida();
+      onClose();
+    } catch (e: any) {
+      setErro(e.message);
+      setEtapa("codigo");
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.80)",
+        backdropFilter: "blur(5px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 200,
+        padding: 16,
+      }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        style={{
+          background: "var(--surface-elevated)",
+          border: "1px solid rgba(239,68,68,0.3)",
+          borderRadius: 14,
+          padding: 28,
+          width: "100%",
+          maxWidth: 440,
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 10,
+                background: "rgba(239,68,68,0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <ShieldAlert size={20} color="#ef4444" />
+            </div>
+            <div>
+              <h2
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: "var(--foreground)",
+                  margin: 0,
+                }}
+              >
+                Excluir Empresa
+              </h2>
+              <p
+                style={{
+                  fontSize: 12,
+                  color: "var(--foreground-muted)",
+                  margin: "2px 0 0",
+                }}
+              >
+                {empresa.nomeFantasia}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--foreground-muted)",
+              padding: 4,
+            }}
+          >
+            <X size={17} />
+          </button>
+        </div>
+
+        {/* Etapa 1 — Aviso */}
+        {etapa === "confirmar" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div
+              style={{
+                padding: "14px 16px",
+                background: "rgba(239,68,68,0.07)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                borderRadius: 10,
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#ef4444",
+                  margin: "0 0 8px",
+                }}
+              >
+                ⚠️ Ação irreversível
+              </p>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "var(--foreground-muted)",
+                  margin: 0,
+                  lineHeight: 1.6,
+                }}
+              >
+                Ao excluir{" "}
+                <strong style={{ color: "var(--foreground)" }}>
+                  {empresa.nomeFantasia}
+                </strong>
+                , todos os dados serão permanentemente removidos:
+              </p>
+              <ul
+                style={{
+                  fontSize: 13,
+                  color: "var(--foreground-muted)",
+                  margin: "10px 0 0",
+                  paddingLeft: 18,
+                  lineHeight: 1.8,
+                }}
+              >
+                <li>Produtos e estoque</li>
+                <li>Histórico de vendas</li>
+                <li>Clientes e fornecedores</li>
+                <li>Caixas e relatórios</li>
+              </ul>
+            </div>
+
+            <p
+              style={{
+                fontSize: 13,
+                color: "var(--foreground-muted)",
+                margin: 0,
+              }}
+            >
+              Para confirmar, enviaremos um código de verificação para seu
+              e-mail cadastrado.
+            </p>
+
+            {erro && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 14px",
+                  background: "rgba(239,68,68,0.07)",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  borderRadius: 8,
+                  color: "#ef4444",
+                  fontSize: 13,
+                }}
+              >
+                <AlertCircle size={14} /> {erro}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={onClose}
+                style={{
+                  flex: 1,
+                  padding: "10px 0",
+                  background: "transparent",
+                  border: "1px solid var(--border)",
+                  borderRadius: 9,
+                  color: "var(--foreground-muted)",
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={solicitarCodigo}
+                style={{
+                  flex: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 7,
+                  padding: "10px 0",
+                  background: "#ef4444",
+                  border: "none",
+                  borderRadius: 9,
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <Mail size={14} /> Enviar código por e-mail
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Etapa 2 — Enviando */}
+        {etapa === "enviando" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              padding: "32px 0",
+              color: "var(--foreground-muted)",
+            }}
+          >
+            <Loader2
+              size={20}
+              style={{ animation: "spin 1s linear infinite" }}
+            />
+            Enviando código para seu e-mail...
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
+
+        {/* Etapa 3 — Inserir código */}
+        {etapa === "codigo" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div
+              style={{
+                padding: "12px 14px",
+                background: "rgba(16,185,129,0.07)",
+                border: "1px solid rgba(16,185,129,0.2)",
+                borderRadius: 9,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <CheckCircle size={15} color="#10b981" />
+              <p style={{ fontSize: 13, color: "#10b981", margin: 0 }}>
+                Código enviado! Verifique sua caixa de entrada.
+              </p>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--foreground-muted)",
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Digite o código de 6 dígitos
+              </label>
+              <input
+                style={{
+                  ...inp,
+                  letterSpacing: "0.4em",
+                  fontSize: 22,
+                  textAlign: "center",
+                  padding: "12px",
+                  borderColor: erro ? "#ef4444" : "var(--border)",
+                }}
+                value={codigo}
+                onChange={(e) => {
+                  setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6));
+                  setErro("");
+                }}
+                placeholder="000000"
+                maxLength={6}
+                autoFocus
+              />
+              {erro && (
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: "#ef4444",
+                    margin: "6px 0 0",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                >
+                  <AlertCircle size={12} /> {erro}
+                </p>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={onClose}
+                style={{
+                  flex: 1,
+                  padding: "10px 0",
+                  background: "transparent",
+                  border: "1px solid var(--border)",
+                  borderRadius: 9,
+                  color: "var(--foreground-muted)",
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarExclusao}
+                disabled={codigo.length < 6}
+                style={{
+                  flex: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 7,
+                  padding: "10px 0",
+                  background: codigo.length < 6 ? "var(--border)" : "#ef4444",
+                  border: "none",
+                  borderRadius: 9,
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: codigo.length < 6 ? "not-allowed" : "pointer",
+                  transition: "background .15s",
+                }}
+              >
+                <Trash2 size={14} /> Confirmar exclusão
+              </button>
+            </div>
+
+            <button
+              onClick={solicitarCodigo}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--foreground-muted)",
+                fontSize: 12,
+                textDecoration: "underline",
+                textAlign: "center",
+                padding: 0,
+              }}
+            >
+              Não recebeu? Reenviar código
+            </button>
+          </div>
+        )}
+
+        {/* Etapa 4 — Excluindo */}
+        {etapa === "excluindo" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              padding: "32px 0",
+              color: "#ef4444",
+              fontSize: 14,
+              fontWeight: 500,
+            }}
+          >
+            <Loader2
+              size={20}
+              style={{ animation: "spin 1s linear infinite" }}
+            />
+            Excluindo empresa e todos os dados...
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Componente principal ───────────────────────────────────────────────── */
 export default function GerenciarEmpresas({
   onEmpresaSelecionada,
   modoSelecao,
@@ -74,6 +513,11 @@ export default function GerenciarEmpresas({
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ nomeFantasia: "", cnpj: "" });
   const [salvandoId, setSalvandoId] = useState<number | null>(null);
+
+  // Modal de exclusão
+  const [empresaParaExcluir, setEmpresaParaExcluir] = useState<Empresa | null>(
+    null,
+  );
 
   const carregar = async () => {
     try {
@@ -108,14 +552,12 @@ export default function GerenciarEmpresas({
     setSalvandoId(id);
     setErro("");
     try {
-      const dados = {
-        ...editForm,
-        cnpj: editForm.cnpj.trim() === "" ? null : editForm.cnpj.trim(),
-      };
-      // Note o uso do PUT e do ID na URL (ou no corpo, dependendo do seu backend)
       await fetchAuth(`/api/v1/empresas/${id}`, {
         method: "PUT",
-        body: JSON.stringify(dados),
+        body: JSON.stringify({
+          ...editForm,
+          cnpj: editForm.cnpj.trim() || null,
+        }),
       });
       ok("Empresa atualizada!");
       setEditandoId(null);
@@ -135,13 +577,9 @@ export default function GerenciarEmpresas({
     setSalvando(true);
     setErro("");
     try {
-      const dadosParaEnviar = {
-        ...form,
-        cnpj: form.cnpj.trim() === "" ? null : form.cnpj.trim(),
-      };
       await fetchAuth("/api/v1/empresas", {
         method: "POST",
-        body: JSON.stringify(dadosParaEnviar),
+        body: JSON.stringify({ ...form, cnpj: form.cnpj.trim() || null }),
       });
       ok("Empresa cadastrada com sucesso!");
       setForm({ nomeFantasia: "", cnpj: "" });
@@ -154,8 +592,6 @@ export default function GerenciarEmpresas({
     }
   };
 
-  // ... (o restante do seu JSX permanece o mesmo, ele já está bem construído)
-  // Certifique-se apenas de que o botão de salvar edição chama: onClick={() => salvarEdicao(emp.id)}
   if (loading)
     return (
       <div
@@ -166,9 +602,12 @@ export default function GerenciarEmpresas({
           height: 200,
           color: "var(--foreground-muted)",
           fontSize: 14,
+          gap: 10,
         }}
       >
+        <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />{" "}
         Carregando empresas...
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
 
@@ -182,6 +621,20 @@ export default function GerenciarEmpresas({
         maxWidth: 700,
       }}
     >
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* Modal de exclusão */}
+      {empresaParaExcluir && (
+        <ModalExclusao
+          empresa={empresaParaExcluir}
+          onClose={() => setEmpresaParaExcluir(null)}
+          onExcluida={() => {
+            carregar();
+            setEmpresaParaExcluir(null);
+          }}
+        />
+      )}
+
       {/* Header */}
       <div
         style={{
@@ -246,10 +699,10 @@ export default function GerenciarEmpresas({
             alignItems: "center",
             gap: 8,
             padding: "10px 14px",
-            background: "var(--success-muted)",
+            background: "rgba(16,185,129,0.08)",
             border: "1px solid rgba(16,185,129,0.2)",
             borderRadius: 8,
-            color: "var(--success)",
+            color: "var(--primary)",
             fontSize: 13,
           }}
         >
@@ -263,10 +716,10 @@ export default function GerenciarEmpresas({
             alignItems: "center",
             gap: 8,
             padding: "10px 14px",
-            background: "var(--destructive-muted)",
+            background: "rgba(239,68,68,0.07)",
             border: "1px solid rgba(239,68,68,0.2)",
             borderRadius: 8,
-            color: "var(--destructive)",
+            color: "#ef4444",
             fontSize: 13,
           }}
         >
@@ -313,6 +766,7 @@ export default function GerenciarEmpresas({
                 }
                 placeholder="Ex: Minha Loja Centro"
                 style={inp}
+                autoFocus
               />
             </div>
             <div>
@@ -375,7 +829,7 @@ export default function GerenciarEmpresas({
         </div>
       )}
 
-      {/* Lista */}
+      {/* Lista de empresas */}
       {empresas.length === 0 ? (
         <div
           style={{
@@ -429,6 +883,7 @@ export default function GerenciarEmpresas({
                 }}
               >
                 {editando ? (
+                  /* ── Modo edição ── */
                   <div
                     style={{
                       display: "flex",
@@ -526,6 +981,7 @@ export default function GerenciarEmpresas({
                     </div>
                   </div>
                 ) : (
+                  /* ── Modo visualização ── */
                   <div
                     style={{
                       display: "flex",
@@ -579,39 +1035,77 @@ export default function GerenciarEmpresas({
                       style={{ display: "flex", alignItems: "center", gap: 8 }}
                     >
                       {!modoSelecao && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            iniciarEdicao(emp);
-                          }}
-                          title="Editar empresa"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: 32,
-                            height: 32,
-                            background: "var(--surface-overlay)",
-                            border: "1px solid var(--border)",
-                            borderRadius: 7,
-                            color: "var(--foreground-muted)",
-                            cursor: "pointer",
-                            transition: "all .15s",
-                            flexShrink: 0,
-                          }}
-                          onMouseEnter={(e) => {
-                            const b = e.currentTarget as HTMLButtonElement;
-                            b.style.borderColor = "var(--primary)";
-                            b.style.color = "var(--primary)";
-                          }}
-                          onMouseLeave={(e) => {
-                            const b = e.currentTarget as HTMLButtonElement;
-                            b.style.borderColor = "var(--border)";
-                            b.style.color = "var(--foreground-muted)";
-                          }}
-                        >
-                          <Pencil size={13} />
-                        </button>
+                        <>
+                          {/* Botão Editar */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              iniciarEdicao(emp);
+                            }}
+                            title="Editar empresa"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: 32,
+                              height: 32,
+                              background: "var(--surface-overlay)",
+                              border: "1px solid var(--border)",
+                              borderRadius: 7,
+                              color: "var(--foreground-muted)",
+                              cursor: "pointer",
+                              transition: "all .15s",
+                              flexShrink: 0,
+                            }}
+                            onMouseEnter={(e) => {
+                              const b = e.currentTarget as HTMLButtonElement;
+                              b.style.borderColor = "var(--primary)";
+                              b.style.color = "var(--primary)";
+                            }}
+                            onMouseLeave={(e) => {
+                              const b = e.currentTarget as HTMLButtonElement;
+                              b.style.borderColor = "var(--border)";
+                              b.style.color = "var(--foreground-muted)";
+                            }}
+                          >
+                            <Pencil size={13} />
+                          </button>
+
+                          {/* Botão Excluir */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEmpresaParaExcluir(emp);
+                            }}
+                            title="Excluir empresa"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: 32,
+                              height: 32,
+                              background: "var(--surface-overlay)",
+                              border: "1px solid rgba(239,68,68,0.3)",
+                              borderRadius: 7,
+                              color: "#ef4444",
+                              cursor: "pointer",
+                              transition: "all .15s",
+                              flexShrink: 0,
+                            }}
+                            onMouseEnter={(e) => {
+                              const b = e.currentTarget as HTMLButtonElement;
+                              b.style.background = "rgba(239,68,68,0.08)";
+                              b.style.borderColor = "#ef4444";
+                            }}
+                            onMouseLeave={(e) => {
+                              const b = e.currentTarget as HTMLButtonElement;
+                              b.style.background = "var(--surface-overlay)";
+                              b.style.borderColor = "rgba(239,68,68,0.3)";
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </>
                       )}
                       {modoSelecao && (
                         <ChevronRight
