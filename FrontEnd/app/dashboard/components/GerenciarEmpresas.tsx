@@ -12,9 +12,10 @@ import {
   X,
   Check,
   Trash2,
-  Mail,
   Loader2,
   ShieldAlert,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,7 +33,7 @@ interface Props {
   modoSelecao?: boolean;
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
+/* ─── Helper fetch ───────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
   const token =
     (typeof window !== "undefined"
@@ -53,7 +54,6 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
     const err = await res.json().catch(() => null);
     throw new Error(err?.mensagem ?? `Erro ${res.status}`);
   }
-  // 204 No Content não tem body
   if (res.status === 204) return undefined as T;
   return res.json();
 }
@@ -69,9 +69,7 @@ const inp: React.CSSProperties = {
   outline: "none",
 };
 
-/* ─── Modal de exclusão com código ──────────────────────────────────────── */
-type EtapaExclusao = "confirmar" | "enviando" | "codigo" | "excluindo";
-
+/* ─── Modal de exclusão por senha ────────────────────────────────────────── */
 function ModalExclusao({
   empresa,
   onClose,
@@ -81,43 +79,29 @@ function ModalExclusao({
   onClose: () => void;
   onExcluida: () => void;
 }) {
-  const [etapa, setEtapa] = useState<EtapaExclusao>("confirmar");
-  const [codigo, setCodigo] = useState("");
+  const [senha, setSenha] = useState("");
+  const [showSenha, setShowSenha] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
   const [erro, setErro] = useState("");
 
-  const solicitarCodigo = async () => {
-    setEtapa("enviando");
-    setErro("");
-    try {
-      await fetchAuth(`/api/v1/empresas/${empresa.id}/solicitar-exclusao`, {
-        method: "POST",
-      });
-      setEtapa("codigo");
-      toast.success("Código enviado para seu e-mail!");
-    } catch (e: any) {
-      setErro(e.message);
-      setEtapa("confirmar");
-    }
-  };
-
-  const confirmarExclusao = async () => {
-    if (!codigo.trim() || codigo.length < 6) {
-      setErro("Digite o código de 6 dígitos");
+  const confirmar = async () => {
+    if (!senha.trim()) {
+      setErro("Digite sua senha");
       return;
     }
-    setEtapa("excluindo");
+    setExcluindo(true);
     setErro("");
     try {
-      await fetchAuth(
-        `/api/v1/empresas/${empresa.id}/confirmar-exclusao?codigo=${codigo.trim()}`,
-        { method: "DELETE" },
-      );
+      await fetchAuth(`/api/v1/empresas/${empresa.id}/confirmar-exclusao`, {
+        method: "DELETE",
+        body: JSON.stringify({ senha }),
+      });
       toast.success(`"${empresa.nomeFantasia}" excluída com sucesso.`);
       onExcluida();
       onClose();
     } catch (e: any) {
       setErro(e.message);
-      setEtapa("codigo");
+      setExcluindo(false);
     }
   };
 
@@ -143,7 +127,7 @@ function ModalExclusao({
           borderRadius: 14,
           padding: 28,
           width: "100%",
-          maxWidth: 440,
+          maxWidth: 420,
         }}
       >
         {/* Header */}
@@ -206,293 +190,163 @@ function ModalExclusao({
           </button>
         </div>
 
-        {/* Etapa 1 — Aviso */}
-        {etapa === "confirmar" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div
-              style={{
-                padding: "14px 16px",
-                background: "rgba(239,68,68,0.07)",
-                border: "1px solid rgba(239,68,68,0.2)",
-                borderRadius: 10,
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#ef4444",
-                  margin: "0 0 8px",
-                }}
-              >
-                ⚠️ Ação irreversível
-              </p>
-              <p
-                style={{
-                  fontSize: 13,
-                  color: "var(--foreground-muted)",
-                  margin: 0,
-                  lineHeight: 1.6,
-                }}
-              >
-                Ao excluir{" "}
-                <strong style={{ color: "var(--foreground)" }}>
-                  {empresa.nomeFantasia}
-                </strong>
-                , todos os dados serão permanentemente removidos:
-              </p>
-              <ul
-                style={{
-                  fontSize: 13,
-                  color: "var(--foreground-muted)",
-                  margin: "10px 0 0",
-                  paddingLeft: 18,
-                  lineHeight: 1.8,
-                }}
-              >
-                <li>Produtos e estoque</li>
-                <li>Histórico de vendas</li>
-                <li>Clientes e fornecedores</li>
-                <li>Caixas e relatórios</li>
-              </ul>
-            </div>
-
-            <p
-              style={{
-                fontSize: 13,
-                color: "var(--foreground-muted)",
-                margin: 0,
-              }}
-            >
-              Para confirmar, enviaremos um código de verificação para seu
-              e-mail cadastrado.
-            </p>
-
-            {erro && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 14px",
-                  background: "rgba(239,68,68,0.07)",
-                  border: "1px solid rgba(239,68,68,0.2)",
-                  borderRadius: 8,
-                  color: "#ef4444",
-                  fontSize: 13,
-                }}
-              >
-                <AlertCircle size={14} /> {erro}
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={onClose}
-                style={{
-                  flex: 1,
-                  padding: "10px 0",
-                  background: "transparent",
-                  border: "1px solid var(--border)",
-                  borderRadius: 9,
-                  color: "var(--foreground-muted)",
-                  fontSize: 13,
-                  cursor: "pointer",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={solicitarCodigo}
-                style={{
-                  flex: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 7,
-                  padding: "10px 0",
-                  background: "#ef4444",
-                  border: "none",
-                  borderRadius: 9,
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                <Mail size={14} /> Enviar código por e-mail
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Etapa 2 — Enviando */}
-        {etapa === "enviando" && (
-          <div
+        {/* Aviso */}
+        <div
+          style={{
+            padding: "12px 14px",
+            background: "rgba(239,68,68,0.07)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: 10,
+            marginBottom: 20,
+          }}
+        >
+          <p
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 12,
-              padding: "32px 0",
-              color: "var(--foreground-muted)",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#ef4444",
+              margin: "0 0 6px",
             }}
           >
-            <Loader2
-              size={20}
-              style={{ animation: "spin 1s linear infinite" }}
-            />
-            Enviando código para seu e-mail...
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          </div>
-        )}
+            ⚠️ Ação irreversível
+          </p>
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--foreground-muted)",
+              margin: 0,
+              lineHeight: 1.6,
+            }}
+          >
+            Todos os dados de{" "}
+            <strong style={{ color: "var(--foreground)" }}>
+              {empresa.nomeFantasia}
+            </strong>{" "}
+            serão removidos permanentemente: produtos, vendas, clientes, caixas
+            e relatórios.
+          </p>
+        </div>
 
-        {/* Etapa 3 — Inserir código */}
-        {etapa === "codigo" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div
+        {/* Campo de senha */}
+        <div style={{ marginBottom: 16 }}>
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "var(--foreground-muted)",
+              display: "block",
+              marginBottom: 8,
+            }}
+          >
+            Digite sua senha para confirmar
+          </label>
+          <div style={{ position: "relative" }}>
+            <input
               style={{
-                padding: "12px 14px",
-                background: "rgba(16,185,129,0.07)",
-                border: "1px solid rgba(16,185,129,0.2)",
-                borderRadius: 9,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
+                ...inp,
+                padding: "10px 40px 10px 12px",
+                fontSize: 14,
+                borderColor: erro ? "#ef4444" : "var(--border)",
               }}
-            >
-              <CheckCircle size={15} color="#10b981" />
-              <p style={{ fontSize: 13, color: "#10b981", margin: 0 }}>
-                Código enviado! Verifique sua caixa de entrada.
-              </p>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "var(--foreground-muted)",
-                  display: "block",
-                  marginBottom: 8,
-                }}
-              >
-                Digite o código de 6 dígitos
-              </label>
-              <input
-                style={{
-                  ...inp,
-                  letterSpacing: "0.4em",
-                  fontSize: 22,
-                  textAlign: "center",
-                  padding: "12px",
-                  borderColor: erro ? "#ef4444" : "var(--border)",
-                }}
-                value={codigo}
-                onChange={(e) => {
-                  setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6));
-                  setErro("");
-                }}
-                placeholder="000000"
-                maxLength={6}
-                autoFocus
-              />
-              {erro && (
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: "#ef4444",
-                    margin: "6px 0 0",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                  }}
-                >
-                  <AlertCircle size={12} /> {erro}
-                </p>
-              )}
-            </div>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={onClose}
-                style={{
-                  flex: 1,
-                  padding: "10px 0",
-                  background: "transparent",
-                  border: "1px solid var(--border)",
-                  borderRadius: 9,
-                  color: "var(--foreground-muted)",
-                  fontSize: 13,
-                  cursor: "pointer",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmarExclusao}
-                disabled={codigo.length < 6}
-                style={{
-                  flex: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 7,
-                  padding: "10px 0",
-                  background: codigo.length < 6 ? "var(--border)" : "#ef4444",
-                  border: "none",
-                  borderRadius: 9,
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: codigo.length < 6 ? "not-allowed" : "pointer",
-                  transition: "background .15s",
-                }}
-              >
-                <Trash2 size={14} /> Confirmar exclusão
-              </button>
-            </div>
-
+              type={showSenha ? "text" : "password"}
+              value={senha}
+              onChange={(e) => {
+                setSenha(e.target.value);
+                setErro("");
+              }}
+              onKeyDown={(e) => e.key === "Enter" && confirmar()}
+              placeholder="Sua senha de acesso"
+              autoFocus
+            />
             <button
-              onClick={solicitarCodigo}
+              onClick={() => setShowSenha((v) => !v)}
               style={{
+                position: "absolute",
+                right: 10,
+                top: "50%",
+                transform: "translateY(-50%)",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
                 color: "var(--foreground-muted)",
-                fontSize: 12,
-                textDecoration: "underline",
-                textAlign: "center",
-                padding: 0,
+                display: "flex",
+                alignItems: "center",
               }}
             >
-              Não recebeu? Reenviar código
+              {showSenha ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-        )}
+          {erro && (
+            <p
+              style={{
+                fontSize: 12,
+                color: "#ef4444",
+                margin: "6px 0 0",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <AlertCircle size={12} /> {erro}
+            </p>
+          )}
+        </div>
 
-        {/* Etapa 4 — Excluindo */}
-        {etapa === "excluindo" && (
-          <div
+        {/* Botões */}
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={onClose}
             style={{
+              flex: 1,
+              padding: "10px 0",
+              background: "transparent",
+              border: "1px solid var(--border)",
+              borderRadius: 9,
+              color: "var(--foreground-muted)",
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={confirmar}
+            disabled={excluindo || !senha.trim()}
+            style={{
+              flex: 2,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 12,
-              padding: "32px 0",
-              color: "#ef4444",
-              fontSize: 14,
-              fontWeight: 500,
+              gap: 7,
+              padding: "10px 0",
+              background:
+                excluindo || !senha.trim() ? "rgba(239,68,68,0.4)" : "#ef4444",
+              border: "none",
+              borderRadius: 9,
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: excluindo || !senha.trim() ? "not-allowed" : "pointer",
+              transition: "background .15s",
             }}
           >
-            <Loader2
-              size={20}
-              style={{ animation: "spin 1s linear infinite" }}
-            />
-            Excluindo empresa e todos os dados...
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          </div>
-        )}
+            {excluindo ? (
+              <>
+                <Loader2
+                  size={14}
+                  style={{ animation: "spin 1s linear infinite" }}
+                />{" "}
+                Excluindo...
+              </>
+            ) : (
+              <>
+                <Trash2 size={14} /> Confirmar exclusão
+              </>
+            )}
+          </button>
+        </div>
+
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
   );
@@ -513,8 +367,6 @@ export default function GerenciarEmpresas({
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ nomeFantasia: "", cnpj: "" });
   const [salvandoId, setSalvandoId] = useState<number | null>(null);
-
-  // Modal de exclusão
   const [empresaParaExcluir, setEmpresaParaExcluir] = useState<Empresa | null>(
     null,
   );
@@ -829,7 +681,7 @@ export default function GerenciarEmpresas({
         </div>
       )}
 
-      {/* Lista de empresas */}
+      {/* Lista */}
       {empresas.length === 0 ? (
         <div
           style={{
@@ -883,7 +735,6 @@ export default function GerenciarEmpresas({
                 }}
               >
                 {editando ? (
-                  /* ── Modo edição ── */
                   <div
                     style={{
                       display: "flex",
@@ -981,7 +832,6 @@ export default function GerenciarEmpresas({
                     </div>
                   </div>
                 ) : (
-                  /* ── Modo visualização ── */
                   <div
                     style={{
                       display: "flex",
@@ -1036,7 +886,6 @@ export default function GerenciarEmpresas({
                     >
                       {!modoSelecao && (
                         <>
-                          {/* Botão Editar */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1055,7 +904,6 @@ export default function GerenciarEmpresas({
                               color: "var(--foreground-muted)",
                               cursor: "pointer",
                               transition: "all .15s",
-                              flexShrink: 0,
                             }}
                             onMouseEnter={(e) => {
                               const b = e.currentTarget as HTMLButtonElement;
@@ -1070,8 +918,6 @@ export default function GerenciarEmpresas({
                           >
                             <Pencil size={13} />
                           </button>
-
-                          {/* Botão Excluir */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1090,7 +936,6 @@ export default function GerenciarEmpresas({
                               color: "#ef4444",
                               cursor: "pointer",
                               transition: "all .15s",
-                              flexShrink: 0,
                             }}
                             onMouseEnter={(e) => {
                               const b = e.currentTarget as HTMLButtonElement;

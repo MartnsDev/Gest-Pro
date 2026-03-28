@@ -12,16 +12,11 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,14 +27,7 @@ public class EmpresaService {
     private final EmpresaRepository       empresaRepository;
     private final UsuarioRepository       usuarioRepository;
     private final VerificarPlanoOperation verificarPlano;
-    private final JavaMailSender          mailSender;
-
-    // Cache em memória: chave = "empresaId:email" → {codigo, expiracao}
-    private final Map<String, CodigoExclusao> codigosExclusao = new ConcurrentHashMap<>();
-
-    private record CodigoExclusao(String codigo, LocalDateTime expiracao) {
-        boolean expirado() { return LocalDateTime.now().isAfter(expiracao); }
-    }
+    private final PasswordEncoder         passwordEncoder;
 
     // ─── CRUD padrão ──────────────────────────────────────────────────────
 
@@ -113,10 +101,15 @@ public class EmpresaService {
                         "Empresa não encontrada com o ID: " + id)));
     }
 
-    // ─── Exclusão com confirmação por e-mail ──────────────────────────────
+    // ─── Exclusão com confirmação por senha ───────────────────────────────
 
+    /**
+     * Valida a senha do usuário e exclui a empresa com todos os dados.
+     * Usuários que fazem login pelo Google (sem senha) não podem usar esta rota —
+     * retorna erro orientando a usar outro método.
+     */
     @Transactional
-    public void solicitarCodigoExclusao(Long empresaId, String emailUsuario) {
+    public void excluirComSenha(Long empresaId, String emailUsuario, String senhaInformada) {
         Empresa empresa = empresaRepository.findByIdWithDono(empresaId)
                 .orElseThrow(() -> new ApiException(
                         "Empresa não encontrada", HttpStatus.NOT_FOUND, "/empresas"));
@@ -125,84 +118,27 @@ public class EmpresaService {
             throw new ApiException(
                     "Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
 
-        String codigo = String.format("%06d", new Random().nextInt(999999));
-        String chave  = empresaId + ":" + emailUsuario;
+        Usuario usuario = empresa.getDono();
 
-        codigosExclusao.put(chave, new CodigoExclusao(codigo,
-                LocalDateTime.now().plusMinutes(10)));
-
-        enviarEmailExclusao(emailUsuario, empresa.getNomeFantasia(), codigo);
-
-        log.info("Código de exclusão gerado para empresa {} | usuario={}",
-                empresaId, emailUsuario);
-    }
-
-    @Transactional
-    public void confirmarExclusao(Long empresaId, String emailUsuario, String codigoInformado) {
-        Empresa empresa = empresaRepository.findByIdWithDono(empresaId)
-                .orElseThrow(() -> new ApiException(
-                        "Empresa não encontrada", HttpStatus.NOT_FOUND, "/empresas"));
-
-        if (!empresa.getDono().getEmail().equals(emailUsuario))
+        // Usuário Google não tem senha — bloqueia com mensagem clara
+        if (usuario.getSenha() == null || usuario.getSenha().isBlank())
             throw new ApiException(
-                    "Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
-
-        String chave = empresaId + ":" + emailUsuario;
-        CodigoExclusao registro = codigosExclusao.get(chave);
-
-        if (registro == null)
-            throw new ApiException(
-                    "Nenhum código solicitado. Clique em 'Solicitar código' primeiro.",
+                    "Sua conta usa login pelo Google e não possui senha cadastrada. " +
+                            "Entre em contato com o suporte para excluir a empresa.",
                     HttpStatus.BAD_REQUEST, "/empresas");
 
-        if (registro.expirado()) {
-            codigosExclusao.remove(chave);
+        // Valida a senha informada contra o hash no banco
+        if (!passwordEncoder.matches(senhaInformada, usuario.getSenha()))
             throw new ApiException(
-                    "Código expirado. Solicite um novo.",
-                    HttpStatus.BAD_REQUEST, "/empresas");
-        }
+                    "Senha incorreta. Tente novamente.",
+                    HttpStatus.UNAUTHORIZED, "/empresas");
 
-        if (!registro.codigo().equals(codigoInformado.trim()))
-            throw new ApiException(
-                    "Código incorreto. Tente novamente.",
-                    HttpStatus.BAD_REQUEST, "/empresas");
-
-        codigosExclusao.remove(chave);
         empresaRepository.deleteById(empresaId);
 
-        log.info("Empresa {} excluída com sucesso pelo usuário {}",
-                empresaId, emailUsuario);
+        log.info("Empresa {} excluída com sucesso pelo usuário {}", empresaId, emailUsuario);
     }
 
     // ─── Helpers privados ─────────────────────────────────────────────────
-
-    private void enviarEmailExclusao(String destinatario, String nomeEmpresa, String codigo) {
-        try {
-            SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setTo(destinatario);
-            msg.setSubject("GestPro — Código de confirmação para excluir empresa");
-            msg.setText(
-                    "Olá!\n\n" +
-                            "Recebemos uma solicitação para excluir permanentemente a empresa:\n\n" +
-                            "   " + nomeEmpresa + "\n\n" +
-                            "Seu código de confirmação é:\n\n" +
-                            "   " + codigo + "\n\n" +
-                            "ATENÇÃO: Esta ação é irreversível. Todos os produtos, vendas,\n" +
-                            "clientes e relatórios desta empresa serão excluídos permanentemente.\n\n" +
-                            "O código é válido por 10 minutos.\n\n" +
-                            "Se você não solicitou isso, ignore este e-mail.\n\n" +
-                            "— Equipe GestPro"
-            );
-            mailSender.send(msg);
-            log.info("E-mail de exclusão enviado para {}", destinatario);
-        } catch (Exception e) {
-            log.error("Falha ao enviar e-mail de exclusão para {}: {}",
-                    destinatario, e.getMessage());
-            throw new ApiException(
-                    "Falha ao enviar e-mail. Tente novamente.",
-                    HttpStatus.INTERNAL_SERVER_ERROR, "/empresas");
-        }
-    }
 
     private EmpresaResponse mapToResponse(Empresa empresa) {
         EmpresaResponse res = new EmpresaResponse();

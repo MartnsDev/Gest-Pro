@@ -48,31 +48,26 @@ public class EmpresaController {
     }
 
     /**
-     * PASSO 1 — Solicita o código de confirmação por e-mail antes de excluir.
-     * POST /api/v1/empresas/{id}/solicitar-exclusao
-     */
-    @PostMapping("/{id}/solicitar-exclusao")
-    public ResponseEntity<Map<String, String>> solicitarExclusao(
-            @PathVariable Long id,
-            Authentication authentication) {
-        empresaService.solicitarCodigoExclusao(id, authentication.getName());
-        return ResponseEntity.ok(Map.of("mensagem", "Código enviado para seu e-mail. Válido por 10 minutos."));
-    }
-
-    /**
-     * PASSO 2 — Confirma o código e exclui a empresa com todos os dados.
-     * DELETE /api/v1/empresas/{id}/confirmar-exclusao?codigo=123456
+     * DELETE /api/v1/empresas/{id}/confirmar-exclusao
+     * Body: { "senha": "minhasenha123" }
+     *
+     * Valida a senha do usuário logado e exclui a empresa com todos os dados.
      */
     @DeleteMapping("/{id}/confirmar-exclusao")
-    public ResponseEntity<Void> confirmarExclusao(
+    public ResponseEntity<Void> excluirComSenha(
             @PathVariable Long id,
-            @RequestParam String codigo,
+            @RequestBody Map<String, String> body,
             Authentication authentication) {
-        empresaService.confirmarExclusao(id, authentication.getName(), codigo);
+
+        String senha = body.get("senha");
+        if (senha == null || senha.isBlank())
+            return ResponseEntity.badRequest().build();
+
+        empresaService.excluirComSenha(id, authentication.getName(), senha);
         return ResponseEntity.noContent().build();
     }
 
-    // ── Rota legada mantida para compatibilidade ──────────────────────────
+    // ── Rota legada mantida ───────────────────────────────────────────────
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(
             @PathVariable Long id,
