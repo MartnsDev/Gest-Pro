@@ -7,14 +7,17 @@ import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.plano.stripe.model.Assinatura;
 import br.com.gestpro.plano.stripe.repository.AssinaturaRepository;
+import com.stripe.model.Subscription;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
@@ -163,6 +166,11 @@ public class VerificarPlanoOperation {
         }
     }
 
+    private LocalDate extrairVencimento(Subscription subscription) {
+        return Instant.ofEpochSecond(subscription.getCurrentPeriodEnd())
+                .atZone(ZoneId.of("America/Sao_Paulo")) // Força o fuso de Brasília
+                .toLocalDate();
+    }
     // ─── Consultas informativas ───────────────────────────────────────────────
 
     /**
