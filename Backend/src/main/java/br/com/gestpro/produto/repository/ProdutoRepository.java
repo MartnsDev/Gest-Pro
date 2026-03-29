@@ -4,6 +4,8 @@ import br.com.gestpro.empresa.model.Empresa;
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.produto.model.Produto;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,4 +24,7 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
 
     // Mantém compatibilidade com alertas por email (dashboard)
     List<Produto> findByQuantidadeEstoqueAndUsuarioEmail(int quantidade, String email);
+
+    @Query("SELECT COUNT(p) FROM Produto p WHERE p.empresa = :empresa AND p.ativo = true")
+    long countByEmpresaAndAtivoTrue(@Param("empresa") Empresa empresa);
 }

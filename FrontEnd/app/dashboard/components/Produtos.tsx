@@ -21,6 +21,7 @@ import {
   ShoppingCart,
   Minus,
   Plus,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,6 +54,14 @@ interface ProdutoForm {
   estoqueMinimo: string;
   ativo: boolean;
 }
+
+// Limites por plano — espelho do TipoPlano.java
+const LIMITE_PRODUTOS: Record<string, number> = {
+  EXPERIMENTAL: 300,
+  BASICO: 800,
+  PRO: 999999,
+  PREMIUM: 999999,
+};
 
 const FORM_VAZIO: ProdutoForm = {
   nome: "",
@@ -137,6 +146,106 @@ const btnGhost: React.CSSProperties = {
   fontSize: 13,
   cursor: "pointer",
 };
+
+/* ─── Barra de uso de produtos ───────────────────────────────────────────── */
+function BarraUsoProdutos({
+  total,
+  plano,
+  onUpgrade,
+}: {
+  total: number;
+  plano: string;
+  onUpgrade: () => void;
+}) {
+  const limite = LIMITE_PRODUTOS[plano] ?? 999999;
+  const ilimitado = limite >= 999999;
+  if (ilimitado) return null;
+
+  const pct = Math.min((total / limite) * 100, 100);
+  const critico = pct >= 90;
+  const aviso = pct >= 70;
+  const cor = critico ? "#ef4444" : aviso ? "#f59e0b" : "var(--primary)";
+
+  return (
+    <div
+      style={{
+        padding: "12px 16px",
+        background: critico
+          ? "rgba(239,68,68,0.07)"
+          : "var(--surface-elevated)",
+        border: `1px solid ${critico ? "rgba(239,68,68,0.25)" : aviso ? "rgba(245,158,11,0.2)" : "var(--border)"}`,
+        borderRadius: 10,
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 6,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 12,
+              color: "var(--foreground-muted)",
+              fontWeight: 500,
+            }}
+          >
+            Produtos cadastrados
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: cor }}>
+            {total} / {limite}
+          </span>
+        </div>
+        <div
+          style={{ height: 5, background: "var(--border)", borderRadius: 99 }}
+        >
+          <div
+            style={{
+              height: 5,
+              width: `${pct}%`,
+              background: cor,
+              borderRadius: 99,
+              transition: "width .3s",
+            }}
+          />
+        </div>
+        {critico && (
+          <p style={{ fontSize: 11, color: "#ef4444", margin: "5px 0 0" }}>
+            Você está perto do limite. Faça upgrade para cadastrar produtos
+            ilimitados.
+          </p>
+        )}
+      </div>
+      {(critico || aviso) && (
+        <button
+          onClick={onUpgrade}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            padding: "7px 12px",
+            background: cor,
+            border: "none",
+            borderRadius: 7,
+            color: "#fff",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          <Zap size={12} /> Fazer upgrade
+        </button>
+      )}
+    </div>
+  );
+}
 
 /* ─── Modal Produto ──────────────────────────────────────────────────────── */
 function ModalProduto({
@@ -781,11 +890,15 @@ type ModalState =
   | { tipo: "estoque"; produto: Produto }
   | null;
 
-export default function Produtos() {
-  // ✅ Pega empresa ativa do contexto global
+export default function Produtos({
+  onNavegar,
+}: {
+  onNavegar?: (s: string) => void;
+}) {
   const { empresaAtiva } = useEmpresa();
 
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [planoAtual, setPlanoAtual] = useState<string>("EXPERIMENTAL");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [filtro, setFiltro] = useState("");
@@ -802,17 +915,16 @@ export default function Produtos() {
     [produtos],
   );
 
-  // ✅ Recarrega produtos quando empresa muda
   const carregar = async () => {
     if (!empresaAtiva) return;
     setLoading(true);
     try {
-      // ✅ Filtra por empresaId
-      setProdutos(
-        await fetchAuth<Produto[]>(
-          `/api/v1/produtos?empresaId=${empresaAtiva.id}`,
-        ),
-      );
+      const [prods, perfil] = await Promise.allSettled([
+        fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaAtiva.id}`),
+        fetchAuth<{ tipoPlano: string }>("/api/v1/configuracoes/perfil"),
+      ]);
+      if (prods.status === "fulfilled") setProdutos(prods.value);
+      if (perfil.status === "fulfilled") setPlanoAtual(perfil.value.tipoPlano);
     } catch {
       toast.error("Erro ao carregar produtos");
     } finally {
@@ -852,7 +964,13 @@ export default function Produtos() {
     [produtos, filtro, catFiltro, sortKey, sortAsc],
   );
 
-  // ── CRUD ──────────────────────────────────────────────────────────────────
+  const totalAtivos = useMemo(
+    () => produtos.filter((p) => p.ativo).length,
+    [produtos],
+  );
+  const limite = LIMITE_PRODUTOS[planoAtual] ?? 999999;
+  const atingiuLimite = totalAtivos >= limite;
+
   const handleSalvar = async (form: ProdutoForm) => {
     if (!empresaAtiva) {
       toast.error("Selecione uma empresa primeiro.");
@@ -860,7 +978,6 @@ export default function Produtos() {
     }
     setSaving(true);
     try {
-      // ✅ Envia empresaId no body
       const body = {
         empresaId: empresaAtiva.id,
         nome: form.nome,
@@ -874,7 +991,6 @@ export default function Produtos() {
         estoqueMinimo: parseInt(form.estoqueMinimo) || 0,
         ativo: form.ativo,
       };
-
       const editing = modal?.tipo === "produto" && modal.produto;
       if (editing) {
         const updated = await fetchAuth<Produto>(
@@ -973,7 +1089,6 @@ export default function Produtos() {
     </th>
   );
 
-  // ── Sem empresa selecionada ────────────────────────────────────────────────
   if (!empresaAtiva)
     return (
       <div
@@ -998,6 +1113,7 @@ export default function Produtos() {
     <div
       style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}
     >
+      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -1029,13 +1145,34 @@ export default function Produtos() {
           </p>
         </div>
         <button
-          style={btnPrimary}
-          onClick={() => setModal({ tipo: "produto" })}
+          style={{
+            ...btnPrimary,
+            opacity: atingiuLimite ? 0.5 : 1,
+            cursor: atingiuLimite ? "not-allowed" : "pointer",
+          }}
+          onClick={() => {
+            if (atingiuLimite) {
+              toast.error(
+                `Limite de ${limite} produtos atingido. Faça upgrade para o Pro!`,
+              );
+              onNavegar?.("planos");
+              return;
+            }
+            setModal({ tipo: "produto" });
+          }}
         >
           <PlusCircle size={15} /> Novo Produto
         </button>
       </div>
 
+      {/* Barra de uso */}
+      <BarraUsoProdutos
+        total={totalAtivos}
+        plano={planoAtual}
+        onUpgrade={() => onNavegar?.("planos")}
+      />
+
+      {/* Filtros */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
           <Search
@@ -1080,6 +1217,7 @@ export default function Produtos() {
         )}
       </div>
 
+      {/* Tabela */}
       <div
         style={{
           background: "var(--surface-elevated)",
