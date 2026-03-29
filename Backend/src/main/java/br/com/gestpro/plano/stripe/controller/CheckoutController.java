@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
+@Configuration
 public class CheckoutController {
 
     private final PaymentService          paymentService;
@@ -37,6 +39,9 @@ public class CheckoutController {
 
     @Value("${stripe.webhook.secret}")
     private String endpointSecret;
+
+    @Value("${STRIPE_API_KEY}")
+    private String stripeApiKey;
 
     // ─── Criar sessão de checkout ─────────────────────────────────────────────
 
@@ -311,5 +316,13 @@ public class CheckoutController {
         }
 
         return (T) stripeObj;
+    }
+
+
+    @jakarta.annotation.PostConstruct
+    public void setupStripe() {
+        // Isso define a chave globalmente para o SDK do Stripe usar
+        com.stripe.Stripe.apiKey = stripeApiKey;
+        log.info("Stripe SDK inicializado com a chave: {}...", stripeApiKey.substring(0, 7));
     }
 }
