@@ -9,13 +9,19 @@ import {
   ReactNode,
 } from "react";
 
-/* ─── Tipos ──────────────────────────────────────────────────────────────── */
+/* ─── Tipos — espelham exatamente o CaixaResponse do backend ─────────────── */
 export interface CaixaInfo {
   id: number;
-  valorInicial?: number;
-  totalVendas?: number;
-  status?: string;
-  empresaNome?: string;
+  // BigDecimal do Java chega como number no JSON
+  valorInicial?: number | null;
+  valorFinal?: number | null;
+  totalVendas?: number | null;
+  status?: string | null; // "ABERTO" | "FECHADO"
+  aberto?: boolean | null;
+  usuarioId?: number | null;
+  empresaId?: number | null;
+  // campo extra adicionado pelo frontend para exibição no header
+  empresaNome?: string | null;
 }
 
 export interface EmpresaAtiva {
@@ -28,7 +34,7 @@ interface EmpresaContextType {
   empresaAtiva: EmpresaAtiva | null;
   caixaAtivo: CaixaInfo | null;
   empresas: EmpresaAtiva[];
-  /** Chame SEMPRE antes de qualquer outra operação ao logar. */
+  /** Ponto de entrada único após autenticação — recebe dados já resolvidos pela API. */
   inicializarUsuario: (
     id: string,
     empresaAtiva: EmpresaAtiva | null,
@@ -37,31 +43,35 @@ interface EmpresaContextType {
   setEmpresaAtiva: (e: EmpresaAtiva | null) => void;
   setCaixaAtivo: (c: CaixaInfo | null) => void;
   setEmpresas: (list: EmpresaAtiva[]) => void;
-  /** Chame no logout. Limpa contexto + localStorage do usuário atual. */
+  /** Chame no logout — limpa contexto + localStorage deste usuário. */
   resetarContexto: () => void;
 }
 
-/* ─── Chaves de localStorage vinculadas ao usuário ───────────────────────── */
+/* ─── Chaves de localStorage por usuário ─────────────────────────────────── */
 const keyEmpresa = (uid: string) => `gp_empresa_${uid}`;
 const keyCaixa = (uid: string) => `gp_caixa_${uid}`;
 
-/** Chaves legadas de versões antigas — removidas no primeiro acesso */
-const CHAVES_LEGADAS = [
-  "empresa_ativa",
-  "caixa_ativo",
-  "empresaAtiva",
-  "caixaAtivo",
-];
-
 function limparChavesLegadas() {
-  CHAVES_LEGADAS.forEach((k) => localStorage.removeItem(k));
+  // Chaves de versões anteriores
+  ["empresa_ativa", "caixa_ativo", "empresaAtiva", "caixaAtivo"].forEach((k) =>
+    localStorage.removeItem(k),
+  );
+  // Prefixos antigos "empresa_ativa_uid_*" e "caixa_ativo_uid_*"
+  Object.keys(localStorage).forEach((k) => {
+    if (
+      k.startsWith("empresa_ativa_uid_") ||
+      k.startsWith("caixa_ativo_uid_")
+    ) {
+      localStorage.removeItem(k);
+    }
+  });
 }
 
 function salvar(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // quota excedida — ignora silenciosamente
+    // localStorage cheio — ignora silenciosamente
   }
 }
 
@@ -96,57 +106,40 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   const [caixaAtivo, setCaixaAtivoState] = useState<CaixaInfo | null>(null);
   const [empresas, setEmpresas] = useState<EmpresaAtiva[]>([]);
 
-  /**
-   * UID do usuário atualmente carregado — guardado em ref para ser acessível
-   * dentro de callbacks sem precisar de dependência no array do useCallback.
-   */
+  // UID em ref — acessível em callbacks sem depender de estado (evita closures stale)
   const uidRef = useRef<string | null>(null);
 
   /**
-   * Ponto de entrada único após autenticação.
-   *
-   * Recebe empresa e caixa já resolvidos pela API (vindos do DashboardLoader).
-   * NÃO lê localStorage aqui — quem decide o estado verdadeiro é sempre a API.
-   * O localStorage serve apenas como cache persistente ENTRE sessões; a API
-   * sempre tem precedência e corrige qualquer divergência.
+   * Chamado UMA VEZ após a API resolver empresa e caixa.
+   * Detecta troca de conta (UID diferente) e limpa estado anterior antes de
+   * carregar os dados do novo usuário.
    */
   const inicializarUsuario = useCallback(
     (
-      id: string,
+      uid: string,
       novaEmpresa: EmpresaAtiva | null,
       novoCaixa: CaixaInfo | null,
     ) => {
-      // Se estava logado com outro usuário, limpa o estado DESSE usuário antes.
-      if (uidRef.current && uidRef.current !== id) {
-        // NÃO apaga o localStorage do usuário anterior — os dados dele
-        // continuam lá para quando ele logar de novo. Apenas resetamos o estado
-        // em memória.
+      // Troca de conta no mesmo navegador — zera estado em memória ANTES de carregar
+      if (uidRef.current && uidRef.current !== uid) {
         setEmpresaAtivaState(null);
         setCaixaAtivoState(null);
         setEmpresas([]);
       }
 
-      uidRef.current = id;
-      setUsuarioIdState(id);
-
-      // Remove chaves de versões antigas (migração única, sem custo)
+      uidRef.current = uid;
+      setUsuarioIdState(uid);
       limparChavesLegadas();
 
-      // Estado vem da API — salva/atualiza o cache local
+      // Grava estado que veio da API
       setEmpresaAtivaState(novaEmpresa);
       setCaixaAtivoState(novoCaixa);
 
-      if (novaEmpresa) {
-        salvar(keyEmpresa(id), novaEmpresa);
-      } else {
-        localStorage.removeItem(keyEmpresa(id));
-      }
+      if (novaEmpresa) salvar(keyEmpresa(uid), novaEmpresa);
+      else localStorage.removeItem(keyEmpresa(uid));
 
-      if (novoCaixa) {
-        salvar(keyCaixa(id), novoCaixa);
-      } else {
-        localStorage.removeItem(keyCaixa(id));
-      }
+      if (novoCaixa) salvar(keyCaixa(uid), novoCaixa);
+      else localStorage.removeItem(keyCaixa(uid));
     },
     [],
   );
@@ -155,27 +148,18 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
     setEmpresaAtivaState(e);
     const uid = uidRef.current;
     if (!uid) return;
-    if (e) {
-      salvar(keyEmpresa(uid), e);
-    } else {
-      localStorage.removeItem(keyEmpresa(uid));
-    }
+    if (e) salvar(keyEmpresa(uid), e);
+    else localStorage.removeItem(keyEmpresa(uid));
   }, []);
 
   const setCaixaAtivo = useCallback((c: CaixaInfo | null) => {
     setCaixaAtivoState(c);
     const uid = uidRef.current;
     if (!uid) return;
-    if (c) {
-      salvar(keyCaixa(uid), c);
-    } else {
-      localStorage.removeItem(keyCaixa(uid));
-    }
+    if (c) salvar(keyCaixa(uid), c);
+    else localStorage.removeItem(keyCaixa(uid));
   }, []);
 
-  /**
-   * Logout: limpa o estado em memória E o cache local deste usuário.
-   */
   const resetarContexto = useCallback(() => {
     const uid = uidRef.current;
     if (uid) {
@@ -183,7 +167,6 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(keyCaixa(uid));
     }
     limparChavesLegadas();
-
     uidRef.current = null;
     setUsuarioIdState(null);
     setEmpresaAtivaState(null);
@@ -214,17 +197,11 @@ export function useEmpresa() {
   return useContext(EmpresaContext);
 }
 
-/* ─── Helpers exportados (usados fora do contexto, ex: DashboardLoader) ─── */
-
-/**
- * Lê o cache do localStorage para um usuário específico.
- * Usado APENAS como sugestão inicial — a API sempre tem a palavra final.
- */
+/* ─── Helper exportado ───────────────────────────────────────────────────── */
 export function lerCacheUsuario(uid: string): {
   empresaAtiva: EmpresaAtiva | null;
   caixaAtivo: CaixaInfo | null;
 } {
-  limparChavesLegadas();
   return {
     empresaAtiva: carregar<EmpresaAtiva>(keyEmpresa(uid)),
     caixaAtivo: carregar<CaixaInfo>(keyCaixa(uid)),
