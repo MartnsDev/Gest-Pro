@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useRef,
   ReactNode,
 } from "react";
 
@@ -14,6 +15,7 @@ export interface CaixaInfo {
   valorInicial?: number;
   totalVendas?: number;
   status?: string;
+  empresaNome?: string;
 }
 
 export interface EmpresaAtiva {
@@ -23,29 +25,64 @@ export interface EmpresaAtiva {
 
 interface EmpresaContextType {
   usuarioId: string | null;
-  setUsuarioId: (id: string) => void;
   empresaAtiva: EmpresaAtiva | null;
-  setEmpresaAtiva: (e: EmpresaAtiva | null) => void;
   caixaAtivo: CaixaInfo | null;
-  setCaixaAtivo: (c: CaixaInfo | null) => void;
   empresas: EmpresaAtiva[];
+  /** Chame SEMPRE antes de qualquer outra operação ao logar. */
+  inicializarUsuario: (
+    id: string,
+    empresaAtiva: EmpresaAtiva | null,
+    caixaAtivo: CaixaInfo | null,
+  ) => void;
+  setEmpresaAtiva: (e: EmpresaAtiva | null) => void;
+  setCaixaAtivo: (c: CaixaInfo | null) => void;
   setEmpresas: (list: EmpresaAtiva[]) => void;
+  /** Chame no logout. Limpa contexto + localStorage do usuário atual. */
   resetarContexto: () => void;
 }
 
 /* ─── Chaves de localStorage vinculadas ao usuário ───────────────────────── */
-const keyEmpresa = (uid: string) => `empresa_ativa_uid_${uid}`;
-const keyCaixa = (uid: string) => `caixa_ativo_uid_${uid}`;
+const keyEmpresa = (uid: string) => `gp_empresa_${uid}`;
+const keyCaixa = (uid: string) => `gp_caixa_${uid}`;
+
+/** Chaves legadas de versões antigas — removidas no primeiro acesso */
+const CHAVES_LEGADAS = [
+  "empresa_ativa",
+  "caixa_ativo",
+  "empresaAtiva",
+  "caixaAtivo",
+];
+
+function limparChavesLegadas() {
+  CHAVES_LEGADAS.forEach((k) => localStorage.removeItem(k));
+}
+
+function salvar(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // quota excedida — ignora silenciosamente
+  }
+}
+
+function carregar<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
 
 /* ─── Context ────────────────────────────────────────────────────────────── */
 const EmpresaContext = createContext<EmpresaContextType>({
   usuarioId: null,
-  setUsuarioId: () => {},
   empresaAtiva: null,
-  setEmpresaAtiva: () => {},
   caixaAtivo: null,
-  setCaixaAtivo: () => {},
   empresas: [],
+  inicializarUsuario: () => {},
+  setEmpresaAtiva: () => {},
+  setCaixaAtivo: () => {},
   setEmpresas: () => {},
   resetarContexto: () => {},
 });
@@ -60,81 +97,110 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   const [empresas, setEmpresas] = useState<EmpresaAtiva[]>([]);
 
   /**
-   * Chamado logo após o login/carregamento do usuário.
-   * Vincula o contexto ao ID do usuário e restaura os dados DELE do localStorage.
+   * UID do usuário atualmente carregado — guardado em ref para ser acessível
+   * dentro de callbacks sem precisar de dependência no array do useCallback.
    */
-  const setUsuarioId = useCallback((id: string) => {
-    setUsuarioIdState(id);
+  const uidRef = useRef<string | null>(null);
 
-    try {
-      const empRaw = localStorage.getItem(keyEmpresa(id));
-      const caixaRaw = localStorage.getItem(keyCaixa(id));
-      setEmpresaAtivaState(empRaw ? JSON.parse(empRaw) : null);
-      setCaixaAtivoState(caixaRaw ? JSON.parse(caixaRaw) : null);
-    } catch {
-      setEmpresaAtivaState(null);
-      setCaixaAtivoState(null);
+  /**
+   * Ponto de entrada único após autenticação.
+   *
+   * Recebe empresa e caixa já resolvidos pela API (vindos do DashboardLoader).
+   * NÃO lê localStorage aqui — quem decide o estado verdadeiro é sempre a API.
+   * O localStorage serve apenas como cache persistente ENTRE sessões; a API
+   * sempre tem precedência e corrige qualquer divergência.
+   */
+  const inicializarUsuario = useCallback(
+    (
+      id: string,
+      novaEmpresa: EmpresaAtiva | null,
+      novoCaixa: CaixaInfo | null,
+    ) => {
+      // Se estava logado com outro usuário, limpa o estado DESSE usuário antes.
+      if (uidRef.current && uidRef.current !== id) {
+        // NÃO apaga o localStorage do usuário anterior — os dados dele
+        // continuam lá para quando ele logar de novo. Apenas resetamos o estado
+        // em memória.
+        setEmpresaAtivaState(null);
+        setCaixaAtivoState(null);
+        setEmpresas([]);
+      }
+
+      uidRef.current = id;
+      setUsuarioIdState(id);
+
+      // Remove chaves de versões antigas (migração única, sem custo)
+      limparChavesLegadas();
+
+      // Estado vem da API — salva/atualiza o cache local
+      setEmpresaAtivaState(novaEmpresa);
+      setCaixaAtivoState(novoCaixa);
+
+      if (novaEmpresa) {
+        salvar(keyEmpresa(id), novaEmpresa);
+      } else {
+        localStorage.removeItem(keyEmpresa(id));
+      }
+
+      if (novoCaixa) {
+        salvar(keyCaixa(id), novoCaixa);
+      } else {
+        localStorage.removeItem(keyCaixa(id));
+      }
+    },
+    [],
+  );
+
+  const setEmpresaAtiva = useCallback((e: EmpresaAtiva | null) => {
+    setEmpresaAtivaState(e);
+    const uid = uidRef.current;
+    if (!uid) return;
+    if (e) {
+      salvar(keyEmpresa(uid), e);
+    } else {
+      localStorage.removeItem(keyEmpresa(uid));
     }
   }, []);
 
-  const setEmpresaAtiva = useCallback(
-    (e: EmpresaAtiva | null) => {
-      setEmpresaAtivaState(e);
-      if (!usuarioId) return;
-      if (e) {
-        localStorage.setItem(keyEmpresa(usuarioId), JSON.stringify(e));
-      } else {
-        localStorage.removeItem(keyEmpresa(usuarioId));
-      }
-    },
-    [usuarioId],
-  );
-
-  const setCaixaAtivo = useCallback(
-    (c: CaixaInfo | null) => {
-      setCaixaAtivoState(c);
-      if (!usuarioId) return;
-      if (c) {
-        localStorage.setItem(keyCaixa(usuarioId), JSON.stringify(c));
-      } else {
-        localStorage.removeItem(keyCaixa(usuarioId));
-      }
-    },
-    [usuarioId],
-  );
+  const setCaixaAtivo = useCallback((c: CaixaInfo | null) => {
+    setCaixaAtivoState(c);
+    const uid = uidRef.current;
+    if (!uid) return;
+    if (c) {
+      salvar(keyCaixa(uid), c);
+    } else {
+      localStorage.removeItem(keyCaixa(uid));
+    }
+  }, []);
 
   /**
-   * Limpa TUDO do contexto e do localStorage deste usuário.
-   * Chamado obrigatoriamente no logout.
+   * Logout: limpa o estado em memória E o cache local deste usuário.
    */
   const resetarContexto = useCallback(() => {
-    if (usuarioId) {
-      localStorage.removeItem(keyEmpresa(usuarioId));
-      localStorage.removeItem(keyCaixa(usuarioId));
+    const uid = uidRef.current;
+    if (uid) {
+      localStorage.removeItem(keyEmpresa(uid));
+      localStorage.removeItem(keyCaixa(uid));
     }
+    limparChavesLegadas();
 
-    // Remove chaves legadas (sem userId) que possam existir de versões antigas
-    localStorage.removeItem("empresa_ativa");
-    localStorage.removeItem("caixa_ativo");
-    localStorage.removeItem("empresaAtiva");
-    localStorage.removeItem("caixaAtivo");
-
+    uidRef.current = null;
+    setUsuarioIdState(null);
     setEmpresaAtivaState(null);
     setCaixaAtivoState(null);
     setEmpresas([]);
-    setUsuarioIdState(null);
-  }, [usuarioId]);
+  }, []);
 
   return (
     <EmpresaContext.Provider
       value={{
         usuarioId,
-        setUsuarioId,
         empresaAtiva,
-        setEmpresaAtiva,
         caixaAtivo,
-        setCaixaAtivo,
         empresas,
+        inicializarUsuario,
+        setEmpresaAtiva,
+        setCaixaAtivo,
         setEmpresas,
         resetarContexto,
       }}
@@ -146,4 +212,21 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
 
 export function useEmpresa() {
   return useContext(EmpresaContext);
+}
+
+/* ─── Helpers exportados (usados fora do contexto, ex: DashboardLoader) ─── */
+
+/**
+ * Lê o cache do localStorage para um usuário específico.
+ * Usado APENAS como sugestão inicial — a API sempre tem a palavra final.
+ */
+export function lerCacheUsuario(uid: string): {
+  empresaAtiva: EmpresaAtiva | null;
+  caixaAtivo: CaixaInfo | null;
+} {
+  limparChavesLegadas();
+  return {
+    empresaAtiva: carregar<EmpresaAtiva>(keyEmpresa(uid)),
+    caixaAtivo: carregar<CaixaInfo>(keyCaixa(uid)),
+  };
 }

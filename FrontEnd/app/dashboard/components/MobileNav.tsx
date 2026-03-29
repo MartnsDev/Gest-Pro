@@ -1,7 +1,4 @@
 // ─── MobileNav.tsx ────────────────────────────────────────────────────────
-// Adicione este componente ao arquivo page.tsx do dashboard.
-// Ele renderiza a barra inferior de navegação apenas no mobile.
-// Uso: <MobileNav secao={secao} onChange={setSecao} caixaAtivo={!!caixaAtivo} />
 
 "use client";
 
@@ -241,23 +238,3 @@ export default function MobileNav({
     </>
   );
 }
-
-// ─── INSTRUÇÕES DE USO ─────────────────────────────────────────────────────
-//
-// 1. Adicione import React from "react" se não tiver
-// 2. Adicione o import no page.tsx:
-//    import MobileNav from "./components/MobileNav";
-//
-// 3. Dentro de DashboardInner, no return(), adicione antes do fechamento de
-//    .dashboardContainer:
-//
-//    <MobileNav
-//      secao={secao}
-//      onChange={setSecao}
-//      caixaAtivo={!!caixaAtivo}
-//    />
-//
-// 4. No dashboard.module.css, adicione padding-bottom no mainContent
-//    conforme já está na media query acima (padding-bottom: 72px).
-//
-// ─────────────────────────────────────────────────────────────────────────

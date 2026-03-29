@@ -27,7 +27,13 @@ import {
 } from "@/lib/api-v2";
 import styles from "@/app/styles/dashboard.module.css";
 
-import { EmpresaProvider, useEmpresa } from "./context/Empresacontext";
+import {
+  EmpresaProvider,
+  useEmpresa,
+  lerCacheUsuario,
+  type CaixaInfo,
+  type EmpresaAtiva,
+} from "./context/Empresacontext";
 
 import DashboardHome from "./components/DashboardHome";
 import Produtos from "./components/Produtos";
@@ -45,6 +51,7 @@ import AbrirCaixa from "./acoesRapidas/AbrirCaixa";
 import PaginaAcaoRapida from "./acoesRapidas/PaginaAcaoRapida";
 import MobileNav from "./components/MobileNav";
 
+/* ─── Tipos ──────────────────────────────────────────────────────────────── */
 type Secao =
   | "dashboard"
   | "produtos"
@@ -58,6 +65,64 @@ type Secao =
   | "produto-rapido"
   | "cliente-rapido"
   | "caixa-rapido";
+
+/* ─── Helper de fetch autenticado ────────────────────────────────────────── */
+async function fetchAuth<T>(path: string): Promise<T> {
+  const token =
+    (typeof window !== "undefined"
+      ? localStorage.getItem("jwt_token")
+      : null) ?? "";
+  const base =
+    process.env.NEXT_PUBLIC_API_URL ??
+    "https://gestpro-backend-production.up.railway.app";
+  const res = await fetch(`${base}${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  return res.json();
+}
+
+/**
+ * Busca o caixa aberto nas empresas do usuário.
+ * Retorna { empresa, caixa } do primeiro caixa aberto encontrado, ou nulls.
+ *
+ * Estratégia:
+ *  1. Se há uma empresa em cache, verifica ela primeiro (caminho rápido).
+ *  2. Depois verifica todas as demais em paralelo.
+ */
+async function resolverCaixaAtivo(
+  empresas: EmpresaAtiva[],
+  empresaCacheId?: number | null,
+): Promise<{ empresa: EmpresaAtiva | null; caixa: CaixaInfo | null }> {
+  if (empresas.length === 0) return { empresa: null, caixa: null };
+
+  // Reordena: empresa em cache vem primeiro
+  const ordenadas = empresaCacheId
+    ? [
+        ...empresas.filter((e) => e.id === empresaCacheId),
+        ...empresas.filter((e) => e.id !== empresaCacheId),
+      ]
+    : empresas;
+
+  for (const empresa of ordenadas) {
+    try {
+      const caixa = await fetchAuth<CaixaInfo>(
+        `/api/v1/caixas/aberto?empresaId=${empresa.id}`,
+      );
+      if (caixa?.id) {
+        return { empresa, caixa };
+      }
+    } catch {
+      // sem caixa aberto nessa empresa — continua
+    }
+  }
+
+  return { empresa: null, caixa: null };
+}
 
 /* ─── Toast de pagamento confirmado ─────────────────────────────────────── */
 function ToastPagamento({ onClose }: { onClose: () => void }) {
@@ -198,8 +263,8 @@ function DashboardInner({
     .slice(0, 2);
 
   const handleLogout = async () => {
-    resetarContexto(); // limpa empresa/caixa vinculados a este usuário
-    await logout(); // limpa cookies e storage
+    resetarContexto();
+    await logout();
     globalThis.location.href = "/";
   };
 
@@ -310,7 +375,7 @@ function DashboardInner({
         </div>
       )}
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* ── Header ────────────────────────────────────────────────────── */}
       <header className={styles.dashboardHeader}>
         <div className={styles.headerBrand}>
           <div className={styles.headerLogo}>
@@ -403,7 +468,7 @@ function DashboardInner({
         </div>
       </header>
 
-      {/* ── Layout ─────────────────────────────────────────────────────── */}
+      {/* ── Layout ────────────────────────────────────────────────────── */}
       <div className={styles.dashboardLayout}>
         <aside className={styles.sidebar}>
           <nav className={styles.sidebarNav}>
@@ -439,7 +504,7 @@ function DashboardInner({
         <main className={styles.mainContent}>{renderSection()}</main>
       </div>
 
-      {/* ── Modal Caixa ────────────────────────────────────────────────── */}
+      {/* ── Modal Caixa ───────────────────────────────────────────────── */}
       {modalCaixa && (
         <ModalCaixa
           onClose={() => setModalCaixa(false)}
@@ -458,10 +523,7 @@ function DashboardInner({
 /* ─── DashboardLoader ────────────────────────────────────────────────────── */
 function DashboardLoader() {
   const searchParams = useSearchParams();
-
-  // ✅ Agora o EmpresaProvider está FORA (em DashboardPage),
-  //    então useEmpresa() funciona aqui dentro.
-  const { setUsuarioId } = useEmpresa();
+  const { inicializarUsuario } = useEmpresa();
 
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
@@ -471,9 +533,11 @@ function DashboardLoader() {
   const secaoInicial = (searchParams.get("section") as Secao) ?? "dashboard";
 
   useEffect(() => {
-    async function inicializarDashboard() {
-      const tokenDaUrl = searchParams.get("token");
+    let cancelado = false; // flag para evitar setState após unmount
 
+    async function inicializarDashboard() {
+      /* 1. Resolve token ─────────────────────────────────────────────── */
+      const tokenDaUrl = searchParams.get("token");
       if (tokenDaUrl) {
         salvarTokenCookie(tokenDaUrl);
         localStorage.setItem("jwt_token", tokenDaUrl);
@@ -481,36 +545,98 @@ function DashboardLoader() {
       }
 
       const tokenFinal = lerTokenCookie() || localStorage.getItem("jwt_token");
-
       if (!tokenFinal) {
         globalThis.location.href = "/auth/login";
         return;
       }
 
+      /* 2. Busca usuário ─────────────────────────────────────────────── */
+      let data: Usuario;
       try {
-        const data = await getUsuario();
-        if (!data) throw new Error("Usuário inválido");
-
-        setUsuario(data);
-
-        //  CORREÇÃO PRINCIPAL:
-        // Vincula o contexto ao ID deste usuário específico.
-        // Isso garante que cada conta tenha seu próprio localStorage isolado.
-        // Talvez seja melhor eu deixar data.email, mas data.id aparentemente está funcionando.
-        setUsuarioId(String(data.id));
+        const resultado = await getUsuario();
+        if (!resultado) throw new Error("Usuário inválido");
+        data = resultado;
       } catch {
-        // Token inválido/expirado — limpa tudo e redireciona
         localStorage.clear();
         sessionStorage.clear();
         removerTokenCookie();
         globalThis.location.href = "/auth/login";
-      } finally {
-        setLoading(false);
+        return;
       }
+
+      if (cancelado) return;
+
+      const uid = String(data.id);
+
+      /* 3. Lê cache local DESTE usuário (sugestão inicial) ───────────── */
+      const cache = lerCacheUsuario(uid);
+
+      /* 4. Busca empresas e caixa aberto na API ──────────────────────── */
+      //
+      // A API é a fonte de verdade. O localStorage é apenas um cache que
+      // reduz o tempo de carregamento — nunca substitui a verificação real.
+      //
+      let empresaResolvida: EmpresaAtiva | null = null;
+      let caixaResolvido: CaixaInfo | null = null;
+
+      try {
+        const empresas = await fetchAuth<EmpresaAtiva[]>("/api/v1/empresas");
+
+        if (cancelado) return;
+
+        if (empresas.length > 0) {
+          // Verifica se o caixa que estava em cache ainda está aberto
+          const { empresa, caixa } = await resolverCaixaAtivo(
+            empresas,
+            cache.empresaAtiva?.id,
+          );
+
+          if (cancelado) return;
+
+          caixaResolvido = caixa;
+          empresaResolvida = empresa;
+
+          // Se o caixa estava aberto, usa a empresa do caixa.
+          // Senão, tenta restaurar a empresa em cache (se ainda existe).
+          if (!empresaResolvida && cache.empresaAtiva) {
+            const aindaExiste = empresas.find(
+              (e) => e.id === cache.empresaAtiva!.id,
+            );
+            empresaResolvida = aindaExiste ?? empresas[0] ?? null;
+          }
+
+          // Fallback: se ainda não tem empresa, pega a primeira
+          if (!empresaResolvida && empresas.length > 0) {
+            empresaResolvida = empresas[0];
+          }
+        }
+      } catch {
+        // Falha de rede ao buscar empresas — continua sem empresa/caixa
+        // (o usuário pode selecionar manualmente depois)
+      }
+
+      if (cancelado) return;
+
+      /* 5. Inicializa contexto com dados vindos da API ─────────────────
+       *
+       * inicializarUsuario() é o único ponto de entrada para o contexto.
+       * Ele:
+       *   a) Detecta troca de conta (UID diferente) e limpa estado anterior
+       *   b) Persiste os dados novos no localStorage deste usuário
+       *   c) Nunca mistura dados de contas diferentes
+       */
+      inicializarUsuario(uid, empresaResolvida, caixaResolvido);
+
+      setUsuario(data);
+      setLoading(false);
     }
 
     inicializarDashboard();
-  }, [searchParams, setUsuarioId]);
+
+    return () => {
+      cancelado = true;
+    };
+  }, [searchParams, inicializarUsuario]);
 
   if (loading) {
     return (
@@ -543,7 +669,6 @@ function DashboardLoader() {
 }
 
 /* ─── Página raiz ────────────────────────────────────────────────────────── */
-// Isso permite que DashboardLoader use useEmpresa() para chamar setUsuarioId().
 export default function DashboardPage() {
   return (
     <EmpresaProvider>
