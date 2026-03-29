@@ -69,6 +69,8 @@ public class CaixaServiceImpl implements CaixaServiceInterface {
         if (!caixa.getAberto())
             throw new ApiException("Este caixa já está fechado.", HttpStatus.BAD_REQUEST, "/caixas/fechar");
 
+       // validarPermissaoFechamento(caixa, req.getEmailUsuario());
+
         caixa.recalcularTotalVendas();
         caixa.setValorFinal(req.getSaldoFinal());
         caixa.setDataFechamento(LocalDateTime.now());
