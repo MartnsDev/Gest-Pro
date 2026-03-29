@@ -66,11 +66,12 @@ type Secao =
   | "cliente-rapido"
   | "caixa-rapido";
 
-/* ─── Helper de fetch autenticado ────────────────────────────────────────── */
+/* ─── Constantes ─────────────────────────────────────────────────────────── */
 const BASE =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://gestpro-backend-production.up.railway.app";
 
+/* ─── fetchAuth ──────────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string): Promise<T> {
   const token =
     typeof window !== "undefined"
@@ -83,82 +84,87 @@ async function fetchAuth<T>(path: string): Promise<T> {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`HTTP_${res.status}`);
   return res.json();
 }
 
-/**
- * Verifica se um CaixaResponse do backend é realmente um caixa aberto.
- *
- * O backend pode retornar:
- *   - null body com 200 OK → sem caixa aberto
- *   - objeto com status "FECHADO" → não conta
- *   - objeto com id mas status "ABERTO" → válido
- */
-function isCaixaAberto(raw: unknown): raw is CaixaInfo {
-  if (!raw || typeof raw !== "object") return false;
+/* ─── Valida se o retorno da API é de fato um caixa aberto ──────────────── *
+ *                                                                            *
+ * O endpoint GET /api/v1/caixas/aberto pode retornar:                       *
+ *   • 404 / 400 → sem caixa aberto (fetchAuth lança erro → catch no caller) *
+ *   • 200 com body null → sem caixa (backend retornou ok mas sem corpo)     *
+ *   • 200 com { id, status: "FECHADO" } → caixa existiu mas está fechado   *
+ *   • 200 com { id, status: "ABERTO" } → caixa válido ✓                    *
+ *   • 200 com { id, aberto: true }     → caixa válido ✓ (variante futura)  *
+ *                                                                            *
+ * A validação aceita QUALQUER objeto com id numérico válido e sem status    *
+ * explicitamente "FECHADO" — porque alguns backends retornam o objeto sem   *
+ * preencher o campo status quando está aberto.                              *
+ * ─────────────────────────────────────────────────────────────────────────── */
+function parseCaixaAberto(raw: unknown): CaixaInfo | null {
+  if (!raw || typeof raw !== "object") return null;
   const c = raw as Record<string, unknown>;
-  // Precisa ter id numérico válido
-  if (!c.id || typeof c.id !== "number") return false;
-  // status deve ser "ABERTO" (ou aberto === true para compatibilidade futura)
-  const statusOk = c.status === "ABERTO" || c.aberto === true;
-  return statusOk;
+
+  // Sem id → inválido
+  const id = typeof c.id === "number" ? c.id : Number(c.id);
+  if (!id || isNaN(id)) return null;
+
+  // Status explicitamente FECHADO → não é caixa aberto
+  if (typeof c.status === "string" && c.status.toUpperCase() === "FECHADO")
+    return null;
+
+  // aberto explicitamente false → não é caixa aberto
+  if (c.aberto === false) return null;
+
+  // Chegou até aqui: tem id, não está fechado → é um caixa aberto
+  return raw as CaixaInfo;
 }
 
-/**
- * Busca caixa aberto nas empresas do usuário.
- *
- * Estratégia:
- *   1. Verifica a empresa em cache primeiro (caminho rápido — evita varredura).
- *   2. Se não achar, varre todas as demais em paralelo.
- *
- * Retorna { empresa, caixa } do primeiro caixa ABERTO encontrado, ou nulls.
- */
-async function resolverCaixaAtivo(
+/* ─── Resolve empresa e caixa aberto para o usuário recém-logado ─────────── *
+ *                                                                             *
+ * Estratégia:                                                                 *
+ *   1. Verifica a empresa em cache primeiro (evita varredura desnecessária). *
+ *   2. Se não achar, verifica as demais em série (não em paralelo, para      *
+ *      evitar sobrecarga no backend e garantir ordem determinística).        *
+ *                                                                             *
+ * Em caso de erro de rede em uma empresa, passa para a próxima.             *
+ * ──────────────────────────────────────────────────────────────────────────── */
+async function resolverEstadoInicial(
   empresas: EmpresaAtiva[],
   empresaCacheId?: number | null,
 ): Promise<{ empresa: EmpresaAtiva | null; caixa: CaixaInfo | null }> {
   if (empresas.length === 0) return { empresa: null, caixa: null };
 
-  // Tenta empresa em cache primeiro
-  if (empresaCacheId) {
-    const alvo = empresas.find((e) => e.id === empresaCacheId);
-    if (alvo) {
-      try {
-        const raw = await fetchAuth<unknown>(
-          `/api/v1/caixas/aberto?empresaId=${alvo.id}`,
-        );
-        if (isCaixaAberto(raw)) {
-          return {
-            empresa: alvo,
-            caixa: { ...(raw as CaixaInfo), empresaNome: alvo.nomeFantasia },
-          };
-        }
-      } catch {
-        // 404 ou outro erro — sem caixa nessa empresa, continua
-      }
-    }
-  }
+  // Reordena: empresa em cache vem primeiro para ser verificada antes
+  const ordenadas: EmpresaAtiva[] = empresaCacheId
+    ? [
+        ...empresas.filter((e) => e.id === empresaCacheId),
+        ...empresas.filter((e) => e.id !== empresaCacheId),
+      ]
+    : empresas;
 
-  // Varre as demais em paralelo
-  const demais = empresas.filter((e) => e.id !== empresaCacheId);
-  if (demais.length === 0) return { empresa: null, caixa: null };
-
-  const resultados = await Promise.allSettled(
-    demais.map(async (empresa) => {
+  for (const empresa of ordenadas) {
+    try {
       const raw = await fetchAuth<unknown>(
         `/api/v1/caixas/aberto?empresaId=${empresa.id}`,
       );
-      if (!isCaixaAberto(raw)) throw new Error("sem caixa aberto");
-      return {
-        empresa,
-        caixa: { ...(raw as CaixaInfo), empresaNome: empresa.nomeFantasia },
-      };
-    }),
-  );
-
-  for (const r of resultados) {
-    if (r.status === "fulfilled") return r.value;
+      const caixa = parseCaixaAberto(raw);
+      if (caixa) {
+        // Enriquece com nome da empresa para exibição no header
+        return {
+          empresa,
+          caixa: { ...caixa, empresaNome: empresa.nomeFantasia },
+        };
+      }
+    } catch (err: unknown) {
+      // 404 = sem caixa aberto nessa empresa → continua para a próxima
+      // Qualquer outro erro de rede → também continua (melhor esforço)
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("HTTP_404") && !msg.includes("HTTP_400")) {
+        // Erro inesperado — loga mas não para
+        console.warn(`[GestPro] caixas/aberto empresaId=${empresa.id}:`, msg);
+      }
+    }
   }
 
   return { empresa: null, caixa: null };
@@ -250,7 +256,7 @@ function ToastPagamento({ onClose }: { onClose: () => void }) {
   );
 }
 
-/* ─── Dashboard interno ──────────────────────────────────────────────────── */
+/* ─── Dashboard principal ────────────────────────────────────────────────── */
 function DashboardInner({
   usuario,
   mostrarToast,
@@ -275,7 +281,7 @@ function DashboardInner({
   const [toast, setToast] = useState(mostrarToast);
 
   const resolverFoto = (url?: string | null) => {
-    if (!url || url.trim() === "") return null;
+    if (!url || !url.trim()) return null;
     if (
       url.startsWith("http") ||
       url.startsWith("blob:") ||
@@ -376,6 +382,10 @@ function DashboardInner({
     }
   };
 
+  // Nome da empresa para exibir no botão de caixa
+  const nomeEmpresaCaixa =
+    empresaAtiva?.nomeFantasia ?? caixaAtivo?.empresaNome ?? "";
+
   return (
     <div className={styles.dashboardContainer}>
       {toast && <ToastPagamento onClose={() => setToast(false)} />}
@@ -472,9 +482,7 @@ function DashboardInner({
             }}
           >
             {caixaAtivo ? <DollarSign size={14} /> : <Lock size={14} />}
-            {caixaAtivo
-              ? `Caixa Aberto · ${empresaAtiva?.nomeFantasia ?? caixaAtivo.empresaNome ?? ""}`
-              : "Abrir Caixa"}
+            {caixaAtivo ? `Caixa Aberto · ${nomeEmpresaCaixa}` : "Abrir Caixa"}
           </button>
           <div className={styles.headerUser}>
             <span className={styles.headerUserName}>
@@ -526,9 +534,7 @@ function DashboardInner({
               <button
                 key={item.id}
                 onClick={() => setSecao(item.id)}
-                className={`${styles.sidebarNavItem} ${
-                  secao === item.id ? styles.sidebarNavItemActive : ""
-                }`}
+                className={`${styles.sidebarNavItem} ${secao === item.id ? styles.sidebarNavItemActive : ""}`}
               >
                 {item.icon}
                 <span>{item.label}</span>
@@ -571,7 +577,7 @@ function DashboardLoader() {
     let desmontado = false;
 
     async function inicializar() {
-      /* 1 ── Resolve token ──────────────────────────────────────────── */
+      /* ── 1. Resolve token ─────────────────────────────────────────── */
       const tokenDaUrl = searchParams.get("token");
       if (tokenDaUrl) {
         salvarTokenCookie(tokenDaUrl);
@@ -585,7 +591,7 @@ function DashboardLoader() {
         return;
       }
 
-      /* 2 ── Busca dados do usuário ────────────────────────────────── */
+      /* ── 2. Busca usuário autenticado ─────────────────────────────── */
       let data: Usuario;
       try {
         const resultado = await getUsuario();
@@ -603,10 +609,15 @@ function DashboardLoader() {
 
       const uid = String(data.id);
 
-      /* 3 ── Lê cache local deste usuário (só como dica de empresa) ── */
+      /* ── 3. Lê cache para saber a empresa mais provável ───────────── *
+       *                                                                  *
+       * O cache NÃO é fonte de verdade — é só uma dica para que          *
+       * resolverEstadoInicial verifique a empresa mais provável primeiro, *
+       * acelerando a detecção do caixa aberto.                           *
+       * ─────────────────────────────────────────────────────────────── */
       const cache = lerCacheUsuario(uid);
 
-      /* 4 ── Busca empresas na API ─────────────────────────────────── */
+      /* ── 4. Busca empresas e detecta caixa aberto via API ─────────── */
       let empresaResolvida: EmpresaAtiva | null = null;
       let caixaResolvido: CaixaInfo | null = null;
 
@@ -616,14 +627,7 @@ function DashboardLoader() {
         if (desmontado) return;
 
         if (empresas.length > 0) {
-          /* 5 ── Verifica caixa aberto na API ─────────────────────── *
-           *                                                            *
-           * isCaixaAberto() garante que:                              *
-           *   - null body (200 OK sem caixa) → ignorado               *
-           *   - status "FECHADO" → ignorado                           *
-           *   - status "ABERTO" com id válido → aceito                *
-           */
-          const { empresa, caixa } = await resolverCaixaAtivo(
+          const { empresa, caixa } = await resolverEstadoInicial(
             empresas,
             cache.empresaAtiva?.id,
           );
@@ -631,10 +635,11 @@ function DashboardLoader() {
           if (desmontado) return;
 
           caixaResolvido = caixa;
-          empresaResolvida = empresa;
+          empresaResolvida = empresa; // empresa onde caixa está aberto
 
-          // Se há caixa aberto, usa a empresa dele.
-          // Senão, tenta restaurar empresa do cache (se ainda existe na lista).
+          /* Se não há caixa aberto em nenhuma empresa, ainda assim
+           * precisamos selecionar uma empresa para o dashboard funcionar.
+           * Prioridade: cache → primeira da lista */
           if (!empresaResolvida) {
             empresaResolvida =
               empresas.find((e) => e.id === cache.empresaAtiva?.id) ??
@@ -642,25 +647,25 @@ function DashboardLoader() {
               null;
           }
         }
-      } catch {
-        // Falha de rede ao buscar empresas — dashboard carrega sem empresa selecionada
+      } catch (err) {
+        // Falha ao buscar empresas (rede) — dashboard carrega sem empresa
+        console.warn("[GestPro] falha ao buscar empresas:", err);
       }
 
       if (desmontado) return;
 
-      /* 6 ── Inicializa contexto com dados da API ──────────────────── *
-       *                                                                 *
-       * inicializarUsuario() é o ÚNICO ponto de escrita no contexto    *
-       * durante o carregamento. Ele detecta troca de conta e garante   *
-       * que dados de outros usuários nunca vazam.                      *
-       */
+      /* ── 5. Inicializa contexto com dados reais da API ────────────── *
+       *                                                                  *
+       * inicializarUsuario() é o ÚNICO ponto de escrita no contexto     *
+       * durante o carregamento. Detecta troca de conta e nunca mistura  *
+       * dados de usuários diferentes.                                    *
+       * ─────────────────────────────────────────────────────────────── */
       inicializarUsuario(uid, empresaResolvida, caixaResolvido);
       setUsuario(data);
       setLoading(false);
     }
 
     inicializar();
-
     return () => {
       desmontado = true;
     };

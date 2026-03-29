@@ -9,10 +9,9 @@ import {
   ReactNode,
 } from "react";
 
-/* ─── Tipos — espelham exatamente o CaixaResponse do backend ─────────────── */
+/* ─── Tipos espelhando CaixaResponse do backend ──────────────────────────── */
 export interface CaixaInfo {
   id: number;
-  // BigDecimal do Java chega como number no JSON
   valorInicial?: number | null;
   valorFinal?: number | null;
   totalVendas?: number | null;
@@ -20,8 +19,7 @@ export interface CaixaInfo {
   aberto?: boolean | null;
   usuarioId?: number | null;
   empresaId?: number | null;
-  // campo extra adicionado pelo frontend para exibição no header
-  empresaNome?: string | null;
+  empresaNome?: string | null; // adicionado pelo frontend
 }
 
 export interface EmpresaAtiva {
@@ -34,7 +32,6 @@ interface EmpresaContextType {
   empresaAtiva: EmpresaAtiva | null;
   caixaAtivo: CaixaInfo | null;
   empresas: EmpresaAtiva[];
-  /** Ponto de entrada único após autenticação — recebe dados já resolvidos pela API. */
   inicializarUsuario: (
     id: string,
     empresaAtiva: EmpresaAtiva | null,
@@ -43,27 +40,20 @@ interface EmpresaContextType {
   setEmpresaAtiva: (e: EmpresaAtiva | null) => void;
   setCaixaAtivo: (c: CaixaInfo | null) => void;
   setEmpresas: (list: EmpresaAtiva[]) => void;
-  /** Chame no logout — limpa contexto + localStorage deste usuário. */
   resetarContexto: () => void;
 }
 
-/* ─── Chaves de localStorage por usuário ─────────────────────────────────── */
+/* ─── Chaves localStorage por usuário ───────────────────────────────────── */
 const keyEmpresa = (uid: string) => `gp_empresa_${uid}`;
 const keyCaixa = (uid: string) => `gp_caixa_${uid}`;
 
 function limparChavesLegadas() {
-  // Chaves de versões anteriores
   ["empresa_ativa", "caixa_ativo", "empresaAtiva", "caixaAtivo"].forEach((k) =>
     localStorage.removeItem(k),
   );
-  // Prefixos antigos "empresa_ativa_uid_*" e "caixa_ativo_uid_*"
   Object.keys(localStorage).forEach((k) => {
-    if (
-      k.startsWith("empresa_ativa_uid_") ||
-      k.startsWith("caixa_ativo_uid_")
-    ) {
+    if (k.startsWith("empresa_ativa_uid_") || k.startsWith("caixa_ativo_uid_"))
       localStorage.removeItem(k);
-    }
   });
 }
 
@@ -71,7 +61,7 @@ function salvar(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // localStorage cheio — ignora silenciosamente
+    /* quota */
   }
 }
 
@@ -105,39 +95,26 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   );
   const [caixaAtivo, setCaixaAtivoState] = useState<CaixaInfo | null>(null);
   const [empresas, setEmpresas] = useState<EmpresaAtiva[]>([]);
-
-  // UID em ref — acessível em callbacks sem depender de estado (evita closures stale)
   const uidRef = useRef<string | null>(null);
 
-  /**
-   * Chamado UMA VEZ após a API resolver empresa e caixa.
-   * Detecta troca de conta (UID diferente) e limpa estado anterior antes de
-   * carregar os dados do novo usuário.
-   */
   const inicializarUsuario = useCallback(
     (
       uid: string,
       novaEmpresa: EmpresaAtiva | null,
       novoCaixa: CaixaInfo | null,
     ) => {
-      // Troca de conta no mesmo navegador — zera estado em memória ANTES de carregar
       if (uidRef.current && uidRef.current !== uid) {
         setEmpresaAtivaState(null);
         setCaixaAtivoState(null);
         setEmpresas([]);
       }
-
       uidRef.current = uid;
       setUsuarioIdState(uid);
       limparChavesLegadas();
-
-      // Grava estado que veio da API
       setEmpresaAtivaState(novaEmpresa);
       setCaixaAtivoState(novoCaixa);
-
       if (novaEmpresa) salvar(keyEmpresa(uid), novaEmpresa);
       else localStorage.removeItem(keyEmpresa(uid));
-
       if (novoCaixa) salvar(keyCaixa(uid), novoCaixa);
       else localStorage.removeItem(keyCaixa(uid));
     },
@@ -197,11 +174,7 @@ export function useEmpresa() {
   return useContext(EmpresaContext);
 }
 
-/* ─── Helper exportado ───────────────────────────────────────────────────── */
-export function lerCacheUsuario(uid: string): {
-  empresaAtiva: EmpresaAtiva | null;
-  caixaAtivo: CaixaInfo | null;
-} {
+export function lerCacheUsuario(uid: string) {
   return {
     empresaAtiva: carregar<EmpresaAtiva>(keyEmpresa(uid)),
     caixaAtivo: carregar<CaixaInfo>(keyCaixa(uid)),
