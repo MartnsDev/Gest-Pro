@@ -44,7 +44,7 @@ export function salvarTokenCookie(token: string) {
   if (typeof document === "undefined") return;
 
   const maxAge = 7 * 24 * 60 * 60; // 7 dias
-  const isProducao = window.location.hostname !== "localhost";
+  const isProducao = globalThis.window.location.hostname !== "localhost";
   
   // No Railway, precisamos de SameSite=None e Secure para o cookie ser aceito
   // entre o redirecionamento do backend e o domínio do frontend.
@@ -90,7 +90,7 @@ export function hasToken(): boolean {
  * Obtém o token JWT de qualquer fonte disponível
  */
 export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
+  if (typeof globalThis.window === "undefined") return null;
   return localStorage.getItem("jwt_token") || lerTokenCookie();
 }
 

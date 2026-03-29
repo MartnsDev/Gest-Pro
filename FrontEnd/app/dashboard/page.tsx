@@ -43,6 +43,7 @@ import NovoProduto from "./acoesRapidas/NovoProduto";
 import NovoCliente from "./acoesRapidas/NovoCliente";
 import AbrirCaixa from "./acoesRapidas/AbrirCaixa";
 import PaginaAcaoRapida from "./acoesRapidas/PaginaAcaoRapida";
+import MobileNav from "./components/MobileNav";
 
 type Secao =
   | "dashboard"
@@ -301,6 +302,11 @@ function DashboardInner({
           }}
         >
           Pagamento cancelado. Você pode assinar quando quiser.
+          <MobileNav
+            secao={secao}
+            onChange={setSecao}
+            caixaAtivo={!!caixaAtivo}
+          />
         </div>
       )}
 

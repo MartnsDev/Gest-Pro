@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 // Importando as funções reais da sua lib
-import { cadastrar, loginComGoogle } from "@/lib/api-v2"; 
+import { cadastrar, loginComGoogle } from "@/lib/api-v2";
 
 /* ─────────────────────────────────────────────
     GLOBAL STYLES (Mantido original)
@@ -93,9 +93,29 @@ const GlobalStyles = () => (
 );
 
 const Logo = () => (
-  <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1 }}>
-    <img src="/images/logo.png" alt="GestPro" style={{ width: 32, height: 32, objectFit: "contain" }} />
-    <span style={{ fontFamily: "var(--font-syne), 'Syne', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: "-0.03em", color: "#f1f5f9" }}>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      position: "relative",
+      zIndex: 1,
+    }}
+  >
+    <img
+      src="/images/logo.png"
+      alt="GestPro"
+      style={{ width: 32, height: 32, objectFit: "contain" }}
+    />
+    <span
+      style={{
+        fontFamily: "var(--font-syne), 'Syne', sans-serif",
+        fontWeight: 800,
+        fontSize: 20,
+        letterSpacing: "-0.03em",
+        color: "#f1f5f9",
+      }}
+    >
       Gest<span style={{ color: "#10b981" }}>Pro</span>
     </span>
   </div>
@@ -103,17 +123,34 @@ const Logo = () => (
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18">
-    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-    <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-    <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+    <path
+      d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+      fill="#4285F4"
+    />
+    <path
+      d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+      fill="#34A853"
+    />
+    <path
+      d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+      fill="#EA4335"
+    />
   </svg>
 );
 
 export default function CadastroPage() {
   const router = useRouter();
   const fotoRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ nome: "", email: "", senha: "", confirmar: "" });
+  const [form, setForm] = useState({
+    nome: "",
+    email: "",
+    senha: "",
+    confirmar: "",
+  });
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -122,11 +159,19 @@ export default function CadastroPage() {
   const [showPass, setShowPass] = useState(false);
   const [step, setStep] = useState(1);
 
-  useEffect(() => { setTimeout(() => setMounted(true), 80); }, []);
+  useEffect(() => {
+    setTimeout(() => setMounted(true), 80);
+  }, []);
 
-  const set = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErro(""); };
+  const set = (k: string, v: string) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setErro("");
+  };
 
-  const senhaForte = form.senha.length >= 6 && /[A-Za-z]/.test(form.senha) && /\d/.test(form.senha);
+  const senhaForte =
+    form.senha.length >= 6 &&
+    /[A-Za-z]/.test(form.senha) &&
+    /\d/.test(form.senha);
   const senhaMatch = form.senha === form.confirmar && form.confirmar.length > 0;
 
   const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,25 +179,40 @@ export default function CadastroPage() {
     if (!file) return;
     setFoto(file);
     const reader = new FileReader();
-    reader.onload = ev => setFotoPreview(ev.target?.result as string);
+    reader.onload = (ev) => setFotoPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome.trim()) { setErro("Nome é obrigatório"); return; }
-    if (!form.email) { setErro("E-mail é obrigatório"); return; }
-    if (!senhaForte) { setErro("Senha deve ter ao menos 6 caracteres com letras e números"); return; }
-    if (form.confirmar && !senhaMatch) { setErro("As senhas não conferem"); return; }
+    if (!form.nome.trim()) {
+      setErro("Nome é obrigatório");
+      return;
+    }
+    if (!form.email) {
+      setErro("E-mail é obrigatório");
+      return;
+    }
+    if (!senhaForte) {
+      setErro("Senha deve ter ao menos 6 caracteres com letras e números");
+      return;
+    }
+    if (form.confirmar && !senhaMatch) {
+      setErro("As senhas não conferem");
+      return;
+    }
 
-    setLoading(true); setErro("");
+    setLoading(true);
+    setErro("");
     try {
       // CHAMADA REAL DA API
       await cadastrar(form.nome, form.email, form.senha, foto || undefined);
       setStep(2); // Muda para a tela de sucesso
     } catch (err: any) {
       setErro(err.message || "Erro ao cadastrar. Tente novamente.");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleRegister = () => {
@@ -170,26 +230,99 @@ export default function CadastroPage() {
   const senhaCor = ["", "#ef4444", "#f59e0b", "#3b82f6", "#10b981"][senhaScore];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#030305", display: "flex", fontFamily: "var(--font-dm-mono), 'DM Mono', monospace", overflowX: "hidden" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#030305",
+        display: "flex",
+        fontFamily: "var(--font-dm-mono), 'DM Mono', monospace",
+        overflowX: "hidden",
+      }}
+    >
       <GlobalStyles />
 
-      <div className="cadastro-left-panel" style={{
-        flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between",
-        padding: "48px", position: "relative", overflow: "hidden",
-        borderRight: "1px solid rgba(16,185,129,0.08)",
-      }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(16,185,129,0.12) 1px, transparent 1px)", backgroundSize: "28px 28px", maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)" }} />
-        <div style={{ position: "absolute", top: "25%", left: "25%", width: 500, height: 500, background: "radial-gradient(ellipse, rgba(16,185,129,0.08) 0%, transparent 70%)", filter: "blur(60px)", pointerEvents: "none" }} />
+      <div
+        className="cadastro-left-panel"
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "48px",
+          position: "relative",
+          overflow: "hidden",
+          borderRight: "1px solid rgba(16,185,129,0.08)",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage:
+              "radial-gradient(rgba(16,185,129,0.12) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+            maskImage:
+              "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            top: "25%",
+            left: "25%",
+            width: 500,
+            height: 500,
+            background:
+              "radial-gradient(ellipse, rgba(16,185,129,0.08) 0%, transparent 70%)",
+            filter: "blur(60px)",
+            pointerEvents: "none",
+          }}
+        />
 
         <div style={{ opacity: mounted ? 1 : 0, transition: "opacity .6s" }}>
           <Logo />
         </div>
 
-        <div style={{ position: "relative", zIndex: 1, opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(24px)", transition: "all .9s cubic-bezier(0.16,1,0.3,1) .2s" }}>
-          <div style={{ fontSize: 11, color: "rgba(16,185,129,0.6)", letterSpacing: "0.2em", marginBottom: 20, fontFamily: "var(--font-dm-mono), 'DM Mono', monospace" }}>COMECE GRÁTIS</div>
-          <h2 style={{ fontFamily: "var(--font-syne), 'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(28px, 3vw, 48px)", letterSpacing: "-0.04em", lineHeight: 1.1, color: "#f1f5f9", marginBottom: 40 }}>
-            30 dias para<br />
-            <span style={{ backgroundImage: "linear-gradient(135deg, #10b981, #34d399)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? "translateY(0)" : "translateY(24px)",
+            transition: "all .9s cubic-bezier(0.16,1,0.3,1) .2s",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              color: "rgba(16,185,129,0.6)",
+              letterSpacing: "0.2em",
+              marginBottom: 20,
+              fontFamily: "var(--font-dm-mono), 'DM Mono', monospace",
+            }}
+          >
+            COMECE GRÁTIS
+          </div>
+          <h2
+            style={{
+              fontFamily: "var(--font-syne), 'Syne', sans-serif",
+              fontWeight: 800,
+              fontSize: "clamp(28px, 3vw, 48px)",
+              letterSpacing: "-0.04em",
+              lineHeight: 1.1,
+              color: "#f1f5f9",
+              marginBottom: 40,
+            }}
+          >
+            30 dias para
+            <br />
+            <span
+              style={{
+                backgroundImage: "linear-gradient(135deg, #10b981, #34d399)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
               experimentar tudo.
             </span>
           </h2>
@@ -202,152 +335,415 @@ export default function CadastroPage() {
               { icon: "◆", text: "Login com Google ou e-mail" },
               { icon: "◆", text: "Dados seguros com JWT + OAuth2" },
             ].map((item, i) => (
-              <div key={i} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                opacity: mounted ? 1 : 0,
-                transition: `all .6s cubic-bezier(0.16,1,0.3,1) ${.35 + i * .08}s`,
-                transform: mounted ? "translateX(0)" : "translateX(-16px)",
-              }}>
-                <span style={{ fontSize: 8, color: "#10b981" }}>{item.icon}</span>
-                <span style={{ fontSize: 13, color: "rgba(241,245,249,0.55)", fontFamily: "var(--font-manrope), 'Manrope', sans-serif" }}>{item.text}</span>
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  opacity: mounted ? 1 : 0,
+                  transition: `all .6s cubic-bezier(0.16,1,0.3,1) ${0.35 + i * 0.08}s`,
+                  transform: mounted ? "translateX(0)" : "translateX(-16px)",
+                }}
+              >
+                <span style={{ fontSize: 8, color: "#10b981" }}>
+                  {item.icon}
+                </span>
+                <span
+                  style={{
+                    fontSize: 13,
+                    color: "rgba(241,245,249,0.55)",
+                    fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
+                  }}
+                >
+                  {item.text}
+                </span>
               </div>
             ))}
           </div>
         </div>
 
-        <div style={{ fontSize: 11, color: "rgba(241,245,249,0.2)", position: "relative", zIndex: 1 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: "rgba(241,245,249,0.2)",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
           © 2025 GestPro · Matheus Martins
         </div>
       </div>
 
-      <div className="cadastro-right-panel" style={{
-        width: "clamp(320px, 45%, 560px)", display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "48px 32px", overflowY: "auto",
-      }}>
-        <div className="cadastro-form-card" style={{
-          width: "100%", maxWidth: 440,
-          opacity: mounted ? 1 : 0,
-          transform: mounted ? "translateY(0)" : "translateY(32px)",
-          transition: "all .8s cubic-bezier(0.16,1,0.3,1) .15s",
-        }}>
-
+      <div
+        className="cadastro-right-panel"
+        style={{
+          width: "clamp(320px, 45%, 560px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "48px 32px",
+          overflowY: "auto",
+        }}
+      >
+        <div
+          className="cadastro-form-card"
+          style={{
+            width: "100%",
+            maxWidth: 440,
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? "translateY(0)" : "translateY(32px)",
+            transition: "all .8s cubic-bezier(0.16,1,0.3,1) .15s",
+          }}
+        >
           {step === 2 ? (
-            <div style={{ textAlign: "center", padding: "20px 0", animation: "fadeUp .6s ease both" }}>
-              <div style={{
-                width: 80, height: 80, borderRadius: "50%",
-                background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 28px",
-                animation: "checkIn .5s cubic-bezier(0.16,1,0.3,1) both",
-              }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "20px 0",
+                animation: "fadeUp .6s ease both",
+              }}
+            >
+              <div
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: "50%",
+                  background: "rgba(16,185,129,0.1)",
+                  border: "1px solid rgba(16,185,129,0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 28px",
+                  animation: "checkIn .5s cubic-bezier(0.16,1,0.3,1) both",
+                }}
+              >
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 13l4 4L19 7" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path
+                    d="M5 13l4 4L19 7"
+                    stroke="#10b981"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </div>
-              <h2 style={{ fontFamily: "var(--font-syne), 'Syne', sans-serif", fontWeight: 800, fontSize: 26, letterSpacing: "-0.03em", color: "#f1f5f9", marginBottom: 12 }}>
+              <h2
+                style={{
+                  fontFamily: "var(--font-syne), 'Syne', sans-serif",
+                  fontWeight: 800,
+                  fontSize: 26,
+                  letterSpacing: "-0.03em",
+                  color: "#f1f5f9",
+                  marginBottom: 12,
+                }}
+              >
                 Conta criada!
               </h2>
-              <p style={{ fontSize: 14, color: "rgba(241,245,249,0.45)", lineHeight: 1.75, marginBottom: 32, fontFamily: "var(--font-manrope), 'Manrope', sans-serif" }}>
-                Enviamos um e-mail de confirmação para <span style={{ color: "#10b981" }}>{form.email}</span>.<br />
+              <p
+                style={{
+                  fontSize: 14,
+                  color: "rgba(241,245,249,0.45)",
+                  lineHeight: 1.75,
+                  marginBottom: 32,
+                  fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
+                }}
+              >
+                Enviamos um e-mail de confirmação para{" "}
+                <span style={{ color: "#10b981" }}>{form.email}</span>.<br />
                 Confirme para acessar sua conta.
               </p>
-              <button onClick={() => router.push("/auth/login")} className="btn-primary">
+              <button
+                onClick={() => router.push("/auth/login")}
+                className="btn-primary"
+              >
                 Ir para o login →
               </button>
             </div>
           ) : (
             <>
               <div style={{ marginBottom: 32 }}>
-                <h1 className="cadastro-title" style={{ fontFamily: "var(--font-syne), 'Syne', sans-serif", fontWeight: 800, fontSize: 28, letterSpacing: "-0.03em", color: "#f1f5f9", marginBottom: 8 }}>
+                <h1
+                  className="cadastro-title"
+                  style={{
+                    fontFamily: "var(--font-syne), 'Syne', sans-serif",
+                    fontWeight: 800,
+                    fontSize: 28,
+                    letterSpacing: "-0.03em",
+                    color: "#f1f5f9",
+                    marginBottom: 8,
+                  }}
+                >
                   Criar conta grátis
                 </h1>
-                <p style={{ fontSize: 14, color: "rgba(241,245,249,0.4)", fontFamily: "var(--font-manrope), 'Manrope', sans-serif" }}>
+                <p
+                  style={{
+                    fontSize: 14,
+                    color: "rgba(241,245,249,0.4)",
+                    fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
+                  }}
+                >
                   30 dias sem custo, sem cartão de crédito
                 </p>
               </div>
 
-              <button className="btn-google" onClick={handleGoogleRegister} style={{ marginBottom: 24 }}>
+              <button
+                className="btn-google"
+                onClick={handleGoogleRegister}
+                style={{ marginBottom: 24 }}
+              >
                 <GoogleIcon />
                 Cadastrar com Google
               </button>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
-                <span style={{ fontSize: 11, color: "rgba(241,245,249,0.25)", letterSpacing: "0.1em" }}>OU</span>
-                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  marginBottom: 24,
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    height: 1,
+                    background: "rgba(255,255,255,0.07)",
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: "rgba(241,245,249,0.25)",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  OU
+                </span>
+                <div
+                  style={{
+                    flex: 1,
+                    height: 1,
+                    background: "rgba(255,255,255,0.07)",
+                  }}
+                />
               </div>
 
-              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div className="foto-upload" style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 4 }}>
+              <form
+                onSubmit={handleSubmit}
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
+                <div
+                  className="foto-upload"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    marginBottom: 4,
+                  }}
+                >
                   <div
                     onClick={() => fotoRef.current?.click()}
                     style={{
-                      width: 60, height: 60, borderRadius: "50%",
+                      width: 60,
+                      height: 60,
+                      borderRadius: "50%",
                       border: "2px dashed rgba(16,185,129,0.3)",
-                      background: fotoPreview ? "transparent" : "rgba(16,185,129,0.05)",
-                      cursor: "pointer", overflow: "hidden",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      transition: "all .2s", flexShrink: 0,
+                      background: fotoPreview
+                        ? "transparent"
+                        : "rgba(16,185,129,0.05)",
+                      cursor: "pointer",
+                      overflow: "hidden",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all .2s",
+                      flexShrink: 0,
                     }}
                   >
-                    {fotoPreview
-                      ? <img src={fotoPreview} alt="foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : (
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(16,185,129,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10"/>
-                          <circle cx="12" cy="10" r="3"/>
-                          <path d="M6.168 18.849A4 4 0 0 1 10 16h4a4 4 0 0 1 3.834 2.855"/>
-                        </svg>
-                      )}
+                    {fotoPreview ? (
+                      <img
+                        src={fotoPreview}
+                        alt="foto"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <svg
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="rgba(16,185,129,0.4)"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="10" r="3" />
+                        <path d="M6.168 18.849A4 4 0 0 1 10 16h4a4 4 0 0 1 3.834 2.855" />
+                      </svg>
+                    )}
                   </div>
                   <div>
-                    <button type="button" onClick={() => fotoRef.current?.click()} style={{ background: "none", border: "none", color: "#10b981", fontSize: 13, cursor: "pointer", padding: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => fotoRef.current?.click()}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#10b981",
+                        fontSize: 13,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
                       {foto ? "Trocar foto" : "Adicionar foto"} (opcional)
                     </button>
-                    <p style={{ fontSize: 11, color: "rgba(241,245,249,0.25)", marginTop: 4 }}>JPG, PNG até 5MB</p>
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "rgba(241,245,249,0.25)",
+                        marginTop: 4,
+                      }}
+                    >
+                      JPG, PNG até 5MB
+                    </p>
                   </div>
-                  <input ref={fotoRef} type="file" accept="image/*" onChange={handleFoto} style={{ display: "none" }} />
+                  <input
+                    ref={fotoRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFoto}
+                    style={{ display: "none" }}
+                  />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 12, color: "rgba(241,245,249,0.5)", display: "block", marginBottom: 7 }}>NOME COMPLETO</label>
-                  <input className="field-input" type="text" placeholder="Seu nome" value={form.nome} onChange={e => set("nome", e.target.value)} required />
+                  <label
+                    style={{
+                      fontSize: 12,
+                      color: "rgba(241,245,249,0.5)",
+                      display: "block",
+                      marginBottom: 7,
+                    }}
+                  >
+                    NOME COMPLETO
+                  </label>
+                  <input
+                    className="field-input"
+                    type="text"
+                    placeholder="Seu nome"
+                    value={form.nome}
+                    onChange={(e) => set("nome", e.target.value)}
+                    required
+                  />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 12, color: "rgba(241,245,249,0.5)", display: "block", marginBottom: 7 }}>E-MAIL</label>
-                  <input className="field-input" type="email" placeholder="seu@email.com" value={form.email} onChange={e => set("email", e.target.value)} required />
+                  <label
+                    style={{
+                      fontSize: 12,
+                      color: "rgba(241,245,249,0.5)",
+                      display: "block",
+                      marginBottom: 7,
+                    }}
+                  >
+                    E-MAIL
+                  </label>
+                  <input
+                    className="field-input"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={form.email}
+                    onChange={(e) => set("email", e.target.value)}
+                    required
+                  />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 12, color: "rgba(241,245,249,0.5)", display: "block", marginBottom: 7 }}>SENHA</label>
+                  <label
+                    style={{
+                      fontSize: 12,
+                      color: "rgba(241,245,249,0.5)",
+                      display: "block",
+                      marginBottom: 7,
+                    }}
+                  >
+                    SENHA
+                  </label>
                   <div style={{ position: "relative" }}>
-                    <input className="field-input" type={showPass ? "text" : "password"} placeholder="Mín. 6 chars" value={form.senha} onChange={e => set("senha", e.target.value)} required />
-                    <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(241,245,249,0.3)" }}>
+                    <input
+                      className="field-input"
+                      type={showPass ? "text" : "password"}
+                      placeholder="Mín. 6 chars"
+                      value={form.senha}
+                      onChange={(e) => set("senha", e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPass(!showPass)}
+                      style={{
+                        position: "absolute",
+                        right: 14,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        color: "rgba(241,245,249,0.3)",
+                      }}
+                    >
                       {showPass ? "Hide" : "Show"}
                     </button>
                   </div>
                 </div>
 
                 {erro && (
-                  <div style={{ padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, fontSize: 13, color: "#f87171" }}>
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      background: "rgba(239,68,68,0.08)",
+                      border: "1px solid rgba(239,68,68,0.2)",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      color: "#f87171",
+                    }}
+                  >
                     {erro}
                   </div>
                 )}
 
-                <button type="submit" className="btn-primary" disabled={loading}>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={loading}
+                >
                   {loading ? "Cadastrando..." : "Criar conta grátis →"}
                 </button>
               </form>
 
-              <p style={{ fontSize: 13, color: "rgba(241,245,249,0.35)", textAlign: "center", marginTop: 24 }}>
-                Já tem conta? <Link href="/auth/login" className="link-style">Entrar</Link>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "rgba(241,245,249,0.35)",
+                  textAlign: "center",
+                  marginTop: 24,
+                }}
+              >
+                Já tem conta?{" "}
+                <Link href="/auth/login" className="link-style">
+                  Entrar
+                </Link>
               </p>
             </>
           )}
         </div>
       </div>
-      
+
       {/* Estilos responsivos (Mantidos originais) */}
       <style>{`
         @media (max-width: 900px) { .cadastro-left-panel { display: none !important; } .cadastro-right-panel { width: 100% !important; min-width: 100% !important; padding: 32px 20px !important; } }
