@@ -531,7 +531,7 @@ const DashboardPreview = () => (
     </div>
 
     <img
-      src="/images/dashboard.png"
+      src="/images/dashboard2.png"
       alt="GestPro Dashboard - PDV, estoque, caixa e relatórios"
       style={{
         width: "100%",
