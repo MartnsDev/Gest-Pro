@@ -1,5 +1,6 @@
 package br.com.gestpro.plano.stripe.dto;
 
+import br.com.gestpro.plano.stripe.PlanoTipo;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 

@@ -4,7 +4,6 @@ import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
-import br.com.gestpro.plano.stripe.dto.PlanoTipo;
 import br.com.gestpro.plano.stripe.model.Assinatura;
 import br.com.gestpro.plano.stripe.repository.AssinaturaRepository;
 import com.stripe.exception.StripeException;

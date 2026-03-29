@@ -90,7 +90,7 @@ const PLANOS = [
       "1 empresa / loja",
       "1 caixa",
       "Dashboard completo",
-      "Cadastrar até 800 produtos",
+      "Cadastrar até 500 produtos",
       "Relatórios completos",
       "Suporte por e-mail",
       /*"Exportação PDF/CSV",*/

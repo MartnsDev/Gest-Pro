@@ -1,6 +1,6 @@
 package br.com.gestpro.plano.stripe.service;
 
-import br.com.gestpro.plano.stripe.dto.PlanoTipo;
+import br.com.gestpro.plano.stripe.PlanoTipo;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;

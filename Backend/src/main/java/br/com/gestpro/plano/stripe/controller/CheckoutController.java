@@ -2,7 +2,7 @@ package br.com.gestpro.plano.stripe.controller;
 
 import br.com.gestpro.plano.service.AtualizarPlanoOperation;
 import br.com.gestpro.plano.stripe.dto.CheckoutRequest;
-import br.com.gestpro.plano.stripe.dto.PlanoTipo;
+import br.com.gestpro.plano.stripe.PlanoTipo;
 import br.com.gestpro.plano.stripe.repository.AssinaturaRepository;
 import br.com.gestpro.plano.stripe.service.PaymentService;
 import com.fasterxml.jackson.databind.JsonNode;

@@ -1,7 +1,7 @@
 package br.com.gestpro.plano.stripe.model;
 
 import br.com.gestpro.auth.model.Usuario;
-import br.com.gestpro.plano.stripe.dto.PlanoTipo;
+import br.com.gestpro.plano.stripe.PlanoTipo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.Data;

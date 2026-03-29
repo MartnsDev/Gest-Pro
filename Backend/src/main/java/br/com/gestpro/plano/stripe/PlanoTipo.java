@@ -1,4 +1,4 @@
-package br.com.gestpro.plano.stripe.dto;
+package br.com.gestpro.plano.stripe;
 
 /**
  * Enum dos planos pagos da Stripe.
@@ -14,7 +14,7 @@ package br.com.gestpro.plano.stripe.dto;
  */
 public enum PlanoTipo {
     //           priceId                              empresas  caixas  produtos  mesesHistorico
-    BASICO  ("price_1TFsKSDiO7eZ8iIh93V2Nck3",         1,       1,      800,         6),
+    BASICO  ("price_1TFsKSDiO7eZ8iIh93V2Nck3",         1,       1,      500,         6),
     PRO     ("price_1TFsKrDiO7eZ8iIhczPJhCJ1",         5,       5,   999999,        12),
     PREMIUM ("price_1TFsLGDiO7eZ8iIhqeBFTRWd",     99999,   99999,   999999,    999999);
 

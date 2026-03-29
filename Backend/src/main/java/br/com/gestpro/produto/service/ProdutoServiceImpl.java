@@ -88,7 +88,7 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
         Usuario usuario = buscarUsuario(dto.getEmailUsuario());
         Empresa empresa = buscarEmpresa(dto.getEmpresaId(), dto.getEmailUsuario());
 
-        // ✅ Valida limite de produtos antes de salvar
+        //  Valida limite de produtos antes de salvar
         validarLimiteProdutos(empresa, usuario);
 
         Produto produto = new Produto();

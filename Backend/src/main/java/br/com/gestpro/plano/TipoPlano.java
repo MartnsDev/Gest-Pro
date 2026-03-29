@@ -1,6 +1,6 @@
 package br.com.gestpro.plano;
 
-import br.com.gestpro.plano.stripe.dto.PlanoTipo;
+import br.com.gestpro.plano.stripe.PlanoTipo;
 import lombok.Getter;
 
 /**
@@ -20,7 +20,7 @@ import lombok.Getter;
 public enum TipoPlano {
     //                     dias  empresas  caixas  produtos  mesesHistorico
     EXPERIMENTAL(          30,      1,       1,      300,         2),
-    BASICO      (           0,      1,       1,      800,         6),
+    BASICO      (           0,      1,       1,      500,         6),
     PRO         (           0,      5,       5,   999999,        12),
     PREMIUM     (           0,  99999,   99999,   999999,    999999);
 
