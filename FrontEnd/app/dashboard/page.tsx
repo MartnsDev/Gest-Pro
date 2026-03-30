@@ -87,13 +87,6 @@ async function fetchAuth<T>(path: string): Promise<T> {
   return res.json();
 }
 
-/* ─── buscarCaixaAberto ──────────────────────────────────────────────────── *
- *                                                                             *
- * Chama GET /api/v1/caixas/aberto?empresaId=X                                *
- * • 200 com { id, status: "ABERTO", aberto: true } → retorna CaixaInfo       *
- * • 404 → sem caixa aberto → retorna null (não lança exceção)                *
- * • Outros erros de rede → propaga para o caller decidir                     *
- * ──────────────────────────────────────────────────────────────────────────── */
 async function buscarCaixaAberto(empresaId: number): Promise<CaixaInfo | null> {
   try {
     const caixa = await fetchAuth<CaixaInfo>(
@@ -115,16 +108,7 @@ async function buscarCaixaAberto(empresaId: number): Promise<CaixaInfo | null> {
   }
 }
 
-/* ─── resolverEstadoInicial ──────────────────────────────────────────────── *
- *                                                                             *
- * Percorre as empresas do usuário buscando um caixa aberto.                  *
- * Estratégia: empresa em cache é verificada PRIMEIRO para ser rápido no      *
- * caso mais comum (usuário volta para a mesma empresa).                      *
- *                                                                             *
- * Retorna:                                                                    *
- *   empresa → empresa onde o caixa está aberto (ou melhor empresa disponível)*
- *   caixa   → caixa aberto encontrado, ou null                               *
- * ──────────────────────────────────────────────────────────────────────────── */
+
 async function resolverEstadoInicial(
   empresas: EmpresaAtiva[],
   empresaCacheId?: number | null,
@@ -451,7 +435,16 @@ function DashboardInner({
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <SeletorEmpresa
             empresaAtiva={empresaAtiva}
-            onSelecionar={setEmpresaAtiva}
+            onSelecionar={(empresa) => {
+              setEmpresaAtiva(empresa);
+              if (
+                caixaAtivo &&
+                caixaAtivo.empresaId &&
+                caixaAtivo.empresaId !== empresa.id
+              ) {
+                setCaixaAtivo(null);
+              }
+            }}
             onNova={() => setSecao("empresas")}
           />
           <button
@@ -542,7 +535,9 @@ function DashboardInner({
           empresaAtiva={empresaAtiva}
           onCaixaAtualizado={(caixa, empresa) => {
             setCaixaAtivo(caixa);
-            if (empresa) setEmpresaAtiva(empresa);
+            if (empresa) {
+              setEmpresaAtiva(empresa);
+            }
           }}
         />
       )}
