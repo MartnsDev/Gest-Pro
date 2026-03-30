@@ -435,13 +435,23 @@ function DashboardInner({
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <SeletorEmpresa
             empresaAtiva={empresaAtiva}
-            onSelecionar={(empresa) => {
+            onSelecionar={async (empresa) => {
               setEmpresaAtiva(empresa);
-              if (
-                caixaAtivo &&
-                caixaAtivo.empresaId &&
-                caixaAtivo.empresaId !== empresa.id
-              ) {
+              try {
+                const caixa = await buscarCaixaAberto(empresa.id);
+                if (caixa) {
+                  setCaixaAtivo({
+                    ...caixa,
+                    empresaNome: empresa.nomeFantasia,
+                  });
+                } else {
+                  setCaixaAtivo(null);
+                }
+              } catch (err) {
+                console.warn(
+                  "[GestPro] falha ao buscar caixa ao trocar empresa:",
+                  err,
+                );
                 setCaixaAtivo(null);
               }
             }}
