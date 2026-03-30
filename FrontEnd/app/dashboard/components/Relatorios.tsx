@@ -116,6 +116,22 @@ const fmt = (v?: number | null) =>
     v ?? 0,
   );
 const fmtN = (v: number) => new Intl.NumberFormat("pt-BR").format(v);
+const esc = (value: unknown) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+const getSessionToken = () => {
+  if (typeof window === "undefined") return "";
+  const fromSession = sessionStorage.getItem("jwt_token");
+  if (fromSession) return fromSession;
+  const cookie = document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/);
+  return cookie ? decodeURIComponent(cookie[1]) : "";
+};
+const msgErroSeguro = () =>
+  "Não foi possível concluir a ação agora. Tente novamente em instantes.";
 const fmtDateSafe = (value?: unknown) => {
   if (!value) return "Sem data";
 
@@ -203,10 +219,7 @@ const CORES = [
 ];
 
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const token =
-    (typeof window !== "undefined"
-      ? localStorage.getItem("jwt_token")
-      : null) ?? "";
+  const token = getSessionToken();
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
     {
@@ -382,7 +395,7 @@ function exportHTML(rel: Relatorio) {
   const pagBarras = rel.pagamentos
     .map(
       (p) =>
-        `<div class="bar-row"><span>${p.forma}</span><div class="bar-wrap"><div class="bar" style="width:${p.percentual.toFixed(1)}%"></div></div><span>${fmt(p.total)} (${p.percentual.toFixed(1)}%)</span></div>`,
+        `<div class="bar-row"><span>${esc(p.forma)}</span><div class="bar-wrap"><div class="bar" style="width:${p.percentual.toFixed(1)}%"></div></div><span>${esc(fmt(p.total))} (${p.percentual.toFixed(1)}%)</span></div>`,
     )
     .join("");
 
@@ -390,19 +403,19 @@ function exportHTML(rel: Relatorio) {
     .slice(0, 10)
     .map(
       (p, i) =>
-        `<tr><td>${i + 1}</td><td>${p.nome}</td><td>${fmtN(p.quantidade)}</td><td>${fmt(p.receita)}</td><td>${fmt(p.lucro)}</td></tr>`,
+        `<tr><td>${i + 1}</td><td>${esc(p.nome)}</td><td>${esc(fmtN(p.quantidade))}</td><td>${esc(fmt(p.receita))}</td><td>${esc(fmt(p.lucro))}</td></tr>`,
     )
     .join("");
 
   const vendaRows = rel.vendas
     .map(
       (v) =>
-        `<tr><td>#${v.id}</td><td>${v.data}</td><td>${v.formaPagamento}${v.formaPagamento2 ? " + " + v.formaPagamento2 : ""}</td><td>${v.itens.join("<br>")}</td><td>${fmt(v.desconto)}</td><td>${fmt(v.valorFinal)}</td><td>${v.nomeCliente ?? "—"}</td></tr>`,
+        `<tr><td>#${v.id}</td><td>${esc(v.data)}</td><td>${esc(v.formaPagamento)}${v.formaPagamento2 ? " + " + esc(v.formaPagamento2) : ""}</td><td>${v.itens.map((it) => esc(it)).join("<br>")}</td><td>${esc(fmt(v.desconto))}</td><td>${esc(fmt(v.valorFinal))}</td><td>${esc(v.nomeCliente ?? "—")}</td></tr>`,
     )
     .join("");
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>${rel.titulo}</title>
+<title>${esc(rel.titulo)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',sans-serif;background:#0a0a0f;color:#f4f4f5;padding:32px}
@@ -428,11 +441,11 @@ function exportHTML(rel: Relatorio) {
   .footer{margin-top:40px;padding-top:16px;border-top:1px solid #27272a;font-size:12px;color:#52525b;text-align:center}
 </style></head><body>
 <div class="header">
-  <div><div class="logo">GestPro</div><div class="sub">${rel.nomeEmpresa}</div></div>
+  <div><div class="logo">GestPro</div><div class="sub">${esc(rel.nomeEmpresa)}</div></div>
   <div class="periodo">
-    <strong style="color:#f4f4f5;font-size:18px">${rel.titulo}</strong><br>
-    Período: ${rel.periodo}<br>
-    Gerado em: ${rel.geradoEm}
+    <strong style="color:#f4f4f5;font-size:18px">${esc(rel.titulo)}</strong><br>
+    Período: ${esc(rel.periodo)}<br>
+    Gerado em: ${esc(rel.geradoEm)}
   </div>
 </div>
 
@@ -457,7 +470,7 @@ function exportHTML(rel: Relatorio) {
 <table><thead><tr><th>#</th><th>Data</th><th>Pagamento</th><th>Itens</th><th>Desconto</th><th>Total</th><th>Cliente</th></tr></thead>
 <tbody>${vendaRows}</tbody></table></div>
 
-<div class="footer">Relatório gerado automaticamente pelo GestPro • ${rel.geradoEm}</div>
+<div class="footer">Relatório gerado automaticamente pelo GestPro • ${esc(rel.geradoEm)}</div>
 </body></html>`;
 
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
@@ -479,7 +492,7 @@ function exportPDF(rel: Relatorio) {
   const pagBarras = rel.pagamentos
     .map(
       (p) =>
-        `<div class="bar-row"><span>${p.forma}</span><div class="bar-wrap"><div class="bar" style="width:${p.percentual.toFixed(1)}%"></div></div><span>${fmt(p.total)} (${p.percentual.toFixed(1)}%)</span></div>`,
+        `<div class="bar-row"><span>${esc(p.forma)}</span><div class="bar-wrap"><div class="bar" style="width:${p.percentual.toFixed(1)}%"></div></div><span>${esc(fmt(p.total))} (${p.percentual.toFixed(1)}%)</span></div>`,
     )
     .join("");
 
@@ -487,19 +500,19 @@ function exportPDF(rel: Relatorio) {
     .slice(0, 15)
     .map(
       (p, i) =>
-        `<tr><td>${i + 1}</td><td>${p.nome}</td><td>${fmtN(p.quantidade)}</td><td>${fmt(p.receita)}</td><td>${fmt(p.lucro)}</td></tr>`,
+        `<tr><td>${i + 1}</td><td>${esc(p.nome)}</td><td>${esc(fmtN(p.quantidade))}</td><td>${esc(fmt(p.receita))}</td><td>${esc(fmt(p.lucro))}</td></tr>`,
     )
     .join("");
 
   const vendaRows = rel.vendas
     .map(
       (v) =>
-        `<tr><td>#${v.id}</td><td>${v.data}</td><td>${v.formaPagamento}${v.formaPagamento2 ? " + " + v.formaPagamento2 : ""}</td><td>${v.itens.slice(0, 3).join(", ")}${v.itens.length > 3 ? "..." : ""}</td><td>${fmt(v.desconto)}</td><td>${fmt(v.valorFinal)}</td><td>${v.nomeCliente ?? "—"}</td></tr>`,
+        `<tr><td>#${v.id}</td><td>${esc(v.data)}</td><td>${esc(v.formaPagamento)}${v.formaPagamento2 ? " + " + esc(v.formaPagamento2) : ""}</td><td>${esc(v.itens.slice(0, 3).join(", "))}${v.itens.length > 3 ? "..." : ""}</td><td>${esc(fmt(v.desconto))}</td><td>${esc(fmt(v.valorFinal))}</td><td>${esc(v.nomeCliente ?? "—")}</td></tr>`,
     )
     .join("");
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>${rel.titulo} — GestPro</title>
+<title>${esc(rel.titulo)} — GestPro</title>
 <style>
   @page { size: A4; margin: 15mm 12mm; }
   @media print {
@@ -537,11 +550,11 @@ function exportPDF(rel: Relatorio) {
 <button class="print-btn no-print" onclick="window.print()">🖨️ Salvar como PDF</button>
 
 <div class="header">
-  <div><div class="logo">GestPro</div><div class="sub">${rel.nomeEmpresa}</div></div>
+  <div><div class="logo">GestPro</div><div class="sub">${esc(rel.nomeEmpresa)}</div></div>
   <div class="periodo">
-    <div class="titulo">${rel.titulo}</div>
-    Período: ${rel.periodo}<br>
-    Gerado em: ${rel.geradoEm}
+    <div class="titulo">${esc(rel.titulo)}</div>
+    Período: ${esc(rel.periodo)}<br>
+    Gerado em: ${esc(rel.geradoEm)}
   </div>
 </div>
 
@@ -566,7 +579,7 @@ function exportPDF(rel: Relatorio) {
 <table><thead><tr><th>#</th><th>Data</th><th>Pagamento</th><th>Itens</th><th>Desconto</th><th>Total</th><th>Cliente</th></tr></thead>
 <tbody>${vendaRows}</tbody></table></div>
 
-<div class="footer">GestPro • ${rel.nomeEmpresa} • Relatório gerado em ${rel.geradoEm}</div>
+<div class="footer">GestPro • ${esc(rel.nomeEmpresa)} • Relatório gerado em ${esc(rel.geradoEm)}</div>
 </body></html>`;
 
   janela.document.write(html);
@@ -593,8 +606,8 @@ function exportNotaFiscal(rel: Relatorio) {
         .map((item) => {
           // item vem como "Produto x2 = R$ 20,00"
           const partes = item.split(" = ");
-          const desc = partes[0] ?? item;
-          const valor = partes[1] ?? "";
+          const desc = esc(partes[0] ?? item);
+          const valor = esc(partes[1] ?? "");
           return `<tr>
         <td style="padding:2px 0;font-size:11px;color:#1a1a2e">${desc}</td>
         <td style="padding:2px 0;font-size:11px;color:#1a1a2e;text-align:right;font-weight:600">${valor}</td>
@@ -603,19 +616,19 @@ function exportNotaFiscal(rel: Relatorio) {
         .join("");
 
       const pagamento = v.formaPagamento2
-        ? `${v.formaPagamento} + ${v.formaPagamento2}`
-        : v.formaPagamento;
+        ? `${esc(v.formaPagamento)} + ${esc(v.formaPagamento2)}`
+        : esc(v.formaPagamento);
 
       return `
     <div class="cupom">
       <!-- Cabeçalho -->
       <div class="header">
-        <div class="empresa">${rel.nomeEmpresa}</div>
+        <div class="empresa">${esc(rel.nomeEmpresa)}</div>
         <div class="titulo-doc">CUPOM NÃO FISCAL</div>
         <div class="linha-ponto"></div>
         <div class="info-row"><span>Nº da Venda:</span><span>#${v.id}</span></div>
-        <div class="info-row"><span>Data/Hora:</span><span>${v.data}</span></div>
-        ${v.nomeCliente ? `<div class="info-row"><span>Cliente:</span><span>${v.nomeCliente}</span></div>` : ""}
+        <div class="info-row"><span>Data/Hora:</span><span>${esc(v.data)}</span></div>
+        ${v.nomeCliente ? `<div class="info-row"><span>Cliente:</span><span>${esc(v.nomeCliente)}</span></div>` : ""}
         <div class="linha-ponto"></div>
       </div>
 
@@ -648,7 +661,7 @@ function exportNotaFiscal(rel: Relatorio) {
         <div>Obrigado pela preferência!</div>
         <div style="margin-top:4px;font-size:9px;color:#94a3b8">
           Este documento não tem valor fiscal.<br>
-          Emitido via GestPro • ${rel.geradoEm}
+          Emitido via GestPro • ${esc(rel.geradoEm)}
         </div>
       </div>
 
@@ -659,7 +672,7 @@ function exportNotaFiscal(rel: Relatorio) {
     .join("");
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Notas Fiscais — ${rel.nomeEmpresa}</title>
+<title>Notas Fiscais — ${esc(rel.nomeEmpresa)}</title>
 <style>
   @page { size: 80mm auto; margin: 4mm; }
   @media print {
@@ -767,7 +780,7 @@ export default function Relatorios() {
       }
       setRelatorio(await fetchAuth<Relatorio>(url));
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(msgErroSeguro());
     } finally {
       setLoading(false);
     }

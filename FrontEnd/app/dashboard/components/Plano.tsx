@@ -34,7 +34,10 @@ const API =
 
 function getToken(): string {
   if (typeof globalThis.window === "undefined") return "";
-  return globalThis.localStorage.getItem("jwt_token") ?? "";
+  const fromSession = globalThis.sessionStorage.getItem("jwt_token");
+  if (fromSession) return fromSession;
+  const cookie = document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/);
+  return cookie ? decodeURIComponent(cookie[1]) : "";
 }
 
 async function fetchAuth<T>(path: string): Promise<T> {

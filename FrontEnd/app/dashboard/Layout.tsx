@@ -26,13 +26,13 @@ export default function DashboardLayout({
       const tokenUrl = params.get("token");
 
       if (tokenUrl) {
-        salvarTokenCookie(tokenUrl);
-        // Remove o token da URL sem recarregar a página
+        // Remove da URL imediatamente para reduzir exposição em histórico/referrer.
         globalThis.window.history.replaceState(
           {},
           "",
           globalThis.window.location.pathname,
         );
+        salvarTokenCookie(tokenUrl);
       }
 
       // 2. Se não há token nenhum, vai para login

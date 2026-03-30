@@ -74,7 +74,7 @@ const BASE =
 async function fetchAuth<T>(path: string): Promise<T> {
   const token =
     typeof window !== "undefined"
-      ? (localStorage.getItem("jwt_token") ?? "")
+      ? (sessionStorage.getItem("jwt_token") ?? lerTokenCookie() ?? "")
       : "";
   const res = await fetch(`${BASE}${path}`, {
     credentials: "include",
@@ -574,12 +574,13 @@ function DashboardLoader() {
       /* 1. Resolve token */
       const tokenDaUrl = searchParams.get("token");
       if (tokenDaUrl) {
-        salvarTokenCookie(tokenDaUrl);
-        localStorage.setItem("jwt_token", tokenDaUrl);
+        // Remove token da URL antes de qualquer outra ação.
         globalThis.history.replaceState({}, "", "/dashboard");
+        salvarTokenCookie(tokenDaUrl);
+        sessionStorage.setItem("jwt_token", tokenDaUrl);
       }
 
-      const token = lerTokenCookie() || localStorage.getItem("jwt_token");
+      const token = lerTokenCookie() || sessionStorage.getItem("jwt_token");
       if (!token) {
         globalThis.location.href = "/auth/login";
         return;
@@ -592,7 +593,6 @@ function DashboardLoader() {
         if (!resultado) throw new Error("sem usuário");
         data = resultado;
       } catch {
-        localStorage.clear();
         sessionStorage.clear();
         removerTokenCookie();
         globalThis.location.href = "/auth/login";

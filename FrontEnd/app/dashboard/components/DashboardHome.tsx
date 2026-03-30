@@ -119,7 +119,9 @@ const fmt = (v?: number | null) =>
 async function fetchQ<T>(path: string, opts?: RequestInit): Promise<T> {
   const token =
     (typeof window !== "undefined"
-      ? localStorage.getItem("jwt_token")
+      ? (sessionStorage.getItem("jwt_token") ??
+        document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
+        null)
       : null) ?? "";
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
@@ -2052,7 +2054,9 @@ export default function DashboardHome({
     setLoading(true);
     const token =
       (typeof globalThis.window !== "undefined"
-        ? localStorage.getItem("jwt_token")
+        ? (sessionStorage.getItem("jwt_token") ??
+          document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
+          null)
         : null) ?? "";
     const base =
       process.env.NEXT_PUBLIC_API_URL ??

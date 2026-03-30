@@ -53,9 +53,9 @@ export function salvarTokenCookie(token: string) {
     ? `jwt_token=${token}; path=/; max-age=${maxAge}; SameSite=None; Secure`
     : `jwt_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;
   document.cookie = cookieString;
-  
-  // Backup no LocalStorage (Caso o navegador bloqueie o cookie de vez)
-  localStorage.setItem("jwt_token", token);
+
+  // Token de sessão apenas durante a aba aberta (reduz exposição persistente)
+  sessionStorage.setItem("jwt_token", token);
 }
 
 /**
@@ -64,6 +64,7 @@ export function salvarTokenCookie(token: string) {
 export function removerTokenCookie() {
   if (typeof document === "undefined") return;
   document.cookie = "jwt_token=; path=/; max-age=0; SameSite=Lax";
+  sessionStorage.removeItem("jwt_token");
 }
 
 /**
@@ -82,9 +83,9 @@ export function lerTokenCookie(): string | null {
  */
 export function hasToken(): boolean {
   if (typeof globalThis.window === "undefined") return false;
-  const localStorageToken = localStorage.getItem("jwt_token");
+  const sessionToken = sessionStorage.getItem("jwt_token");
   const cookieToken = lerTokenCookie();
-  return !!(localStorageToken || cookieToken);
+  return !!(sessionToken || cookieToken);
 }
 
 /**
@@ -92,7 +93,7 @@ export function hasToken(): boolean {
  */
 export function getToken(): string | null {
   if (typeof globalThis.window === "undefined") return null;
-  return localStorage.getItem("jwt_token") || lerTokenCookie();
+  return sessionStorage.getItem("jwt_token") || lerTokenCookie();
 }
 
 // ===================== Fetch autenticado =====================

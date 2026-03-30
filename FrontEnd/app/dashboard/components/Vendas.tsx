@@ -94,6 +94,13 @@ const fmt = (v?: number | null) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     v ?? 0,
   );
+const esc = (value: unknown) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
 // Parseia data do backend em qualquer formato:
 // string ISO, string sem timezone, array [year, month, day, hour, min, sec], ou null
@@ -154,7 +161,9 @@ const fmtData = (s?: any) => {
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
   const token =
     (typeof window !== "undefined"
-      ? localStorage.getItem("jwt_token")
+      ? (sessionStorage.getItem("jwt_token") ??
+        document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
+        null)
       : null) ?? "";
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
@@ -214,21 +223,21 @@ const btnG: React.CSSProperties = {
 function gerarCupom(venda: Venda, nomeEmpresa: string) {
   const misto = venda.formaPagamento2 && venda.valorPagamento2;
   const pagamento = misto
-    ? `${FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento}: ${fmt(venda.valorFinal - (venda.valorPagamento2 ?? 0))} + ${FORMA_LABEL[venda.formaPagamento2!] ?? venda.formaPagamento2}: ${fmt(venda.valorPagamento2)}`
-    : (FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento);
+    ? `${esc(FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento)}: ${esc(fmt(venda.valorFinal - (venda.valorPagamento2 ?? 0)))} + ${esc(FORMA_LABEL[venda.formaPagamento2!] ?? venda.formaPagamento2)}: ${esc(fmt(venda.valorPagamento2))}`
+    : esc(FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento);
 
   const itensHtml = venda.itens
     .map(
       (item) => `
     <tr>
-      <td style="padding:3px 0;font-size:12px;color:#1a1a2e">${item.nomeProduto} × ${item.quantidade}</td>
-      <td style="padding:3px 0;font-size:12px;color:#1a1a2e;text-align:right;font-weight:600">${fmt(item.subtotal)}</td>
+      <td style="padding:3px 0;font-size:12px;color:#1a1a2e">${esc(item.nomeProduto)} × ${item.quantidade}</td>
+      <td style="padding:3px 0;font-size:12px;color:#1a1a2e;text-align:right;font-weight:600">${esc(fmt(item.subtotal))}</td>
     </tr>`,
     )
     .join("");
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Cupom #${venda.id} — ${nomeEmpresa}</title>
+<title>Cupom #${venda.id} — ${esc(nomeEmpresa)}</title>
 <style>
   @page { size: 80mm auto; margin: 4mm; }
   @media print {
@@ -252,13 +261,13 @@ function gerarCupom(venda: Venda, nomeEmpresa: string) {
 
 <div class="cupom">
   <div class="center">
-    <div class="empresa">${nomeEmpresa}</div>
+    <div class="empresa">${esc(nomeEmpresa)}</div>
     <div class="doc">Cupom Não Fiscal</div>
   </div>
   <div class="dash"></div>
   <div class="row"><span>Nº da Venda:</span><span><b>#${venda.id}</b></span></div>
-  <div class="row"><span>Data/Hora:</span><span>${fmtData(venda.dataVenda)}</span></div>
-  ${venda.nomeCliente ? `<div class="row"><span>Cliente:</span><span>${venda.nomeCliente}</span></div>` : ""}
+  <div class="row"><span>Data/Hora:</span><span>${esc(fmtData(venda.dataVenda))}</span></div>
+  ${venda.nomeCliente ? `<div class="row"><span>Cliente:</span><span>${esc(venda.nomeCliente)}</span></div>` : ""}
   <div class="dash"></div>
 
   <table style="width:100%;border-collapse:collapse">
@@ -272,14 +281,14 @@ function gerarCupom(venda: Venda, nomeEmpresa: string) {
   </table>
 
   <div class="dash"></div>
-  <div class="row"><span>Subtotal:</span><span>${fmt(venda.valorTotal)}</span></div>
-  ${venda.desconto > 0 ? `<div class="row red"><span>Desconto:</span><span>− ${fmt(venda.desconto)}</span></div>` : ""}
-  <div class="total-row"><span>TOTAL:</span><span class="green">${fmt(venda.valorFinal)}</span></div>
+  <div class="row"><span>Subtotal:</span><span>${esc(fmt(venda.valorTotal))}</span></div>
+  ${venda.desconto > 0 ? `<div class="row red"><span>Desconto:</span><span>− ${esc(fmt(venda.desconto))}</span></div>` : ""}
+  <div class="total-row"><span>TOTAL:</span><span class="green">${esc(fmt(venda.valorFinal))}</span></div>
   <div class="dash"></div>
   <div class="row"><span>Pagamento:</span><span style="text-align:right;max-width:55%;font-weight:600">${pagamento}</span></div>
-  ${venda.valorRecebido && venda.valorRecebido > 0 ? `<div class="row"><span>Recebido:</span><span>${fmt(venda.valorRecebido)}</span></div>` : ""}
-  ${venda.troco && venda.troco > 0 ? `<div class="row green"><span>Troco:</span><span><b>${fmt(venda.troco)}</b></span></div>` : ""}
-  ${venda.observacao ? `<div class="dash"></div><div class="row"><span>Obs:</span><span>${venda.observacao}</span></div>` : ""}
+  ${venda.valorRecebido && venda.valorRecebido > 0 ? `<div class="row"><span>Recebido:</span><span>${esc(fmt(venda.valorRecebido))}</span></div>` : ""}
+  ${venda.troco && venda.troco > 0 ? `<div class="row green"><span>Troco:</span><span><b>${esc(fmt(venda.troco))}</b></span></div>` : ""}
+  ${venda.observacao ? `<div class="dash"></div><div class="row"><span>Obs:</span><span>${esc(venda.observacao)}</span></div>` : ""}
 
   <div class="dash"></div>
   <div class="footer">

@@ -14,13 +14,13 @@ import {
 export function saveToken(token: string) {
   if (typeof window === "undefined" || !token) return;
   salvarTokenCookie(token);
-  localStorage.setItem("jwt_token", token);
+  sessionStorage.setItem("jwt_token", token);
 }
 
 export function removeToken() {
   if (typeof globalThis.window === "undefined") return;
   removerTokenCookie();
-  localStorage.removeItem("jwt_token");
+  sessionStorage.removeItem("jwt_token");
 }
 
 // Re-export getToken para manter compatibilidade

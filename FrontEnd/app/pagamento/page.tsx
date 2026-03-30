@@ -16,7 +16,10 @@ const API =
 
 function getToken(): string {
   if (typeof window === "undefined") return "";
-  return localStorage.getItem("jwt_token") ?? "";
+  const fromSession = sessionStorage.getItem("jwt_token");
+  if (fromSession) return fromSession;
+  const cookie = document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/);
+  return cookie ? decodeURIComponent(cookie[1]) : "";
 }
 
 // ─── Dados estáticos ──────────────────────────────────────────────────────────
