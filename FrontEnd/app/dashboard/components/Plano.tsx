@@ -905,10 +905,34 @@ function PlanosInner() {
                   values: ["30 dias", "Mensal", "Mensal", "Mensal"],
                 },
                 { label: "Empresas", values: ["1", "1", "5", "Ilimitado"] },
-                { label: "Caixas", values: ["1", "1", "3", "Ilimitado"] },
+                { label: "Caixas", values: ["1", "1", "5", "Ilimitado"] },
+                {
+                  label: "Produtos",
+                  values: ["300", "500", "Ilimitado", "Ilimitado"],
+                },
                 {
                   label: "Relatórios",
                   values: ["Básico", "Básico", "Completo", "Avançado"],
+                },
+                {
+                  label: "Histórico de dados",
+                  values: ["2 meses", "6 meses", "1 ano", "Ilimitado"],
+                },
+                {
+                  label: "Nota Fiscal",
+                  values: ["Sim", "Sim", "Sim", "Sim"],
+                },
+                {
+                  label: "Clientes e Fornecedores",
+                  values: ["Sim", "Sim", "Sim", "Sim"],
+                },
+                {
+                  label: "Controle de Dívidas",
+                  values: ["Sim", "Sim", "Sim", "Sim"],
+                },
+                {
+                  label: "Backup Automático",
+                  values: ["Não", "Não", "Sim", "Sim"],
                 },
                 {
                   label: "Suporte",
