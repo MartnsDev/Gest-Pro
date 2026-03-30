@@ -159,9 +159,9 @@ function BarraUsoProdutos({
 }) {
   const limite = LIMITE_PRODUTOS[plano] ?? 999999;
   const ilimitado = limite >= 999999;
-  if (ilimitado) return null;
+  const restantes = ilimitado ? null : Math.max(limite - total, 0);
 
-  const pct = Math.min((total / limite) * 100, 100);
+  const pct = ilimitado ? 0 : Math.min((total / limite) * 100, 100);
   const critico = pct >= 90;
   const aviso = pct >= 70;
   const cor = critico ? "#ef4444" : aviso ? "#f59e0b" : "var(--primary)";
@@ -197,23 +197,45 @@ function BarraUsoProdutos({
           >
             Produtos cadastrados
           </span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: cor }}>
-            {total} / {limite}
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: ilimitado ? "var(--foreground)" : cor,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            {ilimitado ? (
+              <>
+                {total} <span style={{ opacity: 0.5 }}>·</span> Ilimitado
+              </>
+            ) : (
+              <>
+                {total} / {limite}
+                <span style={{ color: "var(--foreground-muted)", fontWeight: 600 }}>
+                  · Restam {restantes}
+                </span>
+              </>
+            )}
           </span>
         </div>
-        <div
-          style={{ height: 5, background: "var(--border)", borderRadius: 99 }}
-        >
+        {!ilimitado && (
           <div
-            style={{
-              height: 5,
-              width: `${pct}%`,
-              background: cor,
-              borderRadius: 99,
-              transition: "width .3s",
-            }}
-          />
-        </div>
+            style={{ height: 5, background: "var(--border)", borderRadius: 99 }}
+          >
+            <div
+              style={{
+                height: 5,
+                width: `${pct}%`,
+                background: cor,
+                borderRadius: 99,
+                transition: "width .3s",
+              }}
+            />
+          </div>
+        )}
         {critico && (
           <p style={{ fontSize: 11, color: "#ef4444", margin: "5px 0 0" }}>
             Você está perto do limite. Faça upgrade para cadastrar produtos
