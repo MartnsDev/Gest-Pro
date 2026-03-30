@@ -5,20 +5,21 @@ import {
   useContext,
   useState,
   useCallback,
+  useRef,
   ReactNode,
 } from "react";
 
-/* ─── Tipos ──────────────────────────────────────────────────────────────── */
+/* ─── Tipos espelhando CaixaResponse do backend ──────────────────────────── */
 export interface CaixaInfo {
   id: number;
   valorInicial?: number | null;
   valorFinal?: number | null;
   totalVendas?: number | null;
-  status?: string | null;
+  status?: string | null; // "ABERTO" | "FECHADO"
   aberto?: boolean | null;
   usuarioId?: number | null;
   empresaId?: number | null;
-  empresaNome?: string | null;
+  empresaNome?: string | null; // adicionado pelo frontend
 }
 
 export interface EmpresaAtiva {
@@ -26,34 +27,69 @@ export interface EmpresaAtiva {
   nomeFantasia: string;
 }
 
+/* ─── Interface do contexto — COMPLETA e sincronizada ───────────────────── */
 interface EmpresaContextType {
   usuarioId: string | null;
-  setUsuarioId: (id: string) => void;
   empresaAtiva: EmpresaAtiva | null;
-  setEmpresaAtiva: (e: EmpresaAtiva | null) => void;
   caixaAtivo: CaixaInfo | null;
-  setCaixaAtivo: (c: CaixaInfo | null) => void;
   empresas: EmpresaAtiva[];
+  inicializarUsuario: (
+    id: string,
+    empresaAtiva: EmpresaAtiva | null,
+    caixaAtivo: CaixaInfo | null,
+  ) => void;
+  setEmpresaAtiva: (e: EmpresaAtiva | null) => void;
+  setCaixaAtivo: (c: CaixaInfo | null) => void;
   setEmpresas: (list: EmpresaAtiva[]) => void;
   resetarContexto: () => void;
-  inicializarUsuario: (usuarioId: string) => void;
 }
 
-/* ─── Chaves de localStorage vinculadas ao usuário ───────────────────────── */
-const keyEmpresa = (uid: string) => `empresa_ativa_uid_${uid}`;
-const keyCaixa = (uid: string) => `caixa_ativo_uid_${uid}`;
+/* ─── Chaves localStorage por usuário ───────────────────────────────────── */
+const keyEmpresa = (uid: string) => `gp_empresa_${uid}`;
+const keyCaixa = (uid: string) => `gp_caixa_${uid}`;
 
-/* ─── Context ────────────────────────────────────────────────────────────── */
+function limparChavesLegadas() {
+  ["empresa_ativa", "caixa_ativo", "empresaAtiva", "caixaAtivo"].forEach((k) =>
+    localStorage.removeItem(k),
+  );
+  Object.keys(localStorage).forEach((k) => {
+    if (k.startsWith("empresa_ativa_uid_") || k.startsWith("caixa_ativo_uid_"))
+      localStorage.removeItem(k);
+  });
+}
+
+function salvar(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* quota */
+  }
+}
+
+function carregar<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+/* ─── Valor padrão do contexto — TODOS os campos declarados ─────────────── *
+ *                                                                             *
+ * IMPORTANTE: o valor padrão deve ter EXATAMENTE os mesmos campos            *
+ * que EmpresaContextType, caso contrário componentes fora do Provider        *
+ * recebem stubs vazios e nada funciona.                                      *
+ * ──────────────────────────────────────────────────────────────────────────── */
 const EmpresaContext = createContext<EmpresaContextType>({
   usuarioId: null,
-  setUsuarioId: () => {},
   empresaAtiva: null,
-  setEmpresaAtiva: () => {},
   caixaAtivo: null,
-  setCaixaAtivo: () => {},
   empresas: [],
-  setEmpresas: () => {},
   inicializarUsuario: () => {},
+  setEmpresaAtiva: () => {},
+  setCaixaAtivo: () => {},
+  setEmpresas: () => {},
   resetarContexto: () => {},
 });
 
@@ -66,85 +102,87 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   const [caixaAtivo, setCaixaAtivoState] = useState<CaixaInfo | null>(null);
   const [empresas, setEmpresas] = useState<EmpresaAtiva[]>([]);
 
-  /**
-   * Chamado logo após o login/carregamento do usuário.
-   * Vincula o contexto ao ID do usuário e restaura os dados DELE do localStorage.
-   */
-  const setUsuarioId = useCallback((id: string) => {
-    setUsuarioIdState(id);
+  /* Ref para uid — evita stale closure nos callbacks */
+  const uidRef = useRef<string | null>(null);
 
-    try {
-      const empRaw = localStorage.getItem(keyEmpresa(id));
-      const caixaRaw = localStorage.getItem(keyCaixa(id));
-      setEmpresaAtivaState(empRaw ? JSON.parse(empRaw) : null);
-      setCaixaAtivoState(caixaRaw ? JSON.parse(caixaRaw) : null);
-    } catch {
-      setEmpresaAtivaState(null);
-      setCaixaAtivoState(null);
-    }
+  /* ── inicializarUsuario ──────────────────────────────────────────────────
+   *
+   * Chamado UMA VEZ pelo DashboardLoader após buscar o usuário e o caixa.
+   * Se o uid mudar (troca de conta) limpa o estado anterior antes de setar.
+   * ─────────────────────────────────────────────────────────────────────── */
+  const inicializarUsuario = useCallback(
+    (
+      uid: string,
+      novaEmpresa: EmpresaAtiva | null,
+      novoCaixa: CaixaInfo | null,
+    ) => {
+      /* Troca de usuário → limpa estado do usuário anterior */
+      if (uidRef.current && uidRef.current !== uid) {
+        setEmpresaAtivaState(null);
+        setCaixaAtivoState(null);
+        setEmpresas([]);
+      }
+
+      uidRef.current = uid;
+      setUsuarioIdState(uid);
+      limparChavesLegadas();
+
+      /* Seta estado React */
+      setEmpresaAtivaState(novaEmpresa);
+      setCaixaAtivoState(novoCaixa);
+
+      /* Persiste no localStorage */
+      if (novaEmpresa) salvar(keyEmpresa(uid), novaEmpresa);
+      else localStorage.removeItem(keyEmpresa(uid));
+
+      if (novoCaixa) salvar(keyCaixa(uid), novoCaixa);
+      else localStorage.removeItem(keyCaixa(uid));
+    },
+    [],
+  );
+
+  const setEmpresaAtiva = useCallback((e: EmpresaAtiva | null) => {
+    setEmpresaAtivaState(e);
+    const uid = uidRef.current;
+    if (!uid) return;
+    if (e) salvar(keyEmpresa(uid), e);
+    else localStorage.removeItem(keyEmpresa(uid));
   }, []);
 
-  const setEmpresaAtiva = useCallback(
-    (e: EmpresaAtiva | null) => {
-      setEmpresaAtivaState(e);
-      if (!usuarioId) return;
-      if (e) {
-        localStorage.setItem(keyEmpresa(usuarioId), JSON.stringify(e));
-      } else {
-        localStorage.removeItem(keyEmpresa(usuarioId));
-      }
-    },
-    [usuarioId],
-  );
+  const setCaixaAtivo = useCallback((c: CaixaInfo | null) => {
+    setCaixaAtivoState(c);
+    const uid = uidRef.current;
+    if (!uid) return;
+    if (c) salvar(keyCaixa(uid), c);
+    else localStorage.removeItem(keyCaixa(uid));
+  }, []);
 
-  const setCaixaAtivo = useCallback(
-    (c: CaixaInfo | null) => {
-      setCaixaAtivoState(c);
-      if (!usuarioId) return;
-      if (c) {
-        localStorage.setItem(keyCaixa(usuarioId), JSON.stringify(c));
-      } else {
-        localStorage.removeItem(keyCaixa(usuarioId));
-      }
-    },
-    [usuarioId],
-  );
-
-  /**
-   * Limpa TUDO do contexto e do localStorage deste usuário.
-   * Chamado obrigatoriamente no logout.
-   */
   const resetarContexto = useCallback(() => {
-    if (usuarioId) {
-      localStorage.removeItem(keyEmpresa(usuarioId));
-      localStorage.removeItem(keyCaixa(usuarioId));
+    const uid = uidRef.current;
+    if (uid) {
+      localStorage.removeItem(keyEmpresa(uid));
+      localStorage.removeItem(keyCaixa(uid));
     }
-
-    // Remove chaves legadas (sem userId) que possam existir de versões antigas
-    localStorage.removeItem("empresa_ativa");
-    localStorage.removeItem("caixa_ativo");
-    localStorage.removeItem("empresaAtiva");
-    localStorage.removeItem("caixaAtivo");
-
+    limparChavesLegadas();
+    uidRef.current = null;
+    setUsuarioIdState(null);
     setEmpresaAtivaState(null);
     setCaixaAtivoState(null);
     setEmpresas([]);
-    setUsuarioIdState(null);
-  }, [usuarioId]);
+  }, []);
 
   return (
     <EmpresaContext.Provider
       value={{
         usuarioId,
-        setUsuarioId,
         empresaAtiva,
-        setEmpresaAtiva,
         caixaAtivo,
-        setCaixaAtivo,
         empresas,
+        inicializarUsuario,
+        setEmpresaAtiva,
+        setCaixaAtivo,
         setEmpresas,
         resetarContexto,
-        inicializarUsuario,
       }}
     >
       {children}
@@ -152,6 +190,15 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/* ─── Hook ───────────────────────────────────────────────────────────────── */
 export function useEmpresa() {
   return useContext(EmpresaContext);
+}
+
+/* ─── Leitura do cache sem contexto (usado no DashboardLoader) ───────────── */
+export function lerCacheUsuario(uid: string) {
+  return {
+    empresaAtiva: carregar<EmpresaAtiva>(keyEmpresa(uid)),
+    caixaAtivo: carregar<CaixaInfo>(keyCaixa(uid)),
+  };
 }

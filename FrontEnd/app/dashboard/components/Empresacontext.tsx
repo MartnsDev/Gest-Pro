@@ -27,6 +27,7 @@ export interface EmpresaAtiva {
   nomeFantasia: string;
 }
 
+/* ─── Interface do contexto — COMPLETA e sincronizada ───────────────────── */
 interface EmpresaContextType {
   usuarioId: string | null;
   empresaAtiva: EmpresaAtiva | null;
@@ -74,7 +75,12 @@ function carregar<T>(key: string): T | null {
   }
 }
 
-/* ─── Context ────────────────────────────────────────────────────────────── */
+/* ─── Valor padrão do contexto — TODOS os campos declarados ─────────────── *
+ *                                                                             *
+ * IMPORTANTE: o valor padrão deve ter EXATAMENTE os mesmos campos            *
+ * que EmpresaContextType, caso contrário componentes fora do Provider        *
+ * recebem stubs vazios e nada funciona.                                      *
+ * ──────────────────────────────────────────────────────────────────────────── */
 const EmpresaContext = createContext<EmpresaContextType>({
   usuarioId: null,
   empresaAtiva: null,
@@ -95,26 +101,40 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   );
   const [caixaAtivo, setCaixaAtivoState] = useState<CaixaInfo | null>(null);
   const [empresas, setEmpresas] = useState<EmpresaAtiva[]>([]);
+
+  /* Ref para uid — evita stale closure nos callbacks */
   const uidRef = useRef<string | null>(null);
 
+  /* ── inicializarUsuario ──────────────────────────────────────────────────
+   *
+   * Chamado UMA VEZ pelo DashboardLoader após buscar o usuário e o caixa.
+   * Se o uid mudar (troca de conta) limpa o estado anterior antes de setar.
+   * ─────────────────────────────────────────────────────────────────────── */
   const inicializarUsuario = useCallback(
     (
       uid: string,
       novaEmpresa: EmpresaAtiva | null,
       novoCaixa: CaixaInfo | null,
     ) => {
+      /* Troca de usuário → limpa estado do usuário anterior */
       if (uidRef.current && uidRef.current !== uid) {
         setEmpresaAtivaState(null);
         setCaixaAtivoState(null);
         setEmpresas([]);
       }
+
       uidRef.current = uid;
       setUsuarioIdState(uid);
       limparChavesLegadas();
+
+      /* Seta estado React */
       setEmpresaAtivaState(novaEmpresa);
       setCaixaAtivoState(novoCaixa);
+
+      /* Persiste no localStorage */
       if (novaEmpresa) salvar(keyEmpresa(uid), novaEmpresa);
       else localStorage.removeItem(keyEmpresa(uid));
+
       if (novoCaixa) salvar(keyCaixa(uid), novoCaixa);
       else localStorage.removeItem(keyCaixa(uid));
     },
@@ -170,10 +190,12 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/* ─── Hook ───────────────────────────────────────────────────────────────── */
 export function useEmpresa() {
   return useContext(EmpresaContext);
 }
 
+/* ─── Leitura do cache sem contexto (usado no DashboardLoader) ───────────── */
 export function lerCacheUsuario(uid: string) {
   return {
     empresaAtiva: carregar<EmpresaAtiva>(keyEmpresa(uid)),
