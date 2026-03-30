@@ -1,11 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   dashboard.module.css — GestPro Dashboard
-   Mobile-first redesign — apenas @media (max-width: 768px)
-   Todo o desktop permanece intacto abaixo dessa media query
+   dashboard.module.css — GestPro Dashboard (Fixed for Turbopack)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ─── Variáveis globais (mantidas do original) ─── */
-:root {
+/* Variáveis (Recomenda-se mover para o globals.css, mas mantido aqui) */
+:local(:root) {
   --primary: #10b981;
   --primary-muted: rgba(16, 185, 129, 0.12);
   --secondary: #3b82f6;
@@ -23,9 +21,7 @@
   --border-subtle: rgba(255, 255, 255, 0.04);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   ESTRUTURA BASE (desktop — não alterar)
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ─── ESTRUTURA BASE ─── */
 .dashboardContainer {
   display: flex;
   flex-direction: column;
@@ -76,18 +72,18 @@
   color: var(--foreground-muted);
 }
 
-.headerUserAvatar {
+.headerUserAvatar, .headerUserInitials {
   width: 32px;
   height: 32px;
   border-radius: 50%;
+}
+
+.headerUserAvatar {
   object-fit: cover;
   border: 2px solid var(--border);
 }
 
 .headerUserInitials {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
   background: var(--primary-muted);
   border: 1px solid rgba(16, 185, 129, 0.3);
   color: var(--primary);
@@ -154,45 +150,35 @@
   color: var(--primary);
 }
 
-.sidebarNavItemActive:hover {
-  background: var(--primary-muted);
-  color: var(--primary);
-}
-
 .mainContent {
   flex: 1;
   overflow-y: auto;
   background: var(--background);
 }
 
-
 /* ═══════════════════════════════════════════════════════════════════════════
    MOBILE — max-width: 768px
-   Apenas aqui embaixo. Desktop não é tocado.
    ═══════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
 
-  /* ── Container raiz ── */
   .dashboardContainer {
-    height: 100dvh; /* dynamic viewport height — evita bug de barra do browser */
+    height: 100dvh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
   }
 
-  /* ── Header mobile ── */
   .dashboardHeader {
     height: 52px;
     padding: 0 14px;
     gap: 8px;
   }
 
-  /* Oculta o breadcrumb de título de seção (ocupa espaço demais) */
+  /* Oculta breadcrumb */
   .dashboardHeader > .headerBrand > div:last-child {
     display: none;
   }
 
-  /* Logo menor */
   .headerLogo img {
     width: 28px;
     height: 28px;
@@ -202,17 +188,10 @@
     font-size: 14px;
   }
 
-  /* Lado direito do header: colapsa empresa + caixa em ícone */
-  .dashboardHeader > div:last-child {
-    gap: 6px;
-  }
-
-  /* Oculta o nome do usuário no header — só mostra avatar */
   .headerUserName {
     display: none;
   }
 
-  /* Avatar menor */
   .headerUserAvatar,
   .headerUserInitials {
     width: 28px;
@@ -220,60 +199,47 @@
     font-size: 10px;
   }
 
-  /* Botão "Abrir Caixa" no header: só ícone no mobile */
-  .dashboardHeader button[style*="Caixa"] span,
-  .dashboardHeader button[style*="caixa"] span {
+  /* Target buttons with inline styles safely using :local wrapper */
+  :local(.dashboardHeader button[style*="Caixa"] span),
+  :local(.dashboardHeader button[style*="caixa"] span) {
     display: none;
   }
 
-  /* ── Layout: sidebar some, main ocupa tudo ── */
   .dashboardLayout {
     flex-direction: column;
     overflow: hidden;
     flex: 1;
   }
 
-  /* Sidebar desktop: escondida no mobile */
   .sidebar {
     display: none;
   }
 
-  /* Main content: scroll vertical livre */
   .mainContent {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden;
-    /* Padding bottom para não ficar atrás da nav inferior */
     padding-bottom: 72px;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* ── Bottom Navigation Bar ── */
-  /* Injetada via pseudo-elemento no container para não precisar alterar o JSX */
-  /* Na prática, use um componente <MobileNav> — veja nota abaixo */
-
-  /* ═══════════════════════════════════════════════════════════════════════
-     Ajustes internos de componentes — garante usabilidade em telas pequenas
-     ═══════════════════════════════════════════════════════════════════════ */
-
-  /* ── Dashboard Home: cards de métricas em 2 colunas ── */
-  [class*="metricsGrid"],
-  [class*="statsGrid"] {
+  /* ─── Corrigindo seletores "Impuros" ─── */
+  
+  /* Cards de métricas */
+  :local(.dashboardContainer [class*="metricsGrid"]),
+  :local(.dashboardContainer [class*="statsGrid"]) {
     grid-template-columns: 1fr 1fr !important;
     gap: 8px !important;
   }
 
-  /* ── Dashboard Home: ações rápidas em grid 3x2 ── */
-  [class*="acoesRapidas"],
-  [class*="quickActions"] {
+  /* Ações rápidas */
+  :local(.dashboardContainer [class*="acoesRapidas"]),
+  :local(.dashboardContainer [class*="quickActions"]) {
     grid-template-columns: repeat(3, 1fr) !important;
     gap: 8px !important;
   }
 
-  /* ── Vendas: modal de nova venda — ocupa tela toda ── */
-  /* O modal de nova venda usa position:fixed, então pegamos pelo z-index */
-  div[style*="position: fixed"][style*="z-index: 50"] > div,
-  div[style*="position:fixed"][style*="z-index:50"] > div {
+  /* Modais e grids via style attributes */
+  :local(.dashboardContainer div[style*="position: fixed"][style*="z-index: 50"] > div) {
     max-width: 100% !important;
     max-height: 100dvh !important;
     border-radius: 0 !important;
@@ -281,177 +247,33 @@
     height: 100dvh !important;
   }
 
-  /* Modal nova venda: layout interno vira coluna única (produtos em cima, carrinho embaixo) */
-  div[style*="position: fixed"][style*="z-index: 50"] > div > div[style*="grid-template-columns"] {
-    grid-template-columns: 1fr !important;
-    grid-template-rows: 1fr auto !important;
-  }
-
-  /* ── Relatórios: gráficos responsivos ── */
-  [class*="chartContainer"],
-  [class*="graficos"],
-  div[style*="recharts"] {
+  /* Gráficos */
+  :local(.dashboardContainer [class*="chartContainer"]),
+  :local(.dashboardContainer [class*="graficos"]),
+  :local(.dashboardContainer div[style*="recharts"]) {
     width: 100% !important;
     overflow-x: auto !important;
   }
 
-  /* Cards de métricas do relatório: 2 colunas */
-  div[style*="grid-template-columns: repeat(6"] {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-  }
-
-  div[style*="grid-template-columns: repeat(4"] {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-  }
-
-  /* Gráficos lado a lado: empilha em mobile */
-  div[style*="display: grid"][style*="grid-template-columns: 1fr 1fr"],
-  div[style*="display:grid"][style*="grid-template-columns:1fr 1fr"] {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* ── Tabela de produtos: scroll horizontal ── */
-  [class*="tableWrap"],
-  table {
+  /* Tabelas */
+  :local(.dashboardContainer [class*="tableWrap"]),
+  :local(.dashboardContainer table) {
     overflow-x: auto;
     display: block;
     width: 100%;
   }
 
-  /* ── Padding geral das páginas ── */
-  div[style*="padding: 28px"],
-  div[style*="padding:28px"] {
-    padding: 16px !important;
-  }
-
-  div[style*="padding: 24px"],
-  div[style*="padding:24px"] {
+  /* Paddings e grids genéricos fixados com prefixo local */
+  :local(.dashboardContainer div[style*="padding: 28px"]),
+  :local(.dashboardContainer div[style*="padding: 24px"]) {
     padding: 14px !important;
   }
 
-  /* ── CaixaCard: stats em 2 col ── */
-  div[style*="minmax(130px"] {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-  }
-
-  /* ── Formas de pagamento no modal: 2 colunas ── */
-  div[style*="gridTemplateColumns: \"1fr 1fr\""],
-  div[style*="grid-template-columns: 1fr 1fr"] {
-    grid-template-columns: 1fr 1fr !important;
-  }
-
-  /* ── Botões no header do CaixaCard ── */
-  div[style*="flex-wrap: wrap"] {
-    flex-wrap: wrap !important;
-  }
-
-  /* ── Configurações: tabs em scroll horizontal ── */
-  div[style*="display: flex"][style*="borderBottom: \"1px solid"] {
-    overflow-x: auto !important;
-    white-space: nowrap !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-  }
-
-  /* ── Clientes/Fornecedores: tabela → cards ── */
-  /* A tabela já usa divs, então só ajustar padding */
-  div[style*="padding: 13px 20px"],
-  div[style*="padding:13px 20px"] {
-    padding: 12px 14px !important;
-  }
-
-  /* ── Modal detalhe venda: tela cheia ── */
-  div[style*="maxWidth: 440"],
-  div[style*="max-width: 440px"] {
-    max-width: 100% !important;
-    margin: 0 !important;
-    border-radius: 20px 20px 0 0 !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: auto !important;
-  }
-
-  /* ── Planos: cards em coluna ── */
-  div[style*="grid-template-columns: repeat(3"],
-  div[style*="gridTemplateColumns: \"repeat(3"] {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-  }
-
-  /* ── Textos menores para caber ── */
-  p[style*="font-size: 30px"],
-  p[style*="fontSize: 30"] {
-    font-size: 22px !important;
-  }
-
-  h2[style*="font-size: 18px"],
-  h2[style*="fontSize: 18"] {
-    font-size: 16px !important;
-  }
-
-  /* ── Recharts: ResponsiveContainer vai funcionar, mas garante 100% ── */
-  .recharts-wrapper {
-    width: 100% !important;
-  }
-
-  /* ── Inputs e botões: touch-friendly (min 44px) ── */
-  input[type="text"],
-  input[type="email"],
-  input[type="number"],
-  input[type="password"],
-  select,
-  textarea {
+  /* Inputs iOS fix */
+  :local(.dashboardContainer input), 
+  :local(.dashboardContainer select), 
+  :local(.dashboardContainer textarea) {
     min-height: 44px;
-    font-size: 16px !important; /* evita zoom no iOS */
-  }
-
-  button {
-    min-height: 40px;
-  }
-
-  /* ── Seletor de empresa no header: texto curto ── */
-  button[style*="nomeFantasia"] span {
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* ── TelaVendaSucesso: centraliza melhor ── */
-  div[style*="maxWidth: 360"],
-  div[style*="max-width: 360px"] {
-    max-width: calc(100vw - 32px) !important;
-  }
-}
-
-/* ── Extra pequeno: abaixo de 390px (iPhone SE etc) ── */
-@media (max-width: 390px) {
-  .dashboardHeader {
-    height: 48px;
-    padding: 0 10px;
-  }
-
-  div[style*="padding: 28px"],
-  div[style*="padding:28px"] {
-    padding: 12px !important;
-  }
-
-  /* Métricas em 2 cols mais compactas */
-  [class*="metricsGrid"],
-  [class*="statsGrid"] {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 6px !important;
-  }
-
-  /* Ações rápidas: 3 colunas compactas */
-  [class*="acoesRapidas"],
-  [class*="quickActions"] {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 6px !important;
+    font-size: 16px !important;
   }
 }
