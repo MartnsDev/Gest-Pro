@@ -103,6 +103,7 @@ export default function EsqueceuSenhaPage() {
 
   return (
     <div
+      className="forgot-layout"
       style={{
         minHeight: "100vh",
         background: "#0a0a0f",
@@ -235,10 +236,28 @@ export default function EsqueceuSenhaPage() {
           transition: all .35s cubic-bezier(0.16,1,0.3,1);
           flex-shrink: 0;
         }
+
+        @media (max-width: 900px) {
+          .forgot-left-panel { display: none !important; }
+          .forgot-right-panel {
+            max-width: none !important;
+            border-left: none !important;
+            padding: 28px 20px !important;
+            min-height: 100vh;
+          }
+          .forgot-form-wrap {
+            max-width: 100% !important;
+            width: 100%;
+          }
+          .forgot-logo { margin-bottom: 28px !important; }
+          .forgot-title { font-size: 23px !important; }
+          .forgot-steps { margin-bottom: 24px !important; }
+        }
       `}</style>
 
       {/* ── PAINEL ESQUERDO (decorativo, igual ao login/cadastro) ── */}
       <div
+        className="forgot-left-panel"
         style={{
           flex: 1,
           display: "flex",
@@ -388,6 +407,7 @@ export default function EsqueceuSenhaPage() {
 
       {/* ── PAINEL DIREITO (formulário) ── */}
       <div
+        className="forgot-right-panel"
         style={{
           width: "100%",
           maxWidth: 520,
@@ -402,6 +422,7 @@ export default function EsqueceuSenhaPage() {
         }}
       >
         <div
+          className="forgot-form-wrap"
           style={{
             width: "100%",
             maxWidth: 400,
@@ -412,6 +433,7 @@ export default function EsqueceuSenhaPage() {
         >
           {/* Logo */}
           <a
+            className="forgot-logo"
             href="/"
             style={{
               display: "inline-flex",
@@ -540,6 +562,7 @@ export default function EsqueceuSenhaPage() {
               {/* Cabeçalho do form */}
               <div style={{ marginBottom: 32 }}>
                 <h1
+                  className="forgot-title"
                   style={{
                     fontSize: 26,
                     fontWeight: 700,
@@ -573,6 +596,7 @@ export default function EsqueceuSenhaPage() {
 
               {/* Steps indicator */}
               <div
+                className="forgot-steps"
                 style={{
                   display: "flex",
                   alignItems: "center",
