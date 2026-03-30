@@ -167,6 +167,7 @@ export async function login(email: string, senha: string): Promise<Usuario> {
   }
 
   return {
+    id:             data.id,
     nome:           data.nome,
     email:          data.email,
     foto:           data.foto || undefined,
@@ -241,6 +242,7 @@ export async function getUsuario(): Promise<Usuario> {
   }
 
   return {
+    id:             data.id,
     nome:           data.nome,
     email:          data.email,
     foto:           data.foto || undefined,
