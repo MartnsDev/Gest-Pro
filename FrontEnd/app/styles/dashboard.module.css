@@ -271,47 +271,129 @@
 }
 
 /* ══════════════════════════════════════════
-   MOBILE — apenas até 767px
-   Apenas CSS, sem alterar JSX
+   TABLET
+══════════════════════════════════════════ */
+@media (min-width: 768px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .contentGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ══════════════════════════════════════════
+   DESKTOP
+══════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .metricsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .contentGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .chartCard {
+    grid-column: span 2;
+  }
+}
+
+/* ══════════════════════════════════════════
+   MOBILE — até 767px
+   Zero impacto no desktop (tudo dentro deste bloco)
 ══════════════════════════════════════════ */
 @media (max-width: 767px) {
 
-  /* ── Header ── */
-  .dashboardHeader {
-    padding: 0 10px;
-    gap: 6px;
+  /* ─── Reset global mobile ─── */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
   }
 
-  /* Esconde separador "GESTPRO / seção" */
-  .headerBrand > div:last-child {
+  /* ─── Container principal ─── */
+  .dashboardContainer {
+    overflow-x: hidden;
+  }
+
+  /* ─── Header ─── */
+  .dashboardHeader {
+    padding: 0 12px;
+    height: 52px;
+    gap: 8px;
+  }
+
+  .headerBrand {
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Esconde logo + título "GestPro" no mobile para ganhar espaço */
+  .headerLogo {
     display: none;
   }
 
-  /* Esconde só o span do nome, mantém botão Sair e avatar */
+  .headerTitle {
+    display: none;
+  }
+
+  /* Bloco de seção atual (separador) — mantém visível no mobile */
+  .headerBrand > div:last-child {
+    display: flex;
+    flex-direction: column;
+    border-left: none;
+    padding-left: 0;
+    margin-left: 0;
+  }
+
+  .headerBrand > div:last-child p:first-child {
+    /* label "GESTPRO" — esconde */
+    display: none;
+  }
+
+  .headerBrand > div:last-child p:last-child {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  /* User block */
+  .headerUser {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
   .headerUserName {
     display: none;
   }
 
   .headerUserAvatar,
   .headerUserInitials {
-    width: 30px;
-    height: 30px;
-    font-size: 0.7rem;
+    width: 32px;
+    height: 32px;
+    font-size: 0.65rem;
+    border-width: 1.5px;
+    flex-shrink: 0;
   }
 
-  /* Botão Sair menor mas visível */
+  /* Botão Sair — visível e compacto */
   .headerUser button {
     font-size: 11px !important;
-    padding: 4px 8px !important;
+    padding: 5px 10px !important;
+    min-height: 32px;
+    border-radius: 8px !important;
   }
 
-  /* ── Layout ── */
+  /* ─── Layout ─── */
   .dashboardLayout {
     flex-direction: column;
-    padding-bottom: 64px;
+    margin-top: 52px;
+    /* Espaço para a bottom nav */
+    padding-bottom: 68px;
   }
 
-  /* ── Sidebar → nav inferior fixa ── */
+  /* ─── Sidebar → Bottom Nav ─── */
   .sidebar {
     position: fixed;
     top: auto;
@@ -319,13 +401,18 @@
     left: 0;
     right: 0;
     width: 100%;
-    height: 64px;
+    height: 68px;
     border-right: none;
     border-top: 1px solid var(--border);
-    padding: 0 4px;
+    background: var(--surface);
+    padding: 6px 4px env(safe-area-inset-bottom, 0px);
     flex-direction: row;
     align-items: stretch;
+    z-index: 900;
     overflow: visible;
+    /* Leve blur para profundidade */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 
   .sidebarNav {
@@ -340,35 +427,51 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 4px;
     padding: 6px 2px;
-    font-size: 0.6rem;
+    font-size: 0.58rem;
+    font-weight: 500;
     border-radius: 10px;
-    -webkit-tap-highlight-color: transparent;
+    letter-spacing: 0.01em;
+    min-height: 0;
+    min-width: 0;
+    /* Feedback tátil melhorado */
+    transition: background 0.12s, color 0.12s, transform 0.1s;
+  }
+
+  .sidebarNavItem:active {
+    transform: scale(0.92);
   }
 
   .sidebarNavItem svg {
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
   }
 
   .sidebarNavItem span {
     display: block;
     line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
-  /* Itens 5, 6 e 7 somem (Empresas, Config, Planos) */
+  /* Item ativo na bottom nav — destaque pill */
+  .sidebarNavItemActive {
+    background: var(--sidebar-active-bg);
+    color: var(--sidebar-active-fg);
+  }
+
+  /* Itens 5, 6 e 7 (Empresas, Config, Planos) — ocultos na nav principal */
   .sidebarNavItem:nth-child(5),
   .sidebarNavItem:nth-child(6),
   .sidebarNavItem:nth-child(7) {
     display: none;
   }
 
-  /*
-    Item 8 (último = Planos) vira botão "Mais"
-    — esconde o label original e mostra "Mais"
-    — o ícone fica, só troca o texto via CSS
-  */
+  /* Último item vira "Mais" */
   .sidebarNavItem:last-child span {
     visibility: hidden;
     position: relative;
@@ -383,54 +486,265 @@
     white-space: nowrap;
   }
 
-  /* ── Conteúdo principal ── */
+  /* ─── Main content ─── */
   .mainContent {
     margin-left: 0;
-    min-height: calc(100vh - 56px - 64px);
+    min-height: calc(100vh - 52px - 68px);
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
   }
 
-  /* Métricas 2 colunas */
+  /* ─── Inner wrapper ─── */
+  .mainContentInner {
+    padding: 12px;
+  }
+
+  /* ─── Welcome ─── */
+  .welcomeSection {
+    margin-bottom: 14px;
+  }
+
+  .welcomeTitle {
+    font-size: 1.35rem;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .welcomeSubtitle {
+    font-size: 0.82rem;
+  }
+
+  /* ─── Metrics Grid ─── */
   .metricsGrid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 8px;
+    margin-bottom: 12px;
   }
 
+  .metricCard {
+    padding: 12px 10px;
+    border-radius: 12px;
+  }
+
+  /* ─── Content Grid ─── */
   .contentGrid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* ─── Charts ─── */
+  .chartCard {
+    padding: 14px 12px;
+    border-radius: 12px;
+    /* Scroll horizontal APENAS se necessário */
+    overflow-x: auto;
+  }
+
+  .chartTitle {
+    font-size: 0.88rem;
+    margin-bottom: 10px;
   }
 
   .chartContainer {
     height: 180px;
+    min-width: 280px; /* garante que o gráfico não esmague */
+    width: 100%;
   }
 
-  .chartCard,
+  /* ─── Product Table — adapta para cards empilhados ─── */
   .productTable {
+    margin-top: 12px;
+    padding: 12px 10px;
+    border-radius: 12px;
+  }
+
+  .tableContainer {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    min-width: 460px; /* scroll horizontal se necessário */
+  }
+
+  .tableHeadCell {
+    padding: 8px 10px;
+    font-size: 0.72rem;
+  }
+
+  .tableRow {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .tableCell {
+    padding: 10px 10px;
+    font-size: 0.82rem;
+  }
+
+  .statusBadge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+  }
+
+  /* ─── Botões de ação globais ─── */
+  button,
+  [role="button"] {
+    /* Área mínima clicável mobile */
+    min-height: 40px;
+  }
+
+  /* ─── Formulários ─── */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important; /* evita zoom automático do iOS */
+    min-height: 44px;
+    border-radius: 10px !important;
+  }
+
+  /* ─── Caixa header button (mobile compacto) ─── */
+  .dashboardHeader button[style] {
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+    min-height: 34px !important;
+    white-space: nowrap;
+  }
+
+  /* ─── SeletorEmpresa — compacto ─── */
+  /* (estilos inline, mas se tiver className pode adicionar aqui) */
+
+  /* ─── Evitar overflow horizontal global ─── */
+  .mainContent > * {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* ─── Toast de pagamento ─── */
+  /* O toast usa style inline, mas garantimos que não estoure */
+  div[style*="position: fixed"][style*="top: 20"] {
+    max-width: calc(100vw - 24px) !important;
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
+  }
+
+  /* ─── Toast de cancelamento (centralizado) ─── */
+  div[style*="transform: translateX(-50%)"] {
+    width: calc(100vw - 32px) !important;
+    font-size: 12px !important;
+    text-align: center;
+    white-space: normal !important;
+    padding: 10px 14px !important;
+  }
+
+  /* ─── Modal / overlay ─── */
+  /* Garante que modais não quebrem o layout mobile */
+  [role="dialog"],
+  .modal,
+  [class*="modal" i] {
+    max-width: 100vw !important;
+    max-height: calc(100vh - 68px) !important;
+    overflow-y: auto !important;
+    border-radius: 16px 16px 0 0 !important;
+    position: fixed !important;
+    bottom: 68px !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+
+  /* ─── Vendas — Prioridade máxima ─── */
+  /* Cards de produto empilhados, CTA sempre visível */
+  [class*="vendas" i] .productCard,
+  [class*="venda" i] [class*="card" i] {
+    display: flex;
+    flex-direction: column;
     padding: 14px;
+    border-radius: 12px;
+    gap: 10px;
+  }
+
+  /* Botões de ação de venda — grandes e acessíveis */
+  [class*="vendas" i] button[class*="primary" i],
+  [class*="venda" i] button[class*="comprar" i],
+  [class*="venda" i] button[class*="add" i] {
+    width: 100% !important;
+    min-height: 48px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+  }
+
+  /* Preços em destaque */
+  [class*="preco" i],
+  [class*="price" i],
+  [class*="valor" i] {
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+  }
+
+  /* Evitar tabelas de vendas estourando — sempre scroll */
+  [class*="vendas" i] table,
+  [class*="venda" i] table {
+    min-width: 500px;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ─── Ações rápidas — PaginaAcaoRapida ─── */
+  [class*="acaoRapida" i],
+  [class*="acao-rapida" i] {
+    padding: 14px 12px;
+  }
+
+  /* ─── Scrollbar fina no mobile ─── */
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 99px;
   }
 }
 
-/* TABLET */
-@media (min-width: 768px) {
+/* ══════════════════════════════════════════
+   PEQUENOS (≤ 380px — ex: iPhone SE)
+══════════════════════════════════════════ */
+@media (max-width: 380px) {
+
   .metricsGrid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
-  .contentGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* DESKTOP */
-@media (min-width: 1024px) {
-  .metricsGrid {
-    grid-template-columns: repeat(4, 1fr);
+  .metricCard {
+    padding: 10px;
   }
 
-  .contentGrid {
-    grid-template-columns: repeat(3, 1fr);
+  .welcomeTitle {
+    font-size: 1.15rem;
   }
 
-  .chartCard {
-    grid-column: span 2;
+  .sidebarNavItem {
+    font-size: 0.52rem;
+    gap: 3px;
+  }
+
+  .sidebarNavItem svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .chartContainer {
+    height: 155px;
+  }
+
+  .tableHeadCell,
+  .tableCell {
+    padding: 7px 8px;
+    font-size: 0.75rem;
   }
 }

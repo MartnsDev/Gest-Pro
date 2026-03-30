@@ -92,22 +92,16 @@ async function buscarCaixaAberto(empresaId: number): Promise<CaixaInfo | null> {
     const caixa = await fetchAuth<CaixaInfo>(
       `/api/v1/caixas/aberto?empresaId=${empresaId}`,
     );
-
-    // Dupla validação: id deve existir E status deve ser ABERTO
     if (!caixa || !caixa.id) return null;
     if (caixa.status && caixa.status.toUpperCase() !== "ABERTO") return null;
     if (caixa.aberto === false) return null;
-
     return caixa;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    // 404 = sem caixa aberto → comportamento normal, retorna null
     if (msg.includes("HTTP_404") || msg.includes("HTTP_400")) return null;
-    // Outros erros (500, rede) → propaga
     throw err;
   }
 }
-
 
 async function resolverEstadoInicial(
   empresas: EmpresaAtiva[],
@@ -115,7 +109,6 @@ async function resolverEstadoInicial(
 ): Promise<{ empresa: EmpresaAtiva | null; caixa: CaixaInfo | null }> {
   if (empresas.length === 0) return { empresa: null, caixa: null };
 
-  // Empresa em cache vem primeiro — verifica ela antes das demais
   const ordenadas: EmpresaAtiva[] = empresaCacheId
     ? [
         ...empresas.filter((e) => e.id === empresaCacheId),
@@ -127,15 +120,12 @@ async function resolverEstadoInicial(
     try {
       const caixa = await buscarCaixaAberto(empresa.id);
       if (caixa) {
-        // Enriquece com nome da empresa para exibição no header
         return {
           empresa,
           caixa: { ...caixa, empresaNome: empresa.nomeFantasia },
         };
       }
-      // null = sem caixa nessa empresa, continua para a próxima
     } catch (err) {
-      // Erro de rede inesperado nessa empresa — loga e continua
       console.warn(
         `[GestPro] erro ao buscar caixa empresaId=${empresa.id}:`,
         err,
@@ -143,12 +133,23 @@ async function resolverEstadoInicial(
     }
   }
 
-  // Nenhuma empresa tem caixa aberto
-  // Ainda assim seleciona uma empresa: cache → primeira da lista
   const empresaFallback =
     empresas.find((e) => e.id === empresaCacheId) ?? empresas[0] ?? null;
 
   return { empresa: empresaFallback, caixa: null };
+}
+
+/* ─── Detecção de mobile (hook) ─────────────────────────────────────────── */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
 }
 
 /* ─── Toast de pagamento ─────────────────────────────────────────────────── */
@@ -175,6 +176,9 @@ function ToastPagamento({ onClose }: { onClose: () => void }) {
         boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
         animation: "slideIn .35s cubic-bezier(.175,.885,.32,1.275)",
         maxWidth: 340,
+        /* mobile: não estoura */
+        left: "auto",
+        width: "auto",
       }}
     >
       <div
@@ -223,11 +227,24 @@ function ToastPagamento({ onClose }: { onClose: () => void }) {
           display: "flex",
           alignItems: "center",
           flexShrink: 0,
+          minHeight: 32,
+          minWidth: 32,
+          justifyContent: "center",
         }}
       >
         <X size={14} />
       </button>
-      <style>{`@keyframes slideIn { from{transform:translateX(120%);opacity:0} to{transform:translateX(0);opacity:1} }`}</style>
+      <style>{`
+        @keyframes slideIn { from{transform:translateX(120%);opacity:0} to{transform:translateX(0);opacity:1} }
+        @media (max-width: 767px) {
+          /* Toast de pagamento não estoura no mobile */
+          .toast-pagamento {
+            left: 12px !important;
+            right: 12px !important;
+            max-width: calc(100vw - 24px) !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -254,6 +271,7 @@ function DashboardInner({
   const [secao, setSecao] = useState<Secao>(secaoInicial);
   const [modalCaixa, setModalCaixa] = useState(false);
   const [toast, setToast] = useState(mostrarToast);
+  const isMobile = useIsMobile();
 
   const resolverFoto = (url?: string | null) => {
     if (!url || !url.trim()) return null;
@@ -382,15 +400,13 @@ function DashboardInner({
             boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
             fontSize: 13,
             color: "#d97706",
-            whiteSpace: "nowrap",
+            /* mobile: não estoura */
+            maxWidth: "calc(100vw - 24px)",
+            whiteSpace: "normal",
+            textAlign: "center",
           }}
         >
           Pagamento cancelado. Você pode assinar quando quiser.
-          <MobileNav
-            secao={secao}
-            onChange={setSecao}
-            caixaAtivo={!!caixaAtivo}
-          />
         </div>
       )}
 
@@ -432,7 +448,8 @@ function DashboardInner({
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 12 }}>
+          {/* SeletorEmpresa: oculto no mobile apenas se não houver caixa (simplifica header) */}
           <SeletorEmpresa
             empresaAtiva={empresaAtiva}
             onSelecionar={async (empresa) => {
@@ -462,20 +479,29 @@ function DashboardInner({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 7,
-              padding: "7px 14px",
+              gap: isMobile ? 5 : 7,
+              padding: isMobile ? "6px 10px" : "7px 14px",
               background: caixaAtivo ? "rgba(16,185,129,0.12)" : "transparent",
               border: `1px solid ${caixaAtivo ? "rgba(16,185,129,0.4)" : "var(--border)"}`,
               borderRadius: 8,
               color: caixaAtivo ? "var(--primary)" : "var(--foreground-muted)",
-              fontSize: 12,
+              fontSize: isMobile ? 11 : 12,
               fontWeight: 500,
               cursor: "pointer",
               transition: "all .15s",
+              whiteSpace: "nowrap",
+              minHeight: 36,
             }}
           >
             {caixaAtivo ? <DollarSign size={14} /> : <Lock size={14} />}
-            {caixaAtivo ? `Caixa Aberto · ${nomeEmpresaCaixa}` : "Abrir Caixa"}
+            {/* No mobile, mostra só o ícone se não tiver caixa aberto */}
+            {isMobile
+              ? caixaAtivo
+                ? `Caixa · ${nomeEmpresaCaixa.split(" ")[0]}`
+                : "Caixa"
+              : caixaAtivo
+                ? `Caixa Aberto · ${nomeEmpresaCaixa}`
+                : "Abrir Caixa"}
           </button>
           <div className={styles.headerUser}>
             <span className={styles.headerUserName}>
@@ -493,50 +519,67 @@ function DashboardInner({
             ) : (
               <div className={styles.headerUserInitials}>{iniciais}</div>
             )}
-            <Button
-              onClick={handleLogout}
-              variant="ghost"
-              className="text-white hover:text-gray-300 hover:bg-[#1a3a52]"
-            >
-              Sair
-            </Button>
+            {/* Botão Sair: visível no desktop, no mobile está no drawer */}
+            {!isMobile && (
+              <Button
+                onClick={handleLogout}
+                variant="ghost"
+                className="text-white hover:text-gray-300 hover:bg-[#1a3a52]"
+              >
+                Sair
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
       {/* Layout */}
       <div className={styles.dashboardLayout}>
-        <aside className={styles.sidebar}>
-          <nav className={styles.sidebarNav}>
-            {(
-              [
-                { id: "dashboard", label: "Dashboard", icon: <Home /> },
-                { id: "produtos", label: "Produtos", icon: <Package /> },
-                { id: "vendas", label: "Vendas", icon: <CreditCard /> },
-                { id: "clientes", label: "Clientes", icon: <Users /> },
-                { id: "relatorios", label: "Relatórios", icon: <BarChart3 /> },
-                { id: "empresas", label: "Empresas", icon: <Building2 /> },
-                {
-                  id: "configuracoes",
-                  label: "Configurações",
-                  icon: <Settings />,
-                },
-                { id: "planos", label: "Planos", icon: <Zap /> },
-              ] as { id: Secao; label: string; icon: React.ReactNode }[]
-            ).map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setSecao(item.id)}
-                className={`${styles.sidebarNavItem} ${secao === item.id ? styles.sidebarNavItemActive : ""}`}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </nav>
-        </aside>
+        {/* Sidebar: apenas no desktop */}
+        {!isMobile && (
+          <aside className={styles.sidebar}>
+            <nav className={styles.sidebarNav}>
+              {(
+                [
+                  { id: "dashboard", label: "Dashboard", icon: <Home /> },
+                  { id: "produtos", label: "Produtos", icon: <Package /> },
+                  { id: "vendas", label: "Vendas", icon: <CreditCard /> },
+                  { id: "clientes", label: "Clientes", icon: <Users /> },
+                  { id: "relatorios", label: "Relatórios", icon: <BarChart3 /> },
+                  { id: "empresas", label: "Empresas", icon: <Building2 /> },
+                  {
+                    id: "configuracoes",
+                    label: "Configurações",
+                    icon: <Settings />,
+                  },
+                  { id: "planos", label: "Planos", icon: <Zap /> },
+                ] as { id: Secao; label: string; icon: React.ReactNode }[]
+              ).map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setSecao(item.id)}
+                  className={`${styles.sidebarNavItem} ${secao === item.id ? styles.sidebarNavItemActive : ""}`}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </nav>
+          </aside>
+        )}
+
         <main className={styles.mainContent}>{renderSection()}</main>
       </div>
+
+      {/* Bottom Nav — apenas mobile */}
+      {isMobile && (
+        <MobileNav
+          secao={secao}
+          onChange={setSecao}
+          caixaAtivo={!!caixaAtivo}
+          onLogout={handleLogout}
+        />
+      )}
 
       {modalCaixa && (
         <ModalCaixa
@@ -571,10 +614,8 @@ function DashboardLoader() {
     let desmontado = false;
 
     async function inicializar() {
-      /* 1. Resolve token */
       const tokenDaUrl = searchParams.get("token");
       if (tokenDaUrl) {
-        // Remove token da URL antes de qualquer outra ação.
         globalThis.history.replaceState({}, "", "/dashboard");
         salvarTokenCookie(tokenDaUrl);
         sessionStorage.setItem("jwt_token", tokenDaUrl);
@@ -586,7 +627,6 @@ function DashboardLoader() {
         return;
       }
 
-      /* 2. Busca usuário */
       let data: Usuario;
       try {
         const resultado = await getUsuario();
@@ -604,7 +644,6 @@ function DashboardLoader() {
       const uid = String(data.id);
       const cache = lerCacheUsuario(uid);
 
-      /* 3. Busca empresas e caixa aberto via API */
       let empresaResolvida: EmpresaAtiva | null = null;
       let caixaResolvido: CaixaInfo | null = null;
 
@@ -628,7 +667,6 @@ function DashboardLoader() {
 
       if (desmontado) return;
 
-      /* 4. Inicializa contexto — único ponto de escrita durante carregamento */
       inicializarUsuario(uid, empresaResolvida, caixaResolvido);
       setUsuario(data);
       setLoading(false);
