@@ -682,6 +682,7 @@ export default function EsqueceuSenhaPage() {
               {step === 1 && (
                 <form
                   onSubmit={enviarCodigo}
+                  autoComplete="off"
                   style={{ display: "flex", flexDirection: "column", gap: 18 }}
                 >
                   <div>
@@ -689,6 +690,8 @@ export default function EsqueceuSenhaPage() {
                     <input
                       className="g-input"
                       type="email"
+                      name="gp_email"
+                      autoComplete="off"
                       placeholder="seu@email.com"
                       value={email}
                       onChange={(e) => {
@@ -737,6 +740,7 @@ export default function EsqueceuSenhaPage() {
               {step === 2 && (
                 <form
                   onSubmit={redefinirSenha}
+                  autoComplete="off"
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -750,6 +754,11 @@ export default function EsqueceuSenhaPage() {
                     <input
                       className="g-input g-input-code"
                       type="text"
+                      name="gp_codigo"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
                       placeholder="· · · · · · · ·"
                       value={codigo}
                       onChange={(e) => {
@@ -779,6 +788,8 @@ export default function EsqueceuSenhaPage() {
                       <input
                         className="g-input"
                         type={showPass ? "text" : "password"}
+                        name="gp_nova_senha"
+                        autoComplete="new-password"
                         placeholder="Mín. 6 chars com letras e números"
                         value={novaSenha}
                         onChange={(e) => {
@@ -860,6 +871,8 @@ export default function EsqueceuSenhaPage() {
                       <input
                         className="g-input"
                         type="password"
+                        name="gp_confirmar_senha"
+                        autoComplete="new-password"
                         placeholder="Repita a nova senha"
                         value={confirmar}
                         onChange={(e) => {
