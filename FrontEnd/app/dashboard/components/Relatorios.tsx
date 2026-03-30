@@ -116,8 +116,26 @@ const fmt = (v?: number | null) =>
     v ?? 0,
   );
 const fmtN = (v: number) => new Intl.NumberFormat("pt-BR").format(v);
-const fmtDateSafe = (value?: string | null) => {
+const fmtDateSafe = (value?: unknown) => {
   if (!value) return "Sem data";
+
+  // Backend pode enviar LocalDateTime como array: [yyyy, mm, dd, hh, mi, ss]
+  if (Array.isArray(value)) {
+    const [y, mo, d, h = 0, mi = 0, sec = 0] = value;
+    const dt = new Date(
+      Date.UTC(
+        Number(y),
+        Number(mo) - 1,
+        Number(d),
+        Number(h),
+        Number(mi),
+        Number(sec),
+      ),
+    );
+    if (!Number.isNaN(dt.getTime())) {
+      return dt.toLocaleDateString("pt-BR");
+    }
+  }
 
   const raw = String(value).trim();
   if (!raw) return "Sem data";
