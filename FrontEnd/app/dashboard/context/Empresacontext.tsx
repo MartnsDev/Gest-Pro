@@ -11,9 +11,14 @@ import {
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 export interface CaixaInfo {
   id: number;
-  valorInicial?: number;
-  totalVendas?: number;
-  status?: string;
+  valorInicial?: number | null;
+  valorFinal?: number | null;
+  totalVendas?: number | null;
+  status?: string | null;
+  aberto?: boolean | null;
+  usuarioId?: number | null;
+  empresaId?: number | null;
+  empresaNome?: string | null;
 }
 
 export interface EmpresaAtiva {

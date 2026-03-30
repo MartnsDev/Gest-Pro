@@ -8,6 +8,7 @@ export const API_BASE_URL =
 // ===================== Tipos =====================
 
 export interface Usuario {
+  id: number;
   nome: string;
   email: string;
   foto?: string;         // foto do Google (URL completa)
