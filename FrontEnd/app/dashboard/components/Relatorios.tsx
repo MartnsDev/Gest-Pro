@@ -134,11 +134,24 @@ const fmtDateSafe = (value?: string | null) => {
     return normalizedDate.toLocaleDateString("pt-BR");
   }
 
-  // Tenta formatos comuns "dd/MM/yyyy" e "dd-MM-yyyy"
-  const m = raw.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+  // Tenta formatos comuns:
+  // "dd/MM/yyyy", "dd-MM-yyyy", "dd/MM/yyyy HH:mm[:ss]", "dd/MM/yyyy, HH:mm[:ss]"
+  const m = raw.match(
+    /^(\d{2})[\/-](\d{2})[\/-](\d{4})(?:,?\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+  );
   if (m) {
-    const [, dd, mm, yyyy] = m;
-    return `${dd}/${mm}/${yyyy}`;
+    const [, dd, mm, yyyy, hh = "0", mi = "0", ss = "0"] = m;
+    const dt = new Date(
+      Number(yyyy),
+      Number(mm) - 1,
+      Number(dd),
+      Number(hh),
+      Number(mi),
+      Number(ss),
+    );
+    if (!Number.isNaN(dt.getTime())) {
+      return dt.toLocaleDateString("pt-BR");
+    }
   }
 
   return "Sem data";
