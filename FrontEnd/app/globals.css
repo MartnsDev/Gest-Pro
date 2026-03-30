@@ -209,3 +209,39 @@ button, a, input, select, textarea {
   box-shadow: 0 0 0 1px var(--border), 0 4px 24px rgba(16,185,129,0.06);
   transition: box-shadow 200ms ease;
 }
+
+
+
+@media (max-width: 767px) {
+
+  /* Previne zoom automático do iOS ao focar campos */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 44px;
+    border-radius: 10px !important;
+  }
+
+  /* Área mínima clicável para todos os botões */
+  button,
+  [role="button"] {
+    min-height: 40px;
+  }
+
+  /* Scrollbar fina */
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 99px;
+  }
+
+  /* Reset tap highlight */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

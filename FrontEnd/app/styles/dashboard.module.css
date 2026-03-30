@@ -302,17 +302,12 @@
 
 /* ══════════════════════════════════════════
    MOBILE — até 767px
-   Zero impacto no desktop (tudo dentro deste bloco)
+   ATENÇÃO: apenas seletores .className (pure)
+   Regras globais (button, input, etc.) ficam
+   no globals.css — não podem estar aqui.
 ══════════════════════════════════════════ */
 @media (max-width: 767px) {
 
-  /* ─── Reset global mobile ─── */
-  * {
-    -webkit-tap-highlight-color: transparent;
-    box-sizing: border-box;
-  }
-
-  /* ─── Container principal ─── */
   .dashboardContainer {
     overflow-x: hidden;
   }
@@ -330,7 +325,6 @@
     min-width: 0;
   }
 
-  /* Esconde logo + título "GestPro" no mobile para ganhar espaço */
   .headerLogo {
     display: none;
   }
@@ -339,26 +333,6 @@
     display: none;
   }
 
-  /* Bloco de seção atual (separador) — mantém visível no mobile */
-  .headerBrand > div:last-child {
-    display: flex;
-    flex-direction: column;
-    border-left: none;
-    padding-left: 0;
-    margin-left: 0;
-  }
-
-  .headerBrand > div:last-child p:first-child {
-    /* label "GESTPRO" — esconde */
-    display: none;
-  }
-
-  .headerBrand > div:last-child p:last-child {
-    font-size: 15px;
-    font-weight: 700;
-  }
-
-  /* User block */
   .headerUser {
     gap: 8px;
     flex-shrink: 0;
@@ -374,123 +348,24 @@
     height: 32px;
     font-size: 0.65rem;
     border-width: 1.5px;
-    flex-shrink: 0;
-  }
-
-  /* Botão Sair — visível e compacto */
-  .headerUser button {
-    font-size: 11px !important;
-    padding: 5px 10px !important;
-    min-height: 32px;
-    border-radius: 8px !important;
   }
 
   /* ─── Layout ─── */
   .dashboardLayout {
     flex-direction: column;
     margin-top: 52px;
-    /* Espaço para a bottom nav */
     padding-bottom: 68px;
   }
 
-  /* ─── Sidebar → Bottom Nav ─── */
+  /* ─── Sidebar: oculta — o MobileNav cuida da nav no mobile ─── */
   .sidebar {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    height: 68px;
-    border-right: none;
-    border-top: 1px solid var(--border);
-    background: var(--surface);
-    padding: 6px 4px env(safe-area-inset-bottom, 0px);
-    flex-direction: row;
-    align-items: stretch;
-    z-index: 900;
-    overflow: visible;
-    /* Leve blur para profundidade */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  .sidebarNav {
-    flex-direction: row;
-    gap: 0;
-    width: 100%;
-    align-items: stretch;
-  }
-
-  .sidebarNavItem {
-    flex: 1;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 6px 2px;
-    font-size: 0.58rem;
-    font-weight: 500;
-    border-radius: 10px;
-    letter-spacing: 0.01em;
-    min-height: 0;
-    min-width: 0;
-    /* Feedback tátil melhorado */
-    transition: background 0.12s, color 0.12s, transform 0.1s;
-  }
-
-  .sidebarNavItem:active {
-    transform: scale(0.92);
-  }
-
-  .sidebarNavItem svg {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-  }
-
-  .sidebarNavItem span {
-    display: block;
-    line-height: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-  }
-
-  /* Item ativo na bottom nav — destaque pill */
-  .sidebarNavItemActive {
-    background: var(--sidebar-active-bg);
-    color: var(--sidebar-active-fg);
-  }
-
-  /* Itens 5, 6 e 7 (Empresas, Config, Planos) — ocultos na nav principal */
-  .sidebarNavItem:nth-child(5),
-  .sidebarNavItem:nth-child(6),
-  .sidebarNavItem:nth-child(7) {
     display: none;
-  }
-
-  /* Último item vira "Mais" */
-  .sidebarNavItem:last-child span {
-    visibility: hidden;
-    position: relative;
-  }
-
-  .sidebarNavItem:last-child span::after {
-    content: "Mais";
-    visibility: visible;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    white-space: nowrap;
   }
 
   /* ─── Main content ─── */
   .mainContent {
     margin-left: 0;
     min-height: calc(100vh - 52px - 68px);
-    padding: 0;
     width: 100%;
     overflow-x: hidden;
   }
@@ -515,7 +390,7 @@
     font-size: 0.82rem;
   }
 
-  /* ─── Metrics Grid ─── */
+  /* ─── Metrics ─── */
   .metricsGrid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
@@ -537,7 +412,6 @@
   .chartCard {
     padding: 14px 12px;
     border-radius: 12px;
-    /* Scroll horizontal APENAS se necessário */
     overflow-x: auto;
   }
 
@@ -548,11 +422,11 @@
 
   .chartContainer {
     height: 180px;
-    min-width: 280px; /* garante que o gráfico não esmague */
+    min-width: 280px;
     width: 100%;
   }
 
-  /* ─── Product Table — adapta para cards empilhados ─── */
+  /* ─── Product Table ─── */
   .productTable {
     margin-top: 12px;
     padding: 12px 10px;
@@ -565,7 +439,7 @@
   }
 
   .table {
-    min-width: 460px; /* scroll horizontal se necessário */
+    min-width: 460px;
   }
 
   .tableHeadCell {
@@ -573,140 +447,14 @@
     font-size: 0.72rem;
   }
 
-  .tableRow {
-    border-bottom: 1px solid var(--border-subtle);
-  }
-
   .tableCell {
-    padding: 10px 10px;
+    padding: 10px;
     font-size: 0.82rem;
   }
 
   .statusBadge {
     font-size: 0.7rem;
     padding: 0.15rem 0.5rem;
-  }
-
-  /* ─── Botões de ação globais ─── */
-  button,
-  [role="button"] {
-    /* Área mínima clicável mobile */
-    min-height: 40px;
-  }
-
-  /* ─── Formulários ─── */
-  input,
-  select,
-  textarea {
-    font-size: 16px !important; /* evita zoom automático do iOS */
-    min-height: 44px;
-    border-radius: 10px !important;
-  }
-
-  /* ─── Caixa header button (mobile compacto) ─── */
-  .dashboardHeader button[style] {
-    font-size: 11px !important;
-    padding: 6px 10px !important;
-    min-height: 34px !important;
-    white-space: nowrap;
-  }
-
-  /* ─── SeletorEmpresa — compacto ─── */
-  /* (estilos inline, mas se tiver className pode adicionar aqui) */
-
-  /* ─── Evitar overflow horizontal global ─── */
-  .mainContent > * {
-    max-width: 100vw;
-    overflow-x: hidden;
-  }
-
-  /* ─── Toast de pagamento ─── */
-  /* O toast usa style inline, mas garantimos que não estoure */
-  div[style*="position: fixed"][style*="top: 20"] {
-    max-width: calc(100vw - 24px) !important;
-    right: 12px !important;
-    left: 12px !important;
-    width: auto !important;
-  }
-
-  /* ─── Toast de cancelamento (centralizado) ─── */
-  div[style*="transform: translateX(-50%)"] {
-    width: calc(100vw - 32px) !important;
-    font-size: 12px !important;
-    text-align: center;
-    white-space: normal !important;
-    padding: 10px 14px !important;
-  }
-
-  /* ─── Modal / overlay ─── */
-  /* Garante que modais não quebrem o layout mobile */
-  [role="dialog"],
-  .modal,
-  [class*="modal" i] {
-    max-width: 100vw !important;
-    max-height: calc(100vh - 68px) !important;
-    overflow-y: auto !important;
-    border-radius: 16px 16px 0 0 !important;
-    position: fixed !important;
-    bottom: 68px !important;
-    left: 0 !important;
-    right: 0 !important;
-  }
-
-  /* ─── Vendas — Prioridade máxima ─── */
-  /* Cards de produto empilhados, CTA sempre visível */
-  [class*="vendas" i] .productCard,
-  [class*="venda" i] [class*="card" i] {
-    display: flex;
-    flex-direction: column;
-    padding: 14px;
-    border-radius: 12px;
-    gap: 10px;
-  }
-
-  /* Botões de ação de venda — grandes e acessíveis */
-  [class*="vendas" i] button[class*="primary" i],
-  [class*="venda" i] button[class*="comprar" i],
-  [class*="venda" i] button[class*="add" i] {
-    width: 100% !important;
-    min-height: 48px !important;
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    border-radius: 12px !important;
-  }
-
-  /* Preços em destaque */
-  [class*="preco" i],
-  [class*="price" i],
-  [class*="valor" i] {
-    font-size: 1.2rem !important;
-    font-weight: 700 !important;
-  }
-
-  /* Evitar tabelas de vendas estourando — sempre scroll */
-  [class*="vendas" i] table,
-  [class*="venda" i] table {
-    min-width: 500px;
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* ─── Ações rápidas — PaginaAcaoRapida ─── */
-  [class*="acaoRapida" i],
-  [class*="acao-rapida" i] {
-    padding: 14px 12px;
-  }
-
-  /* ─── Scrollbar fina no mobile ─── */
-  ::-webkit-scrollbar {
-    width: 3px;
-    height: 3px;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 99px;
   }
 }
 
@@ -726,16 +474,6 @@
 
   .welcomeTitle {
     font-size: 1.15rem;
-  }
-
-  .sidebarNavItem {
-    font-size: 0.52rem;
-    gap: 3px;
-  }
-
-  .sidebarNavItem svg {
-    width: 18px;
-    height: 18px;
   }
 
   .chartContainer {
