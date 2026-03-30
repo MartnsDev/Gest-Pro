@@ -95,33 +95,47 @@ const fmt = (v?: number | null) =>
     v ?? 0,
   );
 
-// Parseia LocalDateTime do Java em qualquer formato:
-// string "2026-03-21T20:30:00", array [2026,3,21,20,30,0], ou null
+// Parseia data do backend em qualquer formato:
+// string ISO, string sem timezone, array [year, month, day, hour, min, sec], ou null
 const parseDate = (s?: any): Date | null => {
   if (!s) return null;
-  // Array: Java serializa LocalDateTime como [year, month, day, hour, min, sec]
+  // Array: trata como UTC e converte para horário local do usuário
   if (Array.isArray(s)) {
     const [y, mo, d, h = 0, mi = 0, sec = 0] = s;
-    return new Date(y, mo - 1, d, h, mi, sec);
+    return new Date(Date.UTC(y, mo - 1, d, h, mi, sec));
   }
   if (typeof s !== "string") return null;
-  // String: normaliza e parseia
-  const norm = s.replace(" ", "T").replace(/\.\d+/, "");
-  const d = new Date(norm);
-  if (!isNaN(d.getTime())) return d;
-  // Fallback manual
-  const p = norm.match(
-    /^(\d{4})-(\d{2})-(\d{2})T?(\d{2})?:?(\d{2})?:?(\d{2})?/,
+
+  const raw = s.trim().replace(/\.\d+/, "");
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw);
+
+  // Strings com timezone explícito (Z/+00:00/-03:00)
+  if (hasTimezone) {
+    const d = new Date(raw);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+
+  // Strings sem timezone: assume UTC do backend
+  const isoNoTz = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})[ T]?(\d{2})?:?(\d{2})?:?(\d{2})?$/,
   );
-  if (p)
+  if (isoNoTz) {
+    const [, y, mo, d, h = "0", mi = "0", sec = "0"] = isoNoTz;
     return new Date(
-      +p[1],
-      +p[2] - 1,
-      +p[3],
-      +(p[4] || 0),
-      +(p[5] || 0),
-      +(p[6] || 0),
+      Date.UTC(
+        Number(y),
+        Number(mo) - 1,
+        Number(d),
+        Number(h),
+        Number(mi),
+        Number(sec),
+      ),
     );
+  }
+
+  // Fallback: Date nativo
+  const d = new Date(raw.replace(" ", "T"));
+  if (!Number.isNaN(d.getTime())) return d;
   return null;
 };
 
@@ -2165,10 +2179,11 @@ function CaixaCard({
               .toLowerCase()
               .includes(filtro.toLowerCase()),
         )
-        .sort(
-          (a, b) =>
-            new Date(b.dataVenda).getTime() - new Date(a.dataVenda).getTime(),
-        ),
+        .sort((a, b) => {
+          const db = parseDate(b.dataVenda)?.getTime() ?? 0;
+          const da = parseDate(a.dataVenda)?.getTime() ?? 0;
+          return db - da;
+        }),
     [vendas, filtro],
   );
 

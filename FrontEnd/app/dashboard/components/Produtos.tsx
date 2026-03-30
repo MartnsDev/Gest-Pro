@@ -71,8 +71,8 @@ const FORM_VAZIO: ProdutoForm = {
   codigoBarras: "",
   preco: "",
   precoCusto: "",
-  quantidadeEstoque: "0",
-  estoqueMinimo: "0",
+  quantidadeEstoque: "",
+  estoqueMinimo: "",
   ativo: true,
 };
 

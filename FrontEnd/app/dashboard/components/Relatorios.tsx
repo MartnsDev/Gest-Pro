@@ -122,16 +122,33 @@ const fmtDateSafe = (value?: string | null) => {
   const raw = String(value).trim();
   if (!raw) return "Sem data";
 
-  const direct = new Date(raw);
-  if (!Number.isNaN(direct.getTime())) {
-    return direct.toLocaleDateString("pt-BR");
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw);
+  if (hasTimezone) {
+    const direct = new Date(raw);
+    if (!Number.isNaN(direct.getTime())) {
+      return direct.toLocaleDateString("pt-BR");
+    }
   }
 
-  // Tenta formato "yyyy-MM-dd HH:mm:ss" (sem "T")
-  const normalized = raw.includes(" ") ? raw.replace(" ", "T") : raw;
-  const normalizedDate = new Date(normalized);
-  if (!Number.isNaN(normalizedDate.getTime())) {
-    return normalizedDate.toLocaleDateString("pt-BR");
+  // Formato ISO sem timezone: assume UTC do backend
+  const isoNoTz = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})[ T]?(\d{2})?:?(\d{2})?:?(\d{2})?$/,
+  );
+  if (isoNoTz) {
+    const [, y, mo, d, h = "0", mi = "0", sec = "0"] = isoNoTz;
+    const dt = new Date(
+      Date.UTC(
+        Number(y),
+        Number(mo) - 1,
+        Number(d),
+        Number(h),
+        Number(mi),
+        Number(sec),
+      ),
+    );
+    if (!Number.isNaN(dt.getTime())) {
+      return dt.toLocaleDateString("pt-BR");
+    }
   }
 
   // Tenta formatos comuns:
