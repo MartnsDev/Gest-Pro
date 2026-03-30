@@ -36,6 +36,7 @@ interface EmpresaContextType {
   empresas: EmpresaAtiva[];
   setEmpresas: (list: EmpresaAtiva[]) => void;
   resetarContexto: () => void;
+  inicializarUsuario: (usuarioId: string) => void;
 }
 
 /* ─── Chaves de localStorage vinculadas ao usuário ───────────────────────── */
@@ -52,6 +53,7 @@ const EmpresaContext = createContext<EmpresaContextType>({
   setCaixaAtivo: () => {},
   empresas: [],
   setEmpresas: () => {},
+  inicializarUsuario: () => {},
   resetarContexto: () => {},
 });
 
@@ -142,6 +144,7 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
         empresas,
         setEmpresas,
         resetarContexto,
+        inicializarUsuario,
       }}
     >
       {children}
