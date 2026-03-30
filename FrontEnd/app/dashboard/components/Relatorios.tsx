@@ -116,6 +116,33 @@ const fmt = (v?: number | null) =>
     v ?? 0,
   );
 const fmtN = (v: number) => new Intl.NumberFormat("pt-BR").format(v);
+const fmtDateSafe = (value?: string | null) => {
+  if (!value) return "Sem data";
+
+  const raw = String(value).trim();
+  if (!raw) return "Sem data";
+
+  const direct = new Date(raw);
+  if (!Number.isNaN(direct.getTime())) {
+    return direct.toLocaleDateString("pt-BR");
+  }
+
+  // Tenta formato "yyyy-MM-dd HH:mm:ss" (sem "T")
+  const normalized = raw.includes(" ") ? raw.replace(" ", "T") : raw;
+  const normalizedDate = new Date(normalized);
+  if (!Number.isNaN(normalizedDate.getTime())) {
+    return normalizedDate.toLocaleDateString("pt-BR");
+  }
+
+  // Tenta formatos comuns "dd/MM/yyyy" e "dd-MM-yyyy"
+  const m = raw.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+  if (m) {
+    const [, dd, mm, yyyy] = m;
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  return "Sem data";
+};
 const CORES = [
   "#10b981",
   "#3b82f6",
@@ -917,7 +944,7 @@ export default function Relatorios() {
               {caixas.map((c) => (
                 <option key={c.id} value={c.id}>
                   Caixa #{c.id} — {c.aberto ? "ABERTO" : "Fechado"} —{" "}
-                  {new Date(c.dataAbertura).toLocaleDateString("pt-BR")}
+                  {fmtDateSafe(c.dataAbertura)}
                 </option>
               ))}
             </select>
