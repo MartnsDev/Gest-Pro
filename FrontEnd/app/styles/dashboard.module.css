@@ -300,485 +300,189 @@
   }
 }
 
-/* ================================================================
-   GESTPRO — MOBILE OVERRIDES
-   Aplicado APENAS em telas ≤ 767px.
-   NÃO modifica nada do desktop.
-   Importe este arquivo no globals.css ou no layout raiz:
-     @import './mobile-overrides.css';
-   ================================================================ */
+/* ══════════════════════════════════════════
+   MOBILE — até 767px
+   ATENÇÃO: apenas seletores .className (pure)
+   Regras globais (button, input, etc.) ficam
+   no globals.css — não podem estar aqui.
+══════════════════════════════════════════ */
+@media (max-width: 767px) {
 
-   @media (max-width: 767px) {
+  .dashboardContainer {
+    overflow-x: hidden;
+  }
 
-    /* ══════════════════════════════════════════════════
-       1. RESET / CONTENÇÃO GLOBAL
-    ══════════════════════════════════════════════════ */
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-    }
-  
-    html, body {
-      overflow-x: hidden;
-      max-width: 100vw;
-    }
-  
-    /* Impede qualquer elemento de vazar a tela */
-    img, svg, video, canvas {
-      max-width: 100%;
-      height: auto;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       2. SELETOR DE EMPRESA (header)
-       Compacta o dropdown para caber entre logo e avatar
-    ══════════════════════════════════════════════════ */
-    /* SeletorEmpresa — botão compacto */
-    [class*="seletor"],
-    [class*="SeletorEmpresa"],
-    [class*="empresa-selector"] {
-      max-width: 140px;
-      overflow: hidden;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       3. DASHBOARD HOME — stats, alertas, ações rápidas
-    ══════════════════════════════════════════════════ */
-  
-    /* Stats grid: 2 colunas no mobile */
-    .dashboard-stats-grid {
-      grid-template-columns: repeat(2, 1fr) !important;
-      gap: 8px !important;
-    }
-  
-    /* StatsCard compacto */
-    .stats-card,
-    [class*="StatsCard"],
-    [class*="stats-card"] {
-      padding: 10px 10px !important;
-      border-radius: 10px !important;
-    }
-  
-    /* Ações rápidas: 2 colunas */
-    .acoes-rapidas-grid {
-      grid-template-columns: repeat(2, 1fr) !important;
-      gap: 8px !important;
-    }
-  
-    /* Botões de ação rápida: padding menor, ícone reduzido */
-    .acao-rapida-btn {
-      padding: 14px 12px !important;
-      border-radius: 10px !important;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       4. GRÁFICOS — sem overflow, tamanhos ajustados
-    ══════════════════════════════════════════════════ */
-    .recharts-wrapper,
-    .recharts-surface {
-      overflow: visible !important;
-    }
-  
-    /* Evita que labels dos eixos cortem na borda */
-    .recharts-cartesian-axis-tick-value {
-      font-size: 9px !important;
-    }
-  
-    /* Tooltip responsivo */
-    .recharts-tooltip-wrapper {
-      max-width: 180px !important;
-      font-size: 11px !important;
-    }
-  
-    /* Legenda compacta */
-    .recharts-legend-wrapper {
-      font-size: 10px !important;
-      padding-top: 4px !important;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       5. PRODUTOS — tabela adaptada para mobile
-    ══════════════════════════════════════════════════ */
-  
-    /* Nome do produto: trunca e exibe tooltip ao clicar */
-    .produto-nome-cell {
-      max-width: 100px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  
-    /* Esconde colunas menos importantes na tabela de produtos */
-    .col-descricao,
-    .col-codigo-barras,
-    .col-unidade {
-      display: none !important;
-    }
-  
-    /* Tabela de produtos: scroll horizontal suave se precisar */
-    .produtos-table-container {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      border-radius: 10px;
-    }
-  
-    /* Células menores */
-    .produtos-table th,
-    .produtos-table td {
-      padding: 8px 6px !important;
-      font-size: 11px !important;
-    }
-  
-    /* Botões de ação da tabela: compactos */
-    .produtos-table .action-btn {
-      width: 28px !important;
-      height: 28px !important;
-      padding: 0 !important;
-    }
-  
-    /* Badge de categoria: menor */
-    .categoria-badge {
-      font-size: 10px !important;
-      padding: 2px 6px !important;
-    }
-  
-    /* Barra de busca produtos: largura total */
-    .produtos-search {
-      width: 100% !important;
-      min-width: unset !important;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       6. VENDAS — fluxo de venda mobile-first
-    ══════════════════════════════════════════════════ */
-  
-    /* Modal de nova venda: ocupa tela inteira */
-    .modal-nova-venda {
-      max-width: 100% !important;
-      max-height: 100dvh !important;
-      border-radius: 0 !important;
-      margin: 0 !important;
-    }
-  
-    /* Grid produto + carrinho: empilha verticalmente */
-    .venda-grid {
-      grid-template-columns: 1fr !important;
-    }
-  
-    /* Painel de produtos: altura fixa com scroll */
-    .venda-produtos-panel {
-      height: 45dvh !important;
-      border-right: none !important;
-      border-bottom: 1px solid var(--border) !important;
-    }
-  
-    /* Painel do carrinho: compacto */
-    .venda-carrinho-panel {
-      max-height: 55dvh !important;
-      overflow-y: auto !important;
-    }
-  
-    /* Item de produto na lista: área de toque maior */
-    .produto-lista-item {
-      padding: 12px 14px !important;
-      min-height: 56px !important;
-    }
-  
-    /* Preço destaque na lista de produtos */
-    .produto-preco {
-      font-size: 15px !important;
-      font-weight: 700 !important;
-    }
-  
-    /* Botão confirmar venda: fixo na parte inferior, destaque máximo */
-    .btn-confirmar-venda {
-      position: sticky !important;
-      bottom: 0 !important;
-      font-size: 15px !important;
-      padding: 14px 0 !important;
-      border-radius: 10px !important;
-      margin-top: 8px !important;
-    }
-  
-    /* Seletor de formas de pagamento: 2x2 grid */
-    .formas-pagamento-grid {
-      grid-template-columns: repeat(2, 1fr) !important;
-      gap: 6px !important;
-    }
-  
-    /* Resumo de totais: fontes maiores */
-    .venda-total-valor {
-      font-size: 18px !important;
-      font-weight: 800 !important;
-    }
-  
-    /* Troco / falta: destaque visual */
-    .troco-box {
-      border-radius: 10px !important;
-      padding: 12px !important;
-    }
-  
-    /* Card de caixa: compacto */
-    .caixa-card {
-      border-radius: 12px !important;
-    }
-  
-    /* Header do caixa: layout ajustado */
-    .caixa-card-header {
-      padding: 12px 14px !important;
-    }
-  
-    /* Resumo de formas de pagamento: chips menores */
-    .pagamento-chip {
-      padding: 6px 10px !important;
-      font-size: 11px !important;
-    }
-  
-    /* Lista de vendas: itens empilhados */
-    .venda-item {
-      padding: 10px 12px !important;
-      border-radius: 9px !important;
-    }
-  
-    /* Valor da venda: destaque */
-    .venda-item-valor {
-      font-size: 14px !important;
-      font-weight: 700 !important;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       7. CLIENTES — tabela responsiva
-    ══════════════════════════════════════════════════ */
-  
-    /* Esconde colunas secundárias */
-    .col-cpf,
-    .col-cnpj {
-      display: none !important;
-    }
-  
-    /* Nome com truncamento */
-    .cliente-nome-cell {
-      max-width: 120px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  
-    /* Telefone como link clicável: área maior */
-    .cliente-tel-link {
-      min-height: 40px;
-      display: flex;
-      align-items: center;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       8. MODAIS — fullscreen no mobile
-    ══════════════════════════════════════════════════ */
-  
-    /* Overlay: padding menor */
-    .modal-overlay {
-      padding: 8px !important;
-    }
-  
-    /* Caixa modal: quase fullscreen */
-    .modal-box {
-      max-width: 100% !important;
-      max-height: 94dvh !important;
-      border-radius: 16px !important;
-      padding: 18px 16px !important;
-    }
-  
-    /* Modal de exclusão de empresa: fullscreen */
-    .modal-exclusao {
-      max-width: 100% !important;
-      border-radius: 14px !important;
-      padding: 22px 18px !important;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       9. FORMULÁRIOS — digitação confortável
-    ══════════════════════════════════════════════════ */
-  
-    input[type="text"],
-    input[type="number"],
-    input[type="email"],
-    input[type="password"],
-    input[type="date"],
-    select,
-    textarea {
-      /* Impede zoom automático no iOS (mínimo 16px) */
-      font-size: 16px !important;
-      /* Área de toque adequada */
-      min-height: 44px;
-      border-radius: 9px !important;
-    }
-  
-    /* Select nativo: aparência melhorada */
-    select {
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      padding-right: 36px !important;
-    }
-  
-    /* Labels: tamanho legível */
-    label {
-      font-size: 13px !important;
-      font-weight: 500;
-    }
-  
-    /* Botões: área de toque mínima de 44px */
-    button {
-      min-height: 40px;
-    }
-  
-    /* Botões primários de ação: destaque máximo */
-    .btn-primary-mobile {
-      font-size: 15px !important;
-      padding: 13px 0 !important;
-      border-radius: 10px !important;
-      font-weight: 700 !important;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       10. TELA DE SUCESSO DE VENDA
-    ══════════════════════════════════════════════════ */
-  
-    .tela-venda-sucesso {
-      padding: 12px !important;
-    }
-  
-    .tela-venda-sucesso > div {
-      max-width: 100% !important;
-      border-radius: 18px !important;
-      padding: 28px 20px !important;
-    }
-  
-    .venda-sucesso-valor {
-      font-size: 34px !important;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       11. RELATÓRIOS — tabelas compactas
-    ══════════════════════════════════════════════════ */
-  
-    .relatorio-container {
-      padding: 14px 12px !important;
-    }
-  
-    .relatorio-table-wrapper {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       12. CONFIGURAÇÕES — abas empilhadas
-    ══════════════════════════════════════════════════ */
-  
-    .config-abas {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      white-space: nowrap;
-      padding-bottom: 2px;
-      /* Esconde scrollbar */
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-    .config-abas::-webkit-scrollbar {
-      display: none;
-    }
-  
-    /* ══════════════════════════════════════════════════
-       13. PLANOS — cards empilhados
-    ══════════════════════════════════════════════════ */
-  
-    .planos-grid {
-      grid-template-columns: 1fr !important;
-      gap: 14px !important;
-      padding: 0 4px !important;
-    }
-  
-    .plano-card {
-      border-radius: 14px !important;
-      padding: 20px 16px !important;
-    }
-  
-  /* ══════════════════════════════════════════════════
-      14. ALERTAS — compactos
-  ══════════════════════════════════════════════════ */
-  
-    .alerta-item {
-      padding: 9px 12px !important;
-      font-size: 12px !important;
-      border-radius: 8px !important;
-    }
-  
-  /* ══════════════════════════════════════════════════
-    15. GERENCIAR EMPRESAS
-  ══════════════════════════════════════════════════ */
-  
-    .empresa-card {
-      padding: 12px 14px !important;
-      border-radius: 10px !important;
-    }
-  
-    .empresa-nome {
-      font-size: 13px !important;
-    }
-  
-    /* ══════════════════════════════════════════════════
-      16. SCROLLBAR GLOBAL — mais discreta no mobile
-    ══════════════════════════════════════════════════ */
-  
-    ::-webkit-scrollbar {
-      width: 3px;
-      height: 3px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 99px;
-    }
-  
-  /* ══════════════════════════════════════════════════
-  17. ANIMAÇÕES — respeita preferência do usuário
-   ══════════════════════════════════════════════════ */
-  
-    @media (prefers-reduced-motion: reduce) {
-      * {
-        animation-duration: 0.01ms !important;
-        transition-duration: 0.01ms !important;
-      }
-    }
+  /* ─── Header ─── */
+  .dashboardHeader {
+    padding: 0 12px;
+    height: 52px;
+    gap: 8px;
   }
-  
-  /* ══════════════════════════════════════════
-    MOBILE PEQUENO — até 380px (iPhone SE)
-  ══════════════════════════════════════════ */
-  @media (max-width: 380px) {
-  
-    input[type="text"],
-    input[type="number"],
-    input[type="email"],
-    input[type="password"],
-    input[type="date"],
-    select,
-    textarea {
-      font-size: 16px !important;
-      min-height: 42px;
-    }
-  
-    .modal-box {
-      padding: 14px 12px !important;
-    }
-  
-    .venda-total-valor {
-      font-size: 16px !important;
-    }
-  
-    .plano-card {
-      padding: 16px 13px !important;
-    }
+
+  .headerBrand {
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
   }
+
+  .headerLogo {
+    display: none;
+  }
+
+  .headerTitle {
+    display: none;
+  }
+
+  .headerUser {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .headerUserName {
+    display: none;
+  }
+
+  .headerUserAvatar,
+  .headerUserInitials {
+    width: 32px;
+    height: 32px;
+    font-size: 0.65rem;
+    border-width: 1.5px;
+  }
+
+  /* ─── Layout ─── */
+  .dashboardLayout {
+    flex-direction: column;
+    margin-top: 52px;
+    padding-bottom: 68px;
+  }
+
+  /* ─── Sidebar: oculta — o MobileNav cuida da nav no mobile ─── */
+  .sidebar {
+    display: none;
+  }
+
+  /* ─── Main content ─── */
+  .mainContent {
+    margin-left: 0;
+    min-height: calc(100vh - 52px - 68px);
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* ─── Inner wrapper ─── */
+  .mainContentInner {
+    padding: 12px;
+  }
+
+  /* ─── Welcome ─── */
+  .welcomeSection {
+    margin-bottom: 14px;
+  }
+
+  .welcomeTitle {
+    font-size: 1.35rem;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .welcomeSubtitle {
+    font-size: 0.82rem;
+  }
+
+  /* ─── Metrics ─── */
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .metricCard {
+    padding: 12px 10px;
+    border-radius: 12px;
+  }
+
+  /* ─── Content Grid ─── */
+  .contentGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* ─── Charts ─── */
+  .chartCard {
+    padding: 14px 12px;
+    border-radius: 12px;
+    overflow-x: auto;
+  }
+
+  .chartTitle {
+    font-size: 0.88rem;
+    margin-bottom: 10px;
+  }
+
+  .chartContainer {
+    height: 180px;
+    min-width: 280px;
+    width: 100%;
+  }
+
+  /* ─── Product Table ─── */
+  .productTable {
+    margin-top: 12px;
+    padding: 12px 10px;
+    border-radius: 12px;
+  }
+
+  .tableContainer {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    min-width: 460px;
+  }
+
+  .tableHeadCell {
+    padding: 8px 10px;
+    font-size: 0.72rem;
+  }
+
+  .tableCell {
+    padding: 10px;
+    font-size: 0.82rem;
+  }
+
+  .statusBadge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+  }
+}
+
+/* ══════════════════════════════════════════
+   PEQUENOS (≤ 380px — ex: iPhone SE)
+══════════════════════════════════════════ */
+@media (max-width: 380px) {
+
+  .metricsGrid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .metricCard {
+    padding: 10px;
+  }
+
+  .welcomeTitle {
+    font-size: 1.15rem;
+  }
+
+  .chartContainer {
+    height: 155px;
+  }
+
+  .tableHeadCell,
+  .tableCell {
+    padding: 7px 8px;
+    font-size: 0.75rem;
+  }
+}
