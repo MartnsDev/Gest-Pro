@@ -1,6 +1,5 @@
 package br.com.gestpro.pedidos.controller;
 
-
 import br.com.gestpro.pedidos.dto.PedidoResponseDTO;
 import br.com.gestpro.pedidos.dto.RegistrarPedidoDTO;
 import br.com.gestpro.pedidos.dto.StatusPedido;
@@ -19,14 +18,14 @@ import java.util.Map;
 /**
  * Endpoints do módulo "Pedidos" — vendas rápidas sem caixa físico.
  *
- * Base: /api/v1/pedidos
- *
  * POST   /empresa/{empresaId}              → registrar pedido
  * GET    /empresa/{empresaId}              → listar pedidos da empresa
+ * DELETE /empresa/{empresaId}/historico    → apagar TODO o histórico da empresa
  * GET    /{id}                             → buscar por ID
  * PATCH  /{id}/status                     → atualizar status
  * POST   /{id}/cancelar                   → cancelar + devolver estoque
  * PATCH  /{id}/observacao                 → editar observação
+ * DELETE /{id}                            → remover pedido individual do histórico
  */
 @RestController
 @RequestMapping("/api/v1/pedidos")
@@ -45,7 +44,6 @@ public class PedidoController {
 
         dto.setEmailUsuario(authentication.getName());
         dto.setEmpresaId(empresaId);
-
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new PedidoResponseDTO(pedidoService.registrarPedido(dto)));
@@ -67,6 +65,17 @@ public class PedidoController {
         );
     }
 
+    // ─── Limpar todo o histórico de uma empresa ──────────────────────────
+
+    @DeleteMapping("/empresa/{empresaId}/historico")
+    public ResponseEntity<Void> limparHistorico(
+            @PathVariable Long empresaId,
+            Authentication authentication) {
+
+        pedidoService.limparHistorico(empresaId, authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
+
     // ─── Buscar por ID ───────────────────────────────────────────────────
 
     @GetMapping("/{id}")
@@ -77,10 +86,6 @@ public class PedidoController {
 
     // ─── Atualizar status ────────────────────────────────────────────────
 
-    /**
-     * Body: { "status": "ENVIADO" }
-     * Valores aceitos: PENDENTE | CONFIRMADO | ENVIADO | ENTREGUE | CANCELADO
-     */
     @PatchMapping("/{id}/status")
     public ResponseEntity<PedidoResponseDTO> atualizarStatus(
             @PathVariable Long id,
@@ -88,8 +93,7 @@ public class PedidoController {
             Authentication authentication) {
 
         String statusStr = body.get("status");
-        if (statusStr == null || statusStr.isBlank())
-            return ResponseEntity.badRequest().build();
+        if (statusStr == null || statusStr.isBlank()) return ResponseEntity.badRequest().build();
 
         StatusPedido novoStatus;
         try {
@@ -129,5 +133,16 @@ public class PedidoController {
         return ResponseEntity.ok(new PedidoResponseDTO(
                 pedidoService.editarObservacao(id, obs, authentication.getName())
         ));
+    }
+
+    // ─── Remover pedido individual ───────────────────────────────────────
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> remover(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        pedidoService.removerPedido(id, authentication.getName());
+        return ResponseEntity.noContent().build();
     }
 }

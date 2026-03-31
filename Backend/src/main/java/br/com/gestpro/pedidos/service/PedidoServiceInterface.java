@@ -26,4 +26,17 @@ public interface PedidoServiceInterface {
 
     /** Busca um pedido pelo ID */
     Pedido buscarPorId(Long id);
+
+    /**
+     * Remove um único pedido do histórico (exclusão física).
+     * Se o pedido não estiver cancelado, o estoque NÃO é devolvido —
+     * o operador deve cancelar primeiro se quiser devolver o estoque.
+     */
+    void removerPedido(Long id, String emailUsuario);
+
+    /**
+     * Remove TODO o histórico de pedidos de uma empresa (exclusão física).
+     * Usar com cuidado — operação irreversível.
+     */
+    void limparHistorico(Long empresaId, String emailUsuario);
 }

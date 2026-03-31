@@ -7,6 +7,7 @@ import br.com.gestpro.cliente.repository.ClienteRepository;
 import br.com.gestpro.empresa.model.Empresa;
 import br.com.gestpro.empresa.repository.EmpresaRepository;
 import br.com.gestpro.infra.exception.ApiException;
+
 import br.com.gestpro.pedidos.CanalVenda;
 import br.com.gestpro.pedidos.Repository.PedidoRepository;
 import br.com.gestpro.pedidos.dto.ItemPedido;
@@ -35,10 +36,10 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
     private static final String PATH = "/api/v1/pedidos";
 
     private final PedidoRepository pedidoRepository;
-    private final ProdutoRepository   produtoRepository;
-    private final UsuarioRepository   usuarioRepository;
-    private final EmpresaRepository   empresaRepository;
-    private final ClienteRepository   clienteRepository;
+    private final ProdutoRepository  produtoRepository;
+    private final UsuarioRepository  usuarioRepository;
+    private final EmpresaRepository  empresaRepository;
+    private final ClienteRepository  clienteRepository;
 
     // ─── Registrar ───────────────────────────────────────────────────────
 
@@ -54,7 +55,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         Empresa empresa = empresaRepository.findById(dto.getEmpresaId())
                 .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, PATH));
 
-        // Garante que o usuário é dono da empresa
         if (!empresa.getDono().getId().equals(usuario.getId()))
             throw new ApiException("Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, PATH);
 
@@ -73,9 +73,9 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         pedido.setEnderecoEntrega(dto.getEnderecoEntrega());
         pedido.setCustoFrete(dto.getCustoFrete() != null ? dto.getCustoFrete() : BigDecimal.ZERO);
         pedido.setObservacao(dto.getObservacao());
-        pedido.setStatus(StatusPedido.CONFIRMADO); // pedido já confirmado ao ser criado
+        pedido.setStatus(StatusPedido.CONFIRMADO);
 
-        // ─── Itens + debito de estoque ───────────────────────────────────
+        // ─── Itens + débito de estoque ───────────────────────────────────
         List<ItemPedido> itens = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
 
@@ -84,14 +84,12 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
                     .orElseThrow(() -> new ApiException(
                             "Produto não encontrado: " + itemDTO.getIdProduto(), HttpStatus.NOT_FOUND, PATH));
 
-            // Verifica se o produto pertence à mesma empresa
             if (produto.getEmpresa() == null || !produto.getEmpresa().getId().equals(empresa.getId()))
                 throw new ApiException(
                         "Produto '" + produto.getNome() + "' não pertence a esta empresa.",
                         HttpStatus.BAD_REQUEST, PATH);
 
             int qtd = itemDTO.getQuantidade();
-
             if (produto.getQuantidadeEstoque() < qtd)
                 throw new ApiException(
                         "Estoque insuficiente para: " + produto.getNome(), HttpStatus.BAD_REQUEST, PATH);
@@ -118,7 +116,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
 
         pedido.setValorTotal(total);
         pedido.setDesconto(desconto);
-        // valorFinal = total − desconto + frete
         pedido.setValorFinal(
                 total.subtract(desconto)
                         .add(pedido.getCustoFrete())
@@ -126,11 +123,8 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         );
 
         Pedido salvo = pedidoRepository.save(pedido);
-
         log.info("Pedido id={} registrado. empresa={}, canal={}, valorFinal={}",
-                salvo.getId(), empresa.getNomeFantasia(),
-                salvo.getCanalVenda(), salvo.getValorFinal());
-
+                salvo.getId(), empresa.getNomeFantasia(), salvo.getCanalVenda(), salvo.getValorFinal());
         return salvo;
     }
 
@@ -140,13 +134,10 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
     @Transactional
     public Pedido atualizarStatus(Long id, StatusPedido novoStatus, String emailUsuario) {
         Pedido pedido = buscarComPermissao(id, emailUsuario);
-
         if (pedido.getStatus() == StatusPedido.CANCELADO)
             throw new ApiException("Pedido cancelado não pode ser alterado.", HttpStatus.BAD_REQUEST, PATH);
-
         if (novoStatus == StatusPedido.CANCELADO)
             return cancelarPedido(id, null, emailUsuario);
-
         pedido.setStatus(novoStatus);
         return pedidoRepository.save(pedido);
     }
@@ -157,7 +148,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
     @Transactional
     public Pedido cancelarPedido(Long id, String motivo, String emailUsuario) {
         Pedido pedido = buscarComPermissao(id, emailUsuario);
-
         if (pedido.getStatus() == StatusPedido.CANCELADO)
             throw new ApiException("Pedido já cancelado.", HttpStatus.BAD_REQUEST, PATH);
 
@@ -186,17 +176,41 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         return pedidoRepository.save(pedido);
     }
 
+    // ─── Remover pedido individual ───────────────────────────────────────
+
+    @Override
+    @Transactional
+    public void removerPedido(Long id, String emailUsuario) {
+        Pedido pedido = buscarComPermissao(id, emailUsuario);
+        pedidoRepository.delete(pedido);
+        log.info("Pedido id={} removido do histórico por {}.", id, emailUsuario);
+    }
+
+    // ─── Limpar histórico ────────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public void limparHistorico(Long empresaId, String emailUsuario) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, PATH));
+
+        if (!empresa.getDono().getEmail().equals(emailUsuario))
+            throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, PATH);
+
+        List<Pedido> todos = pedidoRepository.findByEmpresaIdOrderByDataPedidoDesc(empresaId);
+        pedidoRepository.deleteAll(todos);
+        log.info("Histórico de pedidos da empresa {} limpo por {}.", empresaId, emailUsuario);
+    }
+
     // ─── Consultas ───────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
     public List<Pedido> listarPorEmpresa(Long empresaId, String emailUsuario) {
-        // Valida que o usuário é dono da empresa antes de listar
         Empresa empresa = empresaRepository.findById(empresaId)
                 .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, PATH));
         if (!empresa.getDono().getEmail().equals(emailUsuario))
             throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, PATH);
-
         return pedidoRepository.findByEmpresaIdOrderByDataPedidoDesc(empresaId);
     }
 
@@ -207,7 +221,7 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
                 .orElseThrow(() -> new ApiException("Pedido não encontrado", HttpStatus.NOT_FOUND, PATH));
     }
 
-    // ─── Helper privado ──────────────────────────────────────────────────
+    // ─── Helper ──────────────────────────────────────────────────────────
 
     private Pedido buscarComPermissao(Long id, String emailUsuario) {
         Pedido pedido = buscarPorId(id);
