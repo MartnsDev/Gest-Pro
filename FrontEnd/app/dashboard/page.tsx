@@ -15,6 +15,7 @@ import {
   Building2,
   CheckCircle2,
   X,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +51,7 @@ import NovoCliente from "./acoesRapidas/NovoCliente";
 import AbrirCaixa from "./acoesRapidas/AbrirCaixa";
 import PaginaAcaoRapida from "./acoesRapidas/PaginaAcaoRapida";
 import MobileNav from "./components/MobileNav";
+import Pedidos from "./components/Pedidos";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 type Secao =
@@ -64,7 +66,8 @@ type Secao =
   | "planos"
   | "produto-rapido"
   | "cliente-rapido"
-  | "caixa-rapido";
+  | "caixa-rapido"
+  | "pedidos";
 
 const BASE =
   process.env.NEXT_PUBLIC_API_URL ??
@@ -316,6 +319,7 @@ function DashboardInner({
     "produto-rapido": "Novo Produto",
     "cliente-rapido": "Novo Cliente",
     "caixa-rapido": "Abrir Caixa",
+    pedidos: "Pedidos",
   };
 
   const renderSection = () => {
@@ -543,7 +547,8 @@ function DashboardInner({
                 [
                   { id: "dashboard", label: "Dashboard", icon: <Home /> },
                   { id: "produtos", label: "Produtos", icon: <Package /> },
-                  { id: "vendas", label: "Vendas", icon: <CreditCard /> },
+                  { id: "vendas PDV", label: "Vendas", icon: <CreditCard /> },
+                  { id: "pedidos", label: "Pedidos", icon: <ShoppingBag /> },
                   { id: "clientes", label: "Clientes", icon: <Users /> },
                   { id: "relatorios", label: "Relatórios", icon: <BarChart3 /> },
                   { id: "empresas", label: "Empresas", icon: <Building2 /> },
