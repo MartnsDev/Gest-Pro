@@ -58,7 +58,6 @@ type Secao =
   | "dashboard"
   | "produtos"
   | "estoque"
-  | "vendas PDV"
   | "vendas"
   | "clientes"
   | "relatorios"
@@ -311,8 +310,8 @@ function DashboardInner({
     dashboard: "Visão Geral",
     produtos: "Produtos",
     estoque: "Estoque",
-    "vendas PDV": "Vendas PDV",
     vendas: "Vendas",
+    pedidos: "Pedidos",
     clientes: "Clientes",
     relatorios: "Relatórios",
     configuracoes: "Configurações",
@@ -321,7 +320,7 @@ function DashboardInner({
     "produto-rapido": "Novo Produto",
     "cliente-rapido": "Novo Cliente",
     "caixa-rapido": "Abrir Caixa",
-    pedidos: "Pedidos",
+  
   };
 
   const renderSection = () => {
