@@ -506,8 +506,15 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
     { title: "Custo em Estoque", value: loading ? "—" : fmt(visao?.custos),                       icon: <Receipt size={16} />,     accent: "warning"     as const },
   ];
 
-  // ✅ Separa alertas de estoque dos demais
-  const todosAlertas    = [...(visao?.alertas ?? []), ...(visao?.planoUsuario ? [`Plano ${visao.planoUsuario.tipoPlano}: ${visao.planoUsuario.diasRestantes} dia(s) restante(s)`] : [])];
+  // Apenas dizer o plano como alerta se o plano tiver menos de 7 dias restantes
+  const todosAlertas = [
+    ...(visao?.alertas ?? []), 
+    ...(visao?.planoUsuario && visao.planoUsuario.diasRestantes < 7 
+      ? [`Plano ${visao.planoUsuario.tipoPlano}: ${visao.planoUsuario.diasRestantes} dia(s) restante(s)`] 
+      : [])
+  ];
+
+
   const alertasProduto  = todosAlertas.filter((a) => a.startsWith("Estoque esgotado:"));
   const alertasOutros   = todosAlertas.filter((a) => !a.startsWith("Estoque esgotado:"));
 
