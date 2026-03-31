@@ -550,7 +550,7 @@ function DashboardInner({
                 [
                   { id: "dashboard", label: "Dashboard", icon: <Home /> },
                   { id: "produtos", label: "Produtos", icon: <Package /> },
-                  { id: "vendas PDV", label: "Vendas", icon: <CreditCard /> },
+                  { id: "vendas", label: "Vendas", icon: <CreditCard /> },
                   { id: "pedidos", label: "Pedidos", icon: <ShoppingBag /> },
                   { id: "clientes", label: "Clientes", icon: <Users /> },
                   { id: "relatorios", label: "Relatórios", icon: <BarChart3 /> },
