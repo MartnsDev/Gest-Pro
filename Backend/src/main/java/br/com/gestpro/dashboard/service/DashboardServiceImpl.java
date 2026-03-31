@@ -29,6 +29,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         return visaoGeralOperation.planoUsuarioLogado(email);
     }
 
+    // ── Valida que a empresa pertence ao usuário ───────────────────────────
     private Empresa validarEmpresa(Long empresaId, String email) {
         Empresa empresa = empresaRepository.findById(empresaId)
                 .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/api/v1/dashboard"));
@@ -58,14 +59,12 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         return graficoServiceOperation.vendasDiariasSemana(empresaId);
     }
 
+
     @Override
     @Transactional(readOnly = true)
     public DashboardVisaoGeralResponse visaoGeral(Long empresaId, String email) {
         validarEmpresa(empresaId, email);
 
-        // ─────────────────────────────────────────────────────────────────────
-        // DADOS ANTIGOS (só PDV — mantém compatibilidade)
-        // ─────────────────────────────────────────────────────────────────────
         List<Object[]> rows = dashboardRepository.findDashboardCountsRaw(empresaId);
         Object vHoje = 0, pCom = 0, pSem = 0, cAtivos = 0;
         if (rows != null && !rows.isEmpty()) {
@@ -78,29 +77,15 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
             }
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // NOVOS KPIs: PDV + Pedidos Unificados
-        // ─────────────────────────────────────────────────────────────────────
-        BigDecimal faturamentoDia      = visaoGeralOperation.faturamentoDia(empresaId);
-        BigDecimal faturamentoSemana   = visaoGeralOperation.faturamentoSemana(empresaId);
-        BigDecimal faturamentoMes      = visaoGeralOperation.faturamentoMes(empresaId);
-        long transacoesDia             = visaoGeralOperation.totalTransacoesDia(empresaId);
-        BigDecimal ticketMedio         = visaoGeralOperation.ticketMedioDia(empresaId);
-
-        // ─────────────────────────────────────────────────────────────────────
-        // ORIGEM: Separação PDV vs Pedidos (para gráfico de origem)
-        // ─────────────────────────────────────────────────────────────────────
-        BigDecimal origemPdvMes        = visaoGeralOperation.faturamentoPdvMes(empresaId);
-        BigDecimal origemPedidosMes    = visaoGeralOperation.faturamentoPedidosMes(empresaId);
-
-        // ─────────────────────────────────────────────────────────────────────
-        // DADOS ANTIGOS (compatibilidade)
-        // ─────────────────────────────────────────────────────────────────────
-        PlanoDTO plano        = visaoGeralOperation.planoUsuarioLogado(email);
-        BigDecimal lucroDia   = visaoGeralOperation.lucroDia(empresaId);
-        BigDecimal lucroMes   = visaoGeralOperation.lucroMes(empresaId);
-        BigDecimal custos     = visaoGeralOperation.custoTotalEstoque(empresaId);
+        PlanoDTO   plano        = visaoGeralOperation.planoUsuarioLogado(email);
+        BigDecimal vendasSemana = visaoGeralOperation.vendasSemana(empresaId);
+        BigDecimal vendasMes    = visaoGeralOperation.vendasMes(empresaId);
+        BigDecimal lucroDia     = visaoGeralOperation.lucroDia(empresaId);
+        BigDecimal lucroMes     = visaoGeralOperation.lucroMes(empresaId);
+        BigDecimal custos = visaoGeralOperation.custoTotalEstoque(empresaId);
         BigDecimal totalInvestido = visaoGeralOperation.totalInvestido(empresaId);
+
+
 
         List<String> alertas = Stream.concat(
                 visaoGeralOperation.alertasProdutosZerados(empresaId).stream(),
@@ -109,32 +94,13 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
                         : Stream.empty()
         ).toList();
 
-        // ─────────────────────────────────────────────────────────────────────
-        // CONSTRUIR RESPOSTA
-        // ─────────────────────────────────────────────────────────────────────
         DashboardVisaoGeralResponse response = new DashboardVisaoGeralResponse(
                 vHoje, pCom, pSem, cAtivos,
-                faturamentoSemana, faturamentoMes, lucroDia, lucroMes,
+                vendasSemana, vendasMes, lucroDia, lucroMes,
                 plano, alertas
         );
         response.setCustos(custos);
         response.setTotalInvestido(totalInvestido);
-
-        // ─────────────────────────────────────────────────────────────────────
-        // NOVOS CAMPOS (PDV + Pedidos)
-        // ─────────────────────────────────────────────────────────────────────
-        response.setFaturamentoDia(faturamentoDia);
-        response.setFaturamentoSemana(faturamentoSemana);
-        response.setFaturamentoMes(faturamentoMes);
-        response.setTransacoesDia(transacoesDia);
-        response.setTicketMedioDia(ticketMedio);
-
-        // ─────────────────────────────────────────────────────────────────────
-        // ORIGEM: PDV vs Pedidos (para gráfico)
-        // ─────────────────────────────────────────────────────────────────────
-        response.setOrigemPdvMes(origemPdvMes);
-        response.setOrigemPedidosMes(origemPedidosMes);
-
         return response;
     }
 }
