@@ -40,6 +40,90 @@ public class VisaoGeralOperation {
                 .orElse(new PlanoDTO("NENHUM", 0, 0, 0, "INATIVO"));
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // NOVOS MÉTODOS: PDV + Pedidos Unificados
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public BigDecimal faturamentoDia(Long empresaId) {
+        Object diaTotalObj = dashboardRepository.faturamentoDia(empresaId);
+        return parseBD(diaTotalObj);
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal faturamentoSemana(Long empresaId) {
+        LocalDate hoje       = LocalDate.now();
+        LocalDateTime inicio = hoje.with(DayOfWeek.MONDAY).atStartOfDay();
+        LocalDateTime fim    = hoje.with(DayOfWeek.SUNDAY).atTime(23, 59, 59);
+        Object semanaTotalObj = dashboardRepository.faturamentoSemana(empresaId, inicio, fim);
+        return parseBD(semanaTotalObj);
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal faturamentoMes(Long empresaId) {
+        Object mesTotalObj = dashboardRepository.faturamentoMes(empresaId);
+        return parseBD(mesTotalObj);
+    }
+
+    @Transactional(readOnly = true)
+    public long totalTransacoesDia(Long empresaId) {
+        Object transacoesObj = dashboardRepository.totalTransacoesDia(empresaId);
+        if (transacoesObj == null) return 0L;
+        try {
+            String str = transacoesObj.toString().split("\\.")[0];
+            return Long.parseLong(str);
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal ticketMedioDia(Long empresaId) {
+        Object ticketObj = dashboardRepository.ticketMedioDia(empresaId);
+        return parseBD(ticketObj);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // MÉTODOS SEPARADOS: PDV vs Pedidos (para gráfico de origem)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public BigDecimal faturamentoPdvMes(Long empresaId) {
+        Object pdvMes = dashboardRepository.somaVendasMes(empresaId);
+        return parseBD(pdvMes);
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal faturamentoPdvDia(Long empresaId) {
+        Object pdvDia = dashboardRepository.findDashboardCountsRaw(empresaId);
+        return parseBD(pdvDia);
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal faturamentoPedidosMes(Long empresaId) {
+        Object pedMes = dashboardRepository.somaPedidosMes(empresaId);
+        return parseBD(pedMes);
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal faturamentoPedidosDia(Long empresaId) {
+        Object pedDia = dashboardRepository.somaPedidosDia(empresaId);
+        return parseBD(pedDia);
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal faturamentoPedidosSemana(Long empresaId) {
+        LocalDate hoje       = LocalDate.now();
+        LocalDateTime inicio = hoje.with(DayOfWeek.MONDAY).atStartOfDay();
+        LocalDateTime fim    = hoje.with(DayOfWeek.SUNDAY).atTime(23, 59, 59);
+        Object pedSem = dashboardRepository.somaPedidosSemana(empresaId, inicio, fim);
+        return parseBD(pedSem);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ANTIGOS MÉTODOS (mantidos para compatibilidade)
+    // ─────────────────────────────────────────────────────────────────────────
+
     @Transactional(readOnly = true)
     public BigDecimal vendasSemana(Long empresaId) {
         LocalDate hoje       = LocalDate.now();
