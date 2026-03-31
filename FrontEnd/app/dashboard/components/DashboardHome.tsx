@@ -398,6 +398,7 @@ function ModalResumoDia({ empresaId, onClose, onIrRelatorios }: { empresaId: num
   const [rel, setRel]       = useState<RelatorioHoje | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro]     = useState("");
+  const CORES = ["#10b981", "#3b82f6", "#a78bfa", "#f59e0b", "#ef4444"];
 
   useEffect(() => { setLoading(true); fetchQ<RelatorioHoje>(`/api/v1/relatorios/hoje?empresaId=${empresaId}`).then(setRel).catch((e) => setErro(e.message)).finally(() => setLoading(false)); }, [empresaId]);
 
@@ -439,26 +440,10 @@ function ClientOnly({ children }: { children: ReactNode }) {
   return ok ? <>{children}</> : null;
 }
 
-/* ─── SectionCard — agora sempre full width, empilhado ──────────────────── */
-function SectionCard({ title, children }: { title: string; children: ReactNode }) {
+function SectionCard({ title, children, fullWidth }: { title: string; children: ReactNode; fullWidth?: boolean }) {
   return (
-    <div style={{
-      background: "var(--surface-elevated)",
-      border: "1px solid var(--border)",
-      borderRadius: 12,
-      padding: 20,
-      width: "100%",
-    }}>
-      <p style={{
-        fontSize: 11,
-        fontWeight: 600,
-        color: "var(--foreground-muted)",
-        marginBottom: 16,
-        textTransform: "uppercase",
-        letterSpacing: ".07em",
-      }}>
-        {title}
-      </p>
+    <div style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 12, padding: 20, gridColumn: fullWidth ? "1 / -1" : undefined }}>
+      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", marginBottom: 16, textTransform: "uppercase", letterSpacing: ".07em" }}>{title}</p>
       {children}
     </div>
   );
@@ -475,6 +460,8 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
   const [loading,       setLoading]       = useState(true);
   const [modal, setModal]                 = useState<"venda"|"produto"|"caixa"|"cliente"|"relatorio"|null>(null);
   const [overlayVenda,  setOverlayVenda]  = useState(false);
+
+  // ✅ Estado para expandir/colapsar a lista de produtos sem estoque
   const [alertasExpandido, setAlertasExpandido] = useState(false);
 
   const nav = (s: string) => onNavegar?.(s);
@@ -519,9 +506,10 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
     { title: "Custo em Estoque", value: loading ? "—" : fmt(visao?.custos),                       icon: <Receipt size={16} />,     accent: "warning"     as const },
   ];
 
-  const todosAlertas   = [...(visao?.alertas ?? []), ...(visao?.planoUsuario ? [`Plano ${visao.planoUsuario.tipoPlano}: ${visao.planoUsuario.diasRestantes} dia(s) restante(s)`] : [])];
-  const alertasProduto = todosAlertas.filter((a) => a.startsWith("Estoque esgotado:"));
-  const alertasOutros  = todosAlertas.filter((a) => !a.startsWith("Estoque esgotado:"));
+  // ✅ Separa alertas de estoque dos demais
+  const todosAlertas    = [...(visao?.alertas ?? []), ...(visao?.planoUsuario ? [`Plano ${visao.planoUsuario.tipoPlano}: ${visao.planoUsuario.diasRestantes} dia(s) restante(s)`] : [])];
+  const alertasProduto  = todosAlertas.filter((a) => a.startsWith("Estoque esgotado:"));
+  const alertasOutros   = todosAlertas.filter((a) => !a.startsWith("Estoque esgotado:"));
 
   const acoes = [
     { label: caixaAtivo ? "Ver Caixa" : "Abrir Caixa", desc: caixaAtivo ? `${fmt(caixaAtivo.totalVendas)} em vendas` : "Nenhum caixa aberto", icon: caixaAtivo ? <DollarSign size={22} /> : <Lock size={22} />, cor: caixaAtivo ? "var(--primary)" : "var(--foreground-muted)", bg: caixaAtivo ? "rgba(16,185,129,.1)" : "var(--surface-overlay)", borda: caixaAtivo ? "rgba(16,185,129,.3)" : "var(--border)", acao: () => nav("caixa-rapido") },
@@ -531,9 +519,6 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
     { label: "Resumo do Dia",desc: "Ver métricas rápidas",                            icon: <BarChart3 size={22} />,cor: "var(--foreground)", bg: "var(--surface-overlay)", borda: "var(--border)", acao: () => setModal("relatorio") },
     { label: "Relatórios",   desc: "Exportar dados completos",                        icon: <FileText size={22} />, cor: "var(--foreground)", bg: "var(--surface-overlay)", borda: "var(--border)", acao: () => nav("relatorios") },
   ];
-
-  // Altura dinâmica para o gráfico de produtos mais vendidos
-  const alturaGraficoProdutos = Math.max(180, vendasProduto.length * 40);
 
   if (!empresaAtiva)
     return (
@@ -549,10 +534,10 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
   return (
     <ClientOnly>
       {overlayVenda && <NovaVendaOverlay onClose={() => setOverlayVenda(false)} />}
-      {modal === "caixa"    && <Overlay onClose={() => setModal(null)}><AbrirCaixaOverlay onConcluido={() => { setModal(null); if (empresaAtiva?.id) fetchDados(empresaAtiva.id); }} /></Overlay>}
-      {modal === "produto"  && empresaAtiva && <Overlay onClose={() => setModal(null)}><NovoProdutoOverlay onConcluido={() => fetchDados(empresaAtiva.id)} /></Overlay>}
-      {modal === "cliente"  && empresaAtiva && <Overlay onClose={() => setModal(null)}><NovoClienteOverlay onConcluido={() => fetchDados(empresaAtiva.id)} /></Overlay>}
-      {modal === "relatorio"&& empresaAtiva && <ModalResumoDia empresaId={empresaAtiva.id} onClose={() => setModal(null)} onIrRelatorios={() => nav("relatorios")} />}
+      {modal === "caixa" && <Overlay onClose={() => setModal(null)}><AbrirCaixaOverlay onConcluido={() => { setModal(null); if (empresaAtiva?.id) fetchDados(empresaAtiva.id); }} /></Overlay>}
+      {modal === "produto" && empresaAtiva && <Overlay onClose={() => setModal(null)}><NovoProdutoOverlay onConcluido={() => fetchDados(empresaAtiva.id)} /></Overlay>}
+      {modal === "cliente" && empresaAtiva && <Overlay onClose={() => setModal(null)}><NovoClienteOverlay onConcluido={() => fetchDados(empresaAtiva.id)} /></Overlay>}
+      {modal === "relatorio" && empresaAtiva && <ModalResumoDia empresaId={empresaAtiva.id} onClose={() => setModal(null)} onIrRelatorios={() => nav("relatorios")} />}
 
       <div style={{ padding: "28px 28px 40px", display: "flex", flexDirection: "column", gap: 24 }}>
 
@@ -567,32 +552,56 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
           {statsCards.map((c, i) => <StatsCard key={i} {...c} loading={loading} />)}
         </div>
 
-        {/* Alertas */}
+        {/* ✅ Alertas — agrupados e sem poluição visual */}
         {todosAlertas.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+
+            {/* Alertas normais (plano, etc.) — um por um */}
             {alertasOutros.map((msg, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--warning-muted)", border: "1px solid rgba(245,158,11,.2)", borderRadius: 8, color: "var(--warning)", fontSize: 13, fontWeight: 500 }}>
                 <AlertCircle size={16} style={{ flexShrink: 0 }} />
                 {msg}
               </div>
             ))}
+
+            {/* Alertas de estoque — agrupados em um único card colapsável */}
             {alertasProduto.length > 0 && (
               <div style={{ border: "1px solid rgba(245,158,11,.2)", borderRadius: 8, overflow: "hidden" }}>
-                <button onClick={() => setAlertasExpandido((v) => !v)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--warning-muted)", border: "none", cursor: "pointer", color: "var(--warning)", fontSize: 13, fontWeight: 500, textAlign: "left" }}>
+                <button
+                  onClick={() => setAlertasExpandido((v) => !v)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--warning-muted)", border: "none", cursor: "pointer", color: "var(--warning)", fontSize: 13, fontWeight: 500, textAlign: "left" }}
+                >
                   <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1 }}>{alertasProduto.length} produto{alertasProduto.length > 1 ? "s" : ""} sem estoque</span>
-                  <ChevronRight size={15} style={{ flexShrink: 0, transition: "transform .2s", transform: alertasExpandido ? "rotate(90deg)" : "none" }} />
+                  <span style={{ flex: 1 }}>
+                    {alertasProduto.length} produto{alertasProduto.length > 1 ? "s" : ""} sem estoque
+                  </span>
+                  <ChevronRight
+                    size={15}
+                    style={{ flexShrink: 0, transition: "transform .2s", transform: alertasExpandido ? "rotate(90deg)" : "none" }}
+                  />
                 </button>
+
                 {alertasExpandido && (
                   <div style={{ background: "var(--surface-elevated)", borderTop: "1px solid rgba(245,158,11,.15)" }}>
                     {alertasProduto.map((msg, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", fontSize: 12, color: "var(--foreground-muted)", borderBottom: i < alertasProduto.length - 1 ? "1px solid var(--border-subtle)" : "none" }}>
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 10,
+                          padding: "8px 14px", fontSize: 12,
+                          color: "var(--foreground-muted)",
+                          borderBottom: i < alertasProduto.length - 1 ? "1px solid var(--border-subtle)" : "none",
+                        }}
+                      >
                         <Package size={13} style={{ flexShrink: 0, color: "var(--warning)" }} />
                         {msg.replace("Estoque esgotado: ", "")}
                       </div>
                     ))}
                     <div style={{ padding: "8px 14px", borderTop: "1px solid var(--border-subtle)" }}>
-                      <button onClick={() => nav("produtos")} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--warning)", fontSize: 12, fontWeight: 600, padding: 0, display: "flex", alignItems: "center", gap: 5 }}>
+                      <button
+                        onClick={() => nav("produtos")}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--warning)", fontSize: 12, fontWeight: 600, padding: 0, display: "flex", alignItems: "center", gap: 5 }}
+                      >
                         <ChevronRight size={13} /> Ver todos os produtos
                       </button>
                     </div>
@@ -608,8 +617,7 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
           <p style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", marginBottom: 14, textTransform: "uppercase", letterSpacing: ".07em" }}>Ações Rápidas</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
             {acoes.map((a, i) => (
-              <button key={i} onClick={a.acao}
-                style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12, padding: "18px 16px", background: a.bg, border: `1px solid ${a.borda}`, borderRadius: 12, cursor: "pointer", transition: "all .15s", textAlign: "left" }}
+              <button key={i} onClick={a.acao} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12, padding: "18px 16px", background: a.bg, border: `1px solid ${a.borda}`, borderRadius: 12, cursor: "pointer", transition: "all .15s", textAlign: "left" }}
                 onMouseEnter={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "var(--primary)"; b.style.transform = "translateY(-2px)"; b.style.boxShadow = "0 4px 16px rgba(0,0,0,.2)"; }}
                 onMouseLeave={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = a.borda; b.style.transform = "translateY(0)"; b.style.boxShadow = "none"; }}
               >
@@ -623,91 +631,49 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
           </div>
         </div>
 
-        {/* ─── Gráficos — empilhados verticalmente, full width ─── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-          {/* 1. Vendas Diárias */}
+        {/* Gráficos */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <SectionCard title="Vendas Diárias (Seg–Dom)">
             {vendasDiarias.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={vendasDiarias} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={vendasDiarias} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="dia" tick={{ fill: "var(--foreground-muted)", fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "var(--foreground-muted)", fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 12 }}
-                    cursor={{ fill: "rgba(96,165,250,.06)" }}
-                    formatter={(v: number) => [fmt(v), "Vendas"]}
-                  />
+                  <XAxis dataKey="dia" tick={{ fill: "var(--foreground-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "var(--foreground-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 12 }} cursor={{ fill: "rgba(96,165,250,.06)" }} formatter={(v: number) => [fmt(v), "Vendas"]} />
                   <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            ) : (
-              <div style={{ height: 220, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>Sem dados</div>
-            )}
+            ) : <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>Sem dados</div>}
           </SectionCard>
 
-          {/* 2. Formas de Pagamento */}
           <SectionCard title="Formas de Pagamento">
             {vendasMetodo.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie
-                    data={vendasMetodo}
-                    dataKey="total"
-                    nameKey="metodo"
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={65}
-                    outerRadius={100}
-                    paddingAngle={3}
-                  >
-                    {vendasMetodo.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
+                  <Pie data={vendasMetodo} dataKey="total" nameKey="metodo" cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3}>
+                    {vendasMetodo.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 12 }}
-                    formatter={(v: number) => [v, "vendas"]}
-                  />
+                  <Tooltip contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 12 }} formatter={(v: number) => [v, "vendas"]} />
                   <Legend formatter={(v) => <span style={{ color: "var(--foreground-muted)", fontSize: 12 }}>{v}</span>} />
                 </PieChart>
               </ResponsiveContainer>
-            ) : (
-              <div style={{ height: 260, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>Sem dados</div>
-            )}
+            ) : <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>Sem dados</div>}
           </SectionCard>
 
-          {/* 3. Produtos Mais Vendidos */}
-          <SectionCard title="Produtos Mais Vendidos">
+          <SectionCard title="Produtos Mais Vendidos" fullWidth>
             {vendasProduto.length > 0 ? (
-              <ResponsiveContainer width="100%" height={alturaGraficoProdutos}>
+              <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={vendasProduto} layout="vertical" margin={{ top: 4, right: 24, left: 8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                  <XAxis type="number" tick={{ fill: "var(--foreground-muted)", fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="nome"
-                    tick={{ fill: "var(--foreground-muted)", fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={130}
-                    tickFormatter={(v: string) => v.length > 16 ? v.slice(0, 16) + "…" : v}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 12 }}
-                    cursor={{ fill: "rgba(52,211,153,.06)" }}
-                    formatter={(v: number) => [v, "unidades"]}
-                    labelFormatter={(label) => label} /* nome completo no tooltip */
-                  />
+                  <XAxis type="number" tick={{ fill: "var(--foreground-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="nome" tick={{ fill: "var(--foreground-muted)", fontSize: 11 }} axisLine={false} tickLine={false} width={100} />
+                  <Tooltip contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 12 }} cursor={{ fill: "rgba(52,211,153,.06)" }} formatter={(v: number) => [v, "unidades"]} />
                   <Bar dataKey="quantidade" fill={CHART_COLORS[1]} radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            ) : (
-              <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>Sem dados</div>
-            )}
+            ) : <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--foreground-subtle)", fontSize: 13 }}>Sem dados</div>}
           </SectionCard>
-
         </div>
       </div>
     </ClientOnly>
