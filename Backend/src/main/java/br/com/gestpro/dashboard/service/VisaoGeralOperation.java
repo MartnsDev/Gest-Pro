@@ -27,6 +27,7 @@ public class VisaoGeralOperation {
     private final VerificarPlanoOperation verificarPlano;
     private final DashboardRepository     dashboardRepository;
 
+
     @Transactional(readOnly = true)
     public PlanoDTO planoUsuarioLogado(String email) {
         return usuarioRepository.findByEmail(email)

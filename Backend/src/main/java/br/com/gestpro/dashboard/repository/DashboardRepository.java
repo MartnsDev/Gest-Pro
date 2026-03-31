@@ -44,14 +44,10 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
     List<Object[]> findDashboardCountsRaw(@Param("empresaId") Long empresaId);
 
     // ══════════════════════════════════════════════════════════════════════
-    //  FATURAMENTO UNIFICADO (PDV + Pedidos) — NOVOS MÉTODOS
+    //  FATURAMENTO UNIFICADO (PDV + Pedidos)
     // ══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Faturamento total do DIA: PDV (não cancelado) + Pedidos (não cancelado)
-     * ─────────────────────────────────────────────────────────────────────
-     * Soma o valor_final de vendas PDV do dia com valor_final de pedidos do dia.
-     */
+    /** Faturamento total do DIA: PDV (não cancelado) + Pedidos (não cancelado) */
     @Query(value =
             "SELECT " +
                     "  COALESCE((SELECT SUM(v.valor_final) FROM venda v " +
@@ -63,11 +59,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             nativeQuery = true)
     Object faturamentoDia(@Param("empresaId") Long empresaId);
 
-    /**
-     * Faturamento total da SEMANA: PDV + Pedidos
-     * ─────────────────────────────────────────────────────────────────────
-     * Soma o valor_final de vendas PDV da semana com valor_final de pedidos da semana.
-     */
+    /** Faturamento total da SEMANA: PDV + Pedidos */
     @Query(value =
             "SELECT " +
                     "  COALESCE((SELECT SUM(v.valor_final) FROM venda v " +
@@ -83,11 +75,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             @Param("fim") LocalDateTime fim
     );
 
-    /**
-     * Faturamento total do MÊS: PDV + Pedidos
-     * ─────────────────────────────────────────────────────────────────────
-     * Soma o valor_final de vendas PDV do mês com valor_final de pedidos do mês.
-     */
+    /** Faturamento total do MÊS: PDV + Pedidos */
     @Query(value =
             "SELECT " +
                     "  COALESCE((SELECT SUM(v.valor_final) FROM venda v " +
@@ -100,15 +88,10 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
     Object faturamentoMes(@Param("empresaId") Long empresaId);
 
     // ══════════════════════════════════════════════════════════════════════
-    //  CONTAGEM DE TRANSAÇÕES UNIFICADA — NOVOS MÉTODOS
+    //  CONTAGEM DE TRANSAÇÕES UNIFICADA
     // ══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Número total de transações do dia (vendas PDV + pedidos)
-     * ─────────────────────────────────────────────────────────────────────
-     * Conta o número de registros em venda (não cancelada) + número de
-     * registros em pedido (não cancelado) para o dia atual.
-     */
+    /** Número total de transações do dia (vendas PDV + pedidos) */
     @Query(value =
             "SELECT " +
                     "  COALESCE((SELECT COUNT(*) FROM venda v " +
@@ -120,12 +103,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             nativeQuery = true)
     Object totalTransacoesDia(@Param("empresaId") Long empresaId);
 
-    /**
-     * Ticket médio do dia (PDV + Pedidos combinados)
-     * ─────────────────────────────────────────────────────────────────────
-     * Calcula a média simples: (Faturamento PDV + Faturamento Pedidos) /
-     * (Qtd Vendas PDV + Qtd Pedidos) para o dia atual.
-     */
+    /** Ticket médio do dia (PDV + Pedidos combinados) */
     @Query(value =
             "SELECT CASE WHEN (" +
                     "    COALESCE((SELECT COUNT(*) FROM venda v WHERE v.empresa_id = :empresaId AND v.cancelada = 0 AND DATE(v.data_venda) = CURDATE()), 0) +" +
@@ -141,103 +119,32 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
     Object ticketMedioDia(@Param("empresaId") Long empresaId);
 
     // ══════════════════════════════════════════════════════════════════════
-    //  SEPARADOS (PDV apenas) — para relatório de origem
+    //  SEPARADOS (PDV apenas) — mantidos para relatório de origem
     // ══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Soma de vendas PDV apenas — da SEMANA
-     * ─────────────────────────────────────────────────────────────────────
-     * Usado para o gráfico de origem (PDV vs Pedidos).
-     */
-    @Query(value =
-            "SELECT COALESCE(SUM(v.valor_final), 0) FROM venda v " +
-                    "WHERE v.empresa_id = :empresaId AND v.cancelada = 0 " +
-                    "AND v.data_venda >= :inicio AND v.data_venda <= :fim",
-            nativeQuery = true)
-    Object contarVendasSemana(
-            @Param("empresaId") Long empresaId,
-            @Param("inicio") LocalDateTime inicio,
-            @Param("fim") LocalDateTime fim
-    );
+    @Query(value = "SELECT COALESCE(SUM(v.valor_final), 0) FROM venda v WHERE v.empresa_id = :empresaId AND v.cancelada = 0 AND v.data_venda >= :inicio AND v.data_venda <= :fim", nativeQuery = true)
+    Object contarVendasSemana(@Param("empresaId") Long empresaId, @Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim);
 
-    /**
-     * Soma de vendas PDV apenas — do MÊS
-     * ─────────────────────────────────────────────────────────────────────
-     * Usado para o gráfico de origem (PDV vs Pedidos).
-     */
-    @Query(value =
-            "SELECT COALESCE(SUM(v.valor_final), 0) FROM venda v " +
-                    "WHERE v.empresa_id = :empresaId AND v.cancelada = 0 " +
-                    "AND YEAR(v.data_venda) = YEAR(NOW()) AND MONTH(v.data_venda) = MONTH(NOW())",
-            nativeQuery = true)
+    @Query(value = "SELECT COALESCE(SUM(v.valor_final), 0) FROM venda v WHERE v.empresa_id = :empresaId AND v.cancelada = 0 AND YEAR(v.data_venda) = YEAR(NOW()) AND MONTH(v.data_venda) = MONTH(NOW())", nativeQuery = true)
     Object somaVendasMes(@Param("empresaId") Long empresaId);
-
-    /**
-     * Soma de vendas PDV apenas — do DIA
-     * ─────────────────────────────────────────────────────────────────────
-     * Usado para o gráfico de origem (PDV vs Pedidos).
-     */
-    @Query(value =
-            "SELECT COALESCE(SUM(v.valor_final), 0) FROM venda v " +
-                    "WHERE v.empresa_id = :empresaId AND v.cancelada = 0 " +
-                    "AND DATE(v.data_venda) = CURDATE()",
-            nativeQuery = true)
-    Object somaVendasDia(@Param("empresaId") Long empresaId);
 
     // ══════════════════════════════════════════════════════════════════════
     //  SEPARADOS (Pedidos apenas) — para relatório de origem
     // ══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Soma de pedidos apenas — do DIA
-     * ─────────────────────────────────────────────────────────────────────
-     * Usado para o gráfico de origem (PDV vs Pedidos).
-     */
-    @Query(value =
-            "SELECT COALESCE(SUM(p.valor_final), 0) FROM pedido p " +
-                    "WHERE p.empresa_id = :empresaId AND p.status <> 'CANCELADO' " +
-                    "AND DATE(p.data_pedido) = CURDATE()",
-            nativeQuery = true)
+    @Query(value = "SELECT COALESCE(SUM(p.valor_final), 0) FROM pedido p WHERE p.empresa_id = :empresaId AND p.status <> 'CANCELADO' AND DATE(p.data_pedido) = CURDATE()", nativeQuery = true)
     Object somaPedidosDia(@Param("empresaId") Long empresaId);
 
-    /**
-     * Soma de pedidos apenas — do MÊS
-     * ─────────────────────────────────────────────────────────────────────
-     * Usado para o gráfico de origem (PDV vs Pedidos).
-     */
-    @Query(value =
-            "SELECT COALESCE(SUM(p.valor_final), 0) FROM pedido p " +
-                    "WHERE p.empresa_id = :empresaId AND p.status <> 'CANCELADO' " +
-                    "AND YEAR(p.data_pedido) = YEAR(NOW()) AND MONTH(p.data_pedido) = MONTH(NOW())",
-            nativeQuery = true)
+    @Query(value = "SELECT COALESCE(SUM(p.valor_final), 0) FROM pedido p WHERE p.empresa_id = :empresaId AND p.status <> 'CANCELADO' AND YEAR(p.data_pedido) = YEAR(NOW()) AND MONTH(p.data_pedido) = MONTH(NOW())", nativeQuery = true)
     Object somaPedidosMes(@Param("empresaId") Long empresaId);
 
-    /**
-     * Soma de pedidos apenas — da SEMANA
-     * ─────────────────────────────────────────────────────────────────────
-     * Usado para o gráfico de origem (PDV vs Pedidos).
-     */
-    @Query(value =
-            "SELECT COALESCE(SUM(p.valor_final), 0) FROM pedido p " +
-                    "WHERE p.empresa_id = :empresaId AND p.status <> 'CANCELADO' " +
-                    "AND p.data_pedido >= :inicio AND p.data_pedido <= :fim",
-            nativeQuery = true)
-    Object somaPedidosSemana(
-            @Param("empresaId") Long empresaId,
-            @Param("inicio") LocalDateTime inicio,
-            @Param("fim") LocalDateTime fim
-    );
+    @Query(value = "SELECT COALESCE(SUM(p.valor_final), 0) FROM pedido p WHERE p.empresa_id = :empresaId AND p.status <> 'CANCELADO' AND p.data_pedido >= :inicio AND p.data_pedido <= :fim", nativeQuery = true)
+    Object somaPedidosSemana(@Param("empresaId") Long empresaId, @Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim);
 
     // ══════════════════════════════════════════════════════════════════════
     //  LUCRO (apenas PDV — pedidos não têm custo cadastrado)
     // ══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Lucro do DIA (apenas PDV)
-     * ─────────────────────────────────────────────────────────────────────
-     * Pedidos não têm preço de custo, então o lucro é calculado apenas
-     * sobre as vendas PDV. Fórmula: (Subtotal - Custo) * Fator de Desconto
-     */
     @Query(value =
             "SELECT COALESCE(SUM((iv.subtotal - (COALESCE(p.preco_custo, 0) * iv.quantidade)) * (v.valor_final / NULLIF(v.total, 0))), 0) " +
                     "FROM item_venda iv JOIN venda v ON v.id = iv.venda_id JOIN produto p ON p.id = iv.produto_id " +
@@ -245,12 +152,6 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             nativeQuery = true)
     Object lucroDia(@Param("empresaId") Long empresaId);
 
-    /**
-     * Lucro do MÊS (apenas PDV)
-     * ─────────────────────────────────────────────────────────────────────
-     * Pedidos não têm preço de custo, então o lucro é calculado apenas
-     * sobre as vendas PDV. Fórmula: (Subtotal - Custo) * Fator de Desconto
-     */
     @Query(value =
             "SELECT COALESCE(SUM((iv.subtotal - (COALESCE(p.preco_custo, 0) * iv.quantidade)) * (v.valor_final / NULLIF(v.total, 0))), 0) " +
                     "FROM item_venda iv JOIN venda v ON v.id = iv.venda_id JOIN produto p ON p.id = iv.produto_id " +
@@ -262,19 +163,9 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
     //  ESTOQUE
     // ══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Custo total do estoque
-     * ─────────────────────────────────────────────────────────────────────
-     * Soma do custo cadastrado × quantidade em estoque de cada produto.
-     */
     @Query("SELECT COALESCE(SUM(p.precoCusto * p.quantidadeEstoque), 0) FROM Produto p WHERE p.empresa.id = :empresaId AND p.precoCusto IS NOT NULL AND p.quantidadeEstoque > 0")
     BigDecimal custoTotalEstoque(@Param("empresaId") Long empresaId);
 
-    /**
-     * Total investido cadastrado
-     * ─────────────────────────────────────────────────────────────────────
-     * Soma de todos os custos cadastrados (independente de ter estoque).
-     */
     @Query("SELECT COALESCE(SUM(p.precoCusto), 0) FROM Produto p WHERE p.empresa.id = :empresaId AND p.precoCusto IS NOT NULL")
     BigDecimal totalInvestidoCadastrado(@Param("empresaId") Long empresaId);
 }
