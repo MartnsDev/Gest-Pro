@@ -58,6 +58,7 @@ type Secao =
   | "dashboard"
   | "produtos"
   | "estoque"
+  | "vendas PDV"
   | "vendas"
   | "clientes"
   | "relatorios"
@@ -310,6 +311,7 @@ function DashboardInner({
     dashboard: "Visão Geral",
     produtos: "Produtos",
     estoque: "Estoque",
+    "vendas PDV": "Vendas PDV",
     vendas: "Vendas",
     clientes: "Clientes",
     relatorios: "Relatórios",
@@ -335,6 +337,8 @@ function DashboardInner({
         return <Produtos onNavegar={(s) => setSecao(s as Secao)} />;
       case "vendas":
         return <Vendas />;
+      case "pedidos":
+        return <Pedidos />;
       case "clientes":
         return <Clientes />;
       case "relatorios":
