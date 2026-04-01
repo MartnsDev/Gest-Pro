@@ -2334,8 +2334,12 @@ export default function DashboardHome({
               label="Receita Mensal"
               color="blue"
               formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
+              height={260}
+              showTooltip={true}
+              showLegend={true}
+              showArea={true}         
             />
-            // Tendência temporal
+
             <LineChartGraph
               labels={meses.map(m => m.substring(0, 3))}
               datasets={[
@@ -2343,12 +2347,22 @@ export default function DashboardHome({
                 { label: "Pedidos", data: pedidosPorMes, color: "green" },
               ]}
               formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
+              height={260}
+              showTooltip={true}
+              showLegend={true}
+              showArea={true}
             />
-            // Pizza/Donut de categorias
+        
             <PieChartGraph
               labels={categorias.map(c => c.substring(0, 3))}
               data={valoresPorCategoria}
               formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
+              donut={true}
+              height={260}
+              showTooltip={true}
+              showLegend={true}
+              showTooltip={true}
+              showArea={true}
             />
           </div>
         </div>
