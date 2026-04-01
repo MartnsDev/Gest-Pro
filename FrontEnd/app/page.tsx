@@ -287,7 +287,7 @@ const Logo = ({ size = "default" }: { size?: "default" | "small" }) => {
           width: logoSize,
           height: logoSize,
           objectFit: "contain",
-          borderRadius: "50%",
+          borderRadius: 8,
         }}
       />
       <span
@@ -506,7 +506,7 @@ const DashboardPreview = () => (
       {["#ff5f57", "#ffbd2e", "#28c840"].map((c) => (
         <div
           key={c}
-          style={{ width: 11, height: 11, borderRadius: "50%", background: c }}
+          style={{ width: 11, height: 11, borderRadius: "80%", background: c }}
         />
       ))}
       <div
@@ -527,7 +527,7 @@ const DashboardPreview = () => (
       </div>
     </div>
     <img
-      src="/images/dashboard2.png"
+      src="/images/dashboard3.png"
       alt="GestPro Dashboard"
       style={{ width: "100%", height: "auto", display: "block" }}
     />
