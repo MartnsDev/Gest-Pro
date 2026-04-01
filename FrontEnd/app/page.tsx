@@ -238,11 +238,6 @@ const Background = () => (
     />
 
     {
-      /*
-      ── VÍDEO DE FUNDO ──────────────────────────────────────────
-      A opacidade está em 0.15 — ajustar aqui (0.0–1.0).
-      ────────────────────────────────────────────────────────────     */
-
       <div
         style={{
           position: "absolute",
@@ -288,14 +283,19 @@ const Logo = ({ size = "default" }: { size?: "default" | "small" }) => {
       <img
         src="/images/logo.png"
         alt="GestPro"
-        style={{ width: logoSize, height: logoSize, objectFit: "contain" }}
+        style={{
+          width: logoSize,
+          height: logoSize,
+          objectFit: "contain",
+          borderRadius: 8,
+        }}
       />
       <span
         style={{
           fontWeight: 700,
           fontSize,
           color: "#f1f5f9",
-          letterSpacing: "-0.05em",
+          letterSpacing: "-0.02em",
         }}
       >
         GestPro
