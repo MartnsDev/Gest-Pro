@@ -287,7 +287,7 @@ const Logo = ({ size = "default" }: { size?: "default" | "small" }) => {
           width: logoSize,
           height: logoSize,
           objectFit: "contain",
-          borderRadius: 8,
+          borderRadius: "50%",
         }}
       />
       <span
