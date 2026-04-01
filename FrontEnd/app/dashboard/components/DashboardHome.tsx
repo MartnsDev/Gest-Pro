@@ -97,6 +97,15 @@ interface Empresa {
 
 const CHART_COLORS = ["#10b981", "#3b82f6", "#a78bfa", "#f59e0b", "#ef4444"];
 const UNIDADES_R = ["UN", "KG", "G", "L", "ML", "CX", "PCT", "PAR", "M", "CM"];
+const meses = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+const vendasPorMes = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200];
+const pedidosPorMes = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200];
+const categorias = ["Vendas", "Pedidos"];
+const valoresPorCategoria = [100, 200];
+
 const FORMA_LABEL: Record<string, string> = {
   PIX: "Pix",
   DINHEIRO: "Dinheiro",
@@ -2317,26 +2326,26 @@ export default function DashboardHome({
             }}
           >
             <BarChart
-              labels={meses}
+              labels={meses.map(m => m.substring(0, 3))}
               data={vendasPorMes}
               label="Receita Mensal"
               color="blue"
-              formatValue={(v) => `R$ ${v.toLocaleString("pt-BR")}`}
+              formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
             />
             // Tendência temporal
             <LineChart
-              labels={meses}
+              labels={meses.map(m => m.substring(0, 3))}
               datasets={[
                 { label: "Vendas", data: vendasPorMes, color: "blue" },
                 { label: "Pedidos", data: pedidosPorMes, color: "green" },
               ]}
-              formatValue={(v) => `R$ ${v.toLocaleString("pt-BR")}`}
+              formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
             />
             // Pizza/Donut de categorias
             <PieChart
-              labels={categorias}
+              labels={categorias.map(c => c.substring(0, 3))}
               data={valoresPorCategoria}
-              formatValue={(v) => `R$ ${v.toLocaleString("pt-BR")}`}
+              formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
             />
           </div>
         </div>
