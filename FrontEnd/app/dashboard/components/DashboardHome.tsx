@@ -53,8 +53,6 @@ import { BarChart as BarChartGraph } from "./graphs/BarChart";
 import { LineChart as LineChartGraph } from "./graphs/Linechart";
 import { PieChart as PieChartGraph } from "./graphs/PieChart";
 
-
-
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface PlanoDTO {
   tipoPlano: string;
@@ -103,11 +101,20 @@ interface Empresa {
 
 const CHART_COLORS = ["#10b981", "#3b82f6", "#a78bfa", "#f59e0b", "#ef4444"];
 const UNIDADES_R = ["UN", "KG", "G", "L", "ML", "CX", "PCT", "PAR", "M", "CM"];
-const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const vendasPorMes = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200];
-const pedidosPorMes = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200];
-const categorias = ["Vendas", "Pedidos"];
-const valoresPorCategoria = [100, 200];
+const meses = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
+];
 
 const FORMA_LABEL: Record<string, string> = {
   PIX: "Pix",
@@ -2328,41 +2335,29 @@ export default function DashboardHome({
               gap: 12,
             }}
           >
+        
             <BarChartGraph
               labels={meses.map(m => m.substring(0, 3))}
-              data={vendasPorMes}
+              data={vendasPorMes.map(v => v.total)}
               label="Receita Mensal"
               color="blue"
-              formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
-              height={260}
-              showTooltip={true}
-              showLegend={true}
-              showArea={true}         
+              formatValue={(v) => `R$ ${v.toLocaleString("pt-BR")}`}
             />
-
+           
             <LineChartGraph
-              labels={meses.map(m => m.substring(0, 3))}
+              labels={meses}
               datasets={[
-                { label: "Vendas", data: vendasPorMes, color: "blue" },
-                { label: "Pedidos", data: pedidosPorMes, color: "green" },
+                { label: "Vendas", data: vendasPorMes.map(v => v.total), color: "blue" },
+                { label: "Pedidos", data: pedidosPorMes.map(v => v.total), color: "green" },
               ]}
-              formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
-              height={260}
-              showTooltip={true}
-              showLegend={true}
-              showArea={true}
+              formatValue={(v) => `R$ ${v.toLocaleString("pt-BR")}`}
             />
-        
+           
             <PieChartGraph
-              labels={categorias.map(c => c.substring(0, 3))}
-              data={valoresPorCategoria}
-              formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
+              labels={vendasPorCategoria.map(v => v.categoria)}
+              data={vendasPorCategoria.map(v => v.total)}
+              formatValue={(v) => `R$ ${v.toLocaleString("pt-BR")}`}
               donut={true}
-              height={260}
-              showTooltip={true}
-              showLegend={true}
-              showTooltip={true}
-              showArea={true}
             />
           </div>
         </div>
