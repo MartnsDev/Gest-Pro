@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import styles from "./styles/landing.module.css";
 
 /* ─────────────────────────────────────────────
    TYPES
@@ -23,6 +22,41 @@ interface CTAProps {
   onLogin: () => void;
 }
 
+const ArrowRight = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 12h14M12 5l7 7-7 7" />
+  </svg>
+);
+
+const Check = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M20 6L9 17l-5-5" />
+  </svg>
+);
+
+const Star = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="#facc15">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+);
 /* ─────────────────────────────────────────────
    GLOBAL STYLES
 ───────────────────────────────────────────── */
@@ -207,65 +241,45 @@ const Background = () => (
       pointerEvents: "none",
     }}
   >
+    {/* Base dark */}
     <div style={{ position: "absolute", inset: 0, background: "#050608" }} />
-    <div
-      className="glow-pulse"
-      style={{
-        position: "absolute",
-        top: "-15%",
-        left: "-10%",
-        width: 700,
-        height: 700,
-        borderRadius: "50%",
-        background:
-          "radial-gradient(circle, rgba(16,185,129,0.13) 0%, transparent 65%)",
-        filter: "blur(60px)",
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        top: "5%",
-        right: "-12%",
-        width: 500,
-        height: 500,
-        borderRadius: "50%",
-        background:
-          "radial-gradient(circle, rgba(16,185,129,0.07) 0%, transparent 65%)",
-        filter: "blur(80px)",
-      }}
-    />
-    <div
-      className="glow-pulse"
-      style={{
-        position: "absolute",
-        top: "45%",
-        left: "30%",
-        width: 800,
-        height: 400,
-        borderRadius: "50%",
-        background:
-          "radial-gradient(ellipse, rgba(16,185,129,0.05) 0%, transparent 65%)",
-        filter: "blur(80px)",
-      }}
-    />
+
+    {/* Subtle grid pattern */}
     <div
       style={{
         position: "absolute",
         inset: 0,
-        backgroundImage:
-          "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
+        backgroundImage: `
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
+      `,
         backgroundSize: "60px 60px",
+        animation: "grid-fade 1s ease forwards",
       }}
     />
+
+    {/* Gradient glow top */}
     <div
       style={{
         position: "absolute",
-        inset: 0,
+        top: "-30%",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "120%",
+        height: "60%",
         background:
-          "radial-gradient(ellipse at center, transparent 40%, rgba(5,6,8,0.7) 100%)",
+          "radial-gradient(ellipse at center, rgba(16,185,129,0.08) 0%, transparent 70%)",
       }}
     />
+
+    {/* Aqui eu vou adicionar video de fundo */}
+    {/* 
+    <div className="video-bg">
+      <video autoPlay muted loop playsInline>
+        <source src="/seu-video.mp4" type="video/mp4" />
+      </video>
+    </div>
+    */}
   </div>
 );
 
