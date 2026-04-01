@@ -97,10 +97,7 @@ interface Empresa {
 
 const CHART_COLORS = ["#10b981", "#3b82f6", "#a78bfa", "#f59e0b", "#ef4444"];
 const UNIDADES_R = ["UN", "KG", "G", "L", "ML", "CX", "PCT", "PAR", "M", "CM"];
-const meses = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const vendasPorMes = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200];
 const pedidosPorMes = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200];
 const categorias = ["Vendas", "Pedidos"];
