@@ -21,19 +21,20 @@ interface Pedido {
   enderecoEntrega?:string; dataPedido:string; dataAtualizacao:string;
   observacao?:string; motivoCancelamento?:string;
 }
-type FormaPagamento  = "PIX"|"DINHEIRO"|"CARTAO_DEBITO"|"CARTAO_CREDITO";
-type CanalVenda      = "WHATSAPP"|"INSTAGRAM"|"MERCADO_LIVRE"|"SHOPEE"|"IFOOD"|"TELEFONE"|"OUTRO";
-type StatusPedido    = "PENDENTE"|"CONFIRMADO"|"ENVIADO"|"ENTREGUE"|"CANCELADO";
-type TipoDesconto    = "REAIS"|"PORCENTAGEM";
+type FormaPagamento = "PIX"|"DINHEIRO"|"CARTAO_DEBITO"|"CARTAO_CREDITO";
+type CanalVenda     = "WHATSAPP"|"INSTAGRAM"|"MERCADO_LIVRE"|"SHOPEE"|"IFOOD"|"TELEFONE"|"OUTRO";
+type StatusPedido   = "PENDENTE"|"CONFIRMADO"|"ENVIADO"|"ENTREGUE"|"CANCELADO";
+type TipoDesconto   = "REAIS"|"PORCENTAGEM";
 
-/* ─── Constantes ─────────────────────────────────────────────────────────── */
+/* ─── Metadados de status ────────────────────────────────────────────────── */
 const STATUS_META: Record<StatusPedido,{label:string;color:string;bg:string;border:string;icon:React.ReactNode}> = {
-  PENDENTE:   {label:"Pendente",   color:"#f59e0b", bg:"rgba(245,158,11,0.12)", border:"rgba(245,158,11,0.35)", icon:<Clock size={12}/>},
-  CONFIRMADO: {label:"Confirmado", color:"#10b981", bg:"rgba(16,185,129,0.12)", border:"rgba(16,185,129,0.35)", icon:<CheckCircle2 size={12}/>},
-  ENVIADO:    {label:"Enviado",    color:"#3b82f6", bg:"rgba(59,130,246,0.12)", border:"rgba(59,130,246,0.35)", icon:<Truck size={12}/>},
-  ENTREGUE:   {label:"Entregue",   color:"#10b981", bg:"rgba(16,185,129,0.18)", border:"rgba(16,185,129,0.45)", icon:<Check size={12}/>},
-  CANCELADO:  {label:"Cancelado",  color:"#ef4444", bg:"rgba(239,68,68,0.12)",  border:"rgba(239,68,68,0.35)",  icon:<Ban size={12}/>},
+  PENDENTE:   {label:"Pendente",   color:"#f59e0b", bg:"rgba(245,158,11,0.12)", border:"rgba(245,158,11,0.4)",  icon:<Clock size={12}/>},
+  CONFIRMADO: {label:"Confirmado", color:"#10b981", bg:"rgba(16,185,129,0.12)", border:"rgba(16,185,129,0.4)",  icon:<CheckCircle2 size={12}/>},
+  ENVIADO:    {label:"Enviado",    color:"#3b82f6", bg:"rgba(59,130,246,0.12)", border:"rgba(59,130,246,0.4)",  icon:<Truck size={12}/>},
+  ENTREGUE:   {label:"Entregue",   color:"#10b981", bg:"rgba(16,185,129,0.18)", border:"rgba(16,185,129,0.5)",  icon:<Check size={12}/>},
+  CANCELADO:  {label:"Cancelado",  color:"#ef4444", bg:"rgba(239,68,68,0.12)",  border:"rgba(239,68,68,0.4)",   icon:<Ban size={12}/>},
 };
+// Status que podem ser selecionados manualmente (cancelado tem fluxo próprio)
 const STATUS_SELECIONAVEIS: StatusPedido[] = ["PENDENTE","CONFIRMADO","ENVIADO","ENTREGUE"];
 
 const FORMAS: {value:FormaPagamento;label:string;icon:React.ReactNode}[] = [
@@ -51,16 +52,21 @@ const CANAIS: {value:CanalVenda;label:string;emoji:string}[] = [
   {value:"TELEFONE",label:"Telefone",emoji:"📞"},
   {value:"OUTRO",label:"Outro",emoji:"📦"},
 ];
-const FORMA_LABEL: Record<string,string> = {PIX:"Pix",DINHEIRO:"Dinheiro",CARTAO_DEBITO:"Débito",CARTAO_CREDITO:"Crédito"};
+const FORMA_LABEL: Record<string,string> = {
+  PIX:"Pix",DINHEIRO:"Dinheiro",CARTAO_DEBITO:"Débito",CARTAO_CREDITO:"Crédito",
+};
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
-const fmt = (v?:number|null) => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v??0);
+const fmt = (v?:number|null) =>
+  new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v??0);
+
 const fmtData = (s?:any) => {
   if(!s) return "—";
   const d = Array.isArray(s)
     ? new Date(Date.UTC(s[0],s[1]-1,s[2],s[3]??0,s[4]??0))
     : new Date(typeof s==="string"?s.replace(" ","T"):s);
-  return isNaN(d.getTime())?"—":d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  return isNaN(d.getTime())?"—"
+    :d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
 };
 
 async function fetchAuth<T>(path:string,opts?:RequestInit):Promise<T> {
@@ -77,10 +83,10 @@ async function fetchAuth<T>(path:string,opts?:RequestInit):Promise<T> {
 }
 
 /* ─── Estilos ────────────────────────────────────────────────────────────── */
-const inp:React.CSSProperties = {width:"100%",padding:"8px 11px",background:"var(--surface-overlay)",border:"1px solid var(--border)",borderRadius:8,color:"var(--foreground)",fontSize:13,outline:"none"};
-const btnP:React.CSSProperties = {display:"flex",alignItems:"center",gap:6,padding:"9px 16px",background:"var(--primary)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"};
-const btnG:React.CSSProperties = {display:"flex",alignItems:"center",gap:6,padding:"7px 11px",background:"transparent",border:"1px solid var(--border)",borderRadius:8,color:"var(--foreground-muted)",fontSize:12,cursor:"pointer"};
-const btnDanger:React.CSSProperties = {display:"flex",alignItems:"center",gap:6,padding:"7px 11px",background:"transparent",border:"1px solid rgba(239,68,68,0.35)",borderRadius:8,color:"var(--destructive)",fontSize:12,cursor:"pointer"};
+const inp:React.CSSProperties={width:"100%",padding:"8px 11px",background:"var(--surface-overlay)",border:"1px solid var(--border)",borderRadius:8,color:"var(--foreground)",fontSize:13,outline:"none"};
+const btnP:React.CSSProperties={display:"flex",alignItems:"center",gap:6,padding:"9px 16px",background:"var(--primary)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"};
+const btnG:React.CSSProperties={display:"flex",alignItems:"center",gap:6,padding:"7px 11px",background:"transparent",border:"1px solid var(--border)",borderRadius:8,color:"var(--foreground-muted)",fontSize:12,cursor:"pointer"};
+const btnDanger:React.CSSProperties={display:"flex",alignItems:"center",gap:6,padding:"7px 11px",background:"transparent",border:"1px solid rgba(239,68,68,0.35)",borderRadius:8,color:"var(--destructive)",fontSize:12,cursor:"pointer"};
 
 /* ─── Badges ─────────────────────────────────────────────────────────────── */
 function StatusBadge({status}:{status:string}) {
@@ -92,32 +98,62 @@ function CanalBadge({canal}:{canal:string}) {
   return <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,fontWeight:500,background:"var(--surface-overlay)",color:"var(--foreground-muted)",border:"1px solid var(--border)"}}>{m.emoji} {m.label}</span>;
 }
 
-/* ─── Seletor de status (dropdown) ──────────────────────────────────────── */
-function SeletorStatus({statusAtual,onChange,salvando}:{statusAtual:StatusPedido;onChange:(s:StatusPedido)=>void;salvando:boolean}) {
+/* ─── Dropdown seletor de status ────────────────────────────────────────── */
+function SeletorStatus({statusAtual,onChange,salvando}:{
+  statusAtual:StatusPedido; onChange:(s:StatusPedido)=>void; salvando:boolean;
+}) {
   const [open,setOpen]=useState(false);
   const meta=STATUS_META[statusAtual];
   return (
     <div style={{position:"relative"}}>
-      <button onClick={()=>!salvando&&setOpen(v=>!v)} disabled={salvando}
-        style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",background:meta.bg,border:`1px solid ${meta.border}`,borderRadius:8,cursor:salvando?"not-allowed":"pointer",color:meta.color,fontSize:12,fontWeight:600,opacity:salvando?0.7:1}}>
+      <button
+        onClick={()=>!salvando&&setOpen(v=>!v)}
+        disabled={salvando}
+        style={{
+          display:"flex",alignItems:"center",gap:6,padding:"8px 13px",
+          background:meta.bg,border:`1px solid ${meta.border}`,borderRadius:9,
+          cursor:salvando?"not-allowed":"pointer",color:meta.color,
+          fontSize:12,fontWeight:700,opacity:salvando?0.7:1,
+          transition:"all .15s",
+        }}
+      >
         {meta.icon}
         {salvando?"Salvando...":meta.label}
         <ChevronDown size={11} style={{marginLeft:2,transform:open?"rotate(180deg)":"none",transition:"transform .15s"}}/>
       </button>
+
       {open&&(
         <>
+          {/* overlay para fechar ao clicar fora */}
           <div style={{position:"fixed",inset:0,zIndex:99}} onClick={()=>setOpen(false)}/>
-          <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,zIndex:100,background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",minWidth:175,boxShadow:"0 8px 28px rgba(0,0,0,0.28)"}}>
+          <div style={{
+            position:"absolute",top:"calc(100% + 6px)",left:0,zIndex:100,
+            background:"var(--surface-elevated)",border:"1px solid var(--border)",
+            borderRadius:11,overflow:"hidden",minWidth:185,
+            boxShadow:"0 10px 32px rgba(0,0,0,0.32)",
+          }}>
+            <div style={{padding:"6px 10px",borderBottom:"1px solid var(--border)",fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em"}}>
+              Alterar status
+            </div>
             {STATUS_SELECIONAVEIS.map(s=>{
               const sm=STATUS_META[s];
               const ativo=s===statusAtual;
               return (
                 <button key={s} onClick={()=>{onChange(s);setOpen(false);}}
-                  style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"10px 14px",border:"none",cursor:"pointer",textAlign:"left",background:ativo?sm.bg:"transparent",color:ativo?sm.color:"var(--foreground)",fontSize:13,fontWeight:ativo?700:400,borderLeft:ativo?`3px solid ${sm.color}`:"3px solid transparent"}}
+                  style={{
+                    width:"100%",display:"flex",alignItems:"center",gap:9,
+                    padding:"10px 14px",border:"none",cursor:"pointer",
+                    background:ativo?sm.bg:"transparent",
+                    color:ativo?sm.color:"var(--foreground)",
+                    fontSize:13,fontWeight:ativo?700:400,
+                    borderLeft:ativo?`3px solid ${sm.color}`:"3px solid transparent",
+                    transition:"background .1s",
+                  }}
                   onMouseEnter={e=>(e.currentTarget as HTMLButtonElement).style.background=ativo?sm.bg:"var(--surface-overlay)"}
-                  onMouseLeave={e=>(e.currentTarget as HTMLButtonElement).style.background=ativo?sm.bg:"transparent"}>
+                  onMouseLeave={e=>(e.currentTarget as HTMLButtonElement).style.background=ativo?sm.bg:"transparent"}
+                >
                   {sm.icon} {sm.label}
-                  {ativo&&<Check size={12} style={{marginLeft:"auto"}}/>}
+                  {ativo&&<Check size={12} style={{marginLeft:"auto"}} color={sm.color}/>}
                 </button>
               );
             })}
@@ -128,7 +164,7 @@ function SeletorStatus({statusAtual,onChange,salvando}:{statusAtual:StatusPedido
   );
 }
 
-/* ─── SeletorForma ───────────────────────────────────────────────────────── */
+/* ─── Seletor de forma de pagamento ─────────────────────────────────────── */
 function SeletorForma({value,onChange}:{value:FormaPagamento;onChange:(v:FormaPagamento)=>void}) {
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}}>
@@ -141,8 +177,10 @@ function SeletorForma({value,onChange}:{value:FormaPagamento;onChange:(v:FormaPa
   );
 }
 
-/* ─── Modal confirmação exclusão ─────────────────────────────────────────── */
-function ModalConfirmarExclusao({titulo,descricao,onConfirmar,onCancelar,confirmando}:{titulo:string;descricao:string;onConfirmar:()=>void;onCancelar:()=>void;confirmando:boolean}) {
+/* ─── Modal de confirmação de exclusão ──────────────────────────────────── */
+function ModalConfirmarExclusao({titulo,descricao,onConfirmar,onCancelar,confirmando}:{
+  titulo:string;descricao:string;onConfirmar:()=>void;onCancelar:()=>void;confirmando:boolean;
+}) {
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}}>
       <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:14,padding:28,width:"100%",maxWidth:380,textAlign:"center"}}>
@@ -163,14 +201,16 @@ function ModalConfirmarExclusao({titulo,descricao,onConfirmar,onCancelar,confirm
 }
 
 /* ─── Modal Novo Pedido ─────────────────────────────────────────────────── */
-function ModalNovoPedido({empresaId,onClose,onSucesso}:{empresaId:number;onClose:()=>void;onSucesso:(p:Pedido)=>void}) {
+function ModalNovoPedido({empresaId,onClose,onSucesso}:{
+  empresaId:number;onClose:()=>void;onSucesso:(p:Pedido)=>void;
+}) {
   const [produtos,setProdutos]=useState<Produto[]>([]);
   const [carrinho,setCarrinho]=useState<ItemCarrinho[]>([]);
   const [busca,setBusca]=useState("");
   const [forma,setForma]=useState<FormaPagamento>("PIX");
   const [canal,setCanal]=useState<CanalVenda>("OUTRO");
   const [contaDestino,setContaDestino]=useState("");
-  const [tipoDesconto,setTipoDesconto]=useState<TipoDesconto>("REAIS");
+  const [tipoDesconto,setTipoDesconto]=useState<"REAIS"|"PORCENTAGEM">("REAIS");
   const [desconto,setDesconto]=useState("");
   const [frete,setFrete]=useState("");
   const [endereco,setEndereco]=useState("");
@@ -178,47 +218,71 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{empresaId:number;onClose
   const [salvando,setSalvando]=useState(false);
 
   useEffect(()=>{
-    fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`).then(setProdutos).catch(()=>toast.error("Erro ao carregar produtos"));
+    fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`)
+      .then(setProdutos).catch(()=>toast.error("Erro ao carregar produtos"));
   },[empresaId]);
 
-  const filtrados=useMemo(()=>produtos.filter(p=>p.quantidadeEstoque>0&&p.nome.toLowerCase().includes(busca.toLowerCase())),[produtos,busca]);
+  const filtrados=useMemo(()=>
+    produtos.filter(p=>p.quantidadeEstoque>0&&p.nome.toLowerCase().includes(busca.toLowerCase())),
+  [produtos,busca]);
 
   const addItem=(p:Produto)=>setCarrinho(prev=>{
     const ex=prev.find(i=>i.produto.id===p.id);
-    if(ex){if(ex.quantidade>=p.quantidadeEstoque){toast.error(`Máx: ${p.quantidadeEstoque}`);return prev;}return prev.map(i=>i.produto.id===p.id?{...i,quantidade:i.quantidade+1}:i);}
+    if(ex){
+      if(ex.quantidade>=p.quantidadeEstoque){toast.error(`Máx: ${p.quantidadeEstoque}`);return prev;}
+      return prev.map(i=>i.produto.id===p.id?{...i,quantidade:i.quantidade+1}:i);
+    }
     return [...prev,{produto:p,quantidade:1}];
   });
 
   const setQtd=(id:number,q:number)=>{
-    if(q<=0)setCarrinho(prev=>prev.filter(i=>i.produto.id!==id));
-    else setCarrinho(prev=>prev.map(i=>i.produto.id===id?{...i,quantidade:q}:i));
+    if(q<=0) setCarrinho(prev=>prev.filter(i=>i.produto.id!==id));
+    else     setCarrinho(prev=>prev.map(i=>i.produto.id===id?{...i,quantidade:q}:i));
   };
 
-  const subtotal=carrinho.reduce((s,i)=>s+i.produto.preco*i.quantidade,0);
-  const descontoRaw=parseFloat(desconto.replace(",","."))||0;
-  const descontoN=tipoDesconto==="PORCENTAGEM"?Math.min(subtotal*(descontoRaw/100),subtotal):Math.max(0,descontoRaw);
-  const freteN=Math.max(0,parseFloat(frete.replace(",","."))||0);
-  const total=Math.max(subtotal-descontoN+freteN,0);
+  const subtotal    = carrinho.reduce((s,i)=>s+i.produto.preco*i.quantidade,0);
+  const descontoRaw = parseFloat(desconto.replace(",","."))||0;
+  const descontoN   = tipoDesconto==="PORCENTAGEM"
+    ? Math.min(subtotal*(descontoRaw/100),subtotal)
+    : Math.max(0,descontoRaw);
+  const freteN  = Math.max(0,parseFloat(frete.replace(",","."))||0);
+  const total   = Math.max(subtotal-descontoN+freteN,0);
 
   const registrar=async()=>{
     if(!carrinho.length){toast.error("Adicione pelo menos um produto.");return;}
     setSalvando(true);
     try{
-      const pedido=await fetchAuth<Pedido>(`/api/v1/pedidos/empresa/${empresaId}`,{method:"POST",body:JSON.stringify({formaPagamento:forma,canalVenda:canal,contaDestino:contaDestino||null,desconto:descontoN,custoFrete:freteN,enderecoEntrega:endereco||null,observacao:observacao||null,itens:carrinho.map(i=>({idProduto:i.produto.id,quantidade:i.quantidade}))})});
+      const pedido=await fetchAuth<Pedido>(`/api/v1/pedidos/empresa/${empresaId}`,{
+        method:"POST",
+        body:JSON.stringify({
+          formaPagamento:forma,canalVenda:canal,
+          contaDestino:contaDestino||null,desconto:descontoN,
+          custoFrete:freteN,enderecoEntrega:endereco||null,
+          observacao:observacao||null,
+          itens:carrinho.map(i=>({idProduto:i.produto.id,quantidade:i.quantidade})),
+        }),
+      });
       onClose();onSucesso(pedido);
-    }catch(e:any){toast.error(e.message);}finally{setSalvando(false);}
+    }catch(e:any){toast.error(e.message);}
+    finally{setSalvando(false);}
   };
 
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:50,padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:50,padding:16}}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:14,width:"100%",maxWidth:900,maxHeight:"95vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+
+        {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",borderBottom:"1px solid var(--border)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}><ShoppingBag size={16} color="var(--primary)"/><h2 style={{fontSize:15,fontWeight:700,color:"var(--foreground)",margin:0}}>Novo Pedido</h2></div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <ShoppingBag size={16} color="var(--primary)"/>
+            <h2 style={{fontSize:15,fontWeight:700,color:"var(--foreground)",margin:0}}>Novo Pedido</h2>
+          </div>
           <button onClick={onClose} style={{...btnG,padding:6,border:"none"}}><X size={16}/></button>
         </div>
 
         <div style={{display:"grid",gridTemplateColumns:"1fr 360px",flex:1,minHeight:0,overflow:"hidden"}}>
-          {/* Produtos */}
+          {/* Lista de produtos */}
           <div style={{display:"flex",flexDirection:"column",borderRight:"1px solid var(--border)",overflow:"hidden"}}>
             <div style={{padding:"10px 16px",borderBottom:"1px solid var(--border)"}}>
               <div style={{position:"relative"}}>
@@ -229,26 +293,37 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{empresaId:number;onClose
             <div style={{overflowY:"auto",flex:1}}>
               {filtrados.length===0
                 ?<div style={{padding:28,textAlign:"center",color:"var(--foreground-subtle)",fontSize:13}}>Nenhum produto disponível</div>
-                :filtrados.map(p=>{const nc=carrinho.find(i=>i.produto.id===p.id);return(
-                  <div key={p.id} onClick={()=>addItem(p)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",cursor:"pointer",borderBottom:"1px solid var(--border-subtle)"}} onMouseEnter={e=>((e.currentTarget as HTMLDivElement).style.background="var(--surface-overlay)")} onMouseLeave={e=>((e.currentTarget as HTMLDivElement).style.background="transparent")}>
-                    <div>
-                      <p style={{fontSize:13,fontWeight:500,color:"var(--foreground)",margin:0}}>{p.nome}</p>
-                      <p style={{fontSize:11,color:"var(--foreground-muted)",margin:"2px 0 0"}}>Estoque: {p.quantidadeEstoque}{p.categoria?` · ${p.categoria}`:""}</p>
+                :filtrados.map(p=>{
+                  const nc=carrinho.find(i=>i.produto.id===p.id);
+                  return(
+                    <div key={p.id} onClick={()=>addItem(p)}
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",cursor:"pointer",borderBottom:"1px solid var(--border-subtle)"}}
+                      onMouseEnter={e=>((e.currentTarget as HTMLDivElement).style.background="var(--surface-overlay)")}
+                      onMouseLeave={e=>((e.currentTarget as HTMLDivElement).style.background="transparent")}>
+                      <div>
+                        <p style={{fontSize:13,fontWeight:500,color:"var(--foreground)",margin:0}}>{p.nome}</p>
+                        <p style={{fontSize:11,color:"var(--foreground-muted)",margin:"2px 0 0"}}>
+                          Estoque: {p.quantidadeEstoque}{p.categoria?` · ${p.categoria}`:""}
+                        </p>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                        <span style={{fontSize:13,fontWeight:600,color:"var(--primary)"}}>{fmt(p.preco)}</span>
+                        {nc&&<span style={{fontSize:11,background:"var(--primary-muted)",color:"var(--primary)",padding:"2px 7px",borderRadius:99,fontWeight:600}}>{nc.quantidade}×</span>}
+                        <Plus size={13} color="var(--foreground-muted)"/>
+                      </div>
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                      <span style={{fontSize:13,fontWeight:600,color:"var(--primary)"}}>{fmt(p.preco)}</span>
-                      {nc&&<span style={{fontSize:11,background:"var(--primary-muted)",color:"var(--primary)",padding:"2px 7px",borderRadius:99,fontWeight:600}}>{nc.quantidade}×</span>}
-                      <Plus size={13} color="var(--foreground-muted)"/>
-                    </div>
-                  </div>
-                );})}
+                  );
+                })}
             </div>
           </div>
 
           {/* Painel direito */}
           <div style={{display:"flex",flexDirection:"column",overflow:"hidden"}}>
+            {/* Carrinho */}
             <div style={{flex:1,overflowY:"auto",padding:"10px 13px"}}>
-              <p style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>Carrinho ({carrinho.length})</p>
+              <p style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>
+                Carrinho ({carrinho.length})
+              </p>
               {carrinho.length===0
                 ?<div style={{textAlign:"center",color:"var(--foreground-subtle)",fontSize:12,padding:"16px 0"}}>Clique nos produtos →</div>
                 :carrinho.map(item=>(
@@ -269,6 +344,7 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{empresaId:number;onClose
                 ))}
             </div>
 
+            {/* Formulário */}
             <div style={{padding:"10px 13px",borderTop:"1px solid var(--border)",display:"flex",flexDirection:"column",gap:9,overflowY:"auto"}}>
               {/* Resumo */}
               <div style={{background:"var(--surface-overlay)",borderRadius:8,padding:"8px 11px",display:"flex",flexDirection:"column",gap:4}}>
@@ -282,7 +358,11 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{empresaId:number;onClose
               <div>
                 <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:5}}>Canal de Venda</label>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
-                  {CANAIS.map(c=><button key={c.value} onClick={()=>setCanal(c.value as CanalVenda)} style={{padding:"6px 8px",fontSize:11,display:"flex",alignItems:"center",gap:5,background:canal===c.value?"var(--primary-muted)":"var(--surface-overlay)",border:`1px solid ${canal===c.value?"var(--primary)":"var(--border)"}`,borderRadius:7,cursor:"pointer",color:canal===c.value?"var(--primary)":"var(--foreground-muted)",fontWeight:canal===c.value?600:400}}>{c.emoji} {c.label}</button>)}
+                  {CANAIS.map(c=>(
+                    <button key={c.value} onClick={()=>setCanal(c.value as CanalVenda)} style={{padding:"6px 8px",fontSize:11,display:"flex",alignItems:"center",gap:5,background:canal===c.value?"var(--primary-muted)":"var(--surface-overlay)",border:`1px solid ${canal===c.value?"var(--primary)":"var(--border)"}`,borderRadius:7,cursor:"pointer",color:canal===c.value?"var(--primary)":"var(--foreground-muted)",fontWeight:canal===c.value?600:400}}>
+                      {c.emoji} {c.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -298,14 +378,22 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{empresaId:number;onClose
                 <input style={inp} value={contaDestino} onChange={e=>setContaDestino(e.target.value)} placeholder="Ex: Mercado Pago, Nubank..."/>
               </div>
 
-              {/* Desconto */}
+              {/* Desconto R$ / % */}
               <div>
                 <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Desconto</label>
                 <div style={{display:"flex",gap:6}}>
                   <div style={{display:"flex",border:"1px solid var(--border)",borderRadius:8,overflow:"hidden",flexShrink:0}}>
-                    {(["REAIS","PORCENTAGEM"] as TipoDesconto[]).map(t=><button key={t} onClick={()=>{setTipoDesconto(t);setDesconto("");}} style={{padding:"7px 10px",fontSize:11,fontWeight:600,cursor:"pointer",border:"none",background:tipoDesconto===t?"var(--primary)":"var(--surface-overlay)",color:tipoDesconto===t?"#fff":"var(--foreground-muted)"}}>{t==="REAIS"?"R$":"%"}</button>)}
+                    {(["REAIS","PORCENTAGEM"] as ("REAIS"|"PORCENTAGEM")[]).map(t=>(
+                      <button key={t} onClick={()=>{setTipoDesconto(t);setDesconto("");}} style={{padding:"7px 10px",fontSize:11,fontWeight:600,cursor:"pointer",border:"none",background:tipoDesconto===t?"var(--primary)":"var(--surface-overlay)",color:tipoDesconto===t?"#fff":"var(--foreground-muted)"}}>
+                        {t==="REAIS"?"R$":"%"}
+                      </button>
+                    ))}
                   </div>
-                  <input style={{...inp,flex:1}} type="number" min="0" step={tipoDesconto==="PORCENTAGEM"?"1":"0.01"} max={tipoDesconto==="PORCENTAGEM"?"100":undefined} value={desconto} onChange={e=>setDesconto(e.target.value)} placeholder={tipoDesconto==="PORCENTAGEM"?"0 – 100":"0,00"}/>
+                  <input style={{...inp,flex:1}} type="number" min="0"
+                    step={tipoDesconto==="PORCENTAGEM"?"1":"0.01"}
+                    max={tipoDesconto==="PORCENTAGEM"?"100":undefined}
+                    value={desconto} onChange={e=>setDesconto(e.target.value)}
+                    placeholder={tipoDesconto==="PORCENTAGEM"?"0 – 100":"0,00"}/>
                 </div>
               </div>
 
@@ -327,7 +415,8 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{empresaId:number;onClose
                 <input style={inp} value={endereco} onChange={e=>setEndereco(e.target.value)} placeholder="Rua, número, bairro, cidade..."/>
               </div>
 
-              <button onClick={registrar} disabled={salvando||!carrinho.length} style={{...btnP,justifyContent:"center",padding:"11px 0",opacity:salvando||!carrinho.length?0.6:1}}>
+              <button onClick={registrar} disabled={salvando||!carrinho.length}
+                style={{...btnP,justifyContent:"center",padding:"11px 0",opacity:salvando||!carrinho.length?0.6:1}}>
                 {salvando?"Registrando...":<><ShoppingBag size={14}/> Registrar Pedido · {fmt(total)}</>}
               </button>
             </div>
@@ -340,7 +429,8 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{empresaId:number;onClose
 
 /* ─── Detalhe do Pedido ─────────────────────────────────────────────────── */
 function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
-  pedido:Pedido;onClose:()=>void;onAtualizado:(p:Pedido)=>void;onRemovido:(id:number)=>void;
+  pedido:Pedido; onClose:()=>void;
+  onAtualizado:(p:Pedido)=>void; onRemovido:(id:number)=>void;
 }) {
   const [cancelando,setCancelando]=useState(false);
   const [motivo,setMotivo]=useState("");
@@ -351,14 +441,17 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
   const [removendo,setRemovendo]=useState(false);
 
   const podeCancelar = pedido.status!=="CANCELADO"&&pedido.status!=="ENTREGUE";
-  const pctDesconto  = pedido.valorTotal>0&&pedido.desconto>0?((pedido.desconto/pedido.valorTotal)*100).toFixed(1):null;
+  const pctDesconto  = pedido.valorTotal>0&&pedido.desconto>0
+    ? ((pedido.desconto/pedido.valorTotal)*100).toFixed(1) : null;
 
-  /* Muda status direto — atualiza state local imediatamente */
+  /* Altera status direto pelo dropdown — atualiza lista local sem reload */
   const mudarStatus=async(novoStatus:StatusPedido)=>{
     if(novoStatus===pedido.status) return;
     setSalvando(true);
     try{
-      const updated=await fetchAuth<Pedido>(`/api/v1/pedidos/${pedido.id}/status`,{method:"PATCH",body:JSON.stringify({status:novoStatus})});
+      const updated=await fetchAuth<Pedido>(`/api/v1/pedidos/${pedido.id}/status`,{
+        method:"PATCH",body:JSON.stringify({status:novoStatus}),
+      });
       onAtualizado(updated);
       toast.success(`Status: ${STATUS_META[novoStatus].label}`);
     }catch(e:any){toast.error(e.message);}
@@ -368,7 +461,9 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
   const cancelar=async()=>{
     setSalvando(true);
     try{
-      const updated=await fetchAuth<Pedido>(`/api/v1/pedidos/${pedido.id}/cancelar`,{method:"POST",body:JSON.stringify({motivo})});
+      const updated=await fetchAuth<Pedido>(`/api/v1/pedidos/${pedido.id}/cancelar`,{
+        method:"POST",body:JSON.stringify({motivo}),
+      });
       onAtualizado(updated);setCancelando(false);
       toast.success("Pedido cancelado. Estoque devolvido.");
     }catch(e:any){toast.error(e.message);}
@@ -378,7 +473,9 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
   const salvarObs=async()=>{
     setSalvando(true);
     try{
-      const updated=await fetchAuth<Pedido>(`/api/v1/pedidos/${pedido.id}/observacao`,{method:"PATCH",body:JSON.stringify({observacao:novaObs})});
+      const updated=await fetchAuth<Pedido>(`/api/v1/pedidos/${pedido.id}/observacao`,{
+        method:"PATCH",body:JSON.stringify({observacao:novaObs}),
+      });
       onAtualizado(updated);setEditandoObs(false);toast.success("Observação salva!");
     }catch(e:any){toast.error(e.message);}
     finally{setSalvando(false);}
@@ -395,7 +492,8 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
 
   return(
     <>
-      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:50,padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:50,padding:16}}
+        onClick={e=>e.target===e.currentTarget&&onClose()}>
         <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:14,padding:24,width:"100%",maxWidth:460,maxHeight:"92vh",overflowY:"auto",display:"flex",flexDirection:"column",gap:14}}>
 
           {/* Header */}
@@ -407,8 +505,8 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
             <button onClick={onClose} style={{...btnG,padding:5,border:"none"}}><X size={16}/></button>
           </div>
 
-          {/* ── Seletor de status ─────────────────────────────────────── */}
-          <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--surface-overlay)",borderRadius:10,flexWrap:"wrap"}}>
+          {/* ── Seletor de status ────────────────────────────────────── */}
+          <div style={{display:"flex",alignItems:"center",gap:10,padding:"11px 13px",background:"var(--surface-overlay)",borderRadius:10,flexWrap:"wrap"}}>
             <span style={{fontSize:12,color:"var(--foreground-muted)",fontWeight:500,flexShrink:0}}>Status do pedido:</span>
             {pedido.status==="CANCELADO"
               ?<StatusBadge status="CANCELADO"/>
@@ -416,13 +514,17 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
             }
           </div>
 
-          {/* Info */}
+          {/* Info badges */}
           <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
             <CanalBadge canal={pedido.canalVenda}/>
             <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,fontWeight:500,background:"var(--surface-overlay)",color:"var(--foreground-muted)",border:"1px solid var(--border)"}}>
               💳 {FORMA_LABEL[pedido.formaPagamento]??pedido.formaPagamento}
             </span>
-            {pedido.contaDestino&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:"rgba(59,130,246,0.08)",color:"#3b82f6",border:"1px solid rgba(59,130,246,0.2)",fontWeight:500}}><Wallet size={10} style={{display:"inline",marginRight:3}}/>{pedido.contaDestino}</span>}
+            {pedido.contaDestino&&(
+              <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:"rgba(59,130,246,0.08)",color:"#3b82f6",border:"1px solid rgba(59,130,246,0.2)",fontWeight:500}}>
+                <Wallet size={10} style={{display:"inline",marginRight:3}}/>{pedido.contaDestino}
+              </span>
+            )}
           </div>
 
           {/* Produtos */}
@@ -453,12 +555,24 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
                 <span>− {fmt(pedido.desconto)}</span>
               </div>
             )}
-            {pedido.custoFrete>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--foreground-muted)"}}><span style={{display:"flex",alignItems:"center",gap:5}}><Truck size={11}/>Frete</span><span>+ {fmt(pedido.custoFrete)}</span></div>}
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:15,fontWeight:700,color:"var(--primary)",paddingTop:6,borderTop:"1px solid var(--border)",marginTop:2}}><span>Total</span><span>{fmt(pedido.valorFinal)}</span></div>
+            {pedido.custoFrete>0&&(
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--foreground-muted)"}}>
+                <span style={{display:"flex",alignItems:"center",gap:5}}><Truck size={11}/>Frete</span>
+                <span>+ {fmt(pedido.custoFrete)}</span>
+              </div>
+            )}
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:15,fontWeight:700,color:"var(--primary)",paddingTop:6,borderTop:"1px solid var(--border)",marginTop:2}}>
+              <span>Total</span><span>{fmt(pedido.valorFinal)}</span>
+            </div>
           </div>
 
           {/* Endereço */}
-          {pedido.enderecoEntrega&&<div style={{display:"flex",gap:8,padding:"10px 12px",background:"var(--surface-overlay)",borderRadius:9,fontSize:12,color:"var(--foreground-muted)"}}><MapPin size={14} style={{flexShrink:0,marginTop:1}} color="#3b82f6"/><span>{pedido.enderecoEntrega}</span></div>}
+          {pedido.enderecoEntrega&&(
+            <div style={{display:"flex",gap:8,padding:"10px 12px",background:"var(--surface-overlay)",borderRadius:9,fontSize:12,color:"var(--foreground-muted)"}}>
+              <MapPin size={14} style={{flexShrink:0,marginTop:1}} color="#3b82f6"/>
+              <span>{pedido.enderecoEntrega}</span>
+            </div>
+          )}
 
           {/* Observação */}
           <div>
@@ -469,18 +583,29 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
                 <button onClick={()=>setEditandoObs(false)} style={{...btnG,padding:"7px 10px"}}><X size={13}/></button>
               </div>
               :<div style={{display:"flex",alignItems:"center",gap:8}}>
-                <p style={{fontSize:12,color:"var(--foreground-muted)",margin:0,flex:1,fontStyle:pedido.observacao?"normal":"italic"}}>{pedido.observacao||"Sem observação"}</p>
-                {pedido.status!=="CANCELADO"&&<button onClick={()=>setEditandoObs(true)} style={{...btnG,padding:"4px 8px"}}><Edit2 size={12}/></button>}
+                <p style={{fontSize:12,color:"var(--foreground-muted)",margin:0,flex:1,fontStyle:pedido.observacao?"normal":"italic"}}>
+                  {pedido.observacao||"Sem observação"}
+                </p>
+                {pedido.status!=="CANCELADO"&&(
+                  <button onClick={()=>setEditandoObs(true)} style={{...btnG,padding:"4px 8px"}}><Edit2 size={12}/></button>
+                )}
               </div>}
           </div>
 
           {/* Motivo cancelamento */}
-          {pedido.motivoCancelamento&&<div style={{padding:"10px 12px",background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:9,fontSize:12,color:"var(--destructive)"}}><strong>Motivo:</strong> {pedido.motivoCancelamento}</div>}
-
-          {/* Cancelar */}
-          {podeCancelar&&!cancelando&&!editandoObs&&(
-            <button onClick={()=>setCancelando(true)} style={{...btnDanger,justifyContent:"center"}}><Ban size={13}/> Cancelar pedido</button>
+          {pedido.motivoCancelamento&&(
+            <div style={{padding:"10px 12px",background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:9,fontSize:12,color:"var(--destructive)"}}>
+              <strong>Motivo:</strong> {pedido.motivoCancelamento}
+            </div>
           )}
+
+          {/* Cancelar pedido */}
+          {podeCancelar&&!cancelando&&!editandoObs&&(
+            <button onClick={()=>setCancelando(true)} style={{...btnDanger,justifyContent:"center"}}>
+              <Ban size={13}/> Cancelar pedido
+            </button>
+          )}
+
           {cancelando&&(
             <div style={{display:"flex",flexDirection:"column",gap:8,padding:12,background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:9}}>
               <p style={{fontSize:12,color:"var(--destructive)",fontWeight:600,margin:0}}>Confirmar cancelamento?</p>
@@ -488,19 +613,31 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
               <input style={inp} value={motivo} onChange={e=>setMotivo(e.target.value)} placeholder="Motivo (opcional)..."/>
               <div style={{display:"flex",gap:7}}>
                 <button onClick={()=>setCancelando(false)} style={{...btnG,flex:1,justifyContent:"center"}}>Voltar</button>
-                <button onClick={cancelar} disabled={salvando} style={{flex:2,padding:"8px 0",background:"var(--destructive)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",opacity:salvando?0.7:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Ban size={13}/> Confirmar</button>
+                <button onClick={cancelar} disabled={salvando} style={{flex:2,padding:"8px 0",background:"var(--destructive)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",opacity:salvando?0.7:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                  <Ban size={13}/> Confirmar
+                </button>
               </div>
             </div>
           )}
 
-          {/* Remover */}
+          {/* Remover do histórico */}
           <div style={{borderTop:"1px solid var(--border)",paddingTop:12,marginTop:4}}>
-            <button onClick={()=>setConfirmandoRemocao(true)} style={{...btnDanger,width:"100%",justifyContent:"center",fontSize:12}}><Trash2 size={13}/> Remover do histórico</button>
+            <button onClick={()=>setConfirmandoRemocao(true)} style={{...btnDanger,width:"100%",justifyContent:"center",fontSize:12}}>
+              <Trash2 size={13}/> Remover do histórico
+            </button>
           </div>
         </div>
       </div>
 
-      {confirmandoRemocao&&<ModalConfirmarExclusao titulo="Remover pedido do histórico?" descricao={`O pedido #${pedido.id} será permanentemente removido. Esta ação não pode ser desfeita.`} onConfirmar={remover} onCancelar={()=>setConfirmandoRemocao(false)} confirmando={removendo}/>}
+      {confirmandoRemocao&&(
+        <ModalConfirmarExclusao
+          titulo="Remover pedido do histórico?"
+          descricao={`O pedido #${pedido.id} será permanentemente removido. Esta ação não pode ser desfeita.`}
+          onConfirmar={remover}
+          onCancelar={()=>setConfirmandoRemocao(false)}
+          confirmando={removendo}
+        />
+      )}
     </>
   );
 }
@@ -508,14 +645,14 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
 /* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Pedidos() {
   const {empresaAtiva}=useEmpresa();
-  const [pedidos,setPedidos]=useState<Pedido[]>([]);
-  const [loading,setLoading]=useState(false);
+  const [pedidos,setPedidos]   =useState<Pedido[]>([]);
+  const [loading,setLoading]   =useState(false);
   const [modalNovo,setModalNovo]=useState(false);
-  const [detalhe,setDetalhe]=useState<Pedido|null>(null);
+  const [detalhe,setDetalhe]   =useState<Pedido|null>(null);
   const [filtroStatus,setFiltroStatus]=useState<string>("TODOS");
-  const [busca,setBusca]=useState("");
+  const [busca,setBusca]       =useState("");
   const [confirmandoLimpar,setConfirmandoLimpar]=useState(false);
-  const [limpando,setLimpando]=useState(false);
+  const [limpando,setLimpando] =useState(false);
 
   const carregar=useCallback(async()=>{
     if(!empresaAtiva) return;
@@ -527,17 +664,28 @@ export default function Pedidos() {
 
   useEffect(()=>{carregar();},[carregar]);
 
-  /* Operações locais — zero reload */
-  const adicionarPedido=useCallback((p:Pedido)=>{setPedidos(prev=>[p,...prev]);toast.success(`Pedido #${p.id} registrado!`);},[]);
-  const removerPedido  =useCallback((id:number)=>{setPedidos(prev=>prev.filter(p=>p.id!==id));},[]);
-  const atualizarPedido=useCallback((updated:Pedido)=>{setPedidos(prev=>prev.map(p=>p.id===updated.id?updated:p));setDetalhe(updated);},[]);
+  /* Todas as operações atualizam o state local — zero reload ─────────────── */
+  const adicionarPedido=useCallback((p:Pedido)=>{
+    setPedidos(prev=>[p,...prev]);
+    toast.success(`Pedido #${p.id} registrado!`);
+  },[]);
+
+  const removerPedido=useCallback((id:number)=>{
+    setPedidos(prev=>prev.filter(p=>p.id!==id));
+  },[]);
+
+  const atualizarPedido=useCallback((updated:Pedido)=>{
+    setPedidos(prev=>prev.map(p=>p.id===updated.id?updated:p));
+    setDetalhe(updated);
+  },[]);
 
   const limparTudo=async()=>{
     if(!empresaAtiva) return;
     setLimpando(true);
     try{
       await fetchAuth(`/api/v1/pedidos/empresa/${empresaAtiva.id}/historico`,{method:"DELETE"});
-      setPedidos([]);setConfirmandoLimpar(false);toast.success("Histórico apagado.");
+      setPedidos([]);setConfirmandoLimpar(false);
+      toast.success("Histórico apagado.");
     }catch(e:any){toast.error(e.message);}
     finally{setLimpando(false);}
   };
@@ -545,38 +693,55 @@ export default function Pedidos() {
   const pedidosFiltrados=useMemo(()=>
     pedidos
       .filter(p=>filtroStatus==="TODOS"||p.status===filtroStatus)
-      .filter(p=>busca===""||String(p.id).includes(busca)||(p.nomeCliente??"").toLowerCase().includes(busca.toLowerCase())||(CANAIS.find(c=>c.value===p.canalVenda)?.label??"").toLowerCase().includes(busca.toLowerCase())),
+      .filter(p=>
+        busca===""||
+        String(p.id).includes(busca)||
+        (p.nomeCliente??"").toLowerCase().includes(busca.toLowerCase())||
+        (CANAIS.find(c=>c.value===p.canalVenda)?.label??"").toLowerCase().includes(busca.toLowerCase())
+      ),
   [pedidos,filtroStatus,busca]);
 
-  const ativos=pedidos.filter(p=>p.status!=="CANCELADO");
-  const totalBruto=ativos.reduce((s,p)=>s+p.valorFinal,0);
-  const pendentes=pedidos.filter(p=>p.status==="PENDENTE").length;
+  const ativos     = pedidos.filter(p=>p.status!=="CANCELADO");
+  const totalBruto = ativos.reduce((s,p)=>s+p.valorFinal,0);
+  const pendentes  = pedidos.filter(p=>p.status==="PENDENTE").length;
 
   if(!empresaAtiva) return(
     <div style={{padding:48,textAlign:"center",color:"var(--foreground-muted)",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
-      <Store size={40} color="var(--foreground-subtle)"/><p style={{fontSize:14}}>Selecione uma empresa para ver os pedidos.</p>
+      <Store size={40} color="var(--foreground-subtle)"/>
+      <p style={{fontSize:14}}>Selecione uma empresa para ver os pedidos.</p>
     </div>
   );
 
   return(
     <div style={{padding:28,display:"flex",flexDirection:"column",gap:20}}>
+
+      {/* Cabeçalho */}
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
         <div>
           <h2 style={{fontSize:18,fontWeight:700,color:"var(--foreground)",margin:0}}>Pedidos</h2>
-          <p style={{fontSize:13,color:"var(--foreground-muted)",marginTop:3}}>{empresaAtiva.nomeFantasia} · vendas remotas &amp; online</p>
+          <p style={{fontSize:13,color:"var(--foreground-muted)",marginTop:3}}>
+            {empresaAtiva.nomeFantasia} · vendas remotas &amp; online
+          </p>
         </div>
         <div style={{display:"flex",gap:8}}>
-          {pedidos.length>0&&<button onClick={()=>setConfirmandoLimpar(true)} style={btnDanger}><Trash2 size={14}/> Limpar histórico</button>}
-          <button style={btnP} onClick={()=>setModalNovo(true)}><Plus size={15}/> Novo Pedido</button>
+          {pedidos.length>0&&(
+            <button onClick={()=>setConfirmandoLimpar(true)} style={btnDanger}>
+              <Trash2 size={14}/> Limpar histórico
+            </button>
+          )}
+          <button style={btnP} onClick={()=>setModalNovo(true)}>
+            <Plus size={15}/> Novo Pedido
+          </button>
         </div>
       </div>
 
+      {/* KPIs */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:10}}>
         {[
-          {label:"Total Faturado",value:fmt(totalBruto),destaque:true},
-          {label:"Total Pedidos",value:String(ativos.length)},
-          {label:"Pendentes",value:String(pendentes),warn:pendentes>0},
-          {label:"Cancelados",value:String(pedidos.filter(p=>p.status==="CANCELADO").length)},
+          {label:"Total Faturado", value:fmt(totalBruto), destaque:true},
+          {label:"Total Pedidos",  value:String(ativos.length)},
+          {label:"Pendentes",      value:String(pendentes), warn:pendentes>0},
+          {label:"Cancelados",     value:String(pedidos.filter(p=>p.status==="CANCELADO").length)},
         ].map((k,i)=>(
           <div key={i} style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px"}}>
             <p style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 4px"}}>{k.label}</p>
@@ -585,25 +750,39 @@ export default function Pedidos() {
         ))}
       </div>
 
+      {/* Filtros + busca */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         {["TODOS",...Object.keys(STATUS_META)].map(s=>(
-          <button key={s} onClick={()=>setFiltroStatus(s)} style={{padding:"5px 12px",borderRadius:99,fontSize:12,fontWeight:500,cursor:"pointer",background:filtroStatus===s?"var(--primary-muted)":"transparent",border:`1px solid ${filtroStatus===s?"var(--primary)":"var(--border)"}`,color:filtroStatus===s?"var(--primary)":"var(--foreground-muted)"}}>
+          <button key={s} onClick={()=>setFiltroStatus(s)} style={{
+            padding:"5px 12px",borderRadius:99,fontSize:12,fontWeight:500,cursor:"pointer",
+            background:filtroStatus===s?"var(--primary-muted)":"transparent",
+            border:`1px solid ${filtroStatus===s?"var(--primary)":"var(--border)"}`,
+            color:filtroStatus===s?"var(--primary)":"var(--foreground-muted)",
+          }}>
             {s==="TODOS"?"Todos":STATUS_META[s as StatusPedido].label}
           </button>
         ))}
         <div style={{position:"relative",marginLeft:"auto"}}>
           <Search size={11} style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:"var(--foreground-subtle)"}}/>
-          <input style={{...inp,paddingLeft:26,padding:"6px 9px 6px 26px",fontSize:12,maxWidth:220}} placeholder="Buscar pedido..." value={busca} onChange={e=>setBusca(e.target.value)}/>
+          <input style={{...inp,paddingLeft:26,padding:"6px 9px 6px 26px",fontSize:12,maxWidth:220}}
+            placeholder="Buscar pedido..." value={busca} onChange={e=>setBusca(e.target.value)}/>
         </div>
       </div>
 
+      {/* Lista */}
       {loading
         ?<div style={{textAlign:"center",color:"var(--foreground-muted)",fontSize:13,padding:32}}>Carregando...</div>
         :pedidosFiltrados.length===0
-          ?<div style={{padding:48,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:10,color:"var(--foreground-subtle)"}}><Package size={40}/><p style={{fontSize:14}}>{pedidos.length===0?"Nenhum pedido registrado.":"Sem resultados para este filtro."}</p></div>
+          ?<div style={{padding:48,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:10,color:"var(--foreground-subtle)"}}>
+            <Package size={40}/>
+            <p style={{fontSize:14}}>{pedidos.length===0?"Nenhum pedido registrado.":"Sem resultados para este filtro."}</p>
+          </div>
           :<div style={{display:"flex",flexDirection:"column",gap:6}}>
             {pedidosFiltrados.map(p=>(
-              <div key={p.id} onClick={()=>setDetalhe(p)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:10,cursor:"pointer",transition:"border-color .1s"}} onMouseEnter={e=>((e.currentTarget as HTMLDivElement).style.borderColor="var(--primary)")} onMouseLeave={e=>((e.currentTarget as HTMLDivElement).style.borderColor="var(--border)")}>
+              <div key={p.id} onClick={()=>setDetalhe(p)}
+                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:10,cursor:"pointer",transition:"border-color .1s"}}
+                onMouseEnter={e=>((e.currentTarget as HTMLDivElement).style.borderColor="var(--primary)")}
+                onMouseLeave={e=>((e.currentTarget as HTMLDivElement).style.borderColor="var(--border)")}>
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
                   <span style={{fontSize:12,fontWeight:600,color:"var(--foreground-muted)",minWidth:32}}>#{p.id}</span>
                   <div>
@@ -612,20 +791,46 @@ export default function Pedidos() {
                       <CanalBadge canal={p.canalVenda}/>
                       {p.contaDestino&&<span style={{fontSize:11,color:"var(--foreground-muted)"}}>💳 {p.contaDestino}</span>}
                     </div>
-                    <p style={{fontSize:11,color:"var(--foreground-subtle)",margin:"3px 0 0"}}>{fmtData(p.dataPedido)} · {p.itens?.length??0} item(s){p.nomeCliente?` · ${p.nomeCliente}`:""}</p>
+                    <p style={{fontSize:11,color:"var(--foreground-subtle)",margin:"3px 0 0"}}>
+                      {fmtData(p.dataPedido)} · {p.itens?.length??0} item(s){p.nomeCliente?` · ${p.nomeCliente}`:""}
+                    </p>
                   </div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:14,fontWeight:700,color:p.status==="CANCELADO"?"var(--foreground-subtle)":"var(--primary)",textDecoration:p.status==="CANCELADO"?"line-through":"none"}}>{fmt(p.valorFinal)}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:p.status==="CANCELADO"?"var(--foreground-subtle)":"var(--primary)",textDecoration:p.status==="CANCELADO"?"line-through":"none"}}>
+                    {fmt(p.valorFinal)}
+                  </span>
                   <ChevronRight size={14} color="var(--foreground-subtle)"/>
                 </div>
               </div>
             ))}
           </div>}
 
-      {modalNovo&&<ModalNovoPedido empresaId={empresaAtiva.id} onClose={()=>setModalNovo(false)} onSucesso={adicionarPedido}/>}
-      {detalhe&&<DetalhePedido pedido={detalhe} onClose={()=>setDetalhe(null)} onAtualizado={atualizarPedido} onRemovido={removerPedido}/>}
-      {confirmandoLimpar&&<ModalConfirmarExclusao titulo="Limpar todo o histórico?" descricao="Todos os pedidos desta empresa serão permanentemente removidos. Esta ação não pode ser desfeita." onConfirmar={limparTudo} onCancelar={()=>setConfirmandoLimpar(false)} confirmando={limpando}/>}
+      {/* Modais */}
+      {modalNovo&&(
+        <ModalNovoPedido
+          empresaId={empresaAtiva.id}
+          onClose={()=>setModalNovo(false)}
+          onSucesso={adicionarPedido}
+        />
+      )}
+      {detalhe&&(
+        <DetalhePedido
+          pedido={detalhe}
+          onClose={()=>setDetalhe(null)}
+          onAtualizado={atualizarPedido}
+          onRemovido={removerPedido}
+        />
+      )}
+      {confirmandoLimpar&&(
+        <ModalConfirmarExclusao
+          titulo="Limpar todo o histórico?"
+          descricao="Todos os pedidos desta empresa serão permanentemente removidos. Esta ação não pode ser desfeita."
+          onConfirmar={limparTudo}
+          onCancelar={()=>setConfirmandoLimpar(false)}
+          confirmando={limpando}
+        />
+      )}
     </div>
   );
 }
