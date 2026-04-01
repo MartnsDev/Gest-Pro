@@ -3,14 +3,12 @@
 import { useEffect, useState, ReactNode } from "react";
 import { useEmpresa, type CaixaInfo } from "../context/Empresacontext";
 import {
-  BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
   Pie,
   Cell,
   Legend,
@@ -47,6 +45,10 @@ import NovoProdutoOverlay from "../acoesRapidas/NovoProduto";
 import NovoClienteOverlay from "../acoesRapidas/NovoCliente";
 import AbrirCaixaOverlay from "../acoesRapidas/AbrirCaixa";
 import type { Usuario } from "@/lib/api-v2";
+
+import { BarChart } from "./graphs/BarChart";
+import { LineChart } from "./graphs/Linechart";
+import { PieChart } from "./graphs/PieChart";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface PlanoDTO {
@@ -2295,7 +2297,6 @@ export default function DashboardHome({
         </div>
 
         {/* Gráficos, Carregar o stilo do barchart, linechart e piechart.*/}
-        {/* Gráficos */}
         <div
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
         >
