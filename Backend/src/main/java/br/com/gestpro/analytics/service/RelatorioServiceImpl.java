@@ -1,9 +1,9 @@
 package br.com.gestpro.analytics.service;
 
 import br.com.gestpro.analytics.dto.RelatorioDTO;
-import br.com.gestpro.analytics.repository.RelatorioRepository;
 import br.com.gestpro.caixa.model.Caixa;
 import br.com.gestpro.caixa.repository.CaixaRepository;
+import br.com.gestpro.dashboard.repository.DashboardRepository;
 import br.com.gestpro.empresa.model.Empresa;
 import br.com.gestpro.empresa.repository.EmpresaRepository;
 import br.com.gestpro.infra.exception.ApiException;
@@ -12,201 +12,271 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class RelatorioServiceImpl implements RelatorioServiceInterface {
 
-    private final RelatorioRepository relatorioRepository;
+    private static final String PATH     = "/api/v1/relatorios";
+    private static final DateTimeFormatter FMT_DT =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final DateTimeFormatter FMT_DAY =
+            DateTimeFormatter.ofPattern("dd/MM");
+
+    private final DashboardRepository dashboardRepository;
     private final EmpresaRepository   empresaRepository;
     private final CaixaRepository     caixaRepository;
 
-    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private static final Map<String, String> FORMA_LABEL = Map.of(
-            "PIX", "Pix", "DINHEIRO", "Dinheiro",
-            "CARTAO_DEBITO", "Débito", "CARTAO_CREDITO", "Crédito"
-    );
-
-    private Empresa validar(Long empresaId, String email) {
-        Empresa emp = empresaRepository.findById(empresaId)
-                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/relatorios"));
-        if (!emp.getDono().getEmail().equals(email))
-            throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, "/relatorios");
-        return emp;
-    }
+    // ─── Endpoints de conveniência ────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
-    public RelatorioDTO gerarPorPeriodo(Long empresaId, LocalDateTime inicio, LocalDateTime fim, String email) {
+    public RelatorioDTO hoje(Long empresaId, String email) {
         Empresa emp = validar(empresaId, email);
-        return montar(emp, inicio, fim,
-                "Relatório " + inicio.format(DateTimeFormatter.ofPattern("dd/MM")) + " → " + fim.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        LocalDateTime inicio = LocalDate.now().atStartOfDay();
+        LocalDateTime fim    = LocalDate.now().atTime(23, 59, 59);
+        return montar(emp, "Relatório de Hoje", inicio, fim);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public RelatorioDTO gerarPorCaixa(Long caixaId, String email) {
+    public RelatorioDTO semana(Long empresaId, String email) {
+        Empresa emp = validar(empresaId, email);
+        LocalDateTime inicio = LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay();
+        LocalDateTime fim    = LocalDate.now().with(DayOfWeek.SUNDAY).atTime(23, 59, 59);
+        return montar(emp, "Relatório da Semana", inicio, fim);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RelatorioDTO mes(Long empresaId, String email) {
+        Empresa emp   = validar(empresaId, email);
+        LocalDate hoje = LocalDate.now();
+        LocalDateTime inicio = hoje.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime fim    = hoje.withDayOfMonth(hoje.lengthOfMonth()).atTime(23, 59, 59);
+        return montar(emp, "Relatório do Mês", inicio, fim);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RelatorioDTO periodo(Long empresaId, String email,
+                                LocalDateTime inicio, LocalDateTime fim) {
+        Empresa emp = validar(empresaId, email);
+        return montar(emp, "Relatório Personalizado", inicio, fim);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RelatorioDTO porCaixa(Long caixaId, String email) {
         Caixa caixa = caixaRepository.findById(caixaId)
-                .orElseThrow(() -> new ApiException("Caixa não encontrado", HttpStatus.NOT_FOUND, "/relatorios"));
-        if (!caixa.getEmpresa().getDono().getEmail().equals(email))
-            throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, "/relatorios");
+                .orElseThrow(() -> new ApiException("Caixa não encontrado", HttpStatus.NOT_FOUND, PATH));
+        Empresa emp = caixa.getEmpresa();
+        if (!emp.getDono().getEmail().equals(email))
+            throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, PATH);
 
         LocalDateTime inicio = caixa.getDataAbertura();
-        LocalDateTime fim    = caixa.getDataFechamento() != null ? caixa.getDataFechamento() : LocalDateTime.now();
-        return montar(caixa.getEmpresa(), inicio, fim, "Relatório Caixa #" + caixaId);
+        LocalDateTime fim    = caixa.getDataFechamento() != null
+                ? caixa.getDataFechamento()
+                : LocalDateTime.now();
+        return montar(emp, "Relatório do Caixa #" + caixaId, inicio, fim);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    private RelatorioDTO montar(Empresa emp, LocalDateTime inicio, LocalDateTime fim, String titulo) {
+    // ─── Montagem principal ────────────────────────────────────────────────
+
+    private RelatorioDTO montar(Empresa emp, String titulo,
+                                LocalDateTime inicio, LocalDateTime fim) {
         Long id = emp.getId();
+        RelatorioDTO rel = new RelatorioDTO();
+        rel.setTitulo(titulo);
+        rel.setNomeEmpresa(emp.getNomeFantasia());
+        rel.setGeradoEm(LocalDateTime.now().format(FMT_DT));
+        rel.setPeriodo(inicio.format(FMT_DT) + " → " + fim.format(FMT_DT));
 
-        // 1. Resumo geral — List<Object[]> garante que nunca colapsa
-        List<Object[]> resumoList = relatorioRepository.resumoGeral(id, inicio, fim);
-        List<Object[]> cancelList = relatorioRepository.resumoCancelamentos(id, inicio, fim);
-        List<Object>   lucroList  = relatorioRepository.lucroTotal(id, inicio, fim);
+        // ── KPIs principais ───────────────────────────────────────────────
+        double receita      = toDouble(dashboardRepository.faturamentoPeriodo(id, inicio, fim));
+        double lucro        = toDouble(dashboardRepository.lucroPorPeriodo(id, inicio, fim));
+        double descontos    = toDouble(dashboardRepository.descontoTotalPeriodo(id, inicio, fim));
+        long   totalTx      = toLong(dashboardRepository.totalTransacoesPeriodo(id, inicio, fim));
+        double maior        = toDouble(dashboardRepository.maiorVendaPeriodo(id, inicio, fim));
+        double menor        = toDouble(dashboardRepository.menorVendaPeriodo(id, inicio, fim));
+        long   cancelTot    = toLong(dashboardRepository.cancelamentosPdvPeriodo(id, inicio, fim))
+                + toLong(dashboardRepository.cancelamentosPedidosPeriodo(id, inicio, fim));
+        double valCancel    = toDouble(dashboardRepository.valorCanceladoPdvPeriodo(id, inicio, fim))
+                + toDouble(dashboardRepository.valorCanceladoPedidosPeriodo(id, inicio, fim));
 
-        Object[] resumo = resumoList != null && !resumoList.isEmpty() ? resumoList.get(0) : new Object[6];
-        Object[] cancel = cancelList != null && !cancelList.isEmpty() ? cancelList.get(0) : new Object[2];
-        Object   lucroObj = lucroList != null && !lucroList.isEmpty() ? lucroList.get(0) : null;
+        rel.setReceitaTotal(receita);
+        rel.setLucroTotal(lucro);
+        rel.setTotalDescontos(descontos);
+        rel.setTotalVendas(totalTx);
+        rel.setTicketMedio(totalTx > 0 ? receita / totalTx : 0);
+        rel.setMaiorVenda(maior);
+        rel.setMenorVenda(menor);
+        rel.setCancelamentos(cancelTot);
+        rel.setValorCancelado(valCancel);
 
-        long       totalVendas = safeIndex(resumo, 0);
-        BigDecimal receita     = toBD(safeGet(resumo, 1));
-        BigDecimal descontos   = toBD(safeGet(resumo, 2));
-        BigDecimal ticket      = toBD(safeGet(resumo, 3));
-        BigDecimal maior       = toBD(safeGet(resumo, 4));
-        BigDecimal menor       = toBD(safeGet(resumo, 5));
-        BigDecimal lucro       = toBD(lucroObj);
-        long       cancelQtd   = safeIndex(cancel, 0);
-        BigDecimal cancelVal   = toBD(safeGet(cancel, 1));
+        // ── Origem (pizza) ────────────────────────────────────────────────
+        double recPdv     = toDouble(dashboardRepository.somaPdvMes(id));     // approx — usa mês; para precisão exata teríamos query por período
+        double recPedidos = toDouble(dashboardRepository.somaPedidosMes(id));
+        // Sobrescreve com valores reais do período via faturamentoPeriodo já calculado
+        // Usa as queries separadas de PDV e Pedidos para o período:
+        double recPdvPeriodo     = toDouble(dashboardRepository.somaPdvPeriodo(id, inicio, fim));
+        double recPedidosPeriodo = toDouble(dashboardRepository.somaPedidosPeriodo(id, inicio, fim));
+        rel.setReceitaPdv(recPdvPeriodo);
+        rel.setReceitaPedidos(recPedidosPeriodo);
 
-        // 2. Vendas diárias
-        List<RelatorioDTO.VendasDiaDTO> diarias = relatorioRepository
-                .vendasDiarias(id, inicio, fim).stream()
-                .map(r -> RelatorioDTO.VendasDiaDTO.builder()
-                        .dia(r[0] != null ? r[0].toString() : "")
-                        .qtdVendas(toLong(r[1]))
-                        .total(toBD(r[2]))
-                        .desconto(toBD(r[3]))
-                        .build())
-                .toList();
+        // ── Vendas diárias ────────────────────────────────────────────────
+        List<Object[]> dias = dashboardRepository.vendasDiariasPeriodo(id, inicio, fim);
+        rel.setVendasDiarias(dias.stream().map(r -> {
+            String diaStr = r[0] != null ? r[0].toString().substring(5).replace("-", "/") : "?";
+            return new RelatorioDTO.VendasDiaItem(diaStr, toDouble(r[1]));
+        }).collect(Collectors.toList()));
 
-        // 3. Pagamentos
-        List<RelatorioDTO.PagamentoDTO> pagamentos = relatorioRepository
-                .totaisPorFormaPagamento(id, inicio, fim).stream()
-                .map(r -> {
-                    String forma = r[0] != null ? FORMA_LABEL.getOrDefault(r[0].toString(), r[0].toString()) : "—";
-                    BigDecimal tot = toBD(r[2]);
-                    double pct = receita.compareTo(BigDecimal.ZERO) > 0
-                            ? tot.divide(receita, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100)).doubleValue()
-                            : 0.0;
-                    return RelatorioDTO.PagamentoDTO.builder()
-                            .forma(forma).qtd(toLong(r[1])).total(tot).percentual(pct).build();
-                }).toList();
+        // ── Pagamentos ────────────────────────────────────────────────────
+        Map<String, long[]> pagMap = new LinkedHashMap<>(); // [qtd, total_cents]
+        for (Object[] r : dashboardRepository.pagamentosPdvPeriodo(id, inicio, fim)) {
+            String forma = str(r[0]);
+            long   qtd   = toLong(r[1]);
+            double tot   = toDouble(r[2]);
+            pagMap.merge(forma, new long[]{qtd, (long)(tot*100)},
+                    (a,b) -> new long[]{a[0]+b[0], a[1]+b[1]});
+        }
+        for (Object[] r : dashboardRepository.pagamentosPedidosPeriodo(id, inicio, fim)) {
+            String forma = str(r[0]);
+            long   qtd   = toLong(r[1]);
+            double tot   = toDouble(r[2]);
+            pagMap.merge(forma, new long[]{qtd, (long)(tot*100)},
+                    (a,b) -> new long[]{a[0]+b[0], a[1]+b[1]});
+        }
+        double totalPag = pagMap.values().stream().mapToDouble(v -> v[1] / 100.0).sum();
+        List<RelatorioDTO.PagamentoItem> pags = pagMap.entrySet().stream().map(e -> {
+                    double tot = e.getValue()[1] / 100.0;
+                    RelatorioDTO.PagamentoItem p = new RelatorioDTO.PagamentoItem(e.getKey(), e.getValue()[0], tot);
+                    p.setPercentual(totalPag > 0 ? (tot / totalPag) * 100 : 0);
+                    return p;
+                }).sorted(Comparator.comparingDouble(RelatorioDTO.PagamentoItem::getTotal).reversed())
+                .collect(Collectors.toList());
+        rel.setPagamentos(pags);
 
-        // 4. Top produtos
-        List<RelatorioDTO.ProdutoRelDTO> top = relatorioRepository
-                .topProdutos(id, inicio, fim).stream()
-                .map(r -> RelatorioDTO.ProdutoRelDTO.builder()
-                        .nome(r[0] != null ? r[0].toString() : "—")
-                        .quantidade(toLong(r[1]))
-                        .receita(toBD(r[2]))
-                        .lucro(toBD(r[3]))
-                        .build())
-                .toList();
+        // ── Top produtos ──────────────────────────────────────────────────
+        List<Object[]> prods = dashboardRepository.topProdutosPeriodo(id, inicio, fim);
+        rel.setTopProdutos(prods.stream().map(r -> new RelatorioDTO.ProdutoItem(
+                str(r[0]), toLong(r[1]), toDouble(r[2]), toDouble(r[3])
+        )).collect(Collectors.toList()));
 
-        // 5. Por hora
-        List<RelatorioDTO.VendasHoraDTO> porHora = relatorioRepository
-                .vendasPorHora(id, inicio, fim).stream()
-                .map(r -> RelatorioDTO.VendasHoraDTO.builder()
-                        .hora(r[0] != null ? ((Number) r[0]).intValue() : 0)
-                        .qtd(toLong(r[1]))
-                        .total(toBD(r[2]))
-                        .build())
-                .toList();
+        // ── Pico por hora ─────────────────────────────────────────────────
+        List<Object[]> horas = dashboardRepository.vendasPorHoraPeriodo(id, inicio, fim);
+        rel.setVendasPorHora(horas.stream().map(r ->
+                new RelatorioDTO.VendasHoraItem((int) toLong(r[0]), toLong(r[1]), toDouble(r[2]))
+        ).collect(Collectors.toList()));
 
-        // 6. Itens em batch — Map<vendaId, List<String>>
-        Map<Long, List<String>> itensPorVenda = new HashMap<>();
-        relatorioRepository.itensPorPeriodo(id, inicio, fim).forEach(r -> {
-            Long   vendaId = toLong(r[0]);
-            String desc    = r[1] + " x" + toLong(r[2]) + " = " + fmtMoeda(toBD(r[3]));
-            itensPorVenda.computeIfAbsent(vendaId, k -> new ArrayList<>()).add(desc);
-        });
+        // ── Listagem individual (PDV + Pedidos) ───────────────────────────
+        List<RelatorioDTO.VendaItem> vendas = new ArrayList<>();
 
-        // 7. Lista de vendas (raw, sem lazy)
-        List<RelatorioDTO.VendaItemDTO> vendas = relatorioRepository
-                .listarVendasRaw(id, inicio, fim).stream()
-                .map(r -> {
-                    Long   vendaId = toLong(r[0]);
-                    String forma   = r[2] != null ? FORMA_LABEL.getOrDefault(r[2].toString(), r[2].toString()) : "—";
-                    String forma2  = r[3] != null ? FORMA_LABEL.getOrDefault(r[3].toString(), r[3].toString()) : null;
-                    return RelatorioDTO.VendaItemDTO.builder()
-                            .id(vendaId)
-                            .data(r[1] != null ? r[1].toString() : "")
-                            .formaPagamento(forma)
-                            .formaPagamento2(forma2)
-                            .valorFinal(toBD(r[4]))
-                            .desconto(toBD(r[5]))
-                            .troco(r[6] != null ? toBD(r[6]) : null)
-                            .observacao(r[7] != null ? r[7].toString() : null)
-                            .nomeCliente(r[8] != null ? r[8].toString() : null)
-                            .itens(itensPorVenda.getOrDefault(vendaId, List.of()))
-                            .build();
-                }).toList();
+        // PDV
+        for (Object[] r : dashboardRepository.vendasPdvPeriodo(id, inicio, fim)) {
+            long   vid  = toLong(r[0]);
+            String data = fmtDt(r[1]);
+            String fp   = str(r[2]);
+            String fp2  = r[3] != null && !r[3].toString().isBlank() ? str(r[3]) : null;
+            double vf   = toDouble(r[4]);
+            double desc = toDouble(r[5]);
+            double troco= toDouble(r[6]);
+            String obs  = strNull(r[7]);
+            String cli  = strNull(r[8]);
 
-        return RelatorioDTO.builder()
-                .titulo(titulo)
-                .periodo(inicio.format(FMT) + " → " + fim.format(FMT))
-                .nomeEmpresa(emp.getNomeFantasia())
-                .geradoEm(LocalDateTime.now().format(FMT))
-                .totalVendas(totalVendas)
-                .receitaTotal(receita)
-                .lucroTotal(lucro)
-                .totalDescontos(descontos)
-                .ticketMedio(ticket)
-                .maiorVenda(maior)
-                .menorVenda(menor)
-                .cancelamentos(cancelQtd)
-                .valorCancelado(cancelVal)
-                .vendasDiarias(diarias)
-                .pagamentos(pagamentos)
-                .topProdutos(top)
-                .vendasPorHora(porHora)
-                .vendas(vendas)
-                .build();
+            List<String> itens = dashboardRepository.itensPorVendaId(vid).stream()
+                    .map(i -> str(i[0]) + " x" + toLong(i[1]) + " = " + fmtMoeda(toDouble(i[3])))
+                    .collect(Collectors.toList());
+
+            vendas.add(new RelatorioDTO.VendaItem(vid, data, fp, fp2, vf, desc, troco, obs, cli, "PDV", itens));
+        }
+
+        // Pedidos
+        for (Object[] r : dashboardRepository.pedidosPeriodo(id, inicio, fim)) {
+            long   pid  = toLong(r[0]);
+            String data = fmtDt(r[1]);
+            String fp   = str(r[2]);
+            String canal= str(r[3]); // canal_venda como "2ª forma"
+            double vf   = toDouble(r[4]);
+            double desc = toDouble(r[5]);
+            double frete= toDouble(r[6]);
+            String obs  = strNull(r[7]);
+            String cli  = strNull(r[8]);
+
+            List<String> itens = dashboardRepository.itensPorPedidoId(pid).stream()
+                    .map(i -> str(i[0]) + " x" + toLong(i[1]) + " = " + fmtMoeda(toDouble(i[3])))
+                    .collect(Collectors.toList());
+
+            // Inclui frete nos itens se houver
+            if (frete > 0) itens.add("Frete = " + fmtMoeda(frete));
+
+            vendas.add(new RelatorioDTO.VendaItem(pid, data, fp, canal, vf, desc, 0, obs, cli, "PEDIDO", itens));
+        }
+
+        // Ordena por data desc
+        vendas.sort((a, b) -> b.getData().compareTo(a.getData()));
+        rel.setVendas(vendas);
+
+        return rel;
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
-    private Object safeGet(Object[] arr, int i) {
-        if (arr == null || arr.length <= i) return null;
-        return arr[i];
+    // ─── Helpers ──────────────────────────────────────────────────────────
+
+    private Empresa validar(Long empresaId, String email) {
+        Empresa e = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, PATH));
+        if (!e.getDono().getEmail().equals(email))
+            throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, PATH);
+        return e;
     }
 
-    private long safeIndex(Object[] arr, int i) {
-        return toLong(safeGet(arr, i));
+    private double toDouble(Object obj) {
+        if (obj == null) return 0.0;
+        if (obj instanceof Number n) return n.doubleValue();
+        try { return Double.parseDouble(obj.toString().trim()); }
+        catch (Exception e) { return 0.0; }
     }
 
-    private BigDecimal toBD(Object v) {
-        if (v == null) return BigDecimal.ZERO;
-        if (v instanceof BigDecimal bd) return bd;
-        if (v instanceof Number n) return BigDecimal.valueOf(n.doubleValue());
-        try { return new BigDecimal(v.toString().trim()); } catch (Exception e) { return BigDecimal.ZERO; }
+    private long toLong(Object obj) {
+        if (obj == null) return 0L;
+        if (obj instanceof Number n) return n.longValue();
+        try {
+            String s = obj.toString().trim();
+            if (s.contains(".")) s = s.split("\\.")[0];
+            return Long.parseLong(s);
+        } catch (Exception e) { return 0L; }
     }
 
-    private long toLong(Object v) {
-        if (v == null) return 0L;
-        if (v instanceof Number n) return n.longValue();
-        try { return Long.parseLong(v.toString().trim()); } catch (Exception e) { return 0L; }
+    private String str(Object obj) {
+        return obj != null ? obj.toString().trim() : "";
     }
 
-    private String fmtMoeda(BigDecimal v) {
-        if (v == null) return "R$ 0,00";
-        return "R$ " + String.format("%.2f", v).replace(".", ",");
+    private String strNull(Object obj) {
+        if (obj == null) return null;
+        String s = obj.toString().trim();
+        return s.isBlank() ? null : s;
+    }
+
+    private String fmtDt(Object obj) {
+        if (obj == null) return "—";
+        try {
+            if (obj instanceof java.sql.Timestamp ts)
+                return ts.toLocalDateTime().format(FMT_DT);
+            if (obj instanceof java.sql.Date d)
+                return d.toLocalDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            String s = obj.toString().trim();
+            if (s.contains("T")) return LocalDateTime.parse(s).format(FMT_DT);
+            return s;
+        } catch (Exception e) { return obj.toString(); }
+    }
+
+    private String fmtMoeda(double v) {
+        return String.format("R$\u00a0%.2f", v).replace('.', ',');
     }
 }

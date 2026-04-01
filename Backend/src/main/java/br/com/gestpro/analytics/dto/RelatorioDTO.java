@@ -1,12 +1,16 @@
 package br.com.gestpro.analytics.dto;
 
-import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
 
-@Data @Builder
+/**
+ * DTO único retornado pelo endpoint /api/v1/relatorios/*.
+ * Combina dados de PDV (Venda) + Pedidos.
+ */
+@Data
+@NoArgsConstructor
 public class RelatorioDTO {
 
     private String titulo;
@@ -14,66 +18,118 @@ public class RelatorioDTO {
     private String nomeEmpresa;
     private String geradoEm;
 
-    // ── Resumo geral ──────────────────────────────────────────────────────
-    private Long    totalVendas;
-    private BigDecimal receitaTotal;
-    private BigDecimal lucroTotal;
-    private BigDecimal totalDescontos;
-    private BigDecimal ticketMedio;
-    private BigDecimal maiorVenda;
-    private BigDecimal menorVenda;
-    private Long    cancelamentos;
-    private BigDecimal valorCancelado;
+    // ── KPIs ───────────────────────────────────────────────────────────────
+    private long   totalVendas;      // PDV + Pedidos
+    private double receitaTotal;
+    private double lucroTotal;       // PDV (preco_custo) + Pedidos (preco_custo via item_pedido)
+    private double totalDescontos;
+    private double ticketMedio;
+    private double maiorVenda;
+    private double menorVenda;
+    private long   cancelamentos;    // PDV + Pedidos
+    private double valorCancelado;
 
-    // ── Séries ────────────────────────────────────────────────────────────
-    private List<VendasDiaDTO>      vendasDiarias;
-    private List<PagamentoDTO>      pagamentos;
-    private List<ProdutoRelDTO>     topProdutos;
-    private List<VendasHoraDTO>     vendasPorHora;
-    private List<VendaItemDTO>      vendas;      // lista completa (para exportar)
+    // ── Origem (para gráfico de pizza) ─────────────────────────────────────
+    private double receitaPdv;
+    private double receitaPedidos;
 
-    @Data @Builder
-    public static class VendasDiaDTO {
-        private String     dia;
-        private Long       qtdVendas;
-        private BigDecimal total;
-        private BigDecimal desconto;
+    // ── Gráficos ───────────────────────────────────────────────────────────
+    private List<VendasDiaItem>  vendasDiarias;
+    private List<PagamentoItem>  pagamentos;
+    private List<ProdutoItem>    topProdutos;
+    private List<VendasHoraItem> vendasPorHora;
+
+    // ── Listagem individual ────────────────────────────────────────────────
+    private List<VendaItem> vendas;
+
+    // ────────────────────────────────────────────────────────────────────────
+    //  Itens internos
+    // ────────────────────────────────────────────────────────────────────────
+
+    @Data @NoArgsConstructor
+    public static class VendasDiaItem {
+        private String dia;
+        private int    qtdVendas;
+        private double total;
+        private double desconto;
+
+        public VendasDiaItem(String dia, double total) {
+            this.dia   = dia;
+            this.total = total;
+        }
     }
 
-    @Data @Builder
-    public static class PagamentoDTO {
-        private String     forma;
-        private Long       qtd;
-        private BigDecimal total;
-        private Double     percentual;
+    @Data @NoArgsConstructor
+    public static class PagamentoItem {
+        private String forma;
+        private long   qtd;
+        private double total;
+        private double percentual;
+
+        public PagamentoItem(String forma, long qtd, double total) {
+            this.forma = forma;
+            this.qtd   = qtd;
+            this.total = total;
+        }
     }
 
-    @Data @Builder
-    public static class ProdutoRelDTO {
-        private String     nome;
-        private Long       quantidade;
-        private BigDecimal receita;
-        private BigDecimal lucro;
+    @Data @NoArgsConstructor
+    public static class ProdutoItem {
+        private String nome;
+        private long   quantidade;
+        private double receita;
+        private double lucro;
+
+        public ProdutoItem(String nome, long quantidade, double receita, double lucro) {
+            this.nome       = nome;
+            this.quantidade = quantidade;
+            this.receita    = receita;
+            this.lucro      = lucro;
+        }
     }
 
-    @Data @Builder
-    public static class VendasHoraDTO {
-        private Integer    hora;
-        private Long       qtd;
-        private BigDecimal total;
+    @Data @NoArgsConstructor
+    public static class VendasHoraItem {
+        private int    hora;
+        private long   qtd;
+        private double total;
+
+        public VendasHoraItem(int hora, long qtd, double total) {
+            this.hora  = hora;
+            this.qtd   = qtd;
+            this.total = total;
+        }
     }
 
-    @Data @Builder
-    public static class VendaItemDTO {
-        private Long       id;
-        private String     data;
-        private String     formaPagamento;
-        private String     formaPagamento2;
-        private BigDecimal valorFinal;
-        private BigDecimal desconto;
-        private BigDecimal troco;
-        private String     observacao;
-        private String     nomeCliente;
+    @Data @NoArgsConstructor
+    public static class VendaItem {
+        private long    id;
+        private String  data;
+        private String  formaPagamento;
+        private String  formaPagamento2; // canal para pedidos
+        private double  valorFinal;
+        private double  desconto;
+        private double  troco;
+        private String  observacao;
+        private String  nomeCliente;
+        private String  origem;          // "PDV" ou "PEDIDO"
         private List<String> itens;
+
+        public VendaItem(long id, String data, String formaPagamento, String formaPagamento2,
+                         double valorFinal, double desconto, double troco,
+                         String observacao, String nomeCliente, String origem,
+                         List<String> itens) {
+            this.id              = id;
+            this.data            = data;
+            this.formaPagamento  = formaPagamento;
+            this.formaPagamento2 = formaPagamento2;
+            this.valorFinal      = valorFinal;
+            this.desconto        = desconto;
+            this.troco           = troco;
+            this.observacao      = observacao;
+            this.nomeCliente     = nomeCliente;
+            this.origem          = origem;
+            this.itens           = itens;
+        }
     }
 }

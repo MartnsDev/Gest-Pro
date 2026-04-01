@@ -27,7 +27,6 @@ public class VisaoGeralOperation {
     private final VerificarPlanoOperation verificarPlano;
     private final DashboardRepository     dashboardRepository;
 
-    // ── Plano do usuário ───────────────────────────────────────────────────
     @Transactional(readOnly = true)
     public PlanoDTO planoUsuarioLogado(String email) {
         return usuarioRepository.findByEmail(email)
@@ -35,57 +34,55 @@ public class VisaoGeralOperation {
                     long dias    = verificarPlano.calcularDiasRestantes(u);
                     Object raw   = empresaRepository.countByDonoId(u.getId());
                     long criadas = raw instanceof Number n ? n.longValue() : 0L;
-                    return new PlanoDTO(
-                            u.getTipoPlano().name(), dias, criadas,
-                            u.getTipoPlano().getLimiteEmpresas(),
-                            u.getStatusAcesso().name()
-                    );
+                    return new PlanoDTO(u.getTipoPlano().name(), dias, criadas,
+                            u.getTipoPlano().getLimiteEmpresas(), u.getStatusAcesso().name());
                 })
                 .orElse(new PlanoDTO("NENHUM", 0, 0, 0, "INATIVO"));
     }
 
-    // ── Faturamento semanal (PDV + Pedidos) ───────────────────────────────
+    /** Faturamento semanal: PDV + Pedidos (query já combina os dois) */
     @Transactional(readOnly = true)
     public BigDecimal vendasSemana(Long empresaId) {
         LocalDate hoje       = LocalDate.now();
         LocalDateTime inicio = hoje.with(DayOfWeek.MONDAY).atStartOfDay();
         LocalDateTime fim    = hoje.with(DayOfWeek.SUNDAY).atTime(23, 59, 59);
-        // contarVendasSemana agora soma PDV + Pedidos no repository
         return parseBD(dashboardRepository.contarVendasSemana(empresaId, inicio, fim));
     }
 
-    // ── Faturamento mensal (PDV + Pedidos) ────────────────────────────────
+    /** Faturamento mensal: PDV + Pedidos */
     @Transactional(readOnly = true)
     public BigDecimal vendasMes(Long empresaId) {
-        // somaVendasMes agora soma PDV + Pedidos no repository
         return parseBD(dashboardRepository.somaVendasMes(empresaId));
     }
 
-    // ── Lucro do dia (apenas PDV — pedidos não têm preco_custo) ──────────
+    /**
+     * Lucro do dia: PDV (preco_custo por item) + Pedidos (preco_custo via item_pedido).
+     * A query lucroDia() no DashboardRepository já combina os dois.
+     */
     @Transactional(readOnly = true)
     public BigDecimal lucroDia(Long empresaId) {
         return parseBD(dashboardRepository.lucroDia(empresaId));
     }
 
-    // ── Lucro do mês (apenas PDV) ─────────────────────────────────────────
+    /**
+     * Lucro do mês: PDV + Pedidos.
+     * A query lucroMes() no DashboardRepository já combina os dois.
+     */
     @Transactional(readOnly = true)
     public BigDecimal lucroMes(Long empresaId) {
         return parseBD(dashboardRepository.lucroMes(empresaId));
     }
 
-    // ── Custo imobilizado em estoque ──────────────────────────────────────
     @Transactional(readOnly = true)
     public BigDecimal custoTotalEstoque(Long empresaId) {
         return parseBD(dashboardRepository.custoTotalEstoque(empresaId));
     }
 
-    // ── Total investido cadastrado ────────────────────────────────────────
     @Transactional(readOnly = true)
     public BigDecimal totalInvestido(Long empresaId) {
         return parseBD(dashboardRepository.totalInvestidoCadastrado(empresaId));
     }
 
-    // ── Alertas de estoque zerado ─────────────────────────────────────────
     @Transactional(readOnly = true)
     public List<String> alertasProdutosZerados(Long empresaId) {
         return produtoRepository.findByQuantidadeEstoqueAndEmpresaId(0, empresaId)
@@ -95,7 +92,6 @@ public class VisaoGeralOperation {
                 .collect(Collectors.toList());
     }
 
-    // ── Helper ────────────────────────────────────────────────────────────
     private BigDecimal parseBD(Object obj) {
         if (obj == null) return BigDecimal.ZERO;
         if (obj instanceof BigDecimal bd) return bd;
