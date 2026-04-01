@@ -49,6 +49,12 @@ import NovoClienteOverlay from "../acoesRapidas/NovoCliente";
 import AbrirCaixaOverlay from "../acoesRapidas/AbrirCaixa";
 import type { Usuario } from "@/lib/api-v2";
 
+import { BarChart as BarChartGraph } from "./graphs/BarChart";
+import { LineChart as LineChartGraph } from "./graphs/Linechart";
+import { PieChart as PieChartGraph } from "./graphs/PieChart";
+
+
+
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface PlanoDTO {
   tipoPlano: string;
@@ -2322,7 +2328,7 @@ export default function DashboardHome({
               gap: 12,
             }}
           >
-            <BarChart
+            <BarChartGraph
               labels={meses.map(m => m.substring(0, 3))}
               data={vendasPorMes}
               label="Receita Mensal"
@@ -2330,7 +2336,7 @@ export default function DashboardHome({
               formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
             />
             // Tendência temporal
-            <LineChart
+            <LineChartGraph
               labels={meses.map(m => m.substring(0, 3))}
               datasets={[
                 { label: "Vendas", data: vendasPorMes, color: "blue" },
@@ -2339,7 +2345,7 @@ export default function DashboardHome({
               formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
             />
             // Pizza/Donut de categorias
-            <PieChart
+            <PieChartGraph
               labels={categorias.map(c => c.substring(0, 3))}
               data={valoresPorCategoria}
               formatValue={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
