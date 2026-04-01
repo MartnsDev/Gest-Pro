@@ -295,7 +295,7 @@ const Logo = ({ size = "default" }: { size?: "default" | "small" }) => {
           fontWeight: 700,
           fontSize,
           color: "#f1f5f9",
-          letterSpacing: "-0.02em",
+          letterSpacing: "-0.05em",
         }}
       >
         GestPro
