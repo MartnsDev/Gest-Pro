@@ -22,6 +22,9 @@ interface CTAProps {
   onLogin: () => void;
 }
 
+/* ─────────────────────────────────────────────
+   ICONS
+───────────────────────────────────────────── */
 const ArrowRight = () => (
   <svg
     width="18"
@@ -57,179 +60,146 @@ const Star = () => (
     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
   </svg>
 );
+
 /* ─────────────────────────────────────────────
-   GLOBAL STYLES
+   GLOBAL STYLES — design do Arquivo 1
 ───────────────────────────────────────────── */
 const GlobalStyles = () => (
   <style>{`
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    ::selection { background: rgba(16,185,129,0.28); color: #e2fef4; }
+    ::selection { background: rgba(16,185,129,0.28); color: #fff; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #050608; }
     ::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.35); border-radius: 2px; }
+    html { scroll-behavior: smooth; }
 
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(28px); }
+      from { opacity: 0; transform: translateY(32px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    @keyframes fadeIn {
-      from { opacity: 0; } to { opacity: 1; }
+    @keyframes float {
+      0%,100% { transform: translateY(0); }
+      50%     { transform: translateY(-20px); }
     }
-    @keyframes floatY {
-      0%,100% { transform: translateY(0px); }
-      50%      { transform: translateY(-14px); }
+    @keyframes pulse-glow {
+      0%,100% { box-shadow: 0 0 40px rgba(16,185,129,0.2); }
+      50%     { box-shadow: 0 0 80px rgba(16,185,129,0.4); }
     }
+    @keyframes grid-fade {
+      from { opacity: 0; }
+      to { opacity: 0.03; }
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
     @keyframes spinSlow {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
-    @keyframes pulseBorder {
-      0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.0); }
-      50%      { box-shadow: 0 0 0 6px rgba(16,185,129,0.12); }
-    }
-    @keyframes dashFloat {
-      0%,100% { transform: translateY(0) rotate(-2deg); }
-      50%      { transform: translateY(-20px) rotate(2deg); }
-    }
-    @keyframes glowPulse {
-      0%,100% { opacity: 0.5; }
-      50%      { opacity: 1; }
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-    .fade-up        { animation: fadeUp 0.7s ease both; }
-    .fade-in        { animation: fadeIn 0.6s ease both; }
-    .float-y        { animation: floatY 6s ease-in-out infinite; }
-    .spin-slow      { animation: spinSlow 20s linear infinite; }
-    .glow-pulse     { animation: glowPulse 3s ease-in-out infinite; }
-    .dash-float     { animation: dashFloat 7s ease-in-out infinite; }
-    .blink          { animation: blink 2s ease-in-out infinite; }
-
+    .fade-up { animation: fadeUp 0.8s ease both; }
+    .float   { animation: float 6s ease-in-out infinite; }
+    .pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
+    .blink   { animation: blink 2s ease-in-out infinite; }
+    .spin-slow { animation: spinSlow 20s linear infinite; }
     .d1 { animation-delay: .1s; }
     .d2 { animation-delay: .2s; }
     .d3 { animation-delay: .35s; }
     .d4 { animation-delay: .5s; }
     .d5 { animation-delay: .65s; }
-    .d6 { animation-delay: .8s; }
 
-    .hover-lift { transition: transform 0.25s ease, box-shadow 0.25s ease; }
-    .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-
-    .btn-green {
-      background: linear-gradient(135deg, #10b981, #059669);
+    /* ── Botões do Arquivo 1 ── */
+    .btn-primary {
+      background: #10b981;
       color: #fff;
       border: none;
       cursor: pointer;
-      font-family: var(--font-manrope), 'Manrope', sans-serif;
+      font-family: inherit;
       font-weight: 600;
-      border-radius: 10px;
-      transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
-      animation: pulseBorder 3s ease-in-out infinite;
-    }
-    .btn-green:hover {
-      transform: translateY(-2px) scale(1.03);
-      filter: brightness(1.12);
-      box-shadow: 0 10px 36px rgba(16,185,129,0.38);
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: rgba(241,245,249,0.75);
-      border: 1px solid rgba(255,255,255,0.12);
-      cursor: pointer;
-      font-family: var(--font-manrope), 'Manrope', sans-serif;
-      font-weight: 500;
-      border-radius: 10px;
-      transition: border-color 0.2s, color 0.2s, background 0.2s;
-    }
-    .btn-ghost:hover {
-      border-color: rgba(16,185,129,0.5);
-      color: #10b981;
-      background: rgba(16,185,129,0.06);
-    }
-
-    .glass {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.07);
-      backdrop-filter: blur(12px);
-      border-radius: 16px;
-    }
-    .glass-bright {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(16,185,129,0.18);
-      backdrop-filter: blur(16px);
-      border-radius: 16px;
-    }
-
-    .section-tag {
+      border-radius: 8px;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
-      font-family: var(--font-dm-mono), 'DM Mono', monospace;
-      font-size: 11px;
-      letter-spacing: .12em;
-      text-transform: uppercase;
+      transition: all 0.25s ease;
+      text-decoration: none;
+    }
+    .btn-primary:hover {
+      background: #059669;
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(16,185,129,0.3);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: #94a3b8;
+      border: 1px solid rgba(148,163,184,0.2);
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+      text-decoration: none;
+    }
+    .btn-outline:hover {
+      border-color: #10b981;
       color: #10b981;
-      background: rgba(16,185,129,0.1);
-      border: 1px solid rgba(16,185,129,0.22);
-      padding: 5px 14px;
-      border-radius: 99px;
-      margin-bottom: 18px;
-    }
-    .section-heading {
-      font-family: var(--font-syne), 'Syne', sans-serif;
-      font-weight: 800;
-      color: #f1f5f9;
-      line-height: 1.1;
-    }
-    .section-sub {
-      font-family: var(--font-manrope), 'Manrope', sans-serif;
-      font-weight: 400;
-      color: rgba(241,245,249,0.55);
-      line-height: 1.7;
     }
 
-    .popular-ring {
-      border: 1.5px solid rgba(16,185,129,0.6) !important;
-      box-shadow: 0 0 40px rgba(16,185,129,0.12), inset 0 0 40px rgba(16,185,129,0.03);
+    /* ── Cards do Arquivo 1 ── */
+    .card {
+      background: rgba(13,15,18,0.6);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      border-color: rgba(16,185,129,0.3);
+      transform: translateY(-4px);
     }
 
+    .stat-card {
+      background: rgba(16,185,129,0.05);
+      border: 1px solid rgba(16,185,129,0.1);
+      border-radius: 12px;
+    }
+
+    /* ── Mobile menu overlay ── */
     .mob-menu {
       position: fixed; inset: 0; z-index: 200;
-      background: rgba(5,6,8,0.97);
+      background: rgba(5,6,8,0.98);
+      backdrop-filter: blur(20px);
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      gap: 28px;
-      animation: fadeIn 0.2s ease;
+      gap: 32px;
+      animation: fadeUp 0.2s ease;
     }
 
-    @media(max-width:768px){
-      .desktop-nav{display:none!important;}
-      .mob-hamburger{display:flex!important;}
-      .dash-float{animation:none!important;}
-    }
-    
     @media(max-width:1024px){
-      .plans-grid{grid-template-columns:repeat(2, 1fr)!important;}
+      .desktop-only { display: none !important; }
+      .mobile-only  { display: flex !important; }
+      .hero-grid    { flex-direction: column !important; }
+      .hero-content { align-items: center !important; text-align: center !important; }
+      .plans-grid   { grid-template-columns: repeat(2, 1fr) !important; }
     }
-    
-    @media(max-width:640px){
-      .hero-text{font-size:32px!important;}
-      .hero-sub{font-size:15px!important;}
-      .section-heading{font-size:28px!important;}
-      .stats-grid{grid-template-columns:1fr 1fr!important;}
-      .features-grid{grid-template-columns:1fr!important;}
-      .plans-grid{grid-template-columns:1fr!important;}
-      .steps-grid{grid-template-columns:1fr!important;}
-      .testimonials-grid{grid-template-columns:1fr!important;}
-      .footer-grid{grid-template-columns:1fr!important;text-align:center;}
-      .footer-links{justify-content:center!important;}
+    @media(max-width:768px){
+      .hero-text        { font-size: 32px !important; line-height: 1.2 !important; }
+      .section-title    { font-size: 28px !important; }
+      .features-grid    { grid-template-columns: 1fr !important; }
+      .plans-grid       { grid-template-columns: 1fr !important; }
+      .stats-grid       { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+      .testimonials-grid{ grid-template-columns: 1fr !important; }
+      .steps-grid       { grid-template-columns: 1fr !important; }
+      .mob-hamburger    { display: flex !important; }
+      .desktop-nav-btns { display: none !important; }
     }
   `}</style>
 );
 
 /* ─────────────────────────────────────────────
-   BACKGROUND
+   BACKGROUND — idêntico ao Arquivo 1
 ───────────────────────────────────────────── */
 const Background = () => (
   <div
@@ -241,10 +211,7 @@ const Background = () => (
       pointerEvents: "none",
     }}
   >
-    {/* Base dark */}
     <div style={{ position: "absolute", inset: 0, background: "#050608" }} />
-
-    {/* Subtle grid pattern */}
     <div
       style={{
         position: "absolute",
@@ -257,8 +224,6 @@ const Background = () => (
         animation: "grid-fade 1s ease forwards",
       }}
     />
-
-    {/* Gradient glow top */}
     <div
       style={{
         position: "absolute",
@@ -271,25 +236,15 @@ const Background = () => (
           "radial-gradient(ellipse at center, rgba(16,185,129,0.08) 0%, transparent 70%)",
       }}
     />
-
-    {/* Aqui eu vou adicionar video de fundo */}
-    {/* 
-    <div className="video-bg">
-      <video autoPlay muted loop playsInline>
-        <source src="/seu-video.mp4" type="video/mp4" />
-      </video>
-    </div>
-    */}
   </div>
 );
 
 /* ─────────────────────────────────────────────
-   LOGO COMPONENT
+   LOGO
 ───────────────────────────────────────────── */
 const Logo = ({ size = "default" }: { size?: "default" | "small" }) => {
   const logoSize = size === "small" ? 28 : 36;
   const fontSize = size === "small" ? 16 : 20;
-
   return (
     <div
       style={{
@@ -302,41 +257,40 @@ const Logo = ({ size = "default" }: { size?: "default" | "small" }) => {
       <img
         src="/images/logo.png"
         alt="GestPro"
-        style={{
-          width: logoSize,
-          height: logoSize,
-          objectFit: "contain",
-        }}
+        style={{ width: logoSize, height: logoSize, objectFit: "contain" }}
       />
       <span
         style={{
-          fontFamily: "var(--font-syne), 'Syne', sans-serif",
-          fontWeight: 800,
+          fontWeight: 700,
           fontSize,
           color: "#f1f5f9",
           letterSpacing: "-0.02em",
         }}
       >
-        Gest<span style={{ color: "#10b981" }}>Pro</span>
+        GestPro
       </span>
     </div>
   );
 };
 
 /* ─────────────────────────────────────────────
-   NAV
+   NAV — estilo Arquivo 1 + lógica Arquivo 2
 ───────────────────────────────────────────── */
 const Nav = ({ onLogin, onRegister }: NavProps) => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 40);
+    const h = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", h);
     return () => window.removeEventListener("scroll", h);
   }, []);
 
-  const links = ["Funcionalidades", "Como Funciona", "Planos"];
+  const links = [
+    { label: "Funcionalidades", href: "#funcionalidades" },
+    { label: "Como Funciona", href: "#como-funciona" },
+    { label: "Planos", href: "#planos" },
+  ];
 
   return (
     <>
@@ -347,20 +301,18 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
           left: 0,
           right: 0,
           zIndex: 100,
-          padding: scrolled ? "12px 0" : "20px 0",
-          background: scrolled ? "rgba(5,6,8,0.92)" : "transparent",
+          padding: "16px 0",
+          background: scrolled ? "rgba(5,6,8,0.95)" : "transparent",
           backdropFilter: scrolled ? "blur(20px)" : "none",
-          borderBottom: scrolled
-            ? "1px solid rgba(255,255,255,0.06)"
-            : "1px solid transparent",
-          transition: "all 0.35s ease",
+          borderBottom: scrolled ? "1px solid rgba(255,255,255,0.05)" : "none",
+          transition: "all 0.3s ease",
         }}
       >
         <div
           style={{
             maxWidth: 1200,
             margin: "0 auto",
-            padding: "0 28px",
+            padding: "0 24px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -368,76 +320,78 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
         >
           <Logo />
 
+          {/* Links desktop */}
           <div
-            style={{ display: "flex", alignItems: "center", gap: 36 }}
-            className="desktop-nav"
+            className="desktop-only"
+            style={{ display: "flex", alignItems: "center", gap: 40 }}
           >
             {links.map((l) => (
               <a
-                key={l}
-                href={`#${l.toLowerCase().replace(" ", "-")}`}
+                key={l.label}
+                href={l.href}
                 style={{
-                  fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
                   fontSize: 14,
                   fontWeight: 500,
-                  color: "rgba(241,245,249,0.6)",
+                  color: "rgba(148,163,184,0.8)",
                   textDecoration: "none",
                   transition: "color 0.2s",
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = "#10b981")}
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = "rgba(241,245,249,0.6)")
+                  (e.currentTarget.style.color = "rgba(148,163,184,0.8)")
                 }
               >
-                {l}
+                {l.label}
               </a>
             ))}
           </div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {/* Botões desktop */}
+          <div className="desktop-only" style={{ display: "flex", gap: 12 }}>
             <button
-              className="btn-ghost desktop-nav"
+              className="btn-outline"
               onClick={onLogin}
-              style={{ padding: "9px 20px", fontSize: 14 }}
+              style={{ padding: "10px 20px", fontSize: 14 }}
             >
               Entrar
             </button>
             <button
-              className="btn-green desktop-nav"
+              className="btn-primary"
               onClick={onRegister}
-              style={{ padding: "9px 20px", fontSize: 14 }}
+              style={{ padding: "10px 24px", fontSize: 14 }}
             >
               Começar grátis
             </button>
-            <button
-              onClick={() => setMenuOpen(true)}
-              style={{
-                display: "none",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "#f1f5f9",
-                fontSize: 22,
-                padding: 4,
-              }}
-              className="mob-hamburger"
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M3 12h18M3 6h18M3 18h18" />
-              </svg>
-            </button>
           </div>
+
+          {/* Hamburguer mobile */}
+          <button
+            className="mobile-only mob-hamburger"
+            onClick={() => setMenuOpen(true)}
+            style={{
+              display: "none",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#f1f5f9",
+              padding: 8,
+            }}
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M3 12h18M3 6h18M3 18h18" />
+            </svg>
+          </button>
         </div>
       </nav>
 
+      {/* Mobile Menu */}
       {menuOpen && (
         <div className="mob-menu" onClick={() => setMenuOpen(false)}>
           <button
@@ -449,7 +403,6 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
               background: "none",
               border: "none",
               color: "#f1f5f9",
-              fontSize: 28,
               cursor: "pointer",
             }}
           >
@@ -460,30 +413,32 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              strokeLinecap="round"
             >
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
           {links.map((l) => (
             <a
-              key={l}
-              href={`#${l.toLowerCase()}`}
+              key={l.label}
+              href={l.href}
+              onClick={() => setMenuOpen(false)}
               style={{
-                fontFamily: "var(--font-syne), 'Syne', sans-serif",
-                fontSize: 28,
-                fontWeight: 700,
+                fontSize: 24,
+                fontWeight: 600,
                 color: "#f1f5f9",
                 textDecoration: "none",
               }}
             >
-              {l}
+              {l.label}
             </a>
           ))}
           <button
-            className="btn-green"
-            onClick={onRegister}
-            style={{ padding: "14px 40px", fontSize: 16, marginTop: 16 }}
+            className="btn-primary"
+            onClick={() => {
+              setMenuOpen(false);
+              onRegister();
+            }}
+            style={{ padding: "16px 48px", fontSize: 16, marginTop: 24 }}
           >
             Começar grátis
           </button>
@@ -494,20 +449,17 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
 };
 
 /* ─────────────────────────────────────────────
-   DASHBOARD PREVIEW
+   DASHBOARD PREVIEW — do Arquivo 2
 ───────────────────────────────────────────── */
 const DashboardPreview = () => (
   <div
-    className="dash-float"
     style={{
       width: "100%",
-      maxWidth: 800,
-      borderRadius: 18,
+      maxWidth: 600,
+      borderRadius: 20,
       overflow: "hidden",
-      border: "1px solid rgba(16,185,129,0.25)",
-      boxShadow:
-        "0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(16,185,129,0.1), 0 0 80px rgba(16,185,129,0.08)",
-      position: "relative",
+      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 40px 80px rgba(0,0,0,0.5)",
     }}
   >
     <div
@@ -536,7 +488,6 @@ const DashboardPreview = () => (
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontFamily: "var(--font-dm-mono), 'DM Mono', monospace",
           fontSize: 10,
           color: "rgba(255,255,255,0.3)",
         }}
@@ -544,30 +495,17 @@ const DashboardPreview = () => (
         gestpro.app/dashboard
       </div>
     </div>
-
     <img
       src="/images/dashboard2.png"
-      alt="GestPro Dashboard - PDV, estoque, caixa e relatórios"
-      style={{
-        width: "100%",
-        height: "auto",
-        display: "block",
-      }}
-    />
-
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        pointerEvents: "none",
-        background:
-          "linear-gradient(180deg, transparent 60%, rgba(16,185,129,0.04) 100%)",
-        borderRadius: 18,
-      }}
+      alt="GestPro Dashboard"
+      style={{ width: "100%", height: "auto", display: "block" }}
     />
   </div>
 );
 
+/* ─────────────────────────────────────────────
+   HERO — layout Arquivo 2 + estilo Arquivo 1
+───────────────────────────────────────────── */
 const lojistas = [
   { nome: "Kelly", img: "/logistas-img/kelly.jpg" },
   { nome: "Heloisa", img: "/logistas-img/heloisa.png" },
@@ -576,9 +514,6 @@ const lojistas = [
   { nome: "Gabriela", img: "/logistas-img/gabriela.jpg" },
 ];
 
-/* ─────────────────────────────────────────────
-   HERO
-───────────────────────────────────────────── */
 const Hero = ({ onRegister, onLogin }: HeroProps) => (
   <section
     style={{
@@ -587,226 +522,199 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
       minHeight: "100vh",
       display: "flex",
       alignItems: "center",
-      padding: "100px 20px 60px",
-      maxWidth: 1200,
-      margin: "0 auto",
+      padding: "120px 24px 80px",
     }}
   >
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 40,
-        width: "100%",
-        flexWrap: "wrap",
-      }}
-    >
-      <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+    <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+      <div
+        className="hero-grid"
+        style={{ display: "flex", alignItems: "center", gap: 80 }}
+      >
+        {/* Lado esquerdo */}
         <div
-          className="fade-up d1"
+          className="hero-content"
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 28,
-            background: "rgba(16,185,129,0.08)",
-            border: "1px solid rgba(16,185,129,0.22)",
-            borderRadius: 99,
-            padding: "6px 16px",
-            fontFamily: "var(--font-dm-mono), 'DM Mono', monospace",
-            fontSize: 11,
-            color: "#10b981",
-            letterSpacing: ".1em",
-            textTransform: "uppercase",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            gap: 28,
           }}
         >
-          <span
-            className="blink"
+          {/* Badge */}
+          <div
+            className="fade-up"
             style={{
-              width: 6,
-              height: 6,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 16px",
+              background: "rgba(16,185,129,0.1)",
+              border: "1px solid rgba(16,185,129,0.2)",
+              borderRadius: 100,
+            }}
+          >
+            <span
+              className="blink"
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "#10b981",
+                display: "inline-block",
+              }}
+            />
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: "#10b981",
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+              }}
+            >
+              Gestão de Vendas Inteligente
+            </span>
+          </div>
+
+          {/* Headline */}
+          <h1
+            className="hero-text fade-up d1"
+            style={{
+              fontSize: 56,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              color: "#f1f5f9",
+              letterSpacing: "-0.03em",
+            }}
+          >
+            Seu negócio,
+            <br />
+            <span style={{ color: "#10b981" }}>no controle.</span>
+          </h1>
+
+          {/* Sub */}
+          <p
+            className="fade-up d2"
+            style={{
+              fontSize: 18,
+              lineHeight: 1.7,
+              color: "rgba(148,163,184,0.8)",
+              maxWidth: 480,
+            }}
+          >
+            Caixa, vendas, estoque e relatórios em um único painel.
+            <br />
+            Feito para lojistas que querem crescer sem complicação.
+          </p>
+
+          {/* CTAs */}
+          <div
+            className="fade-up d3"
+            style={{ display: "flex", gap: 16, flexWrap: "wrap" }}
+          >
+            <button
+              className="btn-primary"
+              onClick={onRegister}
+              style={{ padding: "16px 32px", fontSize: 16 }}
+            >
+              Começar grátis <ArrowRight />
+            </button>
+            <button
+              className="btn-outline"
+              onClick={onLogin}
+              style={{ padding: "16px 26px", fontSize: 16 }}
+            >
+              Já tenho conta
+            </button>
+          </div>
+
+          {/* Social proof — avatares reais do Arquivo 2 */}
+          <div
+            className="fade-up d4"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              marginTop: 12,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center" }}>
+              {lojistas.slice(0, 5).map((lojista, i) => (
+                <div
+                  key={lojista.nome}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    border: "3px solid #050608",
+                    marginLeft: i > 0 ? -12 : 0,
+                    overflow: "hidden",
+                    background: "#1e293b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 10 - i,
+                  }}
+                >
+                  <img
+                    src={lojista.img}
+                    alt={lojista.nome}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: "#f1f5f9", fontSize: 14 }}>
+                +1.200 lojistas
+              </div>
+              <div style={{ color: "rgba(148,163,184,0.6)", fontSize: 13 }}>
+                já usam o GestPro
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Lado direito — preview flutuante */}
+        <div
+          className="desktop-only float"
+          style={{
+            flex: 1,
+            display: "flex",
+            justifyContent: "center",
+            position: "relative",
+          }}
+        >
+          <div
+            className="spin-slow"
+            style={{
+              position: "absolute",
+              width: 500,
+              height: 500,
               borderRadius: "50%",
-              background: "#10b981",
-              display: "inline-block",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%,-50%)",
+              border: "1px dashed rgba(16,185,129,0.1)",
+              pointerEvents: "none",
             }}
           />
-          Gestão de Vendas Inteligente
-        </div>
-
-        <h1
-          className="fade-up d2 hero-text"
-          style={{
-            fontFamily: "var(--font-syne), 'Syne', sans-serif",
-            fontWeight: 800,
-            fontSize: "clamp(32px, 6vw, 68px)",
-            lineHeight: 1.05,
-            letterSpacing: "-0.03em",
-            color: "#f1f5f9",
-            marginBottom: 18,
-          }}
-        >
-          Seu negócio,
-          <br />
-          <span
-            style={{
-              background:
-                "linear-gradient(135deg, #10b981 0%, #34d399 60%, #6ee7b7 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            no controle.
-          </span>
-        </h1>
-
-        <p
-          className="fade-up d3 hero-sub"
-          style={{
-            fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-            fontWeight: 400,
-            fontSize: "clamp(14px, 3vw, 17px)",
-            lineHeight: 1.7,
-            color: "rgba(241,245,249,0.6)",
-            maxWidth: 460,
-            marginBottom: 32,
-          }}
-        >
-          Caixa, vendas, estoque e relatórios em um único painel. Feito para
-          lojistas que querem crescer sem complicação.
-        </p>
-
-        <div
-          className="fade-up d4"
-          style={{ display: "flex", gap: 14, flexWrap: "wrap" }}
-        >
-          <button
-            className="btn-green"
-            onClick={onRegister}
-            style={{ padding: "14px 32px", fontSize: 15, borderRadius: 12 }}
-          >
-            Começar grátis →
-          </button>
-          <button
-            className="btn-ghost"
-            onClick={onLogin}
-            style={{ padding: "14px 26px", fontSize: 15, borderRadius: 12 }}
-          >
-            Já tenho conta
-          </button>
-        </div>
-
-        <div
-          className="fade-up d5"
-          style={{
-            marginTop: 40,
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center" }}>
-            {/* Limite estritamente a 5 fotos */}
-            {lojistas.slice(0, 5).map((lojista, i) => (
-              <div
-                key={lojista.nome} // KEY única evita repetição de render
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  border: "2px solid #050608",
-                  marginLeft: i === 0 ? 0 : -12,
-                  overflow: "hidden",
-                  background: "#1e293b",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  zIndex: 10 - i,
-                }}
-              >
-                <img
-                  // O timestamp Date.now() força o navegador a carregar o arquivo real do disco
-                  src={`${lojista.img}?v=${Date.now()}`}
-                  alt={lojista.nome}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-
-          <div>
-            <div
-              style={{
-                fontFamily: "var(--font-syne), 'Syne', sans-serif",
-                fontWeight: 700,
-                fontSize: 14,
-                color: "#f1f5f9",
-              }}
-            >
-              +1.200 lojistas
-            </div>
-            <div
-              style={{
-                fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                fontSize: 12,
-                color: "rgba(241,245,249,0.45)",
-              }}
-            >
-              já usam o GestPro
-            </div>
+          <div className="pulse-glow">
+            <DashboardPreview />
           </div>
         </div>
-      </div>
-
-      <div
-        className="fade-in d3"
-        style={{
-          flex: "1 1 300px",
-          display: "flex",
-          justifyContent: "center",
-          position: "relative",
-          minWidth: 0,
-          width: "100%",
-        }}
-      >
-        <div
-          className="spin-slow"
-          style={{
-            position: "absolute",
-            width: 500,
-            height: 500,
-            borderRadius: "50%",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%,-50%)",
-            border: "1px dashed rgba(16,185,129,0.1)",
-            pointerEvents: "none",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: 350,
-            height: 350,
-            borderRadius: "50%",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%,-50%)",
-            border: "1px dashed rgba(16,185,129,0.07)",
-            pointerEvents: "none",
-          }}
-        />
-        <DashboardPreview />
       </div>
     </div>
   </section>
 );
 
 /* ─────────────────────────────────────────────
-   STATS
+   STATS — dados do Arquivo 2, estilo Arquivo 1
 ───────────────────────────────────────────── */
 const Stats = () => {
   const stats = [
@@ -818,166 +726,165 @@ const Stats = () => {
 
   return (
     <section
-      style={{ position: "relative", zIndex: 10, padding: "0 28px 100px" }}
+      style={{ position: "relative", zIndex: 10, padding: "0 24px 80px" }}
     >
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 2,
-          borderRadius: 18,
-          overflow: "hidden",
-          border: "1px solid rgba(255,255,255,0.06)",
-        }}
-      >
-        {stats.map((s, i) => (
-          <div
-            key={i}
-            className="hover-lift"
-            style={{
-              padding: "36px 28px",
-              background: "rgba(255,255,255,0.025)",
-              borderRight:
-                i < stats.length - 1
-                  ? "1px solid rgba(255,255,255,0.06)"
-                  : "none",
-              textAlign: "center",
-            }}
-          >
+      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        <div
+          className="stats-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4,1fr)",
+            gap: 16,
+          }}
+        >
+          {stats.map((s, i) => (
             <div
+              key={i}
+              className="stat-card fade-up"
               style={{
-                fontFamily: "var(--font-syne), 'Syne', sans-serif",
-                fontWeight: 800,
-                fontSize: 36,
-                color: "#10b981",
-                letterSpacing: "-0.03em",
-                marginBottom: 6,
+                padding: "24px 20px",
+                textAlign: "center",
+                animationDelay: `${i * 0.1}s`,
               }}
             >
-              {s.value}
+              <div
+                style={{
+                  fontSize: 32,
+                  fontWeight: 700,
+                  color: "#10b981",
+                  marginBottom: 4,
+                }}
+              >
+                {s.value}
+              </div>
+              <div style={{ fontSize: 13, color: "rgba(148,163,184,0.6)" }}>
+                {s.label}
+              </div>
             </div>
-            <div
-              style={{
-                fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                fontSize: 13,
-                color: "rgba(241,245,249,0.45)",
-                fontWeight: 400,
-              }}
-            >
-              {s.label}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
 };
 
 /* ─────────────────────────────────────────────
-   FEATURES
+   FEATURES — dados do Arquivo 2, cards do Arquivo 1
 ───────────────────────────────────────────── */
 const Features = () => {
   const feats = [
     {
       icon: "💰",
       title: "Controle de Caixa",
-      desc: "Abra e feche caixas com saldo inicial, acompanhe cada centavo em tempo real com total transparência.",
       tag: "Financeiro",
+      desc: "Abra e feche caixas com saldo inicial, acompanhe cada centavo em tempo real com total transparência.",
     },
     {
       icon: "📦",
       title: "Gestão de Estoque",
-      desc: "Monitore produtos, receba alertas de estoque zero e nunca perca uma venda por falta de produto.",
       tag: "Estoque",
+      desc: "Monitore produtos, receba alertas de estoque zero e nunca perca uma venda por falta de produto.",
     },
     {
       icon: "📊",
       title: "Relatórios Completos",
-      desc: "Exporte em CSV, HTML ou PDF. Visualize por período, por caixa ou produto com gráficos detalhados.",
       tag: "Analytics",
+      desc: "Exporte em CSV, HTML ou PDF. Visualize por período, por caixa ou produto com gráficos detalhados.",
     },
     {
       icon: "💳",
       title: "Multi Pagamentos",
-      desc: "PIX, Dinheiro, Débito e Crédito. Registre tudo e veja a distribuição por forma de pagamento.",
       tag: "Pagamentos",
+      desc: "PIX, Dinheiro, Débito e Crédito. Registre tudo e veja a distribuição por forma de pagamento.",
     },
     {
       icon: "👥",
       title: "Gestão de Clientes",
-      desc: "Cadastre clientes, acompanhe histórico de compras e construa relacionamentos duradouros.",
       tag: "CRM",
+      desc: "Cadastre clientes, acompanhe histórico de compras e construa relacionamentos duradouros.",
     },
     {
       icon: "🏢",
       title: "Multi Empresa",
-      desc: "Gerencie várias filiais ou negócios em uma única conta. Troque com um clique.",
       tag: "Empresas",
+      desc: "Gerencie várias filiais ou negócios em uma única conta. Troque com um clique.",
     },
   ];
 
   return (
     <section
       id="funcionalidades"
-      style={{ position: "relative", zIndex: 10, padding: "80px 28px" }}
+      style={{ position: "relative", zIndex: 10, padding: "80px 24px" }}
     >
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 64 }}>
-          <div className="section-tag">Funcionalidades</div>
+        <div style={{ textAlign: "center", marginBottom: 60 }}>
+          <span
+            className="fade-up"
+            style={{
+              display: "inline-block",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#10b981",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 16,
+            }}
+          >
+            Funcionalidades
+          </span>
           <h2
-            className="section-heading"
-            style={{ fontSize: "clamp(32px,4vw,52px)", marginBottom: 16 }}
+            className="section-title fade-up d1"
+            style={{
+              fontSize: 40,
+              fontWeight: 700,
+              color: "#f1f5f9",
+              letterSpacing: "-0.02em",
+            }}
           >
             Tudo que você precisa,
             <br />
-            num só lugar
+            <span style={{ color: "#10b981" }}>num só lugar.</span>
           </h2>
-          <p
-            className="section-sub"
-            style={{ maxWidth: 480, margin: "0 auto", fontSize: 16 }}
-          >
-            Do caixa ao relatório final, o GestPro cobre todas as etapas da
-            gestão do seu comércio.
-          </p>
         </div>
 
         <div
+          className="features-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: 16,
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 20,
           }}
         >
           {feats.map((f, i) => (
             <div
               key={i}
-              className="glass hover-lift"
-              style={{
-                padding: "28px 24px",
-                cursor: "default",
-                transition: "border-color .2s",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.borderColor = "rgba(16,185,129,0.25)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)")
-              }
+              className="card fade-up"
+              style={{ padding: "32px 28px", animationDelay: `${i * 0.1}s` }}
             >
               <div
                 style={{
                   display: "flex",
                   alignItems: "flex-start",
                   justifyContent: "space-between",
-                  marginBottom: 16,
+                  marginBottom: 20,
                 }}
               >
-                <div style={{ fontSize: 28 }}>{f.icon}</div>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    background: "rgba(16,185,129,0.1)",
+                    borderRadius: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 24,
+                  }}
+                >
+                  {f.icon}
+                </div>
                 <span
                   style={{
-                    fontFamily: "var(--font-dm-mono), 'DM Mono', monospace",
                     fontSize: 10,
                     color: "#10b981",
                     background: "rgba(16,185,129,0.1)",
@@ -992,9 +899,8 @@ const Features = () => {
               </div>
               <h3
                 style={{
-                  fontFamily: "var(--font-syne), 'Syne', sans-serif",
-                  fontWeight: 700,
-                  fontSize: 19,
+                  fontSize: 18,
+                  fontWeight: 600,
                   color: "#f1f5f9",
                   marginBottom: 10,
                 }}
@@ -1003,10 +909,9 @@ const Features = () => {
               </h3>
               <p
                 style={{
-                  fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
                   fontSize: 14,
-                  color: "rgba(241,245,249,0.5)",
-                  lineHeight: 1.7,
+                  lineHeight: 1.6,
+                  color: "rgba(148,163,184,0.7)",
                 }}
               >
                 {f.desc}
@@ -1020,127 +925,127 @@ const Features = () => {
 };
 
 /* ─────────────────────────────────────────────
-   HOW IT WORKS
+   HOW IT WORKS — passos do Arquivo 2, cards do Arquivo 1
 ───────────────────────────────────────────── */
 const HowItWorks = () => {
   const steps = [
     {
       n: "01",
+      icon: "🚀",
       title: "Crie sua conta",
       desc: "Cadastro em menos de 2 minutos. Sem cartão de crédito.",
-      icon: "🚀",
     },
     {
       n: "02",
+      icon: "⚙️",
       title: "Configure sua empresa",
       desc: "Adicione produtos, defina preços e abra seu primeiro caixa.",
-      icon: "⚙️",
     },
     {
       n: "03",
+      icon: "💸",
       title: "Registre vendas",
       desc: "Interface simples para lançar vendas rapidamente no dia a dia.",
-      icon: "💸",
     },
     {
       n: "04",
+      icon: "📈",
       title: "Analise e cresça",
       desc: "Relatórios automáticos com insights para tomar decisões certeiras.",
-      icon: "📈",
     },
   ];
 
   return (
     <section
       id="como-funciona"
-      style={{ position: "relative", zIndex: 10, padding: "80px 28px" }}
+      style={{ position: "relative", zIndex: 10, padding: "80px 24px" }}
     >
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 64 }}>
-          <div className="section-tag">Como Funciona</div>
-          <h2
-            className="section-heading"
-            style={{ fontSize: "clamp(32px,4vw,52px)", marginBottom: 16 }}
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 60 }}>
+          <span
+            className="fade-up"
+            style={{
+              display: "inline-block",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#10b981",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 16,
+            }}
           >
-            Simples do início ao fim
+            Como funciona
+          </span>
+          <h2
+            className="section-title fade-up d1"
+            style={{
+              fontSize: 40,
+              fontWeight: 700,
+              color: "#f1f5f9",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Simples de usar,
+            <br />
+            <span style={{ color: "#10b981" }}>poderoso de verdade.</span>
           </h2>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-            gap: 24,
-            position: "relative",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: 42,
-              left: "12%",
-              right: "12%",
-              height: 1,
-              background:
-                "linear-gradient(90deg, transparent, rgba(16,185,129,0.3), transparent)",
-              zIndex: 0,
-            }}
-          />
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {steps.map((s, i) => (
             <div
               key={i}
-              style={{ textAlign: "center", position: "relative", zIndex: 1 }}
+              className="card fade-up"
+              style={{
+                padding: "28px 32px",
+                display: "flex",
+                alignItems: "center",
+                gap: 28,
+                animationDelay: `${i * 0.1}s`,
+              }}
             >
               <div
                 style={{
-                  width: 68,
-                  height: 68,
-                  borderRadius: "50%",
-                  margin: "0 auto 20px",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1.5px solid rgba(16,185,129,0.3)",
+                  width: 56,
+                  height: 56,
+                  flexShrink: 0,
+                  background: "rgba(16,185,129,0.1)",
+                  border: "1px solid rgba(16,185,129,0.2)",
+                  borderRadius: 14,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 0 24px rgba(16,185,129,0.12)",
-                  fontSize: 26,
+                  gap: 2,
                 }}
               >
-                {s.icon}
+                <span style={{ fontSize: 20 }}>{s.icon}</span>
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: "#10b981",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  {s.n}
+                </span>
               </div>
-              <div
-                style={{
-                  fontFamily: "var(--font-dm-mono), 'DM Mono', monospace",
-                  fontSize: 10,
-                  color: "#10b981",
-                  letterSpacing: ".12em",
-                  marginBottom: 8,
-                }}
-              >
-                {s.n}
+              <div>
+                <h3
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 600,
+                    color: "#f1f5f9",
+                    marginBottom: 4,
+                  }}
+                >
+                  {s.title}
+                </h3>
+                <p style={{ fontSize: 14, color: "rgba(148,163,184,0.7)" }}>
+                  {s.desc}
+                </p>
               </div>
-              <h3
-                style={{
-                  fontFamily: "var(--font-syne), 'Syne', sans-serif",
-                  fontWeight: 700,
-                  fontSize: 18,
-                  color: "#f1f5f9",
-                  marginBottom: 8,
-                }}
-              >
-                {s.title}
-              </h3>
-              <p
-                style={{
-                  fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                  fontSize: 13,
-                  color: "rgba(241,245,249,0.5)",
-                  lineHeight: 1.65,
-                }}
-              >
-                {s.desc}
-              </p>
             </div>
           ))}
         </div>
@@ -1150,7 +1055,7 @@ const HowItWorks = () => {
 };
 
 /* ─────────────────────────────────────────────
-   PLANS
+   PLANS — planos do Arquivo 2, estilo Arquivo 1
 ───────────────────────────────────────────── */
 const Plans = ({ onRegister }: PlansProps) => {
   const plans = [
@@ -1159,6 +1064,8 @@ const Plans = ({ onRegister }: PlansProps) => {
       price: "Grátis",
       period: "30 dias grátis",
       desc: "Para experimentar o GestPro",
+      popular: false,
+      emoji: "🎁",
       features: [
         "1 empresa / loja",
         "1 caixa por empresa",
@@ -1166,170 +1073,117 @@ const Plans = ({ onRegister }: PlansProps) => {
         "Cadastro de produtos",
         "Registro de vendas",
         "Produtos ilimitados",
-        "Exportacao PDF/CSV",
+        "Exportação PDF/CSV",
         "Nota fiscal",
-        "Gestao completa",
+        "Gestão completa",
       ],
-      cta: "Plano gratuito",
-      popular: false,
-      icon: "flask",
-      color: "#3b82f6",
+      cta: "Começar grátis",
     },
     {
-      name: "Basico",
+      name: "Básico",
       price: "R$ 29,90",
-      period: "por mes",
-      desc: "Ideal para pequenos negocios",
+      period: "por mês",
+      desc: "Ideal para pequenos negócios",
+      popular: false,
+      emoji: "⭐",
       features: [
         "1 empresa / loja",
         "1 caixa",
         "Dashboard completo",
-        "Relatorios basicos",
+        "Relatórios básicos",
         "Suporte por e-mail",
         "Até 500 produtos",
-        "Exportacao PDF/CSV",
+        "Exportação PDF/CSV",
         "Nota fiscal",
       ],
-      cta: "Assinar Basico",
-      popular: false,
-      icon: "star",
-      color: "#f1f5f9",
+      cta: "Assinar Básico",
     },
     {
       name: "Pro",
       price: "R$ 49,90",
-      period: "por mes",
-      desc: "Para negocios em crescimento",
+      period: "por mês",
+      desc: "Para negócios em crescimento",
+      popular: true,
+      emoji: "🚀",
       features: [
         "5 empresas / lojas",
         "5 caixas",
-        "Dashboard avancado",
-        "Relatorios completos",
-        "Suporte prioritario",
+        "Dashboard avançado",
+        "Relatórios completos",
+        "Suporte prioritário",
         "Produtos ilimitados",
-        "Exportacao PDF/CSV",
+        "Exportação PDF/CSV",
         "Nota fiscal",
-        "Gestao completa",
+        "Gestão completa",
       ],
       cta: "Assinar Pro",
-      popular: true,
-      icon: "rocket",
-      color: "#10b981",
     },
     {
       name: "Premium",
       price: "R$ 99,90",
-      period: "por mes",
+      period: "por mês",
       desc: "Para redes e franquias",
+      popular: false,
+      emoji: "👑",
       features: [
         "Empresas ilimitadas",
         "Caixas ilimitados",
         "Dashboard completo",
-        "Relatorios avancados",
+        "Relatórios avançados",
         "Suporte dedicado 24h",
         "Produtos ilimitados",
-        "Exportacao PDF/CSV",
+        "Exportação PDF/CSV",
         "Nota fiscal",
-        "Gestao completa",
-        "API para integracoes",
-        "Gestao de usuarios",
-        "Gestao de estoque",
+        "Gestão completa",
+        "API para integrações",
       ],
       cta: "Assinar Premium",
-      popular: false,
-      icon: "crown",
-      color: "#f59e0b",
     },
   ];
-
-  const getIcon = (icon: string, color: string) => {
-    switch (icon) {
-      case "flask":
-        return (
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={color}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M6 22h12M9 2h6M12 2v6M9 8h6l3 14H6z" />
-          </svg>
-        );
-      case "star":
-        return (
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={color}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-        );
-      case "rocket":
-        return (
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={color}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
-            <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
-            <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
-            <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
-          </svg>
-        );
-      case "crown":
-        return (
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={color}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" />
-          </svg>
-        );
-      default:
-        return null;
-    }
-  };
 
   return (
     <section
       id="planos"
-      style={{ position: "relative", zIndex: 10, padding: "80px 28px" }}
+      style={{ position: "relative", zIndex: 10, padding: "80px 24px" }}
     >
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 64 }}>
-          <div className="section-tag">Planos</div>
-          <h2
-            className="section-heading"
-            style={{ fontSize: "clamp(32px,4vw,52px)", marginBottom: 16 }}
+        <div style={{ textAlign: "center", marginBottom: 60 }}>
+          <span
+            className="fade-up"
+            style={{
+              display: "inline-block",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#10b981",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 16,
+            }}
           >
-            Preco justo,
+            Planos
+          </span>
+          <h2
+            className="section-title fade-up d1"
+            style={{
+              fontSize: 40,
+              fontWeight: 700,
+              color: "#f1f5f9",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Escolha o plano ideal
             <br />
-            valor real
+            <span style={{ color: "#10b981" }}>para seu negócio.</span>
           </h2>
-          <p className="section-sub" style={{ fontSize: 16 }}>
-            Comece gratis. Escale quando quiser.
+          <p
+            className="fade-up d2"
+            style={{
+              fontSize: 16,
+              color: "rgba(148,163,184,0.6)",
+              marginTop: 12,
+            }}
+          >
+            Comece grátis. Escale quando quiser.
           </p>
         </div>
 
@@ -1337,167 +1191,151 @@ const Plans = ({ onRegister }: PlansProps) => {
           className="plans-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 16,
-            alignItems: "stretch",
+            gridTemplateColumns: "repeat(4,1fr)",
+            gap: 20,
+            alignItems: "start",
           }}
         >
           {plans.map((p, i) => (
             <div
               key={i}
-              className={`glass hover-lift ${p.popular ? "popular-ring" : ""}`}
+              className="fade-up"
               style={{
+                background: p.popular
+                  ? "rgba(16,185,129,0.05)"
+                  : "rgba(13,15,18,0.6)",
+                border: p.popular
+                  ? "1px solid rgba(16,185,129,0.3)"
+                  : "1px solid rgba(255,255,255,0.06)",
+                borderRadius: 16,
                 padding: "28px 24px",
                 position: "relative",
                 display: "flex",
                 flexDirection: "column",
+                animationDelay: `${i * 0.1}s`,
+                boxShadow: p.popular
+                  ? "0 0 40px rgba(16,185,129,0.12), inset 0 0 40px rgba(16,185,129,0.03)"
+                  : "none",
               }}
             >
               {p.popular && (
                 <div
                   style={{
                     position: "absolute",
-                    top: -13,
+                    top: -12,
                     left: "50%",
                     transform: "translateX(-50%)",
-                    background: "linear-gradient(90deg, #10b981, #059669)",
-                    borderRadius: 99,
-                    padding: "4px 18px",
-                    fontFamily: "var(--font-dm-mono), 'DM Mono', monospace",
-                    fontSize: 10,
+                    background: "#10b981",
                     color: "#fff",
-                    letterSpacing: ".1em",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: "6px 18px",
+                    borderRadius: 100,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  MAIS POPULAR
+                  Mais Popular
                 </div>
               )}
 
-              {/* Icon */}
               <div
                 style={{
-                  width: 48,
-                  height: 48,
+                  width: 44,
+                  height: 44,
+                  background: "rgba(16,185,129,0.1)",
                   borderRadius: 12,
-                  background: "rgba(255,255,255,0.04)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   marginBottom: 16,
+                  fontSize: 22,
                 }}
               >
-                {getIcon(p.icon, p.color)}
+                {p.emoji}
               </div>
 
-              <div
+              <h3
                 style={{
-                  marginBottom: 4,
-                  fontFamily: "var(--font-syne), 'Syne', sans-serif",
-                  fontWeight: 700,
-                  fontSize: 18,
+                  fontSize: 20,
+                  fontWeight: 600,
                   color: "#f1f5f9",
+                  marginBottom: 4,
                 }}
               >
                 {p.name}
-              </div>
+              </h3>
               <p
                 style={{
-                  fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                  fontSize: 12,
-                  color: "rgba(241,245,249,0.45)",
-                  marginBottom: 16,
-                  lineHeight: 1.5,
+                  fontSize: 13,
+                  color: "rgba(148,163,184,0.6)",
+                  marginBottom: 20,
                 }}
               >
                 {p.desc}
               </p>
 
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: 4,
-                  marginBottom: 4,
-                }}
-              >
+              <div style={{ marginBottom: 24 }}>
                 <span
                   style={{
-                    fontFamily: "var(--font-syne), 'Syne', sans-serif",
-                    fontWeight: 800,
-                    fontSize: p.price === "Gratis" ? 28 : 26,
+                    fontSize: 32,
+                    fontWeight: 700,
                     color: p.popular ? "#10b981" : "#f1f5f9",
                   }}
                 >
                   {p.price}
                 </span>
+                <span
+                  style={{
+                    fontSize: 14,
+                    color: "rgba(148,163,184,0.6)",
+                    marginLeft: 8,
+                  }}
+                >
+                  {p.period}
+                </span>
               </div>
-              <span
-                style={{
-                  fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                  fontSize: 12,
-                  color: "rgba(241,245,249,0.4)",
-                  marginBottom: 20,
-                }}
-              >
-                {p.period}
-              </span>
 
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: 10,
+                  gap: 12,
                   marginBottom: 24,
                   flex: 1,
                 }}
               >
-                {p.features.map((f) => (
+                {p.features.map((f, j) => (
                   <div
-                    key={f}
+                    key={j}
                     style={{
                       display: "flex",
-                      gap: 10,
                       alignItems: "flex-start",
+                      gap: 10,
                     }}
                   >
-                    <span
-                      style={{ color: "#10b981", fontSize: 14, marginTop: 1 }}
+                    <div
+                      style={{ color: "#10b981", flexShrink: 0, marginTop: 1 }}
                     >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    </span>
+                      <Check />
+                    </div>
                     <span
-                      style={{
-                        fontFamily:
-                          "var(--font-manrope), 'Manrope', sans-serif",
-                        fontSize: 13,
-                        color: "rgba(241,245,249,0.65)",
-                      }}
+                      style={{ fontSize: 13, color: "rgba(148,163,184,0.8)" }}
                     >
                       {f}
                     </span>
                   </div>
                 ))}
               </div>
+
               <button
-                className={p.popular ? "btn-green" : "btn-ghost"}
+                className={p.popular ? "btn-primary" : "btn-outline"}
                 onClick={onRegister}
                 style={{
                   width: "100%",
-                  padding: "12px",
+                  padding: "14px 20px",
                   fontSize: 14,
-                  borderRadius: 10,
                   marginTop: "auto",
                 }}
               >
@@ -1511,100 +1349,119 @@ const Plans = ({ onRegister }: PlansProps) => {
   );
 };
 
-/* ────���────────────────────────────────────────
-   TESTIMONIALS
+/* ─────────────────────────────────────────────
+   TESTIMONIALS — do Arquivo 2, estilo Arquivo 1
 ───────────────────────────────────────────── */
 const quotes = [
   {
     name: "Gabriela M.",
     role: "Proprietária da GM Black Sports",
     img: "/logistas-img/gabriela.jpg",
-    text: "Eu vivia escrava de planilhas e sempre ficava aquela dúvida se os números batiam. O GestPro me deu liberdade. Hoje resolvo tudo pelo celular entre um treino e outro na loja. Finalmente sobrou tempo para focar no que eu amo: o atendimento.",
+    text: "Eu vivia escrava de planilhas e sempre ficava aquela dúvida se os números batiam. O GestPro me deu liberdade. Hoje resolvo tudo pelo celular entre um treino e outro na loja.",
   },
   {
     name: "Jakeline S.",
     role: "Dona de Adega",
     img: "/logistas-img/jakeline.jpg",
-    text: "Minha maior dor de cabeça era o fechamento de caixa; sempre parecia que estava faltando algo. Com o sistema, o fluxo ficou automático. É um alívio chegar no fim do dia e ver que tudo bateu de primeira, sem estresse.",
+    text: "Minha maior dor de cabeça era o fechamento de caixa; sempre parecia que estava faltando algo. Com o sistema, o fluxo ficou automático. É um alívio chegar no fim do dia e ver que tudo bateu.",
   },
   {
     name: "Felipe C.",
     role: "Empreendedor",
     img: "/logistas-img/felipe.jpg",
-    text: "Cuidar de mais de uma unidade à distância era um caos, eu nunca sabia o que estava acontecendo de verdade. O GestPro virou meus olhos. Consigo ver cada venda em tempo real e tomar decisões de onde eu estiver, sem precisar baixar 10 relatórios.",
+    text: "Cuidar de mais de uma unidade à distância era um caos, eu nunca sabia o que estava acontecendo de verdade. O GestPro virou meus olhos. Consigo ver cada venda em tempo real de onde estiver.",
   },
 ];
+
 const Testimonials = () => (
-  <section style={{ position: "relative", zIndex: 10, padding: "80px 28px" }}>
+  <section style={{ position: "relative", zIndex: 10, padding: "80px 24px" }}>
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ textAlign: "center", marginBottom: 48 }}>
+        <span
+          className="fade-up"
+          style={{
+            display: "inline-block",
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#10b981",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            marginBottom: 16,
+          }}
+        >
+          Depoimentos
+        </span>
+        <h2
+          className="section-title fade-up d1"
+          style={{
+            fontSize: 40,
+            fontWeight: 700,
+            color: "#f1f5f9",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          O que dizem os
+          <br />
+          <span style={{ color: "#10b981" }}>nossos lojistas.</span>
+        </h2>
+      </div>
+
       <div
+        className="testimonials-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-          gap: 24,
+          gridTemplateColumns: "repeat(3,1fr)",
+          gap: 20,
         }}
       >
         {quotes.map((q, i) => (
           <div
             key={i}
-            className="glass"
-            style={{ padding: 32, borderRadius: 24 }}
+            className="card fade-up"
+            style={{ padding: 32, animationDelay: `${i * 0.15}s` }}
           >
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
+                gap: 14,
                 marginBottom: 20,
               }}
             >
-              {/* CONTAINER DA IMAGEM - MESMO TAMANHO DO HERO */}
               <div
                 style={{
-                  width: 28,
-                  height: 28,
+                  width: 44,
+                  height: 44,
                   borderRadius: "50%",
                   border: "2px solid rgba(16,185,129,0.3)",
                   overflow: "hidden",
                   background: "#1e293b",
-                  flexShrink: 0, // Impede que a imagem esmague
+                  flexShrink: 0,
                 }}
               >
                 <img
-                  src={`${q.img}?v=${Date.now()}`}
+                  src={q.img}
                   alt={q.name}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               </div>
-
               <div>
-                <h4
-                  style={{
-                    fontFamily: "var(--font-syne)",
-                    color: "#f1f5f9",
-                    fontSize: 15,
-                    fontWeight: 700,
-                  }}
-                >
+                <h4 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>
                   {q.name}
                 </h4>
-                <p
-                  style={{
-                    fontFamily: "var(--font-manrope)",
-                    color: "#10b981",
-                    fontSize: 12,
-                  }}
-                >
-                  {q.role}
-                </p>
+                <p style={{ fontSize: 12, color: "#10b981" }}>{q.role}</p>
               </div>
+            </div>
+            <div style={{ display: "flex", gap: 2, marginBottom: 14 }}>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star key={s} />
+              ))}
             </div>
             <p
               style={{
-                fontFamily: "var(--font-manrope)",
-                color: "rgba(241,245,249,0.6)",
-                fontSize: 15,
-                lineHeight: 1.6,
+                fontSize: 14,
+                lineHeight: 1.7,
+                color: "rgba(148,163,184,0.7)",
                 fontStyle: "italic",
               }}
             >
@@ -1618,18 +1475,17 @@ const Testimonials = () => (
 );
 
 /* ─────────────────────────────────────────────
-   CTA FINAL
+   CTA FINAL — lógica do Arquivo 2, estilo Arquivo 1
 ───────────────────────────────────────────── */
 const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
-  <section
-    style={{ position: "relative", zIndex: 10, padding: "80px 28px 100px" }}
-  >
-    <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
+  <section style={{ position: "relative", zIndex: 10, padding: "80px 24px" }}>
+    <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
       <div
-        className="glass-bright"
         style={{
-          padding: "64px 48px",
+          background: "rgba(16,185,129,0.05)",
+          border: "1px solid rgba(16,185,129,0.18)",
           borderRadius: 24,
+          padding: "64px 48px",
           position: "relative",
           overflow: "hidden",
         }}
@@ -1649,72 +1505,109 @@ const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
             pointerEvents: "none",
           }}
         />
-        <div className="section-tag" style={{ margin: "0 auto 24px" }}>
-          Comece hoje mesmo
-        </div>
+
+        <span
+          className="fade-up"
+          style={{
+            display: "inline-block",
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#10b981",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            marginBottom: 20,
+          }}
+        >
+          Comece Grátis
+        </span>
         <h2
-          className="section-heading"
-          style={{ fontSize: "clamp(30px,4vw,52px)", marginBottom: 18 }}
+          className="section-title fade-up d1"
+          style={{
+            fontSize: 40,
+            fontWeight: 700,
+            color: "#f1f5f9",
+            letterSpacing: "-0.02em",
+            marginBottom: 16,
+          }}
         >
           Pronto para ter
           <br />
-          <span
-            style={{
-              background: "linear-gradient(135deg, #10b981, #34d399)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            controle total?
-          </span>
+          <span style={{ color: "#10b981" }}>controle total?</span>
         </h2>
         <p
-          className="section-sub"
-          style={{ fontSize: 16, maxWidth: 420, margin: "0 auto 36px" }}
+          className="fade-up d2"
+          style={{
+            fontSize: 16,
+            lineHeight: 1.7,
+            color: "rgba(148,163,184,0.7)",
+            marginBottom: 32,
+            maxWidth: 420,
+            margin: "0 auto 32px",
+          }}
         >
-          Junte-se a mais de 2.400 lojistas que já descobriram o poder de gerir
-          com inteligência.
+          Sem cartão de crédito. PDV completo desde o dia 1.
+          <br />
+          Estoque, caixa e relatórios inclusos.
         </p>
         <div
+          className="fade-up d3"
           style={{
             display: "flex",
-            gap: 14,
             justifyContent: "center",
+            gap: 16,
             flexWrap: "wrap",
           }}
         >
           <button
-            className="btn-green"
+            className="btn-primary"
             onClick={onRegister}
-            style={{ padding: "15px 36px", fontSize: 15, borderRadius: 12 }}
+            style={{ padding: "16px 32px", fontSize: 16 }}
           >
-            Criar conta grátis →
+            Criar conta grátis <ArrowRight />
           </button>
           <button
-            className="btn-ghost"
+            className="btn-outline"
             onClick={onLogin}
-            style={{ padding: "15px 28px", fontSize: 15, borderRadius: 12 }}
+            style={{ padding: "16px 26px", fontSize: 16 }}
           >
             Já tenho conta
           </button>
         </div>
         <p
           style={{
-            fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
             fontSize: 12,
-            color: "rgba(241,245,249,0.3)",
+            color: "rgba(148,163,184,0.35)",
             marginTop: 20,
           }}
         >
           Sem cartão de crédito · Cancele quando quiser
         </p>
+        <div
+          className="fade-up d4"
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 20,
+          }}
+        >
+          <div style={{ display: "flex", gap: 2 }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Star key={i} />
+            ))}
+          </div>
+          <span style={{ fontSize: 14, color: "rgba(148,163,184,0.6)" }}>
+            4.8/5 — avaliado por +200 lojistas
+          </span>
+        </div>
       </div>
     </div>
   </section>
 );
 
 /* ─────────────────────────────────────────────
-   FOOTER
+   FOOTER — links do Arquivo 2, estilo Arquivo 1
 ───────────────────────────────────────────── */
 const Footer = () => {
   const links = [
@@ -1729,53 +1622,42 @@ const Footer = () => {
       style={{
         position: "relative",
         zIndex: 10,
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-        padding: "40px 28px",
+        padding: "40px 24px",
+        borderTop: "1px solid rgba(255,255,255,0.05)",
       }}
     >
       <div
         style={{
-          maxWidth: 1100,
+          maxWidth: 1200,
           margin: "0 auto",
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
+          justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: 16,
+          gap: 20,
         }}
       >
         <Logo size="small" />
-        <p
-          style={{
-            fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-            fontSize: 12,
-            color: "rgba(241,245,249,0.3)",
-          }}
-        >
-          {new Date().getFullYear()} GestPro - Todos os direitos reservados
-        </p>
-        <div className="footer-links" style={{ display: "flex", gap: 24 }}>
+        <span style={{ fontSize: 12, color: "rgba(148,163,184,0.4)" }}>
+          © {new Date().getFullYear()} GestPro · Todos os direitos reservados
+        </span>
+        <div style={{ display: "flex", gap: 24 }}>
           {links.map((l) => (
             <a
               key={l.label}
               href={l.href}
               style={{
-                fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                fontSize: 12,
+                fontSize: 14,
                 color:
-                  l.label === "Como usar"
-                    ? "#10b981"
-                    : "rgba(241,245,249,0.35)",
+                  l.label === "Como usar" ? "#10b981" : "rgba(148,163,184,0.5)",
                 textDecoration: "none",
-                transition: "color .2s",
                 fontWeight: l.label === "Como usar" ? 600 : 400,
+                transition: "color .2s",
               }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "#10b981")}
               onMouseLeave={(e) =>
                 (e.currentTarget.style.color =
-                  l.label === "Como usar"
-                    ? "#10b981"
-                    : "rgba(241,245,249,0.35)")
+                  l.label === "Como usar" ? "#10b981" : "rgba(148,163,184,0.5)")
               }
             >
               {l.label}
