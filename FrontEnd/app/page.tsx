@@ -1704,9 +1704,9 @@ const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
 const Footer = () => {
   const links = [
     { label: "Como usar", href: "/como-usar" },
-    { label: "Termos", href: "#" },
-    { label: "Privacidade", href: "#" },
-    { label: "Contato", href: "#" },
+    { label: "Termos", href: "/termos" },
+    { label: "Privacidade", href: "/privacidade" },
+    { label: "Contato", href: "/contato" },
   ];
 
   return (
