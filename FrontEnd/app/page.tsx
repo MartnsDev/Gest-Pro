@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import "./styles/landing.module.css";
+import styles from "./styles/landing.module.css";
 
 /* ─────────────────────────────────────────────
    TYPES

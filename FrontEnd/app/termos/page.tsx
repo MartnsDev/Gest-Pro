@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/Link";
+import Link from "next/link";
 import styles from "../styles/landing.module.css";
 
 const Logo = () => (
