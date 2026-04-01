@@ -3,17 +3,6 @@
 import { useEffect, useState, ReactNode } from "react";
 import { useEmpresa, type CaixaInfo } from "../context/Empresacontext";
 import {
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
-import {
   AlertCircle,
   DollarSign,
   FileText,
@@ -37,6 +26,7 @@ import {
   User,
   ChevronRight,
   Receipt,
+  ArrowUpRight,
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { toast } from "sonner";
@@ -46,9 +36,9 @@ import NovoClienteOverlay from "../acoesRapidas/NovoCliente";
 import AbrirCaixaOverlay from "../acoesRapidas/AbrirCaixa";
 import type { Usuario } from "@/lib/api-v2";
 
-import { BarChart } from "./graphs/BarChart";
+import { BarChart }  from "./graphs/BarChart";
 import { LineChart } from "./graphs/Linechart";
-import { PieChart } from "./graphs/PieChart";
+import { PieChart }  from "./graphs/PieChart";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface PlanoDTO {
@@ -72,202 +62,78 @@ interface VisaoGeral {
   totalInvestido: number;
   alertas: string[];
 }
-interface MetodoPagamentoData {
-  metodo: string;
-  total: number;
-}
-interface ProdutoVendasData {
-  nome: string;
-  quantidade: number;
-}
-interface VendasDiariasData {
-  dia: string;
-  total: number;
-}
+interface MetodoPagamentoData { metodo: string; total: number; }
+interface ProdutoVendasData   { nome: string; quantidade: number; }
+interface VendasDiariasData   { dia: string; total: number; }
 interface Produto {
-  id: number;
-  nome: string;
-  preco: number;
-  quantidadeEstoque: number;
-  categoria?: string;
+  id: number; nome: string; preco: number;
+  quantidadeEstoque: number; categoria?: string;
 }
-interface Empresa {
-  id: number;
-  nomeFantasia: string;
-}
+interface Empresa { id: number; nomeFantasia: string; }
 
-const CHART_COLORS = ["#10b981", "#3b82f6", "#a78bfa", "#f59e0b", "#ef4444"];
-const UNIDADES_R = ["UN", "KG", "G", "L", "ML", "CX", "PCT", "PAR", "M", "CM"];
-const FORMA_LABEL: Record<string, string> = {
-  PIX: "Pix",
-  DINHEIRO: "Dinheiro",
-  CARTAO_DEBITO: "Débito",
-  CARTAO_CREDITO: "Crédito",
-};
+const UNIDADES_R = ["UN","KG","G","L","ML","CX","PCT","PAR","M","CM"];
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?: number | null) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-    v ?? 0,
-  );
+  new Intl.NumberFormat("pt-BR", { style:"currency", currency:"BRL" }).format(v ?? 0);
 
 async function fetchQ<T>(path: string, opts?: RequestInit): Promise<T> {
   const token =
-    (typeof window !== "undefined"
+    (typeof globalThis.window !== "undefined"
       ? (sessionStorage.getItem("jwt_token") ??
-        document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
-        null)
+         document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? null)
       : null) ?? "";
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
     {
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { "Content-Type":"application/json", ...(token ? { Authorization:`Bearer ${token}` } : {}) },
       ...opts,
     },
   );
-  if (!res.ok) {
-    const e = await res.json().catch(() => null);
-    throw new Error(e?.mensagem ?? `Erro ${res.status}`);
-  }
+  if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.mensagem ?? `Erro ${res.status}`); }
   return res.json();
 }
 
+/* ─── Shared styles ─────────────────────────────────────────────────────── */
 const inp: React.CSSProperties = {
-  width: "100%",
-  padding: "9px 12px",
-  background: "var(--surface-overlay)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  color: "var(--foreground)",
-  fontSize: 13,
-  outline: "none",
+  width:"100%", padding:"9px 12px",
+  background:"var(--surface-overlay)", border:"1px solid var(--border)",
+  borderRadius:8, color:"var(--foreground)", fontSize:13, outline:"none",
 };
 const btnP: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "10px 0",
-  background: "var(--primary)",
-  border: "none",
-  borderRadius: 8,
-  color: "#fff",
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: "pointer",
-  justifyContent: "center",
+  display:"flex", alignItems:"center", gap:6, padding:"10px 0",
+  background:"var(--primary)", border:"none", borderRadius:8,
+  color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", justifyContent:"center",
 };
 const btnG: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "9px 14px",
-  background: "transparent",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  color: "var(--foreground-muted)",
-  fontSize: 13,
-  cursor: "pointer",
+  display:"flex", alignItems:"center", gap:6, padding:"9px 14px",
+  background:"transparent", border:"1px solid var(--border)",
+  borderRadius:8, color:"var(--foreground-muted)", fontSize:13, cursor:"pointer",
 };
 
-function Overlay({
-  onClose,
-  children,
-}: {
-  onClose: () => void;
-  children: ReactNode;
-}) {
+/* ─── Overlay / ModalBox ─────────────────────────────────────────────────── */
+function Overlay({ onClose, children }: { onClose:()=>void; children:ReactNode }) {
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.78)",
-        backdropFilter: "blur(5px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 200,
-        padding: 16,
-      }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      {children}
-    </div>
+      style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.82)", backdropFilter:"blur(6px)",
+        display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:16 }}
+      onClick={e => e.target===e.currentTarget && onClose()}
+    >{children}</div>
   );
 }
-
-function ModalBox({
-  title,
-  sub,
-  onClose,
-  children,
-}: {
-  title: string;
-  sub?: string;
-  onClose: () => void;
-  children: ReactNode;
-}) {
+function ModalBox({ title, sub, onClose, children }: { title:string;sub?:string;onClose:()=>void;children:ReactNode }) {
   return (
-    <div
-      className="animate-fade-in"
-      style={{
-        background: "var(--surface-elevated)",
-        border: "1px solid var(--border)",
-        borderRadius: 14,
-        padding: 26,
-        width: "100%",
-        maxWidth: 500,
-        maxHeight: "90vh",
-        overflowY: "auto",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: 20,
-        }}
-      >
+    <div className="animate-fade-in" style={{
+      background:"var(--surface-elevated)", border:"1px solid var(--border)",
+      borderRadius:14, padding:26, width:"100%", maxWidth:500, maxHeight:"90vh", overflowY:"auto",
+    }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
         <div>
-          <h2
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              color: "var(--foreground)",
-              margin: 0,
-            }}
-          >
-            {title}
-          </h2>
-          {sub && (
-            <p
-              style={{
-                fontSize: 12,
-                color: "var(--foreground-muted)",
-                margin: "3px 0 0",
-              }}
-            >
-              {sub}
-            </p>
-          )}
+          <h2 style={{ fontSize:16, fontWeight:700, color:"var(--foreground)", margin:0 }}>{title}</h2>
+          {sub && <p style={{ fontSize:12, color:"var(--foreground-muted)", margin:"3px 0 0" }}>{sub}</p>}
         </div>
-        <button
-          onClick={onClose}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--foreground-muted)",
-            padding: 4,
-          }}
-        >
-          <X size={18} />
-        </button>
+        <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--foreground-muted)", padding:4 }}><X size={18}/></button>
       </div>
       {children}
     </div>
@@ -275,566 +141,138 @@ function ModalBox({
 }
 
 /* ─── Modal Nova Venda Rápida ────────────────────────────────────────────── */
-function ModalVendaRapida({
-  empresaId,
-  caixaId,
-  onClose,
-  onFeito,
-}: {
-  empresaId: number;
-  caixaId: number;
-  onClose: () => void;
-  onFeito: () => void;
-}) {
+function ModalVendaRapida({ empresaId, caixaId, onClose, onFeito }:
+  { empresaId:number; caixaId:number; onClose:()=>void; onFeito:()=>void }) {
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [busca, setBusca] = useState("");
-  const [carrinho, setCarrinho] = useState<{ produto: Produto; qtd: number }[]>(
-    [],
-  );
-  const [forma, setForma] = useState("PIX");
+  const [busca, setBusca]       = useState("");
+  const [carrinho, setCarrinho] = useState<{ produto:Produto; qtd:number }[]>([]);
+  const [forma, setForma]       = useState("PIX");
   const [desconto, setDesconto] = useState("");
   const [salvando, setSalvando] = useState(false);
 
-  useEffect(() => {
-    fetchQ<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`)
-      .then(setProdutos)
-      .catch(() => {});
-  }, []);
+  useEffect(() => { fetchQ<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`).then(setProdutos).catch(()=>{}); }, []);
 
-  const filtrados = produtos.filter(
-    (p) =>
-      p.quantidadeEstoque > 0 &&
-      p.nome.toLowerCase().includes(busca.toLowerCase()),
-  );
-  const addItem = (p: Produto) =>
-    setCarrinho((prev) => {
-      const ex = prev.find((i) => i.produto.id === p.id);
-      if (ex)
-        return prev.map((i) =>
-          i.produto.id === p.id
-            ? { ...i, qtd: Math.min(i.qtd + 1, p.quantidadeEstoque) }
-            : i,
-        );
-      return [...prev, { produto: p, qtd: 1 }];
-    });
-  const subtotal = carrinho.reduce((s, i) => s + i.produto.preco * i.qtd, 0);
-  const descontoN = Math.max(0, Number.parseFloat(desconto) || 0);
-  const total = Math.max(subtotal - descontoN, 0);
+  const filtrados = produtos.filter(p => p.quantidadeEstoque>0 && p.nome.toLowerCase().includes(busca.toLowerCase()));
+  const addItem = (p:Produto) => setCarrinho(prev => {
+    const ex = prev.find(i=>i.produto.id===p.id);
+    if (ex) return prev.map(i=>i.produto.id===p.id ? {...i,qtd:Math.min(i.qtd+1,p.quantidadeEstoque)} : i);
+    return [...prev,{produto:p,qtd:1}];
+  });
+  const subtotal = carrinho.reduce((s,i)=>s+i.produto.preco*i.qtd,0);
+  const descontoN = Math.max(0,Number.parseFloat(desconto)||0);
+  const total = Math.max(subtotal-descontoN,0);
 
   const registrar = async () => {
-    if (!carrinho.length) {
-      toast.error("Adicione produtos");
-      return;
-    }
+    if (!carrinho.length) { toast.error("Adicione produtos"); return; }
     setSalvando(true);
     try {
-      await fetchQ("/api/v1/vendas/registrar", {
-        method: "POST",
-        body: JSON.stringify({
-          idCaixa: caixaId,
-          formaPagamento: forma,
-          desconto: descontoN,
-          itens: carrinho.map((i) => ({
-            idProduto: i.produto.id,
-            quantidade: i.qtd,
-          })),
-        }),
-      });
-      toast.success("Venda registrada!");
-      onFeito();
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSalvando(false);
-    }
+      await fetchQ("/api/v1/vendas/registrar",{method:"POST",body:JSON.stringify({
+        idCaixa:caixaId, formaPagamento:forma, desconto:descontoN,
+        itens:carrinho.map(i=>({ idProduto:i.produto.id, quantidade:i.qtd })),
+      })});
+      toast.success("Venda registrada!"); onFeito(); onClose();
+    } catch(e:any) { toast.error(e.message); }
+    finally { setSalvando(false); }
   };
 
   const FORMAS = [
-    { v: "PIX", l: "Pix", icon: <Smartphone size={13} /> },
-    { v: "DINHEIRO", l: "Dinheiro", icon: <DollarSign size={13} /> },
-    { v: "CARTAO_DEBITO", l: "Débito", icon: <CreditCard size={13} /> },
-    { v: "CARTAO_CREDITO", l: "Crédito", icon: <CreditCard size={13} /> },
+    {v:"PIX",l:"Pix",icon:<Smartphone size={13}/>},
+    {v:"DINHEIRO",l:"Dinheiro",icon:<DollarSign size={13}/>},
+    {v:"CARTAO_DEBITO",l:"Débito",icon:<CreditCard size={13}/>},
+    {v:"CARTAO_CREDITO",l:"Crédito",icon:<CreditCard size={13}/>},
   ];
 
   return (
     <Overlay onClose={onClose}>
-      <div
-        className="animate-fade-in"
-        style={{
-          background: "var(--surface-elevated)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          width: "100%",
-          maxWidth: 700,
-          maxHeight: "92vh",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "14px 20px",
-            borderBottom: "1px solid var(--border)",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 15,
-              fontWeight: 700,
-              color: "var(--foreground)",
-              margin: 0,
-            }}
-          >
-            Nova Venda Rápida
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--foreground-muted)",
-            }}
-          >
-            <X size={17} />
-          </button>
+      <div className="animate-fade-in" style={{
+        background:"var(--surface-elevated)", border:"1px solid var(--border)",
+        borderRadius:14, width:"100%", maxWidth:700, maxHeight:"92vh",
+        display:"flex", flexDirection:"column", overflow:"hidden",
+      }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 20px", borderBottom:"1px solid var(--border)" }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"var(--foreground)", margin:0 }}>Nova Venda Rápida</h2>
+          <button onClick={onClose} style={{ background:"none",border:"none",cursor:"pointer",color:"var(--foreground-muted)" }}><X size={17}/></button>
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 280px",
-            flex: 1,
-            minHeight: 0,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              borderRight: "1px solid var(--border)",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                padding: "10px 14px",
-                borderBottom: "1px solid var(--border)",
-              }}
-            >
-              <div style={{ position: "relative" }}>
-                <Search
-                  size={12}
-                  style={{
-                    position: "absolute",
-                    left: 9,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "var(--foreground-subtle)",
-                  }}
-                />
-                <input
-                  style={{ ...inp, paddingLeft: 28 }}
-                  placeholder="Buscar produto..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  autoFocus
-                />
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 280px", flex:1, minHeight:0, overflow:"hidden" }}>
+          <div style={{ display:"flex", flexDirection:"column", borderRight:"1px solid var(--border)", overflow:"hidden" }}>
+            <div style={{ padding:"10px 14px", borderBottom:"1px solid var(--border)" }}>
+              <div style={{ position:"relative" }}>
+                <Search size={12} style={{ position:"absolute", left:9, top:"50%", transform:"translateY(-50%)", color:"var(--foreground-subtle)" }}/>
+                <input style={{ ...inp, paddingLeft:28 }} placeholder="Buscar produto..." value={busca} onChange={e=>setBusca(e.target.value)} autoFocus/>
               </div>
             </div>
-            <div style={{ overflowY: "auto", flex: 1 }}>
-              {filtrados.map((p) => {
-                const nc = carrinho.find((i) => i.produto.id === p.id);
+            <div style={{ overflowY:"auto", flex:1 }}>
+              {filtrados.map(p => {
+                const nc = carrinho.find(i=>i.produto.id===p.id);
                 return (
-                  <div
-                    key={p.id}
-                    onClick={() => addItem(p)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "9px 14px",
-                      cursor: "pointer",
-                      borderBottom: "1px solid var(--border-subtle)",
-                    }}
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLDivElement).style.background =
-                        "var(--surface-overlay)")
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLDivElement).style.background =
-                        "transparent")
-                    }
+                  <div key={p.id} onClick={()=>addItem(p)}
+                    style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"9px 14px", cursor:"pointer", borderBottom:"1px solid var(--border-subtle)" }}
+                    onMouseEnter={e=>((e.currentTarget as HTMLDivElement).style.background="var(--surface-overlay)")}
+                    onMouseLeave={e=>((e.currentTarget as HTMLDivElement).style.background="transparent")}
                   >
                     <div>
-                      <p
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 500,
-                          color: "var(--foreground)",
-                          margin: 0,
-                        }}
-                      >
-                        {p.nome}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: 11,
-                          color: "var(--foreground-muted)",
-                          margin: "1px 0 0",
-                        }}
-                      >
-                        Estoque: {p.quantidadeEstoque}
-                        {p.categoria ? ` · ${p.categoria}` : ""}
-                      </p>
+                      <p style={{ fontSize:13, fontWeight:500, color:"var(--foreground)", margin:0 }}>{p.nome}</p>
+                      <p style={{ fontSize:11, color:"var(--foreground-muted)", margin:"1px 0 0" }}>Estoque: {p.quantidadeEstoque}{p.categoria?` · ${p.categoria}`:""}</p>
                     </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        flexShrink: 0,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: "var(--primary)",
-                        }}
-                      >
-                        {fmt(p.preco)}
-                      </span>
-                      {nc && (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            background: "var(--primary-muted)",
-                            color: "var(--primary)",
-                            padding: "2px 7px",
-                            borderRadius: 99,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {nc.qtd}×
-                        </span>
-                      )}
-                      <Plus size={13} color="var(--foreground-muted)" />
+                    <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                      <span style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{fmt(p.preco)}</span>
+                      {nc && <span style={{ fontSize:11, background:"var(--primary-muted)", color:"var(--primary)", padding:"2px 7px", borderRadius:99, fontWeight:600 }}>{nc.qtd}×</span>}
+                      <Plus size={13} color="var(--foreground-muted)"/>
                     </div>
                   </div>
                 );
               })}
-              {filtrados.length === 0 && (
-                <div
-                  style={{
-                    padding: 24,
-                    textAlign: "center",
-                    color: "var(--foreground-subtle)",
-                    fontSize: 13,
-                  }}
-                >
-                  Nenhum produto
-                </div>
-              )}
+              {filtrados.length===0 && <div style={{ padding:24, textAlign:"center", color:"var(--foreground-subtle)", fontSize:13 }}>Nenhum produto</div>}
             </div>
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px" }}>
-              <p
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "var(--foreground-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: ".07em",
-                  marginBottom: 8,
-                }}
-              >
-                Carrinho ({carrinho.length})
-              </p>
-              {carrinho.length === 0 ? (
-                <p
-                  style={{
-                    textAlign: "center",
-                    color: "var(--foreground-subtle)",
-                    fontSize: 12,
-                    marginTop: 16,
-                  }}
-                >
-                  Selecione produtos
-                </p>
-              ) : (
-                carrinho.map((item) => (
-                  <div
-                    key={item.produto.id}
-                    style={{
-                      marginBottom: 7,
-                      padding: "8px 9px",
-                      background: "var(--surface-overlay)",
-                      borderRadius: 7,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: 5,
-                      }}
-                    >
-                      <p
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 500,
-                          color: "var(--foreground)",
-                          margin: 0,
-                          flex: 1,
-                        }}
-                      >
-                        {item.produto.nome}
-                      </p>
-                      <button
-                        onClick={() =>
-                          setCarrinho((p) =>
-                            p.filter((i) => i.produto.id !== item.produto.id),
-                          )
-                        }
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "var(--foreground-subtle)",
-                          padding: 0,
-                        }}
-                      >
-                        <X size={11} />
-                      </button>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 5,
-                        }}
-                      >
-                        <button
-                          onClick={() =>
-                            setCarrinho((p) =>
-                              p.map((i) =>
-                                i.produto.id === item.produto.id
-                                  ? { ...i, qtd: Math.max(1, i.qtd - 1) }
-                                  : i,
-                              ),
-                            )
-                          }
-                          style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: 5,
-                            background: "var(--surface-elevated)",
-                            border: "1px solid var(--border)",
-                            cursor: "pointer",
-                            color: "var(--foreground)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <Minus size={10} />
-                        </button>
-                        <span
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 600,
-                            minWidth: 20,
-                            textAlign: "center",
-                          }}
-                        >
-                          {item.qtd}
-                        </span>
-                        <button
-                          onClick={() =>
-                            setCarrinho((p) =>
-                              p.map((i) =>
-                                i.produto.id === item.produto.id &&
-                                i.qtd < item.produto.quantidadeEstoque
-                                  ? { ...i, qtd: i.qtd + 1 }
-                                  : i,
-                              ),
-                            )
-                          }
-                          style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: 5,
-                            background: "var(--primary-muted)",
-                            border: "1px solid rgba(16,185,129,.3)",
-                            cursor: "pointer",
-                            color: "var(--primary)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <Plus size={10} />
-                        </button>
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 600 }}>
-                        {fmt(item.produto.preco * item.qtd)}
-                      </span>
-                    </div>
+          <div style={{ display:"flex", flexDirection:"column", overflow:"hidden" }}>
+            <div style={{ flex:1, overflowY:"auto", padding:"10px 12px" }}>
+              <p style={{ fontSize:10, fontWeight:600, color:"var(--foreground-muted)", textTransform:"uppercase", letterSpacing:".07em", marginBottom:8 }}>Carrinho ({carrinho.length})</p>
+              {carrinho.length===0 ? (
+                <p style={{ textAlign:"center", color:"var(--foreground-subtle)", fontSize:12, marginTop:16 }}>Selecione produtos</p>
+              ) : carrinho.map(item => (
+                <div key={item.produto.id} style={{ marginBottom:7, padding:"8px 9px", background:"var(--surface-overlay)", borderRadius:7 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                    <p style={{ fontSize:12, fontWeight:500, color:"var(--foreground)", margin:0, flex:1 }}>{item.produto.nome}</p>
+                    <button onClick={()=>setCarrinho(p=>p.filter(i=>i.produto.id!==item.produto.id))}
+                      style={{ background:"none", border:"none", cursor:"pointer", color:"var(--foreground-subtle)", padding:0 }}><X size={11}/></button>
                   </div>
-                ))
-              )}
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                      <button onClick={()=>setCarrinho(p=>p.map(i=>i.produto.id===item.produto.id?{...i,qtd:Math.max(1,i.qtd-1)}:i))}
+                        style={{ width:20,height:20,borderRadius:5,background:"var(--surface-elevated)",border:"1px solid var(--border)",cursor:"pointer",color:"var(--foreground)",display:"flex",alignItems:"center",justifyContent:"center" }}><Minus size={10}/></button>
+                      <span style={{ fontSize:13, fontWeight:600, minWidth:20, textAlign:"center" }}>{item.qtd}</span>
+                      <button onClick={()=>setCarrinho(p=>p.map(i=>i.produto.id===item.produto.id&&i.qtd<item.produto.quantidadeEstoque?{...i,qtd:i.qtd+1}:i))}
+                        style={{ width:20,height:20,borderRadius:5,background:"var(--primary-muted)",border:"1px solid rgba(16,185,129,.3)",cursor:"pointer",color:"var(--primary)",display:"flex",alignItems:"center",justifyContent:"center" }}><Plus size={10}/></button>
+                    </div>
+                    <span style={{ fontSize:12, fontWeight:600 }}>{fmt(item.produto.preco*item.qtd)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div
-              style={{
-                padding: "10px 12px",
-                borderTop: "1px solid var(--border)",
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-              }}
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 5,
-                }}
-              >
-                {FORMAS.map((f) => (
-                  <button
-                    key={f.v}
-                    onClick={() => setForma(f.v)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                      padding: "6px 8px",
-                      background:
-                        forma === f.v
-                          ? "var(--primary-muted)"
-                          : "var(--surface-overlay)",
-                      border: `1px solid ${forma === f.v ? "var(--primary)" : "var(--border)"}`,
-                      borderRadius: 7,
-                      cursor: "pointer",
-                      color:
-                        forma === f.v
-                          ? "var(--primary)"
-                          : "var(--foreground-muted)",
-                      fontSize: 11,
-                      fontWeight: forma === f.v ? 600 : 400,
-                    }}
-                  >
-                    {f.icon}
-                    {f.l}
-                  </button>
+            <div style={{ padding:"10px 12px", borderTop:"1px solid var(--border)", display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:5 }}>
+                {FORMAS.map(f => (
+                  <button key={f.v} onClick={()=>setForma(f.v)} style={{
+                    display:"flex", alignItems:"center", gap:5, padding:"6px 8px",
+                    background:forma===f.v?"var(--primary-muted)":"var(--surface-overlay)",
+                    border:`1px solid ${forma===f.v?"var(--primary)":"var(--border)"}`,
+                    borderRadius:7, cursor:"pointer", color:forma===f.v?"var(--primary)":"var(--foreground-muted)",
+                    fontSize:11, fontWeight:forma===f.v?600:400,
+                  }}>{f.icon}{f.l}</button>
                 ))}
               </div>
               <div>
-                <label
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: "var(--foreground-muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: ".06em",
-                    display: "block",
-                    marginBottom: 4,
-                  }}
-                >
-                  Desconto R$
-                </label>
-                <input
-                  style={inp}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={desconto}
-                  onChange={(e) => setDesconto(e.target.value)}
-                  placeholder="0,00"
-                />
+                <label style={{ fontSize:10, fontWeight:600, color:"var(--foreground-muted)", textTransform:"uppercase", letterSpacing:".06em", display:"block", marginBottom:4 }}>Desconto R$</label>
+                <input style={inp} type="number" min="0" step="0.01" value={desconto} onChange={e=>setDesconto(e.target.value)} placeholder="0,00"/>
               </div>
-              <div
-                style={{
-                  background: "var(--surface-overlay)",
-                  borderRadius: 8,
-                  padding: "8px 10px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 12,
-                    color: "var(--foreground-muted)",
-                  }}
-                >
-                  <span>Subtotal</span>
-                  <span>{fmt(subtotal)}</span>
-                </div>
-                {descontoN > 0 && (
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontSize: 12,
-                      color: "var(--destructive)",
-                    }}
-                  >
-                    <span>Desconto</span>
-                    <span>− {fmt(descontoN)}</span>
-                  </div>
-                )}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: "var(--primary)",
-                    paddingTop: 5,
-                    borderTop: "1px solid var(--border)",
-                  }}
-                >
-                  <span>Total</span>
-                  <span>{fmt(total)}</span>
-                </div>
+              <div style={{ background:"var(--surface-overlay)", borderRadius:8, padding:"8px 10px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:"var(--foreground-muted)" }}><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
+                {descontoN>0 && <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:"var(--destructive)" }}><span>Desconto</span><span>− {fmt(descontoN)}</span></div>}
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:15, fontWeight:700, color:"var(--primary)", paddingTop:5, borderTop:"1px solid var(--border)" }}><span>Total</span><span>{fmt(total)}</span></div>
               </div>
-              <button
-                onClick={registrar}
-                disabled={salvando || !carrinho.length}
-                style={{
-                  ...btnP,
-                  opacity: salvando || !carrinho.length ? 0.6 : 1,
-                }}
-              >
-                {salvando ? (
-                  "Registrando..."
-                ) : (
-                  <>
-                    <Check size={14} />
-                    Confirmar · {fmt(total)}
-                  </>
-                )}
+              <button onClick={registrar} disabled={salvando||!carrinho.length} style={{ ...btnP, opacity:salvando||!carrinho.length?0.6:1 }}>
+                {salvando ? "Registrando..." : <><Check size={14}/>Confirmar · {fmt(total)}</>}
               </button>
             </div>
           </div>
@@ -845,250 +283,63 @@ function ModalVendaRapida({
 }
 
 /* ─── Modal Produto Rápido ───────────────────────────────────────────────── */
-function ModalProdutoRapido({
-  empresaId,
-  onClose,
-  onFeito,
-}: {
-  empresaId: number;
-  onClose: () => void;
-  onFeito: () => void;
-}) {
-  const [form, setForm] = useState({
-    nome: "",
-    categoria: "",
-    preco: "",
-    precoCusto: "",
-    quantidadeEstoque: "0",
-    unidade: "UN",
-    ativo: true,
-  });
+function ModalProdutoRapido({ empresaId, onClose, onFeito }:
+  { empresaId:number; onClose:()=>void; onFeito:()=>void }) {
+  const [form, setForm] = useState({ nome:"", categoria:"", preco:"", precoCusto:"", quantidadeEstoque:"0", unidade:"UN", ativo:true });
   const [saving, setSaving] = useState(false);
-  const set = (k: string, v: string | boolean) =>
-    setForm((f) => ({ ...f, [k]: v }));
-  const precoN = Number.parseFloat(form.preco) || 0;
-  const custoN = Number.parseFloat(form.precoCusto) || 0;
-  const lucro = precoN > 0 && custoN > 0 ? precoN - custoN : null;
-  const margem = lucro != null && precoN > 0 ? (lucro / precoN) * 100 : null;
+  const set = (k:string, v:string|boolean) => setForm(f=>({...f,[k]:v}));
+  const precoN = Number.parseFloat(form.preco)||0;
+  const custoN = Number.parseFloat(form.precoCusto)||0;
+  const lucro  = precoN>0&&custoN>0 ? precoN-custoN : null;
+  const margem = lucro!=null&&precoN>0 ? (lucro/precoN)*100 : null;
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e:React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome.trim() || precoN <= 0) {
-      toast.error("Nome e preço são obrigatórios");
-      return;
-    }
+    if (!form.nome.trim()||precoN<=0) { toast.error("Nome e preço são obrigatórios"); return; }
     setSaving(true);
     try {
-      await fetchQ("/api/v1/produtos", {
-        method: "POST",
-        body: JSON.stringify({
-          empresaId,
-          nome: form.nome,
-          categoria: form.categoria || null,
-          preco: precoN,
-          precoCusto: custoN > 0 ? custoN : null,
-          quantidadeEstoque: parseInt(form.quantidadeEstoque) || 0,
-          unidade: form.unidade,
-          ativo: form.ativo,
-        }),
-      });
-      toast.success(`"${form.nome}" cadastrado!`);
-      onFeito();
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSaving(false);
-    }
+      await fetchQ("/api/v1/produtos",{method:"POST",body:JSON.stringify({
+        empresaId, nome:form.nome, categoria:form.categoria||null,
+        preco:precoN, precoCusto:custoN>0?custoN:null,
+        quantidadeEstoque:parseInt(form.quantidadeEstoque)||0, unidade:form.unidade, ativo:form.ativo,
+      })});
+      toast.success(`"${form.nome}" cadastrado!`); onFeito(); onClose();
+    } catch(e:any) { toast.error(e.message); }
+    finally { setSaving(false); }
   };
 
   return (
     <Overlay onClose={onClose}>
       <ModalBox title="Cadastrar Produto" onClose={onClose}>
-        <form
-          onSubmit={submit}
-          style={{ display: "flex", flexDirection: "column", gap: 14 }}
-        >
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                color: "var(--foreground-muted)",
-                display: "block",
-                marginBottom: 5,
-              }}
-            >
-              Nome *
-            </label>
-            <input
-              style={inp}
-              value={form.nome}
-              onChange={(e) => set("nome", e.target.value)}
-              placeholder="Ex: Coca-Cola 350ml"
-              autoFocus
-              required
-            />
+        <form onSubmit={submit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <div><label style={{ fontSize:12,color:"var(--foreground-muted)",display:"block",marginBottom:5 }}>Nome *</label>
+            <input style={inp} value={form.nome} onChange={e=>set("nome",e.target.value)} placeholder="Ex: Coca-Cola 350ml" autoFocus required/></div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <div><label style={{ fontSize:12,color:"var(--foreground-muted)",display:"block",marginBottom:5 }}>Categoria</label>
+              <input style={inp} value={form.categoria} onChange={e=>set("categoria",e.target.value)} placeholder="Ex: Bebidas"/></div>
+            <div><label style={{ fontSize:12,color:"var(--foreground-muted)",display:"block",marginBottom:5 }}>Unidade</label>
+              <select style={{ ...inp,cursor:"pointer" }} value={form.unidade} onChange={e=>set("unidade",e.target.value)}>
+                {UNIDADES_R.map(u=><option key={u} value={u}>{u}</option>)}</select></div>
           </div>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
-          >
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  color: "var(--foreground-muted)",
-                  display: "block",
-                  marginBottom: 5,
-                }}
-              >
-                Categoria
-              </label>
-              <input
-                style={inp}
-                value={form.categoria}
-                onChange={(e) => set("categoria", e.target.value)}
-                placeholder="Ex: Bebidas"
-              />
-            </div>
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  color: "var(--foreground-muted)",
-                  display: "block",
-                  marginBottom: 5,
-                }}
-              >
-                Unidade
-              </label>
-              <select
-                style={{ ...inp, cursor: "pointer" }}
-                value={form.unidade}
-                onChange={(e) => set("unidade", e.target.value)}
-              >
-                {UNIDADES_R.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <div><label style={{ fontSize:12,color:"var(--foreground-muted)",display:"block",marginBottom:5 }}>Custo R$</label>
+              <input style={inp} type="number" step="0.01" min="0" value={form.precoCusto} onChange={e=>set("precoCusto",e.target.value)} placeholder="0,00"/></div>
+            <div><label style={{ fontSize:12,color:"var(--foreground-muted)",display:"block",marginBottom:5 }}>Venda R$ *</label>
+              <input style={inp} type="number" step="0.01" min="0" value={form.preco} onChange={e=>set("preco",e.target.value)} placeholder="0,00" required/></div>
           </div>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
-          >
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  color: "var(--foreground-muted)",
-                  display: "block",
-                  marginBottom: 5,
-                }}
-              >
-                Preço de Custo R$
-              </label>
-              <input
-                style={inp}
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.precoCusto}
-                onChange={(e) => set("precoCusto", e.target.value)}
-                placeholder="0,00"
-              />
-            </div>
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  color: "var(--foreground-muted)",
-                  display: "block",
-                  marginBottom: 5,
-                }}
-              >
-                Preço de Venda R$ *
-              </label>
-              <input
-                style={inp}
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.preco}
-                onChange={(e) => set("preco", e.target.value)}
-                placeholder="0,00"
-                required
-              />
-            </div>
-          </div>
-          {lucro != null && (
-            <div
-              style={{
-                padding: "8px 12px",
-                background:
-                  lucro >= 0 ? "rgba(16,185,129,.08)" : "rgba(239,68,68,.08)",
-                border: `1px solid ${lucro >= 0 ? "rgba(16,185,129,.2)" : "rgba(239,68,68,.2)"}`,
-                borderRadius: 8,
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: 13,
-              }}
-            >
-              <span style={{ color: "var(--foreground-muted)" }}>
-                Lucro unitário
-              </span>
-              <span
-                style={{
-                  fontWeight: 700,
-                  color: lucro >= 0 ? "var(--primary)" : "var(--destructive)",
-                }}
-              >
-                {fmt(lucro)}
-                {margem != null && ` (${margem.toFixed(1)}%)`}
-              </span>
+          {lucro!=null && (
+            <div style={{ padding:"8px 12px", background:lucro>=0?"rgba(16,185,129,.08)":"rgba(239,68,68,.08)",
+              border:`1px solid ${lucro>=0?"rgba(16,185,129,.2)":"rgba(239,68,68,.2)"}`, borderRadius:8, display:"flex", justifyContent:"space-between", fontSize:13 }}>
+              <span style={{ color:"var(--foreground-muted)" }}>Lucro unitário</span>
+              <span style={{ fontWeight:700, color:lucro>=0?"var(--primary)":"var(--destructive)" }}>{fmt(lucro)}{margem!=null&&` (${margem.toFixed(1)}%)`}</span>
             </div>
           )}
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                color: "var(--foreground-muted)",
-                display: "block",
-                marginBottom: 5,
-              }}
-            >
-              Quantidade em Estoque
-            </label>
-            <input
-              style={inp}
-              type="number"
-              min="0"
-              value={form.quantidadeEstoque}
-              onChange={(e) => set("quantidadeEstoque", e.target.value)}
-            />
-          </div>
-          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{ flex: 1, ...btnG, justifyContent: "center" }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              style={{ flex: 2, ...btnP, opacity: saving ? 0.7 : 1 }}
-            >
-              {saving ? (
-                "Salvando..."
-              ) : (
-                <>
-                  <Check size={14} />
-                  Cadastrar
-                </>
-              )}
-            </button>
+          <div><label style={{ fontSize:12,color:"var(--foreground-muted)",display:"block",marginBottom:5 }}>Estoque</label>
+            <input style={inp} type="number" min="0" value={form.quantidadeEstoque} onChange={e=>set("quantidadeEstoque",e.target.value)}/></div>
+          <div style={{ display:"flex", gap:10, marginTop:4 }}>
+            <button type="button" onClick={onClose} style={{ flex:1,...btnG,justifyContent:"center" }}>Cancelar</button>
+            <button type="submit" disabled={saving} style={{ flex:2,...btnP,opacity:saving?0.7:1 }}>
+              {saving?"Salvando...":<><Check size={14}/>Cadastrar</>}</button>
           </div>
         </form>
       </ModalBox>
@@ -1096,377 +347,53 @@ function ModalProdutoRapido({
   );
 }
 
-/* ─── Modal Caixa Rápido ─────────────────────────────────────────────────── */
-function ModalCaixaRapido({
-  empresas,
-  caixaAtivo,
-  onClose,
-  onFeito,
-}: {
-  empresas: Empresa[];
-  caixaAtivo: CaixaInfo | null;
-  onClose: () => void;
-  onFeito: (c: CaixaInfo, e: Empresa) => void;
-}) {
-  const [empSel, setEmpSel] = useState<Empresa | null>(empresas[0] ?? null);
-  const [saldo, setSaldo] = useState("");
-  const [salvando, setSalvando] = useState(false);
-
-  const abrir = async () => {
-    if (!empSel) {
-      toast.error("Selecione uma empresa");
-      return;
-    }
-    setSalvando(true);
-    try {
-      const caixa = await fetchQ<CaixaInfo>("/api/v1/caixas/abrir", {
-        method: "POST",
-        body: JSON.stringify({
-          empresaId: empSel.id,
-          saldoInicial: parseFloat(saldo) || 0,
-        }),
-      });
-      toast.success("Caixa aberto!");
-      onFeito(caixa, empSel);
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSalvando(false);
-    }
-  };
-
-  if (caixaAtivo)
-    return (
-      <Overlay onClose={onClose}>
-        <ModalBox title="Caixa Atual" onClose={onClose}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div
-              style={{
-                background: "rgba(16,185,129,.08)",
-                border: "1px solid rgba(16,185,129,.2)",
-                borderRadius: 10,
-                padding: "14px 16px",
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 12,
-                  color: "var(--foreground-muted)",
-                  margin: "0 0 4px",
-                }}
-              >
-                Status
-              </p>
-              <p
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: "var(--primary)",
-                  margin: 0,
-                }}
-              >
-                ● CAIXA ABERTO
-              </p>
-            </div>
-            {[
-              { l: "Saldo Inicial", v: fmt(caixaAtivo.valorInicial) },
-              {
-                l: "Total em Vendas",
-                v: fmt(caixaAtivo.totalVendas),
-                bold: true,
-              },
-              {
-                l: "Saldo Esperado",
-                v: fmt(
-                  (caixaAtivo.valorInicial ?? 0) +
-                    (caixaAtivo.totalVendas ?? 0),
-                ),
-              },
-            ].map((r) => (
-              <div
-                key={r.l}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: 14,
-                }}
-              >
-                <span style={{ color: "var(--foreground-muted)" }}>{r.l}</span>
-                <span
-                  style={{
-                    fontWeight: r.bold ? 700 : 500,
-                    color: r.bold ? "var(--primary)" : "var(--foreground)",
-                  }}
-                >
-                  {r.v}
-                </span>
-              </div>
-            ))}
-            <button onClick={onClose} style={{ ...btnP, marginTop: 8 }}>
-              Fechar
-            </button>
-          </div>
-        </ModalBox>
-      </Overlay>
-    );
-
-  return (
-    <Overlay onClose={onClose}>
-      <ModalBox title="Abrir Caixa" onClose={onClose}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                color: "var(--foreground-muted)",
-                display: "block",
-                marginBottom: 5,
-              }}
-            >
-              Empresa
-            </label>
-            <select
-              style={{ ...inp, cursor: "pointer" }}
-              value={empSel?.id ?? ""}
-              onChange={(e) =>
-                setEmpSel(
-                  empresas.find((em) => em.id === Number(e.target.value)) ??
-                    null,
-                )
-              }
-            >
-              {empresas.map((em) => (
-                <option key={em.id} value={em.id}>
-                  {em.nomeFantasia}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                color: "var(--foreground-muted)",
-                display: "block",
-                marginBottom: 5,
-              }}
-            >
-              Saldo Inicial (R$)
-            </label>
-            <input
-              style={inp}
-              type="number"
-              min="0"
-              step="0.01"
-              value={saldo}
-              onChange={(e) => setSaldo(e.target.value)}
-              placeholder="0,00"
-              autoFocus
-            />
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              onClick={onClose}
-              style={{ flex: 1, ...btnG, justifyContent: "center" }}
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={abrir}
-              disabled={salvando}
-              style={{ flex: 2, ...btnP, opacity: salvando ? 0.7 : 1 }}
-            >
-              {salvando ? (
-                "Abrindo..."
-              ) : (
-                <>
-                  <Check size={14} />
-                  Abrir Caixa
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </ModalBox>
-    </Overlay>
-  );
-}
-
 /* ─── Modal Cliente Rápido ───────────────────────────────────────────────── */
-function ModalClienteRapido({
-  empresaId,
-  onClose,
-  onFeito,
-}: {
-  empresaId: number;
-  onClose: () => void;
-  onFeito: () => void;
-}) {
-  const [form, setForm] = useState({
-    nome: "",
-    telefone: "",
-    email: "",
-    tipo: "CLIENTE",
-  });
+function ModalClienteRapido({ empresaId, onClose, onFeito }:
+  { empresaId:number; onClose:()=>void; onFeito:()=>void }) {
+  const [form, setForm] = useState({ nome:"", telefone:"", email:"", tipo:"CLIENTE" });
   const [saving, setSaving] = useState(false);
-  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k:string,v:string) => setForm(f=>({...f,[k]:v}));
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e:React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome.trim()) {
-      toast.error("Nome é obrigatório");
-      return;
-    }
+    if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
     setSaving(true);
     try {
-      await fetchQ("/api/v1/clientes", {
-        method: "POST",
-        body: JSON.stringify({
-          nome: form.nome,
-          telefone: form.telefone || null,
-          email: form.email || null,
-          tipo: form.tipo,
-          empresaId,
-        }),
-      });
-      toast.success(
-        `${form.tipo === "CLIENTE" ? "Cliente" : "Fornecedor"} cadastrado!`,
-      );
-      onFeito();
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSaving(false);
-    }
+      await fetchQ("/api/v1/clientes",{method:"POST",body:JSON.stringify({
+        nome:form.nome, telefone:form.telefone||null, email:form.email||null, tipo:form.tipo, empresaId,
+      })});
+      toast.success(`${form.tipo==="CLIENTE"?"Cliente":"Fornecedor"} cadastrado!`); onFeito(); onClose();
+    } catch(e:any) { toast.error(e.message); }
+    finally { setSaving(false); }
   };
 
   return (
     <Overlay onClose={onClose}>
       <ModalBox title="Cadastrar Contato" onClose={onClose}>
-        <form
-          onSubmit={submit}
-          style={{ display: "flex", flexDirection: "column", gap: 14 }}
-        >
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
-          >
-            {[
-              ["CLIENTE", "Cliente"],
-              ["FORNECEDOR", "Fornecedor"],
-            ].map(([v, l]) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => set("tipo", v)}
-                style={{
-                  padding: "9px 0",
-                  borderRadius: 8,
-                  border: `1px solid ${form.tipo === v ? "var(--primary)" : "var(--border)"}`,
-                  background:
-                    form.tipo === v ? "var(--primary-muted)" : "transparent",
-                  color:
-                    form.tipo === v
-                      ? "var(--primary)"
-                      : "var(--foreground-muted)",
-                  fontSize: 13,
-                  fontWeight: form.tipo === v ? 600 : 400,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                }}
-              >
-                {v === "CLIENTE" ? <User size={14} /> : <Truck size={14} />}
-                {l}
-              </button>
+        <form onSubmit={submit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+            {[["CLIENTE","Cliente"],["FORNECEDOR","Fornecedor"]].map(([v,l])=>(
+              <button key={v} type="button" onClick={()=>set("tipo",v)} style={{
+                padding:"9px 0", borderRadius:8, border:`1px solid ${form.tipo===v?"var(--primary)":"var(--border)"}`,
+                background:form.tipo===v?"var(--primary-muted)":"transparent",
+                color:form.tipo===v?"var(--primary)":"var(--foreground-muted)",
+                fontSize:13, fontWeight:form.tipo===v?600:400, cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+              }}>{v==="CLIENTE"?<User size={14}/>:<Truck size={14}/>}{l}</button>
             ))}
           </div>
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                color: "var(--foreground-muted)",
-                display: "block",
-                marginBottom: 5,
-              }}
-            >
-              Nome *
-            </label>
-            <input
-              style={inp}
-              value={form.nome}
-              onChange={(e) => set("nome", e.target.value)}
-              placeholder="Nome completo"
-              autoFocus
-              required
-            />
+          <div><label style={{ fontSize:12,color:"var(--foreground-muted)",display:"block",marginBottom:5 }}>Nome *</label>
+            <input style={inp} value={form.nome} onChange={e=>set("nome",e.target.value)} placeholder="Nome completo" autoFocus required/></div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <div><label style={{ fontSize:12,color:"var(--foreground-muted)",display:"block",marginBottom:5 }}>Telefone</label>
+              <input style={inp} value={form.telefone} onChange={e=>set("telefone",e.target.value)} placeholder="(00) 00000-0000"/></div>
+            <div><label style={{ fontSize:12,color:"var(--foreground-muted)",display:"block",marginBottom:5 }}>E-mail</label>
+              <input style={inp} type="email" value={form.email} onChange={e=>set("email",e.target.value)} placeholder="email@exemplo.com"/></div>
           </div>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
-          >
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  color: "var(--foreground-muted)",
-                  display: "block",
-                  marginBottom: 5,
-                }}
-              >
-                Telefone
-              </label>
-              <input
-                style={inp}
-                value={form.telefone}
-                onChange={(e) => set("telefone", e.target.value)}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  color: "var(--foreground-muted)",
-                  display: "block",
-                  marginBottom: 5,
-                }}
-              >
-                E-mail
-              </label>
-              <input
-                style={inp}
-                type="email"
-                value={form.email}
-                onChange={(e) => set("email", e.target.value)}
-                placeholder="email@exemplo.com"
-              />
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{ flex: 1, ...btnG, justifyContent: "center" }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              style={{ flex: 2, ...btnP, opacity: saving ? 0.7 : 1 }}
-            >
-              {saving ? (
-                "Salvando..."
-              ) : (
-                <>
-                  <Check size={14} />
-                  Cadastrar
-                </>
-              )}
-            </button>
+          <div style={{ display:"flex", gap:10, marginTop:4 }}>
+            <button type="button" onClick={onClose} style={{ flex:1,...btnG,justifyContent:"center" }}>Cancelar</button>
+            <button type="submit" disabled={saving} style={{ flex:2,...btnP,opacity:saving?0.7:1 }}>
+              {saving?"Salvando...":<><Check size={14}/>Cadastrar</>}</button>
           </div>
         </form>
       </ModalBox>
@@ -1476,238 +403,65 @@ function ModalClienteRapido({
 
 /* ─── Modal Resumo do Dia ────────────────────────────────────────────────── */
 interface RelatorioHoje {
-  titulo: string;
-  periodo: string;
-  nomeEmpresa: string;
-  geradoEm: string;
-  totalVendas: number;
-  receitaTotal: number;
-  lucroTotal: number;
-  totalDescontos: number;
-  ticketMedio: number;
-  maiorVenda: number;
-  menorVenda: number;
-  cancelamentos: number;
-  valorCancelado: number;
-  pagamentos: {
-    forma: string;
-    qtd: number;
-    total: number;
-    percentual: number;
-  }[];
-  topProdutos: {
-    nome: string;
-    quantidade: number;
-    receita: number;
-    lucro: number;
-  }[];
+  titulo:string; periodo:string; nomeEmpresa:string; geradoEm:string;
+  totalVendas:number; receitaTotal:number; lucroTotal:number;
+  totalDescontos:number; ticketMedio:number; maiorVenda:number;
+  menorVenda:number; cancelamentos:number; valorCancelado:number;
+  pagamentos:{ forma:string; qtd:number; total:number; percentual:number }[];
+  topProdutos:{ nome:string; quantidade:number; receita:number; lucro:number }[];
 }
 
-function ModalResumoDia({
-  empresaId,
-  onClose,
-  onIrRelatorios,
-}: {
-  empresaId: number;
-  onClose: () => void;
-  onIrRelatorios: () => void;
-}) {
-  const [rel, setRel] = useState<RelatorioHoje | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState("");
-  const CORES = ["#10b981", "#3b82f6", "#a78bfa", "#f59e0b", "#ef4444"];
+function ModalResumoDia({ empresaId, onClose, onIrRelatorios }:
+  { empresaId:number; onClose:()=>void; onIrRelatorios:()=>void }) {
+  const [rel, setRel]       = useState<RelatorioHoje|null>(null);
+  const [loading, setLoading]= useState(true);
+  const [erro, setErro]     = useState("");
 
   useEffect(() => {
     setLoading(true);
     fetchQ<RelatorioHoje>(`/api/v1/relatorios/hoje?empresaId=${empresaId}`)
-      .then(setRel)
-      .catch((e) => setErro(e.message))
-      .finally(() => setLoading(false));
+      .then(setRel).catch(e=>setErro(e.message)).finally(()=>setLoading(false));
   }, [empresaId]);
 
   return (
     <Overlay onClose={onClose}>
-      <div
-        className="animate-fade-in"
-        style={{
-          background: "var(--surface-elevated)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          width: "100%",
-          maxWidth: 560,
-          maxHeight: "90vh",
-          overflowY: "auto",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "16px 20px",
-            borderBottom: "1px solid var(--border)",
-          }}
-        >
+      <div className="animate-fade-in" style={{
+        background:"var(--surface-elevated)", border:"1px solid var(--border)",
+        borderRadius:14, width:"100%", maxWidth:560, maxHeight:"90vh", overflowY:"auto",
+      }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"16px 20px", borderBottom:"1px solid var(--border)" }}>
           <div>
-            <h2
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: "var(--foreground)",
-                margin: 0,
-              }}
-            >
-              Resumo de Hoje
-            </h2>
-            {rel && (
-              <p
-                style={{
-                  fontSize: 12,
-                  color: "var(--foreground-muted)",
-                  margin: "3px 0 0",
-                }}
-              >
-                {rel.periodo}
-              </p>
-            )}
+            <h2 style={{ fontSize:16, fontWeight:700, color:"var(--foreground)", margin:0 }}>Resumo de Hoje</h2>
+            {rel && <p style={{ fontSize:12, color:"var(--foreground-muted)", margin:"3px 0 0" }}>{rel.periodo}</p>}
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--foreground-muted)",
-            }}
-          >
-            <X size={18} />
-          </button>
+          <button onClick={onClose} style={{ background:"none",border:"none",cursor:"pointer",color:"var(--foreground-muted)" }}><X size={18}/></button>
         </div>
-        <div
-          style={{
-            padding: 20,
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
-        >
-          {loading &&
-            [1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                style={{
-                  height: 44,
-                  background: "var(--surface-overlay)",
-                  borderRadius: 8,
-                  opacity: 0.5,
-                }}
-              />
-            ))}
-          {erro && (
-            <p
-              style={{
-                color: "var(--destructive)",
-                fontSize: 13,
-                textAlign: "center",
-              }}
-            >
-              {erro}
-            </p>
-          )}
+        <div style={{ padding:20, display:"flex", flexDirection:"column", gap:14 }}>
+          {loading && [1,2,3,4].map(i=><div key={i} style={{ height:44,background:"var(--surface-overlay)",borderRadius:8,opacity:0.5 }}/>)}
+          {erro && <p style={{ color:"var(--destructive)",fontSize:13,textAlign:"center" }}>{erro}</p>}
           {rel && !loading && (
             <>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 10,
-                }}
-              >
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                 {[
-                  {
-                    l: "Receita Total",
-                    v: fmt(rel.receitaTotal),
-                    c: "var(--primary)",
-                    bg: "rgba(16,185,129,.08)",
-                  },
-                  {
-                    l: "Lucro Estimado",
-                    v: fmt(rel.lucroTotal),
-                    c: "#3b82f6",
-                    bg: "rgba(59,130,246,.08)",
-                  },
-                  {
-                    l: "Ticket Médio",
-                    v: fmt(rel.ticketMedio),
-                    c: "#a78bfa",
-                    bg: "rgba(167,139,250,.08)",
-                  },
-                  {
-                    l: "Nº de Vendas",
-                    v: String(rel.totalVendas),
-                    c: "var(--foreground)",
-                    bg: "var(--surface-overlay)",
-                  },
-                ].map((s) => (
-                  <div
-                    key={s.l}
-                    style={{
-                      background: s.bg,
-                      border: `1px solid ${s.bg}`,
-                      borderRadius: 10,
-                      padding: "12px 14px",
-                    }}
-                  >
-                    <p
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: "var(--foreground-muted)",
-                        textTransform: "uppercase",
-                        letterSpacing: ".06em",
-                        margin: "0 0 4px",
-                      }}
-                    >
-                      {s.l}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 800,
-                        color: s.c,
-                        margin: 0,
-                      }}
-                    >
-                      {s.v}
-                    </p>
+                  {l:"Receita Total",v:fmt(rel.receitaTotal),c:"var(--primary)",bg:"rgba(16,185,129,.08)"},
+                  {l:"Lucro Estimado",v:fmt(rel.lucroTotal),c:"#60a5fa",bg:"rgba(96,165,250,.08)"},
+                  {l:"Ticket Médio",v:fmt(rel.ticketMedio),c:"#c084fc",bg:"rgba(192,132,252,.08)"},
+                  {l:"Nº de Vendas",v:String(rel.totalVendas),c:"var(--foreground)",bg:"var(--surface-overlay)"},
+                ].map(s=>(
+                  <div key={s.l} style={{ background:s.bg,borderRadius:10,padding:"12px 14px" }}>
+                    <p style={{ fontSize:11,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 4px" }}>{s.l}</p>
+                    <p style={{ fontSize:22,fontWeight:800,color:s.c,margin:0 }}>{s.v}</p>
                   </div>
                 ))}
               </div>
-              {rel.totalVendas === 0 && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "20px 0",
-                    color: "var(--foreground-muted)",
-                  }}
-                >
-                  <BarChart3
-                    size={36}
-                    style={{ opacity: 0.3, marginBottom: 8 }}
-                  />
-                  <p style={{ fontSize: 14 }}>
-                    Nenhuma venda registrada hoje ainda.
-                  </p>
+              {rel.totalVendas===0 && (
+                <div style={{ textAlign:"center", padding:"20px 0", color:"var(--foreground-muted)" }}>
+                  <BarChart3 size={36} style={{ opacity:0.3,marginBottom:8 }}/>
+                  <p style={{ fontSize:14 }}>Nenhuma venda registrada hoje ainda.</p>
                 </div>
               )}
-              <button
-                onClick={() => {
-                  onIrRelatorios();
-                  onClose();
-                }}
-                style={{ ...btnP, gap: 8 }}
-              >
-                <FileText size={14} /> Ver Relatórios Completos
+              <button onClick={()=>{onIrRelatorios();onClose();}} style={{ ...btnP,gap:8 }}>
+                <FileText size={14}/> Ver Relatórios Completos
               </button>
             </>
           )}
@@ -1717,44 +471,39 @@ function ModalResumoDia({
   );
 }
 
-/* ─── Helpers de layout ──────────────────────────────────────────────────── */
+/* ─── ClientOnly ─────────────────────────────────────────────────────────── */
 function ClientOnly({ children }: { children: ReactNode }) {
   const [ok, setOk] = useState(false);
   useEffect(() => setOk(true), []);
   return ok ? <>{children}</> : null;
 }
 
-function SectionCard({
-  title,
-  children,
-  fullWidth,
+/* ─── Chart Section Card ─────────────────────────────────────────────────── */
+function ChartCard({
+  title, subtitle, children, fullWidth, accent,
 }: {
-  title: string;
-  children: ReactNode;
-  fullWidth?: boolean;
+  title:string; subtitle?:string; children:ReactNode; fullWidth?:boolean; accent?:string;
 }) {
   return (
-    <div
-      style={{
-        background: "var(--surface-elevated)",
-        border: "1px solid var(--border)",
-        borderRadius: 12,
-        padding: 20,
-        gridColumn: fullWidth ? "1 / -1" : undefined,
-      }}
-    >
-      <p
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          color: "var(--foreground-muted)",
-          marginBottom: 16,
-          textTransform: "uppercase",
-          letterSpacing: ".07em",
-        }}
-      >
-        {title}
-      </p>
+    <div style={{
+      background:"var(--surface-elevated)", border:"1px solid var(--border)",
+      borderRadius:14, padding:"20px 22px",
+      gridColumn: fullWidth ? "1 / -1" : undefined,
+      position:"relative", overflow:"hidden",
+    }}>
+      {/* Subtle top accent bar */}
+      {accent && (
+        <div style={{
+          position:"absolute", top:0, left:0, right:0, height:2,
+          background:`linear-gradient(90deg, ${accent}88, ${accent}00)`,
+        }}/>
+      )}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
+        <div>
+          <p style={{ fontSize:11, fontWeight:700, color:"var(--foreground-muted)", textTransform:"uppercase", letterSpacing:".08em", margin:0 }}>{title}</p>
+          {subtitle && <p style={{ fontSize:12, color:"var(--foreground-subtle)", margin:"2px 0 0" }}>{subtitle}</p>}
+        </div>
+      </div>
       {children}
     </div>
   );
@@ -1762,76 +511,44 @@ function SectionCard({
 
 /* ─── Componente principal ───────────────────────────────────────────────── */
 export default function DashboardHome({
-  usuario,
-  onNavegar,
+  usuario, onNavegar,
 }: {
   usuario?: Usuario;
   onNavegar?: (secao: string) => void;
 }) {
-  const { empresaAtiva, caixaAtivo, setCaixaAtivo, setEmpresaAtiva, empresas } =
-    useEmpresa();
+  const { empresaAtiva, caixaAtivo, setCaixaAtivo, setEmpresaAtiva, empresas } = useEmpresa();
 
-  const [visao, setVisao] = useState<VisaoGeral | null>(null);
-  const [vendasMetodo, setVendasMetodo] = useState<MetodoPagamentoData[]>([]);
+  const [visao, setVisao]             = useState<VisaoGeral | null>(null);
+  const [vendasMetodo, setVendasMetodo]   = useState<MetodoPagamentoData[]>([]);
   const [vendasProduto, setVendasProduto] = useState<ProdutoVendasData[]>([]);
   const [vendasDiarias, setVendasDiarias] = useState<VendasDiariasData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<
-    "venda" | "produto" | "caixa" | "cliente" | "relatorio" | null
-  >(null);
-  const [overlayVenda, setOverlayVenda] = useState(false);
-
-  // ✅ Estado para expandir/colapsar a lista de produtos sem estoque
+  const [loading, setLoading]         = useState(true);
+  const [modal, setModal]             = useState<"venda"|"produto"|"caixa"|"cliente"|"relatorio"|null>(null);
+  const [overlayVenda, setOverlayVenda]   = useState(false);
   const [alertasExpandido, setAlertasExpandido] = useState(false);
 
   const nav = (s: string) => onNavegar?.(s);
 
   const fetchDados = async (id: number) => {
     setLoading(true);
-    const token =
-      (typeof globalThis.window !== "undefined"
-        ? (sessionStorage.getItem("jwt_token") ??
-          document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
-          null)
-        : null) ?? "";
-    const base =
-      process.env.NEXT_PUBLIC_API_URL ??
-      "https://gestpro-backend-production.up.railway.app";
-    const opts = {
-      credentials: "include" as const,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    };
+    const token = (typeof globalThis.window !== "undefined"
+      ? (sessionStorage.getItem("jwt_token") ?? document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? null)
+      : null) ?? "";
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
+    const opts = { credentials:"include" as const, headers:{ "Content-Type":"application/json", ...(token?{Authorization:`Bearer ${token}`}:{}) }};
     try {
       const [v, metodo, produto, diarias] = await Promise.allSettled([
-        fetch(
-          `${base}/api/v1/dashboard/visao-geral?empresaId=${id}`,
-          opts,
-        ).then((r) => r.json()),
-        fetch(
-          `${base}/api/v1/dashboard/vendas/metodo-pagamento?empresaId=${id}`,
-          opts,
-        ).then((r) => r.json()),
-        fetch(
-          `${base}/api/v1/dashboard/vendas/produto?empresaId=${id}`,
-          opts,
-        ).then((r) => r.json()),
-        fetch(
-          `${base}/api/v1/dashboard/vendas/diarias?empresaId=${id}`,
-          opts,
-        ).then((r) => r.json()),
+        fetch(`${base}/api/v1/dashboard/visao-geral?empresaId=${id}`,opts).then(r=>r.json()),
+        fetch(`${base}/api/v1/dashboard/vendas/metodo-pagamento?empresaId=${id}`,opts).then(r=>r.json()),
+        fetch(`${base}/api/v1/dashboard/vendas/produto?empresaId=${id}`,opts).then(r=>r.json()),
+        fetch(`${base}/api/v1/dashboard/vendas/diarias?empresaId=${id}`,opts).then(r=>r.json()),
       ]);
-      if (v.status === "fulfilled") setVisao(v.value);
-      if (metodo.status === "fulfilled") setVendasMetodo(metodo.value ?? []);
-      if (produto.status === "fulfilled") setVendasProduto(produto.value ?? []);
-      if (diarias.status === "fulfilled") setVendasDiarias(diarias.value ?? []);
-    } catch (err) {
-      console.error("Erro ao buscar dados do dashboard:", err);
-    } finally {
-      setLoading(false);
-    }
+      if (v.status==="fulfilled")       setVisao(v.value);
+      if (metodo.status==="fulfilled")  setVendasMetodo(metodo.value ?? []);
+      if (produto.status==="fulfilled") setVendasProduto(produto.value ?? []);
+      if (diarias.status==="fulfilled") setVendasDiarias(diarias.value ?? []);
+    } catch(err) { console.error("Erro ao buscar dados:", err); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -1840,375 +557,174 @@ export default function DashboardHome({
   }, [empresaAtiva?.id]);
 
   const primeiroNome = usuario?.nome?.split(" ")[0] ?? "usuário";
-  const today = new Date().toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const today = new Date().toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
 
+  // Stats cards
   const statsCards = [
-    {
-      title: "Vendas Hoje",
-      value: loading ? "—" : fmt(visao?.vendasHoje),
-      icon: <CreditCard size={16} />,
-      accent: "primary" as const,
-    },
-    {
-      title: "Vendas Semana",
-      value: loading ? "—" : fmt(visao?.vendasSemanais),
-      icon: <BarChart3 size={16} />,
-      accent: "secondary" as const,
-    },
-    {
-      title: "Vendas Mês",
-      value: loading ? "—" : fmt(visao?.vendasMes),
-      icon: <Calendar size={16} />,
-      accent: "primary" as const,
-    },
-    {
-      title: "Lucro Hoje",
-      value: loading ? "—" : fmt(visao?.lucroDia),
-      icon: <TrendingUp size={16} />,
-      accent: "secondary" as const,
-    },
-    {
-      title: "Lucro Mês",
-      value: loading ? "—" : fmt(visao?.lucroMes),
-      icon: <TrendingUp size={16} />,
-      accent: "primary" as const,
-    },
-    {
-      title: "Em Estoque",
-      value: loading ? "—" : String(visao?.produtosComEstoque ?? 0),
-      icon: <Package size={16} />,
-      accent: "secondary" as const,
-    },
-    {
-      title: "Zerados",
-      value: loading ? "—" : String(visao?.produtosSemEstoque ?? 0),
-      icon: <TrendingDown size={16} />,
-      accent: "destructive" as const,
-    },
-    {
-      title: "Clientes",
-      value: loading ? "—" : String(visao?.clientesAtivos ?? 0),
-      icon: <Users size={16} />,
-      accent: "warning" as const,
-    },
-    {
-      title: "Custo em Estoque",
-      value: loading ? "—" : fmt(visao?.custos),
-      icon: <Receipt size={16} />,
-      accent: "warning" as const,
-    },
+    { title:"Vendas Hoje",    value:loading?"—":fmt(visao?.vendasHoje),            icon:<CreditCard size={16}/>, accent:"primary" as const },
+    { title:"Vendas Semana",  value:loading?"—":fmt(visao?.vendasSemanais),        icon:<BarChart3 size={16}/>,  accent:"secondary" as const },
+    { title:"Vendas Mês",     value:loading?"—":fmt(visao?.vendasMes),             icon:<Calendar size={16}/>,   accent:"primary" as const },
+    { title:"Lucro Hoje",     value:loading?"—":fmt(visao?.lucroDia),              icon:<TrendingUp size={16}/>, accent:"secondary" as const },
+    { title:"Lucro Mês",      value:loading?"—":fmt(visao?.lucroMes),              icon:<TrendingUp size={16}/>, accent:"primary" as const },
+    { title:"Em Estoque",     value:loading?"—":String(visao?.produtosComEstoque??0), icon:<Package size={16}/>, accent:"secondary" as const },
+    { title:"Zerados",        value:loading?"—":String(visao?.produtosSemEstoque??0), icon:<TrendingDown size={16}/>, accent:"destructive" as const },
+    { title:"Clientes",       value:loading?"—":String(visao?.clientesAtivos??0),  icon:<Users size={16}/>,      accent:"warning" as const },
+    { title:"Custo Estoque",  value:loading?"—":fmt(visao?.custos),                icon:<Receipt size={16}/>,   accent:"warning" as const },
   ];
 
-  // Apenas dizer o plano como alerta se o plano tiver menos de 7 dias restantes
   const todosAlertas = [
     ...(visao?.alertas ?? []),
     ...(visao?.planoUsuario && visao.planoUsuario.diasRestantes < 7
-      ? [
-          `Plano ${visao.planoUsuario.tipoPlano}: ${visao.planoUsuario.diasRestantes} dia(s) restante(s)`,
-        ]
-      : []),
+      ? [`Plano ${visao.planoUsuario.tipoPlano}: ${visao.planoUsuario.diasRestantes} dia(s) restante(s)`] : []),
   ];
-
-  const alertasProduto = todosAlertas.filter((a) =>
-    a.startsWith("Estoque esgotado:"),
-  );
-  const alertasOutros = todosAlertas.filter(
-    (a) => !a.startsWith("Estoque esgotado:"),
-  );
+  const alertasProduto = todosAlertas.filter(a => a.startsWith("Estoque esgotado:"));
+  const alertasOutros  = todosAlertas.filter(a => !a.startsWith("Estoque esgotado:"));
 
   const acoes = [
     {
       label: caixaAtivo ? "Ver Caixa" : "Abrir Caixa",
-      desc: caixaAtivo
-        ? `${fmt(caixaAtivo.totalVendas)} em vendas`
-        : "Nenhum caixa aberto",
-      icon: caixaAtivo ? <DollarSign size={22} /> : <Lock size={22} />,
-      cor: caixaAtivo ? "var(--primary)" : "var(--foreground-muted)",
-      bg: caixaAtivo ? "rgba(16,185,129,.1)" : "var(--surface-overlay)",
-      borda: caixaAtivo ? "rgba(16,185,129,.3)" : "var(--border)",
-      acao: () => nav("caixa-rapido"),
+      desc:  caixaAtivo ? `${fmt(caixaAtivo.totalVendas)} em vendas` : "Nenhum caixa aberto",
+      icon:  caixaAtivo ? <DollarSign size={20}/> : <Lock size={20}/>,
+      cor:   caixaAtivo ? "#34d399" : "var(--foreground-muted)",
+      bg:    caixaAtivo ? "rgba(52,211,153,0.08)" : "var(--surface-overlay)",
+      borda: caixaAtivo ? "rgba(52,211,153,0.3)"  : "var(--border)",
+      acao:  () => nav("caixa-rapido"),
     },
     {
       label: "Nova Venda",
-      desc: caixaAtivo
-        ? `Caixa #${caixaAtivo.id} aberto`
-        : "Abra o caixa primeiro",
-      icon: <ShoppingBag size={22} />,
-      cor: caixaAtivo ? "var(--foreground)" : "var(--foreground-subtle)",
-      bg: "var(--surface-overlay)",
-      borda: "var(--border)",
-      acao: () => (caixaAtivo ? setOverlayVenda(true) : nav("caixa-rapido")),
+      desc:  caixaAtivo ? `Caixa #${caixaAtivo.id} aberto` : "Abra o caixa primeiro",
+      icon:  <ShoppingBag size={20}/>,
+      cor:   caixaAtivo ? "var(--foreground)" : "var(--foreground-subtle)",
+      bg:    "var(--surface-overlay)", borda:"var(--border)",
+      acao:  () => caixaAtivo ? setOverlayVenda(true) : nav("caixa-rapido"),
     },
     {
       label: "Novo Produto",
-      desc: `${visao?.produtosComEstoque ?? 0} com estoque`,
-      icon: <Package size={22} />,
-      cor: "var(--foreground)",
-      bg: "var(--surface-overlay)",
-      borda: "var(--border)",
-      acao: () => nav("produto-rapido"),
+      desc:  `${visao?.produtosComEstoque??0} com estoque`,
+      icon:  <Package size={20}/>,
+      cor:   "var(--foreground)", bg:"var(--surface-overlay)", borda:"var(--border)",
+      acao:  () => nav("produto-rapido"),
     },
     {
       label: "Novo Cliente",
-      desc: `${visao?.clientesAtivos ?? 0} ativos`,
-      icon: <Users size={22} />,
-      cor: "var(--foreground)",
-      bg: "var(--surface-overlay)",
-      borda: "var(--border)",
-      acao: () => nav("cliente-rapido"),
+      desc:  `${visao?.clientesAtivos??0} ativos`,
+      icon:  <Users size={20}/>,
+      cor:   "var(--foreground)", bg:"var(--surface-overlay)", borda:"var(--border)",
+      acao:  () => nav("cliente-rapido"),
     },
     {
       label: "Resumo do Dia",
-      desc: "Ver métricas rápidas",
-      icon: <BarChart3 size={22} />,
-      cor: "var(--foreground)",
-      bg: "var(--surface-overlay)",
-      borda: "var(--border)",
-      acao: () => setModal("relatorio"),
+      desc:  "Ver métricas rápidas",
+      icon:  <BarChart3 size={20}/>,
+      cor:   "var(--foreground)", bg:"var(--surface-overlay)", borda:"var(--border)",
+      acao:  () => setModal("relatorio"),
     },
     {
       label: "Relatórios",
-      desc: "Exportar dados completos",
-      icon: <FileText size={22} />,
-      cor: "var(--foreground)",
-      bg: "var(--surface-overlay)",
-      borda: "var(--border)",
-      acao: () => nav("relatorios"),
+      desc:  "Exportar dados completos",
+      icon:  <FileText size={20}/>,
+      cor:   "var(--foreground)", bg:"var(--surface-overlay)", borda:"var(--border)",
+      acao:  () => nav("relatorios"),
     },
   ];
 
   if (!empresaAtiva)
     return (
       <ClientOnly>
-        <div
-          style={{
-            padding: 48,
-            textAlign: "center",
-            color: "var(--foreground-muted)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <Store size={48} color="var(--foreground-subtle)" />
-          <h2
-            style={{
-              fontSize: 16,
-              fontWeight: 600,
-              color: "var(--foreground)",
-              margin: 0,
-            }}
-          >
-            Nenhuma empresa selecionada
-          </h2>
-          <p style={{ fontSize: 14 }}>
-            Selecione ou cadastre uma empresa no menu superior.
-          </p>
+        <div style={{ padding:48, textAlign:"center", color:"var(--foreground-muted)", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+          <Store size={48} color="var(--foreground-subtle)"/>
+          <h2 style={{ fontSize:16, fontWeight:600, color:"var(--foreground)", margin:0 }}>Nenhuma empresa selecionada</h2>
+          <p style={{ fontSize:14 }}>Selecione ou cadastre uma empresa no menu superior.</p>
         </div>
       </ClientOnly>
     );
 
   return (
     <ClientOnly>
-      {overlayVenda && (
-        <NovaVendaOverlay onClose={() => setOverlayVenda(false)} />
-      )}
-      {modal === "caixa" && (
-        <Overlay onClose={() => setModal(null)}>
-          <AbrirCaixaOverlay
-            onConcluido={() => {
-              setModal(null);
-              if (empresaAtiva?.id) fetchDados(empresaAtiva.id);
-            }}
-          />
+      {overlayVenda && <NovaVendaOverlay onClose={()=>setOverlayVenda(false)}/>}
+      {modal==="caixa" && (
+        <Overlay onClose={()=>setModal(null)}>
+          <AbrirCaixaOverlay onConcluido={()=>{ setModal(null); if (empresaAtiva?.id) fetchDados(empresaAtiva.id); }}/>
         </Overlay>
       )}
-      {modal === "produto" && empresaAtiva && (
-        <Overlay onClose={() => setModal(null)}>
-          <NovoProdutoOverlay onConcluido={() => fetchDados(empresaAtiva.id)} />
+      {modal==="produto" && empresaAtiva && (
+        <Overlay onClose={()=>setModal(null)}>
+          <NovoProdutoOverlay onConcluido={()=>fetchDados(empresaAtiva.id)}/>
         </Overlay>
       )}
-      {modal === "cliente" && empresaAtiva && (
-        <Overlay onClose={() => setModal(null)}>
-          <NovoClienteOverlay onConcluido={() => fetchDados(empresaAtiva.id)} />
+      {modal==="cliente" && empresaAtiva && (
+        <Overlay onClose={()=>setModal(null)}>
+          <NovoClienteOverlay onConcluido={()=>fetchDados(empresaAtiva.id)}/>
         </Overlay>
       )}
-      {modal === "relatorio" && empresaAtiva && (
-        <ModalResumoDia
-          empresaId={empresaAtiva.id}
-          onClose={() => setModal(null)}
-          onIrRelatorios={() => nav("relatorios")}
-        />
+      {modal==="relatorio" && empresaAtiva && (
+        <ModalResumoDia empresaId={empresaAtiva.id} onClose={()=>setModal(null)} onIrRelatorios={()=>nav("relatorios")}/>
       )}
 
-      <div
-        style={{
-          padding: "28px 28px 40px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 24,
-        }}
-      >
-        {/* Saudação */}
-        <div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 700,
-              color: "var(--foreground)",
-              marginBottom: 4,
-            }}
-          >
-            Olá, {primeiroNome}! 👋
-          </h1>
-          <p
-            style={{
-              fontSize: 13,
-              color: "var(--foreground-muted)",
-              textTransform: "capitalize",
-            }}
-          >
-            {today} · {empresaAtiva.nomeFantasia}
-          </p>
+      <div style={{ padding:"28px 28px 48px", display:"flex", flexDirection:"column", gap:26 }}>
+
+        {/* ── Saudação ── */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", flexWrap:"wrap", gap:12 }}>
+          <div>
+            <h1 style={{ fontSize:24, fontWeight:800, color:"var(--foreground)", marginBottom:4, letterSpacing:"-0.02em" }}>
+              Olá, {primeiroNome}! 👋
+            </h1>
+            <p style={{ fontSize:13, color:"var(--foreground-muted)", textTransform:"capitalize", margin:0 }}>
+              {today} · <span style={{ color:"var(--primary)" }}>{empresaAtiva.nomeFantasia}</span>
+            </p>
+          </div>
+          {caixaAtivo && (
+            <div style={{
+              display:"flex", alignItems:"center", gap:8, padding:"8px 14px",
+              background:"rgba(52,211,153,0.08)", border:"1px solid rgba(52,211,153,0.25)",
+              borderRadius:10, fontSize:13, color:"#34d399", fontWeight:500,
+            }}>
+              <span style={{ width:7,height:7,borderRadius:"50%",background:"#34d399",boxShadow:"0 0 8px rgba(52,211,153,0.8)" }}/>
+              Caixa aberto · {fmt(caixaAtivo.totalVendas ?? 0)} em vendas
+            </div>
+          )}
         </div>
 
-        {/* Stats */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-            gap: 14,
-          }}
-        >
-          {statsCards.map((c, i) => (
-            <StatsCard key={i} {...c} loading={loading} />
-          ))}
+        {/* ── Stats ── */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px,1fr))", gap:12 }}>
+          {statsCards.map((c,i) => <StatsCard key={i} {...c} loading={loading}/>)}
         </div>
 
-        {/* ✅ Alertas — agrupados e sem poluição visual */}
+        {/* ── Alertas ── */}
         {todosAlertas.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {/* Alertas normais (plano, etc.) — um por um */}
-            {alertasOutros.map((msg, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "10px 14px",
-                  background: "var(--warning-muted)",
-                  border: "1px solid rgba(245,158,11,.2)",
-                  borderRadius: 8,
-                  color: "var(--warning)",
-                  fontSize: 13,
-                  fontWeight: 500,
-                }}
-              >
-                <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                {msg}
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {alertasOutros.map((msg,i) => (
+              <div key={i} style={{
+                display:"flex", alignItems:"center", gap:10, padding:"10px 14px",
+                background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.2)",
+                borderRadius:8, color:"#f59e0b", fontSize:13, fontWeight:500,
+              }}>
+                <AlertCircle size={16} style={{ flexShrink:0 }}/>{msg}
               </div>
             ))}
-
-            {/* Alertas de estoque — agrupados em um único card colapsável */}
             {alertasProduto.length > 0 && (
-              <div
-                style={{
-                  border: "1px solid rgba(245,158,11,.2)",
-                  borderRadius: 8,
-                  overflow: "hidden",
-                }}
-              >
-                <button
-                  onClick={() => setAlertasExpandido((v) => !v)}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 14px",
-                    background: "var(--warning-muted)",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--warning)",
-                    fontSize: 13,
-                    fontWeight: 500,
-                    textAlign: "left",
-                  }}
-                >
-                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1 }}>
-                    {alertasProduto.length} produto
-                    {alertasProduto.length > 1 ? "s" : ""} sem estoque
-                  </span>
-                  <ChevronRight
-                    size={15}
-                    style={{
-                      flexShrink: 0,
-                      transition: "transform .2s",
-                      transform: alertasExpandido ? "rotate(90deg)" : "none",
-                    }}
-                  />
+              <div style={{ border:"1px solid rgba(245,158,11,0.2)", borderRadius:8, overflow:"hidden" }}>
+                <button onClick={()=>setAlertasExpandido(v=>!v)} style={{
+                  width:"100%", display:"flex", alignItems:"center", gap:10, padding:"10px 14px",
+                  background:"rgba(245,158,11,0.08)", border:"none", cursor:"pointer",
+                  color:"#f59e0b", fontSize:13, fontWeight:500, textAlign:"left",
+                }}>
+                  <AlertCircle size={16} style={{ flexShrink:0 }}/>
+                  <span style={{ flex:1 }}>{alertasProduto.length} produto{alertasProduto.length>1?"s":""} sem estoque</span>
+                  <ChevronRight size={15} style={{ flexShrink:0, transition:"transform .2s", transform:alertasExpandido?"rotate(90deg)":"none" }}/>
                 </button>
-
                 {alertasExpandido && (
-                  <div
-                    style={{
-                      background: "var(--surface-elevated)",
-                      borderTop: "1px solid rgba(245,158,11,.15)",
-                    }}
-                  >
-                    {alertasProduto.map((msg, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "8px 14px",
-                          fontSize: 12,
-                          color: "var(--foreground-muted)",
-                          borderBottom:
-                            i < alertasProduto.length - 1
-                              ? "1px solid var(--border-subtle)"
-                              : "none",
-                        }}
-                      >
-                        <Package
-                          size={13}
-                          style={{ flexShrink: 0, color: "var(--warning)" }}
-                        />
-                        {msg.replace("Estoque esgotado: ", "")}
+                  <div style={{ background:"var(--surface-elevated)", borderTop:"1px solid rgba(245,158,11,0.15)" }}>
+                    {alertasProduto.map((msg,i) => (
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 14px",
+                        fontSize:12, color:"var(--foreground-muted)", borderBottom:i<alertasProduto.length-1?"1px solid var(--border-subtle)":"none" }}>
+                        <Package size={13} style={{ flexShrink:0, color:"#f59e0b" }}/>
+                        {msg.replace("Estoque esgotado: ","")}
                       </div>
                     ))}
-                    <div
-                      style={{
-                        padding: "8px 14px",
-                        borderTop: "1px solid var(--border-subtle)",
-                      }}
-                    >
-                      <button
-                        onClick={() => nav("produtos")}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "var(--warning)",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          padding: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 5,
-                        }}
-                      >
-                        <ChevronRight size={13} /> Ver todos os produtos
+                    <div style={{ padding:"8px 14px", borderTop:"1px solid var(--border-subtle)" }}>
+                      <button onClick={()=>nav("produtos")} style={{ background:"none",border:"none",cursor:"pointer",color:"#f59e0b",fontSize:12,fontWeight:600,padding:0,display:"flex",alignItems:"center",gap:5 }}>
+                        <ChevronRight size={13}/> Ver todos os produtos
                       </button>
                     </div>
                   </div>
@@ -2218,165 +734,106 @@ export default function DashboardHome({
           </div>
         )}
 
-        {/* Ações Rápidas */}
+        {/* ── Ações Rápidas ── */}
         <div>
-          <p
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--foreground-muted)",
-              marginBottom: 14,
-              textTransform: "uppercase",
-              letterSpacing: ".07em",
-            }}
-          >
+          <p style={{ fontSize:11, fontWeight:700, color:"var(--foreground-muted)", marginBottom:12, textTransform:"uppercase", letterSpacing:".08em" }}>
             Ações Rápidas
           </p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-              gap: 12,
-            }}
-          >
-            {acoes.map((a, i) => (
-              <button
-                key={i}
-                onClick={a.acao}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  gap: 12,
-                  padding: "18px 16px",
-                  background: a.bg,
-                  border: `1px solid ${a.borda}`,
-                  borderRadius: 12,
-                  cursor: "pointer",
-                  transition: "all .15s",
-                  textAlign: "left",
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px,1fr))", gap:10 }}>
+            {acoes.map((a,i) => (
+              <button key={i} onClick={a.acao} style={{
+                display:"flex", flexDirection:"column", alignItems:"flex-start", gap:11,
+                padding:"16px 15px", background:a.bg, border:`1px solid ${a.borda}`,
+                borderRadius:12, cursor:"pointer", transition:"all .16s", textAlign:"left",
+              }}
+                onMouseEnter={e=>{
+                  const b=e.currentTarget as HTMLButtonElement;
+                  b.style.borderColor="var(--primary)"; b.style.transform="translateY(-2px)";
+                  b.style.boxShadow="0 6px 20px rgba(0,0,0,0.25)";
                 }}
-                onMouseEnter={(e) => {
-                  const b = e.currentTarget as HTMLButtonElement;
-                  b.style.borderColor = "var(--primary)";
-                  b.style.transform = "translateY(-2px)";
-                  b.style.boxShadow = "0 4px 16px rgba(0,0,0,.2)";
-                }}
-                onMouseLeave={(e) => {
-                  const b = e.currentTarget as HTMLButtonElement;
-                  b.style.borderColor = a.borda;
-                  b.style.transform = "translateY(0)";
-                  b.style.boxShadow = "none";
+                onMouseLeave={e=>{
+                  const b=e.currentTarget as HTMLButtonElement;
+                  b.style.borderColor=a.borda; b.style.transform="translateY(0)";
+                  b.style.boxShadow="none";
                 }}
               >
-                <span style={{ color: a.cor }}>{a.icon}</span>
+                <span style={{ color:a.cor }}>{a.icon}</span>
                 <div>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: a.cor,
-                      margin: 0,
-                    }}
-                  >
-                    {a.label}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: 11,
-                      color: "var(--foreground-subtle)",
-                      margin: "3px 0 0",
-                    }}
-                  >
-                    {a.desc}
-                  </p>
+                  <p style={{ fontSize:13, fontWeight:700, color:a.cor, margin:0 }}>{a.label}</p>
+                  <p style={{ fontSize:11, color:"var(--foreground-subtle)", margin:"3px 0 0" }}>{a.desc}</p>
                 </div>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Gráficos, Carregar o stilo do barchart, linechart e piechart.*/}
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
-        >
-          {/* Vendas Diárias - BarChart */}
-          <SectionCard title="Vendas Diárias (Seg–Dom)">
-            {vendasDiarias.length > 0 ? (
-              <BarChart
-                labels={vendasDiarias.map((d) => d.dia)}
-                data={vendasDiarias.map((d) => d.total)}
-                label="Vendas"
-                color="blue"
-                formatValue={(v) => fmt(v)}
-              />
-            ) : (
-              <div
-                style={{
-                  height: 200,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--foreground-subtle)",
-                  fontSize: 13,
-                }}
-              >
-                Sem dados
-              </div>
-            )}
-          </SectionCard>
+        {/* ── Gráficos ── */}
+        <div>
+          <p style={{ fontSize:11, fontWeight:700, color:"var(--foreground-muted)", marginBottom:14, textTransform:"uppercase", letterSpacing:".08em" }}>
+            Análise Visual
+          </p>
 
-          {/* Formas de Pagamento - PieChart */}
-          <SectionCard title="Formas de Pagamento">
-            {vendasMetodo.length > 0 ? (
-              <PieChart
-                labels={vendasMetodo.map((m) => m.metodo)}
-                data={vendasMetodo.map((m) => m.total)}
-                formatValue={(v) => `${v} vendas`}
-              />
-            ) : (
-              <div
-                style={{
-                  height: 200,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--foreground-subtle)",
-                  fontSize: 13,
-                }}
-              >
-                Sem dados
-              </div>
-            )}
-          </SectionCard>
+          {/* Row 1: Vendas Diárias + Métodos Pagamento */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
 
-          {/* Produtos Mais Vendidos - BarChart (ou LineChart se preferir tendência) */}
-          <SectionCard title="Produtos Mais Vendidos" fullWidth>
+            <ChartCard title="Vendas Diárias" subtitle="Seg → Dom desta semana" accent="#60a5fa">
+              {vendasDiarias.length > 0 ? (
+                <BarChart
+                  labels={vendasDiarias.map(d => d.dia)}
+                  data={vendasDiarias.map(d => d.total)}
+                  label="Receita Diária"
+                  color="blue"
+                  formatValue={v => fmt(v)}
+                  height={240}
+                />
+              ) : (
+                <EmptyChart/>
+              )}
+            </ChartCard>
+
+            <ChartCard title="Formas de Pagamento" subtitle="Distribuição por método" accent="#34d399">
+              {vendasMetodo.length > 0 ? (
+                <PieChart
+                  labels={vendasMetodo.map(m => m.metodo)}
+                  data={vendasMetodo.map(m => m.total)}
+                  formatValue={v => `${v} venda${v!==1?"s":""}`}
+                />
+              ) : (
+                <EmptyChart/>
+              )}
+            </ChartCard>
+          </div>
+
+          {/* Row 2: Produtos Mais Vendidos full width */}
+          <ChartCard title="Produtos Mais Vendidos" subtitle="Ranking por unidades vendidas" accent="#c084fc">
             {vendasProduto.length > 0 ? (
               <BarChart
-                labels={vendasProduto.map((p) => p.nome)}
-                data={vendasProduto.map((p) => p.quantidade)}
-                label="Unidades"
-                color="green"
-                formatValue={(v) => `${v} un`}
+                labels={vendasProduto.map(p => p.nome)}
+                data={vendasProduto.map(p => p.quantidade)}
+                label="Unidades Vendidas"
+                color="purple"
+                formatValue={v => `${v} un.`}
+                height={240}
               />
             ) : (
-              <div
-                style={{
-                  height: 180,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--foreground-subtle)",
-                  fontSize: 13,
-                }}
-              >
-                Sem dados
-              </div>
+              <EmptyChart/>
             )}
-          </SectionCard>
+          </ChartCard>
         </div>
       </div>
     </ClientOnly>
+  );
+}
+
+/* ─── Empty state para gráficos ──────────────────────────────────────────── */
+function EmptyChart() {
+  return (
+    <div style={{
+      height:200, display:"flex", flexDirection:"column", alignItems:"center",
+      justifyContent:"center", gap:8, color:"var(--foreground-subtle)",
+    }}>
+      <BarChart3 size={32} style={{ opacity:0.25 }}/>
+      <p style={{ fontSize:13, margin:0, opacity:0.5 }}>Sem dados disponíveis</p>
+    </div>
   );
 }

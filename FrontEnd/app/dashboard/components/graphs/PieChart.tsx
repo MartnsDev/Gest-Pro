@@ -6,397 +6,212 @@ interface PieChartProps {
   labels: string[];
   data: number[];
   formatValue?: (value: number) => string;
-  donut?: boolean;
 }
 
 const COLORS = [
-  { from: "#38bdf8", to: "#0369a1", glow: "rgba(56,189,248,0.4)" },
-  { from: "#34d399", to: "#047857", glow: "rgba(52,211,153,0.4)" },
-  { from: "#a78bfa", to: "#6d28d9", glow: "rgba(167,139,250,0.4)" },
-  { from: "#fb923c", to: "#c2410c", glow: "rgba(251,146,60,0.4)" },
-  { from: "#f472b6", to: "#be185d", glow: "rgba(244,114,182,0.4)" },
-  { from: "#fbbf24", to: "#b45309", glow: "rgba(251,191,36,0.4)" },
+  { a:"#34d399", b:"#064e3b", glow:"rgba(52,211,153,0.45)",  hex:"#34d399" },
+  { a:"#60a5fa", b:"#1e3a8a", glow:"rgba(96,165,250,0.45)",  hex:"#60a5fa" },
+  { a:"#c084fc", b:"#4c1d95", glow:"rgba(192,132,252,0.45)", hex:"#c084fc" },
+  { a:"#fbbf24", b:"#78350f", glow:"rgba(251,191,36,0.45)",  hex:"#fbbf24" },
+  { a:"#fb7185", b:"#881337", glow:"rgba(251,113,133,0.45)", hex:"#fb7185" },
+  { a:"#22d3ee", b:"#164e63", glow:"rgba(34,211,238,0.45)",  hex:"#22d3ee" },
 ];
 
 export const PieChart = ({
-  labels,
-  data,
+  labels, data,
   formatValue = (v) => v.toLocaleString("pt-BR"),
-  donut = true,
 }: PieChartProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animRef = useRef<number>(0);
-  const progressRef = useRef(0);
-  const startTimeRef = useRef<number | null>(null);
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const animRef      = useRef<number>(0);
+  const progressRef  = useRef(0);
+  const startRef     = useRef<number|null>(null);
 
-  const [hoveredIndex, setHoveredIndex] = useState(-1);
-  const [tooltip, setTooltip] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    index: number;
-  }>({ visible: false, x: 0, y: 0, index: -1 });
-  const [dims, setDims] = useState({ width: 0, height: 240 });
+  const [hovered, setHovered]   = useState(-1);
+  const [dims, setDims]         = useState({ w:0, h:220 });
 
-  const total = data.reduce((a, b) => a + b, 0) || 1;
+  const total = data.reduce((a,b) => a+b, 0) || 1;
 
-  const getSlices = useCallback(
-    (cx: number, cy: number, radius: number, progress: number) => {
-      let startAngle = -Math.PI / 2;
-      return data.map((val, i) => {
-        const sweep = ((val / total) * Math.PI * 2) * progress;
-        const midAngle = startAngle + sweep / 2;
-        const slice = { startAngle, sweep, midAngle, val, i };
-        startAngle += sweep;
-        return slice;
-      });
-    },
-    [data, total]
-  );
+  const getSlices = useCallback((progress: number) => {
+    let ang = -Math.PI / 2;
+    return data.map((val, i) => {
+      const sweep = (val / total) * Math.PI * 2 * progress;
+      const mid   = ang + sweep / 2;
+      const s = { ang, sweep, mid, val, i };
+      ang += sweep;
+      return s;
+    });
+  }, [data, total]);
 
-  const draw = useCallback(
-    (progress: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas || !dims.width) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const w = canvas.width / (window.devicePixelRatio || 1);
-      const h = canvas.height / (window.devicePixelRatio || 1);
+  const draw = useCallback((progress: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !dims.w) return;
+    const ctx = canvas.getContext("2d"); if (!ctx) return;
+    const DPR = window.devicePixelRatio || 1;
+    const W = dims.w, H = dims.h;
+    ctx.clearRect(0, 0, W*DPR, H*DPR);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = W / 2, cy = H / 2;
+    const R  = Math.min(cx, cy) - 18;
+    const ri = R * 0.55;
+    const GAP = 0.028;
 
-      const cx = w / 2;
-      const cy = h / 2;
-      const radius = Math.min(cx, cy) - 16;
-      const innerRadius = donut ? radius * 0.58 : 0;
-      const gap = 0.025; // radians gap between slices
+    const slices = getSlices(progress);
 
-      const slices = getSlices(cx, cy, radius, progress);
+    // ── Draw each slice ──
+    slices.forEach(({ ang, sweep, mid, i }) => {
+      if (sweep < 0.002) return;
+      const col  = COLORS[i % COLORS.length];
+      const isH  = i === hovered;
+      const bump = isH ? 10 : 0;
+      const ox = Math.cos(mid) * bump;
+      const oy = Math.sin(mid) * bump;
+      const s  = ang  + GAP/2;
+      const e  = ang + sweep - GAP/2;
 
-      slices.forEach(({ startAngle, sweep, midAngle, val, i }) => {
-        if (sweep <= 0) return;
-        const color = COLORS[i % COLORS.length];
-        const isHovered = i === hoveredIndex;
-        const expand = isHovered ? 8 : 0;
-        const ox = Math.cos(midAngle) * expand;
-        const oy = Math.sin(midAngle) * expand;
+      if (isH) { ctx.shadowColor = col.glow; ctx.shadowBlur = 22; }
 
-        const actualStart = startAngle + gap / 2;
-        const actualEnd = startAngle + sweep - gap / 2;
+      // Radial gradient
+      const grad = ctx.createRadialGradient(cx+ox, cy+oy, ri*0.6, cx+ox, cy+oy, R+bump);
+      grad.addColorStop(0, col.b + "bb");
+      grad.addColorStop(0.5, col.a + "ee");
+      grad.addColorStop(1,   col.a + (isH?"ff":"cc"));
 
-        // Glow
-        if (isHovered) {
-          ctx.shadowColor = color.glow;
-          ctx.shadowBlur = 20;
-        }
+      ctx.beginPath();
+      ctx.moveTo(cx+ox + Math.cos(s)*ri, cy+oy + Math.sin(s)*ri);
+      ctx.arc(cx+ox, cy+oy, R+bump, s, e);
+      ctx.arc(cx+ox, cy+oy, ri, e, s, true);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
 
-        // Gradient
-        const grad = ctx.createRadialGradient(
-          cx + ox,
-          cy + oy,
-          innerRadius,
-          cx + ox,
-          cy + oy,
-          radius + expand
-        );
-        grad.addColorStop(0, color.to + "99");
-        grad.addColorStop(1, color.from);
+      ctx.shadowBlur = 0; ctx.shadowColor = "transparent";
 
-        ctx.beginPath();
-        ctx.moveTo(
-          cx + ox + Math.cos(actualStart) * innerRadius,
-          cy + oy + Math.sin(actualStart) * innerRadius
-        );
-        ctx.arc(cx + ox, cy + oy, radius + expand, actualStart, actualEnd);
-        ctx.arc(
-          cx + ox,
-          cy + oy,
-          innerRadius,
-          actualEnd,
-          actualStart,
-          true
-        );
-        ctx.closePath();
-        ctx.fillStyle = grad;
-        ctx.fill();
+      // Subtle inner stroke
+      ctx.beginPath();
+      ctx.moveTo(cx+ox + Math.cos(s)*ri, cy+oy + Math.sin(s)*ri);
+      ctx.arc(cx+ox, cy+oy, R+bump, s, e);
+      ctx.arc(cx+ox, cy+oy, ri, e, s, true);
+      ctx.closePath();
+      ctx.strokeStyle = "rgba(255,255,255,0.07)";
+      ctx.lineWidth = 1; ctx.stroke();
+    });
 
-        ctx.shadowBlur = 0;
-        ctx.shadowColor = "transparent";
+    // ── Center donut ──
+    // Dark center fill
+    const cGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, ri);
+    cGrad.addColorStop(0, "rgba(6,8,18,0.95)");
+    cGrad.addColorStop(1, "rgba(6,8,18,0.80)");
+    ctx.beginPath(); ctx.arc(cx, cy, ri - 1, 0, Math.PI*2);
+    ctx.fillStyle = cGrad; ctx.fill();
 
-        // Subtle stroke
-        ctx.strokeStyle = "rgba(255,255,255,0.08)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      });
+    // Center text
+    const hi   = hovered >= 0 ? hovered : -1;
+    const dVal = hi >= 0 ? data[hi] : total;
+    const dLbl = hi >= 0 ? labels[hi] : "Total";
+    const dPct = hi >= 0 ? `${((data[hi]/total)*100).toFixed(1)}%` : `${data.length} categ.`;
+    const col  = hi >= 0 ? COLORS[hi % COLORS.length].a : "rgba(255,255,255,0.88)";
 
-      // Center label (donut)
-      if (donut) {
-        const hovered = hoveredIndex >= 0 ? hoveredIndex : -1;
-        const displayVal =
-          hovered >= 0 ? data[hovered] : total;
-        const displayLabel =
-          hovered >= 0
-            ? labels[hovered]
-            : "Total";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = col;
+    ctx.font = `800 ${Math.min(20, ri*0.38)}px 'Geist Mono', monospace`;
+    ctx.fillText(formatValue(dVal), cx, cy - 13);
 
-        ctx.save();
-        // Subtle center bg
-        const cGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, innerRadius);
-        cGrad.addColorStop(0, "rgba(255,255,255,0.04)");
-        cGrad.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.beginPath();
-        ctx.arc(cx, cy, innerRadius - 2, 0, Math.PI * 2);
-        ctx.fillStyle = cGrad;
-        ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.38)";
+    ctx.font = `${Math.min(10, ri*0.2)}px sans-serif`;
+    ctx.fillText(dLbl.length > 14 ? dLbl.slice(0,13)+"…" : dLbl, cx, cy + 4);
 
-        ctx.fillStyle =
-          hovered >= 0
-            ? COLORS[hovered % COLORS.length].from
-            : "rgba(255,255,255,0.9)";
-        ctx.font = `bold ${Math.min(22, innerRadius * 0.4)}px 'DM Mono', monospace, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(formatValue(displayVal), cx, cy - 10);
-
-        ctx.fillStyle = "rgba(255,255,255,0.4)";
-        ctx.font = `${Math.min(11, innerRadius * 0.22)}px sans-serif`;
-        ctx.fillText(displayLabel, cx, cy + 14);
-
-        if (hovered >= 0) {
-          ctx.fillStyle = "rgba(255,255,255,0.25)";
-          ctx.font = `${Math.min(10, innerRadius * 0.2)}px sans-serif`;
-          ctx.fillText(
-            `${((data[hovered] / total) * 100).toFixed(1)}%`,
-            cx,
-            cy + 30
-          );
-        }
-        ctx.restore();
-      }
-    },
-    [data, dims, hoveredIndex, donut, formatValue, getSlices, labels, total]
-  );
+    ctx.fillStyle = hi >= 0 ? col : "rgba(255,255,255,0.22)";
+    ctx.font = `600 ${Math.min(11, ri*0.22)}px 'Geist Mono', monospace`;
+    ctx.fillText(dPct, cx, cy + 18);
+  }, [data, dims, hovered, labels, formatValue, getSlices, total]);
 
   // Animation
   useEffect(() => {
-    progressRef.current = 0;
-    startTimeRef.current = null;
-
-    const animate = (ts: number) => {
-      if (!startTimeRef.current) startTimeRef.current = ts;
-      const elapsed = ts - startTimeRef.current;
-      const duration = 950;
-      const t = Math.min(elapsed / duration, 1);
-      // Elastic-like ease
-      const progress =
-        t === 0
-          ? 0
-          : t === 1
-          ? 1
-          : t < 0.5
-          ? 4 * t * t * t
-          : 1 - Math.pow(-2 * t + 2, 3) / 2;
-      progressRef.current = progress;
-      draw(progress);
-      if (t < 1) {
-        animRef.current = requestAnimationFrame(animate);
-      }
+    progressRef.current = 0; startRef.current = null;
+    const run = (ts:number) => {
+      if (!startRef.current) startRef.current = ts;
+      const t = Math.min((ts - startRef.current) / 950, 1);
+      const p = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+      progressRef.current = p; draw(p);
+      if (t < 1) animRef.current = requestAnimationFrame(run);
     };
-
-    animRef.current = requestAnimationFrame(animate);
+    animRef.current = requestAnimationFrame(run);
     return () => cancelAnimationFrame(animRef.current);
   }, [draw]);
 
   // Resize
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const w = entry.contentRect.width;
-        setDims({ width: w, height: 240 });
-      }
+    const el = containerRef.current; if (!el) return;
+    const ro = new ResizeObserver(e => {
+      for (const en of e) setDims({ w: en.contentRect.width, h: 220 });
     });
-    ro.observe(container);
-    return () => ro.disconnect();
+    ro.observe(el); return () => ro.disconnect();
   }, []);
 
-  // Canvas DPR
+  // DPR
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !dims.width) return;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = dims.width * dpr;
-    canvas.height = dims.height * dpr;
-    canvas.style.width = `${dims.width}px`;
-    canvas.style.height = `${dims.height}px`;
-    const ctx = canvas.getContext("2d");
-    if (ctx) ctx.scale(dpr, dpr);
+    const canvas = canvasRef.current; if (!canvas || !dims.w) return;
+    const DPR = window.devicePixelRatio || 1;
+    canvas.width = dims.w*DPR; canvas.height = dims.h*DPR;
+    canvas.style.width = `${dims.w}px`; canvas.style.height = `${dims.h}px`;
+    const ctx = canvas.getContext("2d"); if (ctx) ctx.scale(DPR, DPR);
     draw(progressRef.current);
   }, [dims, draw]);
 
-  const getHitIndex = useCallback(
-    (mx: number, my: number) => {
-      if (!dims.width) return -1;
-      const cx = dims.width / 2;
-      const cy = dims.height / 2;
-      const radius = Math.min(cx, cy) - 16;
-      const innerRadius = donut ? radius * 0.58 : 0;
-
-      const dx = mx - cx;
-      const dy = my - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist > radius + 10 || dist < innerRadius - 4) return -1;
-
-      let angle = Math.atan2(dy, dx);
-      if (angle < -Math.PI / 2) angle += Math.PI * 2;
-
-      let startAngle = -Math.PI / 2;
-      for (let i = 0; i < data.length; i++) {
-        const sweep = (data[i] / total) * Math.PI * 2;
-        if (angle >= startAngle && angle <= startAngle + sweep) return i;
-        startAngle += sweep;
-      }
-      return -1;
-    },
-    [dims, data, total, donut]
-  );
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const idx = getHitIndex(mx, my);
-    if (idx !== hoveredIndex) {
-      setHoveredIndex(idx);
-      setTooltip({ visible: idx >= 0, x: e.clientX - rect.left, y: e.clientY - rect.top, index: idx });
+  const hitIndex = useCallback((mx:number, my:number) => {
+    const cx = dims.w/2, cy = dims.h/2;
+    const R  = Math.min(cx, cy) - 18;
+    const ri = R * 0.55;
+    const dx = mx-cx, dy = my-cy;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if (dist > R+12 || dist < ri-4) return -1;
+    let ang = Math.atan2(dy, dx);
+    if (ang < -Math.PI/2) ang += Math.PI*2;
+    let start = -Math.PI/2;
+    for (let i=0; i<data.length; i++) {
+      const sw = (data[i]/total)*Math.PI*2;
+      if (ang >= start && ang <= start+sw) return i;
+      start += sw;
     }
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredIndex(-1);
-    setTooltip((t) => ({ ...t, visible: false }));
-  };
+    return -1;
+  }, [dims, data, total]);
 
   return (
-    <div ref={containerRef} style={{ position: "relative", width: "100%" }}>
-      <div style={{ position: "relative" }}>
-        <canvas
-          ref={canvasRef}
-          style={{
-            display: "block",
-            width: "100%",
-            height: dims.height,
-            cursor: hoveredIndex >= 0 ? "pointer" : "default",
+    <div ref={containerRef} style={{ position:"relative", width:"100%" }}>
+      <div style={{ position:"relative" }}>
+        <canvas ref={canvasRef}
+          style={{ display:"block", width:"100%", height:dims.h, cursor: hovered>=0?"pointer":"default" }}
+          onMouseMove={e => {
+            const rect = canvasRef.current?.getBoundingClientRect(); if (!rect) return;
+            const i = hitIndex(e.clientX-rect.left, e.clientY-rect.top);
+            if (i !== hovered) setHovered(i);
           }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
+          onMouseLeave={() => setHovered(-1)}
         />
-
-        {/* Floating tooltip (outside donut) */}
-        {!donut && tooltip.visible && tooltip.index >= 0 && (
-          <div
-            style={{
-              position: "absolute",
-              left: tooltip.x,
-              top: tooltip.y - 60,
-              transform: "translateX(-50%)",
-              pointerEvents: "none",
-              zIndex: 10,
-            }}
-          >
-            <div
-              style={{
-                background: "rgba(10,14,26,0.96)",
-                border: `1px solid ${COLORS[tooltip.index % COLORS.length].glow}`,
-                borderRadius: 10,
-                padding: "8px 14px",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                textAlign: "center",
-                backdropFilter: "blur(12px)",
-              }}
-            >
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                {labels[tooltip.index]}
-              </p>
-              <p style={{ fontSize: 16, fontWeight: 700, color: COLORS[tooltip.index % COLORS.length].from, margin: 0 }}>
-                {formatValue(data[tooltip.index])}
-              </p>
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: "3px 0 0" }}>
-                {((data[tooltip.index] / total) * 100).toFixed(1)}%
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Legend */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "8px 16px",
-          marginTop: 16,
-          justifyContent: "center",
-        }}
-      >
+      <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 14px", marginTop:14, justifyContent:"center" }}>
         {labels.map((lbl, i) => {
-          const pct = ((data[i] / total) * 100).toFixed(1);
-          const isHovered = i === hoveredIndex;
+          const col = COLORS[i % COLORS.length];
+          const pct = ((data[i]/total)*100).toFixed(1);
+          const isH = i === hovered;
           return (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                cursor: "pointer",
-                opacity: hoveredIndex >= 0 && !isHovered ? 0.45 : 1,
-                transition: "opacity 0.2s",
-                padding: "4px 8px",
-                borderRadius: 6,
-                background: isHovered ? "rgba(255,255,255,0.06)" : "transparent",
-              }}
-              onMouseEnter={() => setHoveredIndex(i)}
-              onMouseLeave={() => setHoveredIndex(-1)}
+            <div key={i}
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"3px 8px", borderRadius:6, cursor:"pointer",
+                background: isH ? "rgba(255,255,255,0.06)" : "transparent",
+                opacity: hovered >= 0 && !isH ? 0.4 : 1, transition:"all 0.18s" }}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(-1)}
             >
-              <span
-                style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: 3,
-                  background: COLORS[i % COLORS.length].from,
-                  flexShrink: 0,
-                  boxShadow: isHovered ? `0 0 8px ${COLORS[i % COLORS.length].glow}` : "none",
-                  transition: "box-shadow 0.2s",
-                }}
-              />
-              <span
-                style={{
-                  fontSize: 11,
-                  color: isHovered ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.5)",
-                  transition: "color 0.2s",
-                  maxWidth: 100,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {lbl}
-              </span>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: isHovered ? COLORS[i % COLORS.length].from : "rgba(255,255,255,0.35)",
-                  transition: "color 0.2s",
-                }}
-              >
-                {pct}%
-              </span>
+              <span style={{ width:10, height:10, borderRadius:3, background:col.a, flexShrink:0,
+                boxShadow: isH ? `0 0 10px ${col.glow}` : "none", transition:"box-shadow 0.18s" }} />
+              <span style={{ fontSize:11, color: isH ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.45)",
+                transition:"color 0.18s", maxWidth:90, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                fontFamily:"sans-serif" }}>{lbl}</span>
+              <span style={{ fontSize:11, fontWeight:700, color: isH ? col.a : "rgba(255,255,255,0.3)",
+                transition:"color 0.18s", fontFamily:"'Geist Mono',monospace" }}>{pct}%</span>
             </div>
           );
         })}
