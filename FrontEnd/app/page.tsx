@@ -236,6 +236,37 @@ const Background = () => (
           "radial-gradient(ellipse at center, rgba(16,185,129,0.08) 0%, transparent 70%)",
       }}
     />
+
+    {
+      /*
+      ── VÍDEO DE FUNDO ──────────────────────────────────────────
+      A opacidade está em 0.15 — ajustar aqui (0.0–1.0).
+      ────────────────────────────────────────────────────────────     */
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 1,
+          overflow: "hidden",
+        }}
+      >
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: 0.15,
+          }}
+        >
+          <source src="/videos/gestpro.mp4" type="video/mp4" />
+        </video>
+      </div>
+    }
   </div>
 );
 
