@@ -244,21 +244,31 @@ const Background = () => (
       }}
     />
 
-    {/*
-      ── VÍDEO DE FUNDO ──────────────────────────────────────────
-      Para ativar: descomente o bloco abaixo e coloque o caminho
-      do seu vídeo em src (ex: "/videos/background.mp4").
-      A opacidade está em 0.15 — ajuste conforme preferir (0.0–1.0).
-      ────────────────────────────────────────────────────────────
-
-    <div style={{ position: "absolute", inset: 0, zIndex: 1, overflow: "hidden" }}>
-      <video autoPlay muted loop playsInline
-        style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.15 }}>
-        <source src="/videos/seu-video.mp4" type="video/mp4" />
-      </video>
-    </div>
-
-    */}
+    {
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 1,
+          overflow: "hidden",
+        }}
+      >
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: 0.15,
+          }}
+        >
+          <source src="/videos/video-teste-compressado.mp4" type="video/mp4" />
+        </video>
+      </div>
+    }
   </div>
 );
 
