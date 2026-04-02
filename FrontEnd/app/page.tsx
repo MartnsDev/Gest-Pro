@@ -529,7 +529,12 @@ const DashboardPreview = () => (
     <img
       src="/images/dashboard3.png"
       alt="GestPro Dashboard"
-      style={{ width: "100%", height: "auto", display: "block" }}
+      style={{
+        width: "100%",
+        height: "auto",
+        display: "block",
+        borderRadius: "0 0 20px 20px",
+      }}
     />
   </div>
 );
