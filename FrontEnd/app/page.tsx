@@ -62,7 +62,7 @@ const Star = () => (
 );
 
 /* ─────────────────────────────────────────────
-   GLOBAL STYLES — design do Arquivo 1
+   GLOBAL STYLES
 ───────────────────────────────────────────── */
 const GlobalStyles = () => (
   <style>{`
@@ -94,19 +94,30 @@ const GlobalStyles = () => (
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(48px) scale(0.98); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-48px) scale(0.98); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes progress-fill {
+      from { height: 0%; }
+      to   { height: 100%; }
+    }
 
-    .fade-up { animation: fadeUp 0.8s ease both; }
-    .float   { animation: float 6s ease-in-out infinite; }
+    .fade-up    { animation: fadeUp 0.8s ease both; }
+    .float      { animation: float 6s ease-in-out infinite; }
     .pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
-    .blink   { animation: blink 2s ease-in-out infinite; }
-    .spin-slow { animation: spinSlow 20s linear infinite; }
+    .blink      { animation: blink 2s ease-in-out infinite; }
+    .spin-slow  { animation: spinSlow 20s linear infinite; }
     .d1 { animation-delay: .1s; }
     .d2 { animation-delay: .2s; }
     .d3 { animation-delay: .35s; }
     .d4 { animation-delay: .5s; }
     .d5 { animation-delay: .65s; }
 
-    /* ── Botões do Arquivo 1 ── */
     .btn-primary {
       background: #10b981;
       color: #fff;
@@ -148,7 +159,6 @@ const GlobalStyles = () => (
       color: #10b981;
     }
 
-    /* ── Cards do Arquivo 1 ── */
     .card {
       background: rgba(13,15,18,0.6);
       border: 1px solid rgba(255,255,255,0.06);
@@ -166,7 +176,6 @@ const GlobalStyles = () => (
       border-radius: 12px;
     }
 
-    /* ── Mobile menu overlay ── */
     .mob-menu {
       position: fixed; inset: 0; z-index: 200;
       background: rgba(5,6,8,0.98);
@@ -183,23 +192,21 @@ const GlobalStyles = () => (
       .hero-grid    { flex-direction: column !important; }
       .hero-content { align-items: center !important; text-align: center !important; }
       .plans-grid   { grid-template-columns: repeat(2, 1fr) !important; }
+      .carousel-layout { flex-direction: column !important; }
     }
     @media(max-width:768px){
-      .hero-text        { font-size: 32px !important; line-height: 1.2 !important; }
-      .section-title    { font-size: 28px !important; }
-      .features-grid    { grid-template-columns: 1fr !important; }
-      .plans-grid       { grid-template-columns: 1fr !important; }
-      .stats-grid       { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
-      .testimonials-grid{ grid-template-columns: 1fr !important; }
-      .steps-grid       { grid-template-columns: 1fr !important; }
-      .mob-hamburger    { display: flex !important; }
-      .desktop-nav-btns { display: none !important; }
+      .hero-text         { font-size: 32px !important; line-height: 1.2 !important; }
+      .section-title     { font-size: 28px !important; }
+      .plans-grid        { grid-template-columns: 1fr !important; }
+      .stats-grid        { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+      .testimonials-grid { grid-template-columns: 1fr !important; }
+      .mob-hamburger     { display: flex !important; }
     }
   `}</style>
 );
 
 /* ─────────────────────────────────────────────
-   BACKGROUND — idêntico ao Arquivo 1
+   BACKGROUND
 ───────────────────────────────────────────── */
 const Background = () => (
   <div
@@ -237,31 +244,21 @@ const Background = () => (
       }}
     />
 
-    {
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 1,
-          overflow: "hidden",
-        }}
-      >
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            opacity: 0.15,
-          }}
-        >
-          <source src="/videos/video-teste-comprensado.mp4" type="video/mp4" />
-        </video>
-      </div>
-    }
+    {/*
+      ── VÍDEO DE FUNDO ──────────────────────────────────────────
+      Para ativar: descomente o bloco abaixo e coloque o caminho
+      do seu vídeo em src (ex: "/videos/background.mp4").
+      A opacidade está em 0.15 — ajuste conforme preferir (0.0–1.0).
+      ────────────────────────────────────────────────────────────
+
+    <div style={{ position: "absolute", inset: 0, zIndex: 1, overflow: "hidden" }}>
+      <video autoPlay muted loop playsInline
+        style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.15 }}>
+        <source src="/videos/seu-video.mp4" type="video/mp4" />
+      </video>
+    </div>
+
+    */}
   </div>
 );
 
@@ -286,8 +283,8 @@ const Logo = ({ size = "default" }: { size?: "default" | "small" }) => {
         style={{
           width: logoSize,
           height: logoSize,
-          objectFit: "contain",
-          borderRadius: 8,
+          objectFit: "cover",
+          borderRadius: "30%",
         }}
       />
       <span
@@ -305,7 +302,7 @@ const Logo = ({ size = "default" }: { size?: "default" | "small" }) => {
 };
 
 /* ─────────────────────────────────────────────
-   NAV — estilo Arquivo 1 + lógica Arquivo 2
+   NAV
 ───────────────────────────────────────────── */
 const Nav = ({ onLogin, onRegister }: NavProps) => {
   const [scrolled, setScrolled] = useState(false);
@@ -350,8 +347,6 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
           }}
         >
           <Logo />
-
-          {/* Links desktop */}
           <div
             className="desktop-only"
             style={{ display: "flex", alignItems: "center", gap: 40 }}
@@ -376,8 +371,6 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
               </a>
             ))}
           </div>
-
-          {/* Botões desktop */}
           <div className="desktop-only" style={{ display: "flex", gap: 12 }}>
             <button
               className="btn-outline"
@@ -394,8 +387,6 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
               Começar grátis
             </button>
           </div>
-
-          {/* Hamburguer mobile */}
           <button
             className="mobile-only mob-hamburger"
             onClick={() => setMenuOpen(true)}
@@ -422,7 +413,6 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
         </div>
       </nav>
 
-      {/* Mobile Menu */}
       {menuOpen && (
         <div className="mob-menu" onClick={() => setMenuOpen(false)}>
           <button
@@ -480,7 +470,7 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
 };
 
 /* ─────────────────────────────────────────────
-   DASHBOARD PREVIEW — do Arquivo 2
+   DASHBOARD PREVIEW
 ───────────────────────────────────────────── */
 const DashboardPreview = () => (
   <div
@@ -506,7 +496,7 @@ const DashboardPreview = () => (
       {["#ff5f57", "#ffbd2e", "#28c840"].map((c) => (
         <div
           key={c}
-          style={{ width: 11, height: 11, borderRadius: "80%", background: c }}
+          style={{ width: 11, height: 11, borderRadius: "50%", background: c }}
         />
       ))}
       <div
@@ -540,7 +530,7 @@ const DashboardPreview = () => (
 );
 
 /* ─────────────────────────────────────────────
-   HERO — layout Arquivo 2 + estilo Arquivo 1
+   HERO
 ───────────────────────────────────────────── */
 const lojistas = [
   { nome: "Kelly", img: "/logistas-img/kelly.jpg" },
@@ -566,7 +556,6 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
         className="hero-grid"
         style={{ display: "flex", alignItems: "center", gap: 80 }}
       >
-        {/* Lado esquerdo */}
         <div
           className="hero-content"
           style={{
@@ -577,7 +566,6 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
             gap: 28,
           }}
         >
-          {/* Badge */}
           <div
             className="fade-up"
             style={{
@@ -613,7 +601,6 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
             </span>
           </div>
 
-          {/* Headline */}
           <h1
             className="hero-text fade-up d1"
             style={{
@@ -629,7 +616,6 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
             <span style={{ color: "#10b981" }}>no controle.</span>
           </h1>
 
-          {/* Sub */}
           <p
             className="fade-up d2"
             style={{
@@ -644,7 +630,6 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
             Feito para lojistas que querem crescer sem complicação.
           </p>
 
-          {/* CTAs */}
           <div
             className="fade-up d3"
             style={{ display: "flex", gap: 16, flexWrap: "wrap" }}
@@ -665,7 +650,6 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
             </button>
           </div>
 
-          {/* Social proof — avatares reais do Arquivo 2 */}
           <div
             className="fade-up d4"
             style={{
@@ -687,9 +671,6 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
                     marginLeft: i > 0 ? -12 : 0,
                     overflow: "hidden",
                     background: "#1e293b",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
                     zIndex: 10 - i,
                   }}
                 >
@@ -716,7 +697,6 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
           </div>
         </div>
 
-        {/* Lado direito — preview flutuante */}
         <div
           className="desktop-only float"
           style={{
@@ -750,7 +730,7 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
 );
 
 /* ─────────────────────────────────────────────
-   STATS — dados do Arquivo 2, estilo Arquivo 1
+   STATS
 ───────────────────────────────────────────── */
 const Stats = () => {
   const stats = [
@@ -759,7 +739,6 @@ const Stats = () => {
     { value: "98,7%", label: "Uptime garantido" },
     { value: "4.8★", label: "Avaliação média" },
   ];
-
   return (
     <section
       style={{ position: "relative", zIndex: 10, padding: "0 24px 80px" }}
@@ -805,47 +784,98 @@ const Stats = () => {
 };
 
 /* ─────────────────────────────────────────────
-   FEATURES — dados do Arquivo 2, cards do Arquivo 1
+   FEATURES — CARROSSEL AUTOMÁTICO
 ───────────────────────────────────────────── */
-const Features = () => {
-  const feats = [
-    {
-      icon: "💰",
-      title: "Controle de Caixa",
-      tag: "Financeiro",
-      desc: "Abra e feche caixas com saldo inicial, acompanhe cada centavo em tempo real com total transparência.",
-    },
-    {
-      icon: "📦",
-      title: "Gestão de Estoque",
-      tag: "Estoque",
-      desc: "Monitore produtos, receba alertas de estoque zero e nunca perca uma venda por falta de produto.",
-    },
-    {
-      icon: "📊",
-      title: "Relatórios Completos",
-      tag: "Analytics",
-      desc: "Exporte em CSV, HTML ou PDF. Visualize por período, por caixa ou produto com gráficos detalhados.",
-    },
-    {
-      icon: "💳",
-      title: "Multi Pagamentos",
-      tag: "Pagamentos",
-      desc: "PIX, Dinheiro, Débito e Crédito. Registre tudo e veja a distribuição por forma de pagamento.",
-    },
-    {
-      icon: "👥",
-      title: "Gestão de Clientes",
-      tag: "CRM",
-      desc: "Cadastre clientes, acompanhe histórico de compras e construa relacionamentos duradouros.",
-    },
-    {
-      icon: "🏢",
-      title: "Multi Empresa",
-      tag: "Empresas",
-      desc: "Gerencie várias filiais ou negócios em uma única conta. Troque com um clique.",
-    },
-  ];
+const feats = [
+  {
+    icon: "💰",
+    title: "Controle de Caixa",
+    tag: "Financeiro",
+    desc: "Abra e feche caixas com saldo inicial, acompanhe cada centavo em tempo real com total transparência.",
+  },
+  {
+    icon: "📦",
+    title: "Gestão de Estoque",
+    tag: "Estoque",
+    desc: "Monitore produtos, receba alertas de estoque zero e nunca perca uma venda por falta de produto.",
+  },
+  {
+    icon: "📊",
+    title: "Relatórios Completos",
+    tag: "Analytics",
+    desc: "Exporte em CSV, HTML ou PDF. Visualize por período, por caixa ou produto com gráficos detalhados.",
+  },
+  {
+    icon: "💳",
+    title: "Multi Pagamentos",
+    tag: "Pagamentos",
+    desc: "PIX, Dinheiro, Débito e Crédito. Registre tudo e veja a distribuição por forma de pagamento.",
+  },
+  {
+    icon: "👥",
+    title: "Gestão de Clientes",
+    tag: "CRM",
+    desc: "Cadastre clientes, acompanhe histórico de compras e construa relacionamentos duradouros.",
+  },
+  {
+    icon: "🏢",
+    title: "Multi Empresa",
+    tag: "Empresas",
+    desc: "Gerencie várias filiais ou negócios em uma única conta. Troque com um clique.",
+  },
+];
+
+const FeaturesCarousel = () => {
+  const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState<"next" | "prev">("next");
+  const [key, setKey] = useState(0); // força re-render da animação
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isAnimating = useRef(false);
+
+  const goTo = useCallback((idx: number, dir: "next" | "prev" = "next") => {
+    if (isAnimating.current) return;
+    isAnimating.current = true;
+    setDirection(dir);
+    setCurrent(idx);
+    setKey((k) => k + 1);
+    setTimeout(() => {
+      isAnimating.current = false;
+    }, 500);
+  }, []);
+
+  const next = useCallback(() => {
+    setCurrent((c) => {
+      const nx = (c + 1) % feats.length;
+      setDirection("next");
+      setKey((k) => k + 1);
+      return nx;
+    });
+  }, []);
+
+  const prev = useCallback(() => {
+    setCurrent((c) => {
+      const pv = (c - 1 + feats.length) % feats.length;
+      setDirection("prev");
+      setKey((k) => k + 1);
+      return pv;
+    });
+  }, []);
+
+  useEffect(() => {
+    timerRef.current = setInterval(next, 3200);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [next]);
+
+  const pause = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+  const resume = () => {
+    timerRef.current = setInterval(next, 3200);
+  };
+
+  const f = feats[current];
 
   return (
     <section
@@ -853,7 +883,8 @@ const Features = () => {
       style={{ position: "relative", zIndex: 10, padding: "80px 24px" }}
     >
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 60 }}>
+        {/* Cabeçalho */}
+        <div style={{ textAlign: "center", marginBottom: 56 }}>
           <span
             className="fade-up"
             style={{
@@ -883,49 +914,81 @@ const Features = () => {
           </h2>
         </div>
 
+        {/* Layout carrossel */}
         <div
-          className="features-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 20,
-          }}
+          className="carousel-layout"
+          style={{ display: "flex", gap: 32, alignItems: "stretch" }}
         >
-          {feats.map((f, i) => (
+          {/* Card principal */}
+          <div
+            onMouseEnter={pause}
+            onMouseLeave={resume}
+            style={{
+              flex: "1 1 400px",
+              background: "rgba(13,15,18,0.6)",
+              border: "1px solid rgba(16,185,129,0.22)",
+              borderRadius: 20,
+              padding: "48px 44px",
+              minHeight: 320,
+              position: "relative",
+              overflow: "hidden",
+              boxShadow: "0 0 60px rgba(16,185,129,0.06)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {/* Glow decorativo */}
             <div
-              key={i}
-              className="card fade-up"
-              style={{ padding: "32px 28px", animationDelay: `${i * 0.1}s` }}
+              style={{
+                position: "absolute",
+                top: -60,
+                right: -60,
+                width: 220,
+                height: 220,
+                borderRadius: "50%",
+                background:
+                  "radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%)",
+                pointerEvents: "none",
+              }}
+            />
+
+            {/* Conteúdo animado */}
+            <div
+              key={key}
+              style={{
+                animation: `${direction === "next" ? "slideInRight" : "slideInLeft"} 0.45s cubic-bezier(0.22,1,0.36,1) both`,
+                flex: 1,
+              }}
             >
               <div
                 style={{
                   display: "flex",
                   alignItems: "flex-start",
                   justifyContent: "space-between",
-                  marginBottom: 20,
+                  marginBottom: 28,
                 }}
               >
                 <div
                   style={{
-                    width: 48,
-                    height: 48,
-                    background: "rgba(16,185,129,0.1)",
-                    borderRadius: 12,
+                    width: 60,
+                    height: 60,
+                    background: "rgba(16,185,129,0.12)",
+                    borderRadius: 16,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 24,
+                    fontSize: 28,
                   }}
                 >
                   {f.icon}
                 </div>
                 <span
                   style={{
-                    fontSize: 10,
+                    fontSize: 11,
                     color: "#10b981",
                     background: "rgba(16,185,129,0.1)",
                     border: "1px solid rgba(16,185,129,0.2)",
-                    padding: "3px 10px",
+                    padding: "4px 12px",
                     borderRadius: 99,
                     letterSpacing: ".08em",
                   }}
@@ -935,33 +998,261 @@ const Features = () => {
               </div>
               <h3
                 style={{
-                  fontSize: 18,
-                  fontWeight: 600,
+                  fontSize: 24,
+                  fontWeight: 700,
                   color: "#f1f5f9",
-                  marginBottom: 10,
+                  marginBottom: 14,
+                  letterSpacing: "-0.02em",
                 }}
               >
                 {f.title}
               </h3>
               <p
                 style={{
-                  fontSize: 14,
-                  lineHeight: 1.6,
-                  color: "rgba(148,163,184,0.7)",
+                  fontSize: 15,
+                  lineHeight: 1.7,
+                  color: "rgba(148,163,184,0.75)",
                 }}
               >
                 {f.desc}
               </p>
             </div>
-          ))}
+
+            {/* Controles + dots */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                marginTop: 36,
+              }}
+            >
+              <button
+                onClick={prev}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor =
+                    "#10b981";
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "#10b981";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor =
+                    "rgba(255,255,255,0.1)";
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "#94a3b8";
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              <div style={{ display: "flex", gap: 6, flex: 1 }}>
+                {feats.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => goTo(i, i > current ? "next" : "prev")}
+                    style={{
+                      height: 4,
+                      borderRadius: 2,
+                      width: i === current ? 24 : 8,
+                      background:
+                        i === current ? "#10b981" : "rgba(255,255,255,0.12)",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                      transition: "all 0.35s ease",
+                    }}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={next}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "rgba(16,185,129,0.12)",
+                  border: "1px solid rgba(16,185,129,0.25)",
+                  color: "#10b981",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "rgba(16,185,129,0.25)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "rgba(16,185,129,0.12)";
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Lista lateral clicável */}
+          <div
+            style={{
+              flex: "0 0 280px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            {feats.map((item, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i, i > current ? "next" : "prev")}
+                onMouseEnter={pause}
+                onMouseLeave={resume}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  padding: "13px 16px",
+                  borderRadius: 12,
+                  background:
+                    i === current ? "rgba(16,185,129,0.08)" : "transparent",
+                  border:
+                    i === current
+                      ? "1px solid rgba(16,185,129,0.22)"
+                      : "1px solid transparent",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "all 0.2s ease",
+                  flex: 1,
+                }}
+                onFocus={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.outline = "none";
+                }}
+              >
+                <span
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    flexShrink: 0,
+                    background:
+                      i === current
+                        ? "rgba(16,185,129,0.15)"
+                        : "rgba(255,255,255,0.04)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 16,
+                    transition: "background 0.2s",
+                  }}
+                >
+                  {item.icon}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color:
+                        i === current ? "#f1f5f9" : "rgba(148,163,184,0.55)",
+                      transition: "color 0.2s",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {item.title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color:
+                        i === current ? "#10b981" : "rgba(148,163,184,0.3)",
+                      marginTop: 2,
+                      transition: "color 0.2s",
+                    }}
+                  >
+                    {item.tag}
+                  </div>
+                </div>
+
+                {/* Barra de progresso do item ativo */}
+                {i === current && (
+                  <div
+                    style={{
+                      width: 3,
+                      height: 28,
+                      borderRadius: 2,
+                      background: "rgba(16,185,129,0.15)",
+                      flexShrink: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      key={key}
+                      style={{
+                        width: "100%",
+                        borderRadius: 2,
+                        background: "#10b981",
+                        animation: "progress-fill 3.2s linear forwards",
+                      }}
+                    />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes progress-fill {
+          from { height: 0%; }
+          to   { height: 100%; }
+        }
+      `}</style>
     </section>
   );
 };
 
 /* ─────────────────────────────────────────────
-   HOW IT WORKS — passos do Arquivo 2, cards do Arquivo 1
+   HOW IT WORKS
 ───────────────────────────────────────────── */
 const HowItWorks = () => {
   const steps = [
@@ -1026,7 +1317,6 @@ const HowItWorks = () => {
             <span style={{ color: "#10b981" }}>poderoso de verdade.</span>
           </h2>
         </div>
-
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {steps.map((s, i) => (
             <div
@@ -1091,7 +1381,7 @@ const HowItWorks = () => {
 };
 
 /* ─────────────────────────────────────────────
-   PLANS — planos do Arquivo 2, estilo Arquivo 1
+   PLANS
 ───────────────────────────────────────────── */
 const Plans = ({ onRegister }: PlansProps) => {
   const plans = [
@@ -1222,7 +1512,6 @@ const Plans = ({ onRegister }: PlansProps) => {
             Comece grátis. Escale quando quiser.
           </p>
         </div>
-
         <div
           className="plans-grid"
           style={{
@@ -1275,7 +1564,6 @@ const Plans = ({ onRegister }: PlansProps) => {
                   Mais Popular
                 </div>
               )}
-
               <div
                 style={{
                   width: 44,
@@ -1291,7 +1579,6 @@ const Plans = ({ onRegister }: PlansProps) => {
               >
                 {p.emoji}
               </div>
-
               <h3
                 style={{
                   fontSize: 20,
@@ -1311,7 +1598,6 @@ const Plans = ({ onRegister }: PlansProps) => {
               >
                 {p.desc}
               </p>
-
               <div style={{ marginBottom: 24 }}>
                 <span
                   style={{
@@ -1332,7 +1618,6 @@ const Plans = ({ onRegister }: PlansProps) => {
                   {p.period}
                 </span>
               </div>
-
               <div
                 style={{
                   display: "flex",
@@ -1364,7 +1649,6 @@ const Plans = ({ onRegister }: PlansProps) => {
                   </div>
                 ))}
               </div>
-
               <button
                 className={p.popular ? "btn-primary" : "btn-outline"}
                 onClick={onRegister}
@@ -1386,7 +1670,7 @@ const Plans = ({ onRegister }: PlansProps) => {
 };
 
 /* ─────────────────────────────────────────────
-   TESTIMONIALS — do Arquivo 2, estilo Arquivo 1
+   TESTIMONIALS
 ───────────────────────────────────────────── */
 const quotes = [
   {
@@ -1441,7 +1725,6 @@ const Testimonials = () => (
           <span style={{ color: "#10b981" }}>nossos lojistas.</span>
         </h2>
       </div>
-
       <div
         className="testimonials-grid"
         style={{
@@ -1511,7 +1794,7 @@ const Testimonials = () => (
 );
 
 /* ─────────────────────────────────────────────
-   CTA FINAL — lógica do Arquivo 2, estilo Arquivo 1
+   CTA FINAL
 ───────────────────────────────────────────── */
 const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
   <section style={{ position: "relative", zIndex: 10, padding: "80px 24px" }}>
@@ -1541,7 +1824,6 @@ const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
             pointerEvents: "none",
           }}
         />
-
         <span
           className="fade-up"
           style={{
@@ -1576,7 +1858,6 @@ const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
             fontSize: 16,
             lineHeight: 1.7,
             color: "rgba(148,163,184,0.7)",
-            marginBottom: 32,
             maxWidth: 420,
             margin: "0 auto 32px",
           }}
@@ -1643,7 +1924,7 @@ const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
 );
 
 /* ─────────────────────────────────────────────
-   FOOTER — links do Arquivo 2, estilo Arquivo 1
+   FOOTER
 ───────────────────────────────────────────── */
 const Footer = () => {
   const links = [
@@ -1652,7 +1933,6 @@ const Footer = () => {
     { label: "Privacidade", href: "/privacidade" },
     { label: "Contato", href: "/contato" },
   ];
-
   return (
     <footer
       style={{
@@ -1727,7 +2007,7 @@ export default function LandingPage() {
       <Nav onLogin={goLogin} onRegister={goRegister} />
       <Hero onRegister={goRegister} onLogin={goLogin} />
       <Stats />
-      <Features />
+      <FeaturesCarousel />
       <HowItWorks />
       <Plans onRegister={goRegister} />
       <Testimonials />
