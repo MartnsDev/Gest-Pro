@@ -2,10 +2,10 @@ package br.com.gestpro.auth.service;
 
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
+import br.com.gestpro.infra.jwt.JwtService;
 import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.plano.service.VerificarPlanoOperation;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,15 +16,17 @@ public class LoginGoogleOperation {
 
     private final UsuarioRepository usuarioRepository;
     private final VerificarPlanoOperation verificarPlano;
+    private final JwtService jwtService;
 
     public LoginGoogleOperation(UsuarioRepository usuarioRepository,
-                                VerificarPlanoOperation verificarPlano) {
+                                VerificarPlanoOperation verificarPlano, JwtService jwtService) {
         this.usuarioRepository = usuarioRepository;
         this.verificarPlano = verificarPlano;
+        this.jwtService = jwtService;
     }
 
     @Transactional
-    public Usuario execute(String email, String nome, String foto, HttpServletResponse response) {
+    public Usuario execute(String email, String nome, String foto) {
 
         return usuarioRepository.findByEmail(email)
                 .map(u -> {
@@ -72,5 +74,9 @@ public class LoginGoogleOperation {
 
                     return usuarioRepository.save(novo);
                 });
+    }
+
+    public String gerarToken(Usuario usuario) {
+        return jwtService.gerarToken(usuario);
     }
 }

@@ -51,11 +51,6 @@ public class AuthenticationService implements IAuthenticationService {
         return loginManual.execute(new LoginUsuarioDTO(email, senha), path, response);
     }
 
-    @Override
-    public Usuario loginOrRegisterGoogle(String email, String nome,
-                                         String foto, HttpServletResponse response) throws IOException {
-        return loginGoogle.execute(email, nome, foto, response);
-    }
 
     @Override
     public String gerarToken(Usuario usuario) {

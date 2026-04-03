@@ -1,7 +1,7 @@
 package br.com.gestpro.infra.filter;
 
 import br.com.gestpro.auth.model.Usuario;
-import br.com.gestpro.auth.service.GoogleAuthService;
+import br.com.gestpro.auth.service.LoginGoogleOperation;
 import br.com.gestpro.plano.StatusAcesso;
 
 import jakarta.servlet.http.Cookie;
@@ -18,12 +18,12 @@ import java.io.IOException;
 @Component
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
-    private final GoogleAuthService googleAuthService;
+    private final LoginGoogleOperation loginGoogleOperation;
     private final String URL_FRONTEND;
 
-    public OAuth2LoginSuccessHandler(GoogleAuthService googleAuthService,
+    public OAuth2LoginSuccessHandler(LoginGoogleOperation loginGoogleOperation,
                                      @Value("${app.frontend.url}") String URL_FRONTEND) {
-        this.googleAuthService = googleAuthService;
+        this.loginGoogleOperation = loginGoogleOperation;
         this.URL_FRONTEND = URL_FRONTEND;
     }
 
@@ -40,10 +40,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String foto = attributes.get("picture").toString();
 
         // Cria ou atualiza usuário
-        Usuario usuario = googleAuthService.loginOrRegister(email, nome, foto);
+        Usuario usuario = loginGoogleOperation.execute(email, nome, foto);
 
         // Gera JWT
-        String token = googleAuthService.gerarToken(usuario);
+        String token = loginGoogleOperation.gerarToken(usuario);
 
         // Cria cookie seguro com token
         Cookie jwtCookie = new Cookie("jwt_token", token);

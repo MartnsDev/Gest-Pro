@@ -21,9 +21,6 @@ public interface IAuthenticationService {
                               String path,
                               HttpServletResponse response);
 
-    //Login Google Operation
-    Usuario loginOrRegisterGoogle(String email, String nome, String foto, HttpServletResponse response) throws IOException;
-
     //Gerar Token
     String gerarToken(Usuario usuario);
 

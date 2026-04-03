@@ -45,6 +45,22 @@ env.sh
 # Uploads (arquivos gerados em runtime)
 uploads/
 
+# Scripts com credenciais reais
+set-env-secrets.ps1
+set-env-secrets.sh
+.env
+.env.local
+.env.production
+
+# Logs e builds
+*.log
+target/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+
 
 
 
