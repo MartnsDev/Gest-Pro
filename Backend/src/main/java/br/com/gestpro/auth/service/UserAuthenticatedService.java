@@ -77,5 +77,4 @@ public class UserAuthenticatedService {
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
     }
 
-
 }

@@ -96,7 +96,7 @@ public class VendaServiceImpl implements VendaServiceInterface {
 
         venda.setItens(itens);
 
-        // ✅ Desconto normalizado — null nunca chega ao banco
+        //  Desconto normalizado — null nunca chega ao banco
         BigDecimal desconto = dto.getDesconto() != null
                 ? dto.getDesconto().max(BigDecimal.ZERO)
                 : BigDecimal.ZERO;
@@ -105,7 +105,7 @@ public class VendaServiceImpl implements VendaServiceInterface {
         venda.setDesconto(desconto);
         venda.setValorFinal(total.subtract(desconto).max(BigDecimal.ZERO));
 
-        // ✅ Troco para pagamento em dinheiro
+        // Troco para pagamento em dinheiro
         if (dto.getValorRecebido() != null && dto.getValorRecebido().compareTo(BigDecimal.ZERO) > 0) {
             venda.setValorRecebido(dto.getValorRecebido());
             venda.setTroco(dto.getValorRecebido().subtract(venda.getValorFinal()).max(BigDecimal.ZERO));

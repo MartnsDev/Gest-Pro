@@ -1,4 +1,4 @@
-package br.com.gestpro.auth.dto;
+package br.com.gestpro.auth.dto.googleAuthDTO;
 
 import br.com.gestpro.auth.model.Usuario;
 import lombok.Builder;

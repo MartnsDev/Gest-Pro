@@ -49,8 +49,6 @@ public class EmpresaController {
 
     /**
      * DELETE /api/v1/empresas/{id}/confirmar-exclusao
-     * Body: { "senha": "minhasenha123" }
-     *
      * Valida a senha do usuário logado e exclui a empresa com todos os dados.
      */
     @DeleteMapping("/{id}/confirmar-exclusao")
@@ -67,7 +65,7 @@ public class EmpresaController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Rota legada mantida ───────────────────────────────────────────────
+    // Rota legada mantida
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(
             @PathVariable Long id,

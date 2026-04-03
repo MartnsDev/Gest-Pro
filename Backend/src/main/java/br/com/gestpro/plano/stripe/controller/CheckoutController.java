@@ -43,7 +43,6 @@ public class CheckoutController {
     @Value("${STRIPE_API_KEY}")
     private String stripeApiKey;
 
-    // ─── Criar sessão de checkout ─────────────────────────────────────────────
 
     @PostMapping("/create-checkout-session")
     public ResponseEntity<Map<String, String>> createCheckout(
@@ -62,15 +61,6 @@ public class CheckoutController {
         }
     }
 
-    // ─── Info da sessão ───────────────────────────────────────────────────────
-
-    /**
-     * Retorna o plano contratado a partir do session_id.
-     * Usado pela página /payment/sucesso para exibição imediata sem depender do webhook.
-     *
-     * GET /api/payments/session-info?sessionId=cs_xxx
-     * Retorna: { "priceId": "price_xxx", "plano": "PRO" }
-     */
     @GetMapping("/session-info")
     public ResponseEntity<Map<String, String>> getSessionInfo(@RequestParam String sessionId) {
         try {

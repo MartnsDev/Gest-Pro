@@ -1,7 +1,6 @@
 package br.com.gestpro.venda.dto;
 
 import br.com.gestpro.venda.model.Venda;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,22 +28,51 @@ public class VendaResponseDTO {
     private String motivoCancelamento;
 
     public VendaResponseDTO(Venda venda) {
-        this.id               = venda.getId();
-        this.emailUsuario     = venda.getUsuario()    != null ? venda.getUsuario().getEmail() : null;
-        this.idCaixa          = venda.getCaixa()      != null ? venda.getCaixa().getId()      : null;
-        this.nomeCliente      = venda.getCliente()    != null ? venda.getCliente().getNome()   : null;
-        this.itens            = venda.getItens().stream().map(ItemVendaDTO::new).collect(Collectors.toList());
-        this.valorTotal       = venda.getTotal();
-        this.desconto         = venda.getDesconto()         != null ? venda.getDesconto()         : BigDecimal.ZERO;
-        this.valorFinal       = venda.getValorFinal()       != null ? venda.getValorFinal()       : BigDecimal.ZERO;
-        this.valorRecebido    = venda.getValorRecebido();
-        this.troco            = venda.getTroco();
-        this.formaPagamento   = venda.getFormaPagamento()  != null ? venda.getFormaPagamento().name()  : null;
-        this.formaPagamento2  = venda.getFormaPagamento2() != null ? venda.getFormaPagamento2().name() : null;
-        this.valorPagamento2  = venda.getValorPagamento2();
-        this.dataVenda        = venda.getDataVenda();
-        this.observacao       = venda.getObservacao();
-        this.cancelada        = venda.getCancelada() != null ? venda.getCancelada() : false;
+
+        var usuario = venda.getUsuario();
+        var caixa = venda.getCaixa();
+        var cliente = venda.getCliente();
+
+        this.id = venda.getId();
+
+        this.emailUsuario = usuario != null ? usuario.getEmail() : null;
+        this.idCaixa = caixa != null ? caixa.getId() : null;
+        this.nomeCliente = cliente != null ? cliente.getNome() : null;
+
+        this.itens = venda.getItens() != null
+                ? venda.getItens().stream()
+                .map(ItemVendaDTO::new)
+                .collect(Collectors.toList())
+                : List.of();
+
+        this.valorTotal = venda.getTotal();
+
+        this.desconto = venda.getDesconto() != null
+                ? venda.getDesconto()
+                : BigDecimal.ZERO;
+
+        this.valorFinal = venda.getValorFinal() != null
+                ? venda.getValorFinal()
+                : BigDecimal.ZERO;
+
+        this.valorRecebido = venda.getValorRecebido();
+        this.troco = venda.getTroco();
+
+        this.formaPagamento = venda.getFormaPagamento() != null
+                ? venda.getFormaPagamento().name()
+                : null;
+
+        this.formaPagamento2 = venda.getFormaPagamento2() != null
+                ? venda.getFormaPagamento2().name()
+                : null;
+
+        this.valorPagamento2 = venda.getValorPagamento2();
+
+        this.dataVenda = venda.getDataVenda();
+        this.observacao = venda.getObservacao();
+
+        this.cancelada = Boolean.TRUE.equals(venda.getCancelada());
+
         this.dataCancelamento = venda.getDataCancelamento();
         this.motivoCancelamento = venda.getMotivoCancelamento();
     }

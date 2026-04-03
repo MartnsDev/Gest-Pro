@@ -15,16 +15,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Pedido — módulo de "Vendas Rápidas".
- *
- * Diferente de {@link br.com.gestpro.venda.model.Venda} (PDV físico),
- * um Pedido NÃO está vinculado a um Caixa. O saldo é registrado
- * diretamente em uma conta financeira (ex.: Mercado Pago, conta corrente).
- *
- * Controle de estoque é unificado — ao confirmar um pedido o estoque
- * é debitado da mesma tabela de Produto.
- */
 @Entity
 @Table(name = "pedido")
 @Getter @Setter
@@ -36,8 +26,6 @@ public class Pedido {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Long id;
-
-    // ─── Relacionamentos obrigatórios ────────────────────────────────────
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_id", nullable = false)
@@ -51,12 +39,10 @@ public class Pedido {
     @JoinColumn(name = "cliente_id")
     private Cliente cliente;
 
-    // ─── Itens ───────────────────────────────────────────────────────────
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemPedido> itens = new ArrayList<>();
 
-    // ─── Valores ─────────────────────────────────────────────────────────
 
     /** Soma bruta dos itens (sem desconto) */
     @Column(name = "valor_total", nullable = false, precision = 10, scale = 2)
@@ -69,13 +55,10 @@ public class Pedido {
     @Column(name = "valor_final", nullable = false, precision = 10, scale = 2)
     private BigDecimal valorFinal = BigDecimal.ZERO;
 
-    // ─── Pagamento ───────────────────────────────────────────────────────
 
     @Enumerated(EnumType.STRING)
     @Column(name = "forma_pagamento", nullable = false, length = 30)
     private FormaDePagamento formaPagamento;
-
-    // ─── Canal e status ──────────────────────────────────────────────────
 
     @Enumerated(EnumType.STRING)
     @Column(name = "canal_venda", nullable = false, length = 30)
@@ -85,25 +68,14 @@ public class Pedido {
     @Column(name = "status", nullable = false, length = 20)
     private StatusPedido status = StatusPedido.PENDENTE;
 
-    // ─── Conta financeira de destino ─────────────────────────────────────
-
-    /**
-     * Descrição livre da conta que receberá o valor.
-     * Ex.: "Mercado Pago", "Nubank", "Dinheiro em mãos".
-     * Futuro: pode virar FK para uma entidade ContaFinanceira.
-     */
     @Column(name = "conta_destino", length = 100)
     private String contaDestino;
-
-    // ─── Entrega ─────────────────────────────────────────────────────────
 
     @Column(name = "endereco_entrega", length = 300)
     private String enderecoEntrega;
 
     @Column(name = "custo_frete", precision = 10, scale = 2)
     private BigDecimal custoFrete = BigDecimal.ZERO;
-
-    // ─── Datas e controle ────────────────────────────────────────────────
 
     @Column(name = "data_pedido", nullable = false, updatable = false)
     private LocalDateTime dataPedido;

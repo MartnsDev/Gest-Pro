@@ -1,8 +1,8 @@
 package br.com.gestpro.auth.service;
 
+import br.com.gestpro.auth.EmailService;
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
-import br.com.gestpro.auth.EmailService;
 import br.com.gestpro.infra.exception.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;

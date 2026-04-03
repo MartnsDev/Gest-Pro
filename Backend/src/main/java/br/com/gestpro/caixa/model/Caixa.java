@@ -12,15 +12,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "caixas")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
-@Builder
+@Entity @Table(name = "caixas") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Caixa {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "data_abertura", nullable = false, updatable = false)
@@ -38,8 +33,7 @@ public class Caixa {
     @Column(name = "total_vendas", precision = 19, scale = 4, nullable = false)
     private BigDecimal totalVendas;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Enumerated(EnumType.STRING) @Column(nullable = false)
     private StatusCaixa status;
 
     @Column(nullable = false)
@@ -49,12 +43,10 @@ public class Caixa {
     private String abertoPor;
     private String fechadoPor;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "empresa_id", nullable = false)
     private Empresa empresa;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
     @OneToMany(mappedBy = "caixa", cascade = CascadeType.ALL)
@@ -65,7 +57,6 @@ public class Caixa {
 
     /**
      * Recalcula o total de vendas usando valorFinal (já com desconto aplicado).
-     * Antes usava getTotal() que era o bruto sem desconto.
      */
     public void recalcularTotalVendas() {
         this.totalVendas = vendas.stream()

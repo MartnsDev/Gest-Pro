@@ -60,7 +60,6 @@ public class ClienteController {
     }
 
     // ── Rotas legadas ──────────────────────────────────────────────────────
-
     @PostMapping("/criar")
     public ResponseEntity<ClienteDTO> criarLegado(
             @RequestBody ClienteRequest req,

@@ -25,20 +25,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String nome = oAuth2User.getAttribute("name");
         String foto = oAuth2User.getAttribute("picture");
 
-// Salva ou atualiza usuário no banco
-        Usuario usuario = usuarioRepository.findByEmail(email)
+        // Salva ou atualiza usuário no banco
+        usuarioRepository.findByEmail(email)
                 .orElseGet(() -> {
                     Usuario novo = new Usuario();
                     novo.setEmail(email);
                     novo.setNome(nome);
                     novo.setFoto(foto);
-                    novo.setTipoPlano(TipoPlano.EXPERIMENTAL); // valor padrão
+                    novo.setTipoPlano(TipoPlano.EXPERIMENTAL);
                     return usuarioRepository.save(novo);
                 });
-
-
-        // Aqui você pode gerar um JWT se quiser
-        // String token = jwtService.gerarToken(usuario);
 
         return oAuth2User;
     }

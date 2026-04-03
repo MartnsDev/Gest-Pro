@@ -10,91 +10,277 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+import static com.stripe.Stripe.apiKey;
+
 @Service
 public class EmailService {
 
     @Value("${resend.api.key}")
     private String resendApiKey;
 
-    // ================= TEMPLATE BASE =================
-    private String templateBase(String titulo, String conteudo) {
+    private String templateBase(String preheader, String corpoHtml) {
         return """
             <!DOCTYPE html>
-            <html>
-            <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, sans-serif;">
-                <div style="max-width:600px; margin:40px auto; background:#ffffff; border-radius:12px; padding:30px; box-shadow:0 4px 15px rgba(0,0,0,0.08);">
-                    <h2 style="text-align:center; color:#333; margin-bottom:20px;">%s</h2>
-                    %s
-                    <hr style="margin:30px 0; border:none; border-top:1px solid #eee;">
-                    <p style="color:#999; font-size:12px;">Este é um e-mail automático. Não responda.</p>
-                    <p style="text-align:center; color:#bbb; font-size:12px; margin-top:10px;">© 2026 GestPro</p>
-                </div>
+            <html lang="pt-BR">
+            <head>
+              <meta charset="UTF-8"/>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+              <title>GestPro</title>
+              <!--[if mso]><noscript><xml><o:OfficeDocumentSettings>
+              <o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings>
+              </xml></noscript><![endif]-->
+            </head>
+            <body style="margin:0;padding:0;background-color:#0f0f13;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
+              <!-- preheader oculto -->
+              <span style="display:none;max-height:0;overflow:hidden;">%s</span>
+
+              <!-- wrapper -->
+              <table width="100%%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#0f0f13;padding:40px 16px;">
+                <tr>
+                  <td align="center">
+                    <table width="100%%" cellpadding="0" cellspacing="0" border="0"
+                           style="max-width:580px;">
+
+                      <!-- ── LOGO ── -->
+                      <tr>
+                        <td align="center" style="padding-bottom:28px;">
+                          <table cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td style="background:linear-gradient(135deg,#6c63ff,#3b82f6);
+                                         border-radius:14px;padding:10px 22px;">
+                                <span style="font-size:22px;font-weight:800;color:#ffffff;
+                                             letter-spacing:1.5px;font-family:'Segoe UI',sans-serif;">
+                                  gest<span style="color:#a5f3fc;">pro</span>
+                                </span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+
+                      <!-- ── CARD PRINCIPAL ── -->
+                      <tr>
+                        <td style="background:#1a1a24;border-radius:20px;
+                                   border:1px solid #2a2a3a;
+                                   box-shadow:0 24px 60px rgba(0,0,0,0.5);
+                                   overflow:hidden;">
+                          %s
+                        </td>
+                      </tr>
+
+                      <!-- ── RODAPÉ ── -->
+                      <tr>
+                        <td align="center" style="padding-top:28px;">
+                          <p style="margin:0 0 6px;font-size:12px;color:#4a4a6a;">
+                            Precisa de ajuda?
+                            <a href="mailto:suporte@gestpro.site"
+                               style="color:#6c63ff;text-decoration:none;">suporte@gestpro.site</a>
+                          </p>
+                          <p style="margin:0;font-size:11px;color:#333350;">
+                            © 2026 GestPro · Este e-mail é automático, não responda diretamente.
+                          </p>
+                        </td>
+                      </tr>
+
+                    </table>
+                  </td>
+                </tr>
+              </table>
             </body>
             </html>
-        """.formatted(titulo, conteudo);
+        """.formatted(preheader, corpoHtml);
     }
 
-    // ================= EMAIL GENÉRICO =================
+    //  FAIXA HERO COLORIDA — topo do card com ícone e título
+    private String hero(String gradiente, String emoji, String titulo, String subtitulo) {
+        return """
+            <div style="background:%s;padding:40px 32px 32px;text-align:center;">
+              <div style="font-size:48px;line-height:1;margin-bottom:14px;">%s</div>
+              <h1 style="margin:0 0 8px;font-size:26px;font-weight:800;color:#ffffff;
+                         letter-spacing:-0.5px;">%s</h1>
+              <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.75);">%s</p>
+            </div>
+        """.formatted(gradiente, emoji, titulo, subtitulo);
+    }
+
+    //  EMAIL GENÉRICO
     @Async
     public void enviarEmail(String to, String nomeUsuario, String subject, String body) {
         String nome = (nomeUsuario != null && !nomeUsuario.isBlank()) ? nomeUsuario : "usuário";
-        String conteudo = """
-            <p style="color:#555; font-size:16px;">Olá, <strong>%s</strong>!</p>
-            <p style="color:#555; font-size:15px;">%s</p>
-            <p style="margin-top:20px; font-size:13px; color:#777;">
-                Se precisar de ajuda: suporte@gestpro.site
-            </p>
+
+        String corpo = hero(
+                "linear-gradient(135deg,#6c63ff 0%%,#3b82f6 100%%)",
+                "📩", "Você tem uma mensagem", "GestPro · Comunicado"
+        ) + """
+            <div style="padding:32px;color:#c8c8e0;">
+              <p style="margin:0 0 16px;font-size:16px;color:#e0e0f0;">
+                Olá, <strong style="color:#ffffff;">%s</strong>!
+              </p>
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#a0a0c0;">%s</p>
+              <div style="border-top:1px solid #2a2a3a;padding-top:20px;
+                          font-size:13px;color:#555570;">
+                Dúvidas? Fale com
+                <a href="mailto:suporte@gestpro.site"
+                   style="color:#6c63ff;text-decoration:none;">suporte@gestpro.site</a>
+              </div>
+            </div>
         """.formatted(nome, body);
-        enviarHtml(to, subject, templateBase("📩 GestPro", conteudo));
+
+        enviarHtml(to, subject, templateBase(body.substring(0, Math.min(80, body.length())), corpo));
     }
 
-    // ================= CONFIRMAÇÃO =================
+    //  CONFIRMAÇÃO DE CONTA
     @Async
     public void enviarConfirmacao(String emailDestino, String linkConfirmacao) {
-        String conteudo = """
-            <p style="color:#555; font-size:16px;">
-                Obrigado por se cadastrar no <strong>GestPro</strong>!
-            </p>
-            <p style="color:#555;">Clique no botão abaixo para ativar sua conta:</p>
-            <div style="text-align:center; margin:30px 0;">
-                <a href="%s" style="
-                    background:linear-gradient(135deg, #4CAF50, #2e7d32);
-                    color:white; padding:14px 24px; text-decoration:none;
-                    border-radius:8px; font-weight:bold; display:inline-block;">
-                    ✔ Confirmar Conta
-                </a>
+        String corpo = hero(
+                "linear-gradient(135deg,#10b981 0%%,#059669 100%%)",
+                "🚀", "Bem-vindo ao GestPro!", "Você está a um clique de começar"
+        ) + """
+            <div style="padding:36px 32px;">
+              <p style="margin:0 0 12px;font-size:16px;color:#e0e0f0;line-height:1.6;">
+                Sua conta foi criada com sucesso.
+                Confirme seu e-mail para ativar todos os recursos da plataforma.
+              </p>
+
+              <!-- botão CTA -->
+              <table cellpadding="0" cellspacing="0" border="0"
+                     style="margin:32px auto;">
+                <tr>
+                  <td align="center"
+                      style="background:linear-gradient(135deg,#10b981,#059669);
+                             border-radius:12px;">
+                    <a href="%s"
+                       style="display:inline-block;padding:16px 40px;
+                              font-size:16px;font-weight:700;
+                              color:#ffffff;text-decoration:none;
+                              letter-spacing:0.5px;">
+                      ✔&nbsp;&nbsp;Confirmar minha conta
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- link fallback -->
+              <div style="background:#111120;border-radius:10px;
+                          padding:16px 20px;margin-top:8px;">
+                <p style="margin:0 0 6px;font-size:12px;color:#555570;
+                           text-transform:uppercase;letter-spacing:0.8px;">
+                  Ou copie o link abaixo:
+                </p>
+                <p style="margin:0;font-size:12px;color:#6c63ff;
+                           word-break:break-all;line-height:1.5;">%s</p>
+              </div>
+
+              <p style="margin:24px 0 0;font-size:12px;color:#555570;line-height:1.6;">
+                ⏱ Este link expira em <strong style="color:#a0a0c0;">24 horas</strong>.
+                Se você não criou essa conta, ignore este e-mail.
+              </p>
             </div>
-            <p style="font-size:13px; color:#777;">Ou copie o link abaixo:</p>
-            <p style="word-break:break-all; font-size:12px; color:#555;">%s</p>
         """.formatted(linkConfirmacao, linkConfirmacao);
-        enviarHtml(emailDestino, "Confirme seu e-mail - GestPro",
-                templateBase("🚀 Bem-vindo ao GestPro", conteudo));
+
+        enviarHtml(emailDestino, "Confirme seu e-mail · GestPro",
+                templateBase("Ative sua conta GestPro — clique para confirmar seu e-mail.", corpo));
     }
 
-    // ================= CÓDIGO =================
+    //  CÓDIGO DE VERIFICAÇÃO — exibição grande + botão copiar via JS
     @Async
     public void enviarCodigoConfirmacao(String emailDestino, String nomeUsuario, String codigo) {
         String nome = (nomeUsuario != null && !nomeUsuario.isBlank()) ? nomeUsuario : "usuário";
-        String conteudo = """
-            <p style="color:#555;">Olá, <strong>%s</strong>!</p>
-            <p style="color:#555;">Use o código abaixo para confirmar sua ação:</p>
-            <div style="text-align:center; margin:30px 0;">
-                <span style="font-size:28px; font-weight:bold; letter-spacing:5px;
-                    background:#f1f1f1; padding:12px 20px; border-radius:8px; display:inline-block;">
-                    %s
+
+        // Separa os dígitos em spans individuais para espaçamento elegante
+        StringBuilder digitos = new StringBuilder();
+        for (char c : codigo.toCharArray()) {
+            digitos.append("""
+                <span style="display:inline-block;width:52px;height:64px;line-height:64px;
+                             text-align:center;font-size:36px;font-weight:800;color:#ffffff;
+                             background:#23233a;border-radius:12px;
+                             border:1.5px solid #3a3a5a;margin:0 4px;
+                             font-family:'Courier New',monospace;letter-spacing:0;">
+                  %s
                 </span>
+            """.formatted(c));
+        }
+
+        String corpo = hero(
+                "linear-gradient(135deg,#7c3aed 0%%,#4f46e5 100%%)",
+                "🔐", "Código de Verificação", "Use este código para confirmar sua ação"
+        ) + """
+            <div style="padding:36px 32px;">
+              <p style="margin:0 0 8px;font-size:16px;color:#e0e0f0;">
+                Olá, <strong style="color:#ffffff;">%s</strong>!
+              </p>
+              <p style="margin:0 0 28px;font-size:14px;color:#7070a0;line-height:1.6;">
+                Seu código de verificação GestPro está abaixo.
+                Digite-o na tela para continuar.
+              </p>
+
+              <!-- bloco do código -->
+              <div style="background:#111120;border-radius:16px;
+                          padding:28px 20px;text-align:center;
+                          border:1px solid #2a2a3a;">
+                <div style="margin-bottom:20px;">
+                  %s
+                </div>
+
+                <!-- botão copiar (funciona em clientes que renderizam JS — fallback visual nos demais) -->
+                <div id="copy-wrap" style="margin-top:4px;">
+                  <button onclick="
+                    navigator.clipboard.writeText('%s').then(function(){
+                      var btn = document.getElementById('copy-btn');
+                      btn.textContent = '✓  Copiado!';
+                      btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+                      setTimeout(function(){ btn.textContent = '⧉  Copiar código'; btn.style.background = 'linear-gradient(135deg,#6c63ff,#4f46e5)'; }, 2500);
+                    })
+                  "
+                    id="copy-btn"
+                    style="cursor:pointer;border:none;outline:none;
+                           background:linear-gradient(135deg,#6c63ff,#4f46e5);
+                           color:#ffffff;font-size:14px;font-weight:700;
+                           padding:12px 32px;border-radius:10px;
+                           letter-spacing:0.5px;transition:all .3s;">
+                    ⧉&nbsp;&nbsp;Copiar código
+                  </button>
+                </div>
+              </div>
+
+              <!-- avisos -->
+              <div style="margin-top:24px;display:flex;flex-direction:column;gap:8px;">
+                <div style="background:#1e1a2e;border-left:3px solid #f59e0b;
+                             border-radius:0 8px 8px 0;padding:12px 16px;">
+                  <p style="margin:0;font-size:13px;color:#f59e0b;font-weight:600;">
+                    ⏱&nbsp; Expira em <strong>10 minutos</strong>
+                  </p>
+                </div>
+                <div style="background:#1a1e1e;border-left:3px solid #ef4444;
+                             border-radius:0 8px 8px 0;padding:12px 16px;">
+                  <p style="margin:0;font-size:13px;color:#ef4444;font-weight:600;">
+                    🔒&nbsp; Nunca compartilhe este código com ninguém
+                  </p>
+                </div>
+              </div>
+
+              <p style="margin:24px 0 0;font-size:12px;color:#555570;line-height:1.6;">
+                Não solicitou este código?
+                <a href="mailto:suporte@gestpro.site"
+                   style="color:#6c63ff;text-decoration:none;">
+                  Entre em contato imediatamente.
+                </a>
+              </p>
             </div>
-            <p style="font-size:13px; color:#777;">⏱ Expira em 10 minutos.</p>
-            <p style="font-size:13px; color:#999;">Nunca compartilhe este código com ninguém.</p>
-        """.formatted(nome, codigo);
-        enviarHtml(emailDestino, "Código de Confirmação - GestPro",
-                templateBase("🔐 Verificação de Segurança", conteudo));
+        """.formatted(nome, digitos.toString(), codigo);
+
+        enviarHtml(emailDestino, "Seu código de verificação · GestPro",
+                templateBase("Seu código GestPro: " + codigo + " — expira em 10 minutos.", corpo));
     }
 
-    // ================= ENVIO CENTRAL =================
+    //  ENVIO CENTRAL via Resend API
     private void enviarHtml(String to, String subject, String html) {
         if (resendApiKey == null || resendApiKey.isBlank()) {
             throw new RuntimeException("RESEND_API_KEY não configurada no ambiente");
+        }
+        if (apiKey == null || apiKey.isEmpty()) {
+            return;
         }
         try {
             String json = """
@@ -119,19 +305,18 @@ public class EmailService {
             if (response.statusCode() == 200 || response.statusCode() == 201) {
                 System.out.println("✅ E-mail enviado para " + to + " | Status: " + response.statusCode());
             } else {
-                // Lança exceção com o motivo real da Resend
                 throw new RuntimeException("Resend recusou: " + response.statusCode() + " - " + response.body());
             }
         } catch (RuntimeException e) {
-            throw e; // propaga sem encapsular
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Falha ao enviar e-mail: " + e.getMessage(), e);
         }
     }
 
-    // ================= GERAR CÓDIGO =================
+    //  GERADOR DE CÓDIGO 6 DÍGITOS
     public String gerarCodigo() {
-        int codigo = 100000 + (int)(Math.random() * 900000);
+        int codigo = 100000 + (int) (Math.random() * 900000);
         return String.valueOf(codigo);
     }
 }

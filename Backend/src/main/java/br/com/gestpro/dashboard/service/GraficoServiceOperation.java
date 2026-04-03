@@ -25,7 +25,7 @@ public class GraficoServiceOperation {
     private final GraficoRepository   graficoRepository;
     private final DashboardRepository dashboardRepository; // para a query combinada
 
-    // ── Métodos de pagamento por empresa ───────────────────────────────────
+    // Métodos de pagamento por empresa
     @Transactional(readOnly = true)
     public List<MetodoPagamentoDTO> vendasPorMetodoPagamento(Long empresaId) {
         List<Object[]> raw = graficoRepository.countVendasPorFormaPagamentoRaw(empresaId);
@@ -40,20 +40,13 @@ public class GraficoServiceOperation {
         }).toList();
     }
 
-    // ── Top produtos por empresa (PDV + Pedidos) ───────────────────────────
+    // Top produtos por empresa (PDV + Pedidos)
     @Transactional(readOnly = true)
     public List<ProdutoVendasDTO> vendasPorProduto(Long empresaId) {
-        return graficoRepository.countVendasPorProdutoDTO(empresaId);
+        return graficoRepository.countVendasPorProdutoRaw(empresaId);
     }
 
-    // ── Vendas diárias da semana — PDV + Pedidos ───────────────────────────
-    /**
-     * Usa a query combinada do DashboardRepository que faz UNION ALL
-     * entre venda e pedido, somando ambos por dia da semana.
-     *
-     * Retorno da query: Object[] = [dayofweek(int), date_str, total(double)]
-     * DAYOFWEEK MySQL: 1=Dom, 2=Seg, 3=Ter, 4=Qua, 5=Qui, 6=Sex, 7=Sáb
-     */
+    // Vendas diárias da semana — PDV + Pedidos
     @Transactional(readOnly = true)
     public List<VendasDiariasDTO> vendasDiariasSemana(Long empresaId) {
         LocalDate hoje       = LocalDate.now();
@@ -71,7 +64,7 @@ public class GraficoServiceOperation {
                 )
         );
 
-        String[] nomes        = {"", "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"};
+        String[] nomes         = {"", "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"};
         int[]    ordemExibicao = {2, 3, 4, 5, 6, 7, 1}; // Segunda → Domingo
 
         List<VendasDiariasDTO> result = new ArrayList<>();

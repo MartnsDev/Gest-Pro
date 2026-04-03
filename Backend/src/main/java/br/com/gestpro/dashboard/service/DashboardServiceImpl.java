@@ -23,14 +23,14 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
     private final VisaoGeralOperation     visaoGeralOperation;
     private final EmpresaRepository       empresaRepository;
 
-    // ── Plano ──────────────────────────────────────────────────────────────
+    // Plano
     @Override
     @Transactional(readOnly = true)
     public PlanoDTO planoUsuarioLogado(String email) {
         return visaoGeralOperation.planoUsuarioLogado(email);
     }
 
-    // ── Validação de permissão ─────────────────────────────────────────────
+    // Validação de permissão
     private Empresa validarEmpresa(Long empresaId, String email) {
         Empresa empresa = empresaRepository.findById(empresaId)
                 .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, "/api/v1/dashboard"));
@@ -39,7 +39,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         return empresa;
     }
 
-    // ── Gráficos ───────────────────────────────────────────────────────────
+    // Gráficos
     @Override
     @Transactional(readOnly = true)
     public List<MetodoPagamentoDTO> vendasPorMetodoPagamento(Long empresaId, String email) {
@@ -62,13 +62,13 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         return graficoServiceOperation.vendasDiariasSemana(empresaId);
     }
 
-    // ── Visão geral ────────────────────────────────────────────────────────
+    // Visão geral
     @Override
     @Transactional(readOnly = true)
     public DashboardVisaoGeralResponse visaoGeral(Long empresaId, String email) {
         validarEmpresa(empresaId, email);
 
-        // ── Contadores do dia (vendasHoje já inclui PDV + Pedidos na query) ──
+        // Contadores do dia (vendasHoje já inclui PDV + Pedidos na query)
         List<Object[]> rows = dashboardRepository.findDashboardCountsRaw(empresaId);
         Object vHoje = 0, pCom = 0, pSem = 0, cAtivos = 0;
         if (rows != null && !rows.isEmpty()) {
@@ -81,7 +81,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
             }
         }
 
-        // ── Dados agregados (semana/mês já combinam PDV + Pedidos) ────────
+        // Dados agregados (semana/mês já combinam PDV + Pedidos)
         PlanoDTO   plano          = visaoGeralOperation.planoUsuarioLogado(email);
         BigDecimal vendasSemana   = visaoGeralOperation.vendasSemana(empresaId);
         BigDecimal vendasMes      = visaoGeralOperation.vendasMes(empresaId);
@@ -90,13 +90,13 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         BigDecimal custos         = visaoGeralOperation.custoTotalEstoque(empresaId);
         BigDecimal totalInvestido = visaoGeralOperation.totalInvestido(empresaId);
 
-        // ── Origem separada (PDV vs Pedidos) para gráfico de pizza ────────
+        // Origem separada (PDV vs Pedidos) para gráfico de pizza
         BigDecimal pdvDia     = parseBD(dashboardRepository.somaPdvDia(empresaId));
         BigDecimal pedidosDia = parseBD(dashboardRepository.somaPedidosDia(empresaId));
         BigDecimal pdvMes     = parseBD(dashboardRepository.somaPdvMes(empresaId));
         BigDecimal pedidosMes = parseBD(dashboardRepository.somaPedidosMes(empresaId));
 
-        // ── Alertas ────────────────────────────────────────────────────────
+        // Alertas
         List<String> alertas = Stream.concat(
                 visaoGeralOperation.alertasProdutosZerados(empresaId).stream(),
                 "INATIVO".equals(plano.getStatusAcesso())
@@ -104,7 +104,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
                         : Stream.empty()
         ).toList();
 
-        // ── Montar resposta ────────────────────────────────────────────────
+        // Montar resposta
         DashboardVisaoGeralResponse response = new DashboardVisaoGeralResponse(
                 vHoje, pCom, pSem, cAtivos,
                 vendasSemana, vendasMes, lucroDia, lucroMes,
@@ -120,7 +120,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         return response;
     }
 
-    // ── Helper local ───────────────────────────────────────────────────────
+    // Helper local
     private BigDecimal parseBD(Object obj) {
         if (obj == null) return BigDecimal.ZERO;
         if (obj instanceof BigDecimal bd) return bd;

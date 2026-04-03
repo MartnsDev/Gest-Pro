@@ -61,7 +61,11 @@ public class AuthController {
                 "/auth/cadastro"
         );
 
-        return ResponseEntity.ok(Map.of("mensagem", "Cadastro realizado! Verifique seu e-mail para confirmar a conta."));
+        return ResponseEntity.ok(Map.of(
+                "mensagem", "Cadastro realizado! Verifique seu e-mail para confirmar a conta.",
+                "usuarioId", retornoUsuario.getId(),
+                "nome", retornoUsuario.getNome()
+        ));
     }
 
 
@@ -77,6 +81,7 @@ public class AuthController {
         }
     }
 
+    //Login Manual
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> loginUsuario(
             @RequestBody LoginUsuarioDTO loginRequest,

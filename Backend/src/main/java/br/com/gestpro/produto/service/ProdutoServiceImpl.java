@@ -44,10 +44,7 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
         return empresa;
     }
 
-    /**
-     * Valida se o usuário pode cadastrar mais um produto nesta empresa.
-     * Conta apenas produtos ativos para não penalizar quem excluiu itens.
-     */
+
     private void validarLimiteProdutos(Empresa empresa, Usuario usuario) {
         TipoPlano plano = usuario.getTipoPlano();
 
@@ -73,7 +70,7 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
         produto.setNome(dto.getNome());
         produto.setPreco(dto.getPreco());
         produto.setQuantidadeEstoque(dto.getQuantidadeEstoque());
-        produto.setAtivo(dto.getAtivo() != null ? dto.getAtivo() : true);
+        produto.setAtivo(Boolean.TRUE.equals(dto.getAtivo()));
         produto.setCategoria(dto.getCategoria());
         produto.setDescricao(dto.getDescricao());
         produto.setUnidade(dto.getUnidade());
@@ -88,7 +85,6 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
         Usuario usuario = buscarUsuario(dto.getEmailUsuario());
         Empresa empresa = buscarEmpresa(dto.getEmpresaId(), dto.getEmailUsuario());
 
-        //  Valida limite de produtos antes de salvar
         validarLimiteProdutos(empresa, usuario);
 
         Produto produto = new Produto();

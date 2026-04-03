@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class LoginManualOperation {
@@ -48,7 +50,6 @@ public class LoginManualOperation {
 
         // 3. Validação de Senha / Conversão de conta Google
         if (usuario.isLoginGoogle()) {
-            // Se o usuário era apenas Google e agora definiu uma senha, desmarca a flag
             usuario.setSenha(passwordEncoder.encode(loginRequest.senha()));
             usuario.setLoginGoogle(false);
             usuarioRepository.save(usuario);
@@ -57,13 +58,10 @@ public class LoginManualOperation {
         }
 
         // 4. Verificação de Expiração do Plano
-        // Usamos o try-catch para permitir o login mesmo se o plano venceu.
-        // O método 'validarAcessoTemporario' já atualizará o status no banco para INATIVO.
         try {
             verificarPlano.validarAcessoIsolado(usuario);
         } catch (ApiException e) {
-            // Ignoramos a interrupção aqui. O usuário loga, mas o status dele no token/banco será INATIVO.
-            // Isso permite que o Frontend redirecione ele para a página de Planos/Pagamento.
+            logger.warn("Usuário com plano inválido ao logar: {}", usuario.getEmail());
         }
 
         // 5. Geração do Token JWT
@@ -77,7 +75,7 @@ public class LoginManualOperation {
         jwtCookie.setMaxAge(7 * 24 * 60 * 60); // 7 dias de validade
         response.addCookie(jwtCookie);
 
-        // 7. Resposta para o Frontend (Next.js)
+        // 7. Resposta para o Frontend
         return new LoginResponse(
                 token,
                 usuario.getNome(),
@@ -86,4 +84,6 @@ public class LoginManualOperation {
                 usuario.getFoto()
         );
     }
+
+    private static final Logger logger = LoggerFactory.getLogger(LoginManualOperation.class);
 }

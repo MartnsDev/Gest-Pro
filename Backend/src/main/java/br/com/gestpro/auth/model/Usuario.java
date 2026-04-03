@@ -4,9 +4,8 @@ import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
 import jakarta.persistence.*;
 import lombok.Data;
-import java.time.LocalDate;
+
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "usuarios")

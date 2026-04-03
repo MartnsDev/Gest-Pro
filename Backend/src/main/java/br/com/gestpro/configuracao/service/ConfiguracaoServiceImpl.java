@@ -3,19 +3,22 @@ package br.com.gestpro.configuracao.service;
 import br.com.gestpro.auth.EmailService;
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
-import br.com.gestpro.configuracao.dto.*;
+import br.com.gestpro.configuracao.dto.NotificacoesDTO;
+import br.com.gestpro.configuracao.dto.PerfilDTO;
+import br.com.gestpro.configuracao.dto.TrocarSenhaDTO;
 import br.com.gestpro.infra.exception.ApiException;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.*;
-import java.time.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -37,7 +40,7 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoServiceInterface {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    // ── Perfil ────────────────────────────────────────────────────────────
+    // Perfil
     @Override
     public PerfilDTO getPerfil(String email) {
         Usuario u = buscar(email);

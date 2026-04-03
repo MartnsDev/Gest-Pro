@@ -30,7 +30,6 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.vendasPorMetodoPagamento(empresaId, authentication.getName()));
     }
 
-
     @GetMapping("/vendas/produto")
     public ResponseEntity<List<ProdutoVendasDTO>> vendasPorProduto(
             @RequestParam Long empresaId,
@@ -44,7 +43,6 @@ public class DashboardController {
             Authentication authentication) {
         return ResponseEntity.ok(dashboardService.vendasDiariasSemana(empresaId, authentication.getName()));
     }
-
 
     @GetMapping("/vendas/plano-usuario")
     public ResponseEntity<PlanoDTO> buscarPlanoUsuarioLogado(Authentication authentication) {

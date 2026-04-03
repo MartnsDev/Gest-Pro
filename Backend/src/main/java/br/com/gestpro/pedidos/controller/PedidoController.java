@@ -34,8 +34,6 @@ public class PedidoController {
 
     private final PedidoServiceInterface pedidoService;
 
-    // ─── Registrar ───────────────────────────────────────────────────────
-
     @PostMapping("/empresa/{empresaId}")
     public ResponseEntity<PedidoResponseDTO> registrar(
             @PathVariable Long empresaId,
@@ -49,7 +47,6 @@ public class PedidoController {
                 .body(new PedidoResponseDTO(pedidoService.registrarPedido(dto)));
     }
 
-    // ─── Listar por empresa ──────────────────────────────────────────────
 
     @GetMapping("/empresa/{empresaId}")
     @Transactional(readOnly = true)
@@ -65,8 +62,6 @@ public class PedidoController {
         );
     }
 
-    // ─── Limpar todo o histórico de uma empresa ──────────────────────────
-
     @DeleteMapping("/empresa/{empresaId}/historico")
     public ResponseEntity<Void> limparHistorico(
             @PathVariable Long empresaId,
@@ -76,15 +71,11 @@ public class PedidoController {
         return ResponseEntity.noContent().build();
     }
 
-    // ─── Buscar por ID ───────────────────────────────────────────────────
-
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
     public ResponseEntity<PedidoResponseDTO> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(new PedidoResponseDTO(pedidoService.buscarPorId(id)));
     }
-
-    // ─── Atualizar status ────────────────────────────────────────────────
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<PedidoResponseDTO> atualizarStatus(
@@ -107,8 +98,6 @@ public class PedidoController {
         ));
     }
 
-    // ─── Cancelar ────────────────────────────────────────────────────────
-
     @PostMapping("/{id}/cancelar")
     public ResponseEntity<PedidoResponseDTO> cancelar(
             @PathVariable Long id,
@@ -121,8 +110,6 @@ public class PedidoController {
         ));
     }
 
-    // ─── Editar observação ───────────────────────────────────────────────
-
     @PatchMapping("/{id}/observacao")
     public ResponseEntity<PedidoResponseDTO> editarObservacao(
             @PathVariable Long id,
@@ -134,8 +121,6 @@ public class PedidoController {
                 pedidoService.editarObservacao(id, obs, authentication.getName())
         ));
     }
-
-    // ─── Remover pedido individual ───────────────────────────────────────
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> remover(

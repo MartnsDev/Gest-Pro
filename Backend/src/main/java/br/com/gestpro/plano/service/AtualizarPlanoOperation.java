@@ -27,16 +27,6 @@ public class AtualizarPlanoOperation {
     private final UsuarioRepository    usuarioRepository;
     private final AssinaturaRepository assinaturaRepository;
 
-    /**
-     * Ativa ou atualiza o plano do usuário após confirmação de pagamento.
-     * Chamado pelo webhook checkout.session.completed.
-     * <p>
-     * O vencimento vem de subscription.getCurrentPeriodEnd() — nunca calculado localmente.
-     *
-     * @param email          E-mail do cliente conforme retornado pela Stripe
-     * @param subscriptionId ID da assinatura Stripe (sub_xxx)
-     * @param customerId     ID do customer Stripe (cus_xxx)
-     */
     @Transactional
     public void ativarPlano(String email, String subscriptionId, String customerId) {
         log.info("Ativando plano para: {} | subscription: {}", email, subscriptionId);
@@ -78,15 +68,6 @@ public class AtualizarPlanoOperation {
         log.info("Plano {} ativado com sucesso para: {} | vence em: {}", planoTipo, email, vencimento);
     }
 
-    /**
-     * Renova o vencimento após cobrança recorrente ou atualização de plano.
-     * Chamado pelos webhooks invoice.payment_succeeded e customer.subscription.updated.
-     * <p>
-     * Idempotente: se o vencimento recebido for igual ou anterior ao já salvo,
-     * a operação é ignorada (evita race condition de webhooks fora de ordem).
-     *
-     * @param subscriptionId ID da assinatura Stripe
-     */
     @Transactional
     public void renovarPlano(String subscriptionId) {
         log.info("Renovando plano para subscription: {}", subscriptionId);
@@ -131,14 +112,6 @@ public class AtualizarPlanoOperation {
         log.info("Plano renovado com sucesso: {} | vence em: {}", subscriptionId, novoVencimento);
     }
 
-    /**
-     * Cancela o plano do usuário ao fim do período pago.
-     * Chamado pelo webhook customer.subscription.deleted.
-     * <p>
-     * Rebaixa para EXPERIMENTAL (tier gratuito) e bloqueia acesso.
-     *
-     * @param subscriptionId ID da assinatura Stripe
-     */
     @Transactional
     public void cancelarPlano(String subscriptionId) {
         log.info("Cancelando plano para subscription: {}", subscriptionId);
@@ -159,15 +132,6 @@ public class AtualizarPlanoOperation {
                 }, () -> log.warn("Subscription não encontrada para cancelamento: {}", subscriptionId));
     }
 
-    /**
-     * Marca como inadimplente quando o pagamento falha após as tentativas da Stripe.
-     * Chamado pelo webhook invoice.payment_failed.
-     * <p>
-     * Preserva o TipoPlano — apenas bloqueia o acesso. O plano será rebaixado
-     * somente em customer.subscription.deleted, quando a Stripe desistir definitivamente.
-     *
-     * @param subscriptionId ID da assinatura Stripe
-     */
     @Transactional
     public void marcarInadimplente(String subscriptionId) {
         log.warn("Marcando inadimplência para subscription: {}", subscriptionId);
@@ -188,8 +152,6 @@ public class AtualizarPlanoOperation {
                     log.warn("Acesso bloqueado por inadimplência: {}", usuario.getEmail());
                 }, () -> log.warn("Subscription não encontrada para inadimplência: {}", subscriptionId));
     }
-
-    // ─── Helpers privados ─────────────────────────────────────────────────────
 
     private Subscription buscarSubscriptionStripe(String subscriptionId) {
         try {

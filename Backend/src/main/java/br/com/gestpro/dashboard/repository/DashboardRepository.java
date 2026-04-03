@@ -14,15 +14,13 @@ import java.util.List;
  * Queries de faturamento somam PDV (venda, cancelada=0) + Pedidos (pedido, status <> 'CANCELADO').
  * Lucro PDV = calculado via preco_custo dos itens.
  * Lucro Pedidos = estimado como (valor_final - custo_frete), pois pedidos não têm
- *   item com preco_custo. Quando preco_custo médio dos produtos vendidos estiver
- *   disponível via JOIN com item_pedido, usa-se o mesmo cálculo do PDV.
+ * item com preco_custo. Quando preco_custo médio dos produtos vendidos estiver
+ * disponível via JOIN com item_pedido, usa-se o mesmo cálculo do PDV.
  */
 @Repository
 public interface DashboardRepository extends JpaRepository<Venda, Long> {
 
-    // ══════════════════════════════════════════════════════════════════════
     //  CONTADORES DO DIA — vendasHoje = PDV + Pedidos
-    // ══════════════════════════════════════════════════════════════════════
     @Query(value =
             "SELECT " +
                     " CAST((" +
@@ -42,9 +40,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             nativeQuery = true)
     List<Object[]> findDashboardCountsRaw(@Param("empresaId") Long empresaId);
 
-    // ══════════════════════════════════════════════════════════════════════
     //  FATURAMENTO SEMANAL — PDV + Pedidos
-    // ══════════════════════════════════════════════════════════════════════
     @Query(value =
             "SELECT " +
                     "  COALESCE((SELECT SUM(v.valor_final) FROM venda v " +
@@ -60,9 +56,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             @Param("fim")       LocalDateTime fim
     );
 
-    // ══════════════════════════════════════════════════════════════════════
     //  FATURAMENTO MENSAL — PDV + Pedidos
-    // ══════════════════════════════════════════════════════════════════════
     @Query(value =
             "SELECT " +
                     "  COALESCE((SELECT SUM(v.valor_final) FROM venda v " +
@@ -76,10 +70,8 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             nativeQuery = true)
     Object somaVendasMes(@Param("empresaId") Long empresaId);
 
-    // ══════════════════════════════════════════════════════════════════════
     //  LUCRO DO DIA — PDV + estimativa de Pedidos
     //  Pedidos: usa preco_custo dos produtos vendidos via item_pedido JOIN produto
-    // ══════════════════════════════════════════════════════════════════════
     @Query(value =
             // Lucro PDV do dia
             "SELECT COALESCE((" +
@@ -105,9 +97,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             nativeQuery = true)
     Object lucroDia(@Param("empresaId") Long empresaId);
 
-    // ══════════════════════════════════════════════════════════════════════
     //  LUCRO DO MÊS — PDV + Pedidos
-    // ══════════════════════════════════════════════════════════════════════
     @Query(value =
             "SELECT COALESCE((" +
                     "  SELECT SUM(" +
@@ -133,9 +123,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             nativeQuery = true)
     Object lucroMes(@Param("empresaId") Long empresaId);
 
-    // ══════════════════════════════════════════════════════════════════════
     //  LUCRO POR PERÍODO — PDV + Pedidos (usado pelo RelatorioService)
-    // ══════════════════════════════════════════════════════════════════════
     @Query(value =
             "SELECT COALESCE((" +
                     "  SELECT SUM(" +
@@ -163,9 +151,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             @Param("fim")       LocalDateTime fim
     );
 
-    // ══════════════════════════════════════════════════════════════════════
     //  VENDAS DIÁRIAS COMBINADAS — PDV + Pedidos (gráfico de barras)
-    // ══════════════════════════════════════════════════════════════════════
     @Query(value =
             "SELECT dia, DATE_FORMAT(data_dia, '%Y-%m-%d') AS data_str, SUM(total) AS total_dia " +
                     "FROM (" +
@@ -188,9 +174,7 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
             @Param("fim")       LocalDateTime fim
     );
 
-    // ══════════════════════════════════════════════════════════════════════
     //  ORIGEM SEPARADA — para gráfico de pizza PDV vs Pedidos
-    // ══════════════════════════════════════════════════════════════════════
     @Query(value = "SELECT COALESCE(SUM(v.valor_final),0) FROM venda v WHERE v.empresa_id=:empresaId AND v.cancelada=0 AND DATE(v.data_venda)=CURDATE()", nativeQuery = true)
     Object somaPdvDia(@Param("empresaId") Long empresaId);
 
@@ -211,18 +195,14 @@ public interface DashboardRepository extends JpaRepository<Venda, Long> {
     @Query(value = "SELECT COALESCE(SUM(p.valor_final),0) FROM pedido p WHERE p.empresa_id=:empresaId AND p.status<>'CANCELADO' AND p.data_pedido>=:inicio AND p.data_pedido<=:fim", nativeQuery = true)
     Object somaPedidosPeriodo(@Param("empresaId") Long empresaId, @Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim);
 
-    // ══════════════════════════════════════════════════════════════════════
     //  ESTOQUE
-    // ══════════════════════════════════════════════════════════════════════
     @Query("SELECT COALESCE(SUM(p.precoCusto * p.quantidadeEstoque), 0) FROM Produto p WHERE p.empresa.id = :empresaId AND p.precoCusto IS NOT NULL AND p.quantidadeEstoque > 0")
     BigDecimal custoTotalEstoque(@Param("empresaId") Long empresaId);
 
     @Query("SELECT COALESCE(SUM(p.precoCusto), 0) FROM Produto p WHERE p.empresa.id = :empresaId AND p.precoCusto IS NOT NULL")
     BigDecimal totalInvestidoCadastrado(@Param("empresaId") Long empresaId);
 
-    // ══════════════════════════════════════════════════════════════════════
     //  QUERIES PARA RELATÓRIOS — período customizável
-    // ══════════════════════════════════════════════════════════════════════
 
     /** Faturamento PDV + Pedidos em um período */
     @Query(value =

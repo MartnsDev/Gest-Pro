@@ -9,11 +9,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class GoogleAuthController {
 
     /**
-     * Endpoint necessário apenas para que o Spring Security reconheça o sucesso do login.
-     * Não devolve token nem dados do usuário, porque o OAuth2LoginSuccessHandler já lida com isso.
+      OAuth2LoginSuccessHandler já lida com isso.
      */
     @GetMapping("/success")
     public void success() {
-        // Nada aqui: o OAuth2LoginSuccessHandler já redireciona o usuário
+        // OAuth2LoginSuccessHandler já redireciona o usuário
     }
 }

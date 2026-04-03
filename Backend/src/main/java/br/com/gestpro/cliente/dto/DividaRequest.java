@@ -1,7 +1,6 @@
 package br.com.gestpro.cliente.dto;
 
 import lombok.Data;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 

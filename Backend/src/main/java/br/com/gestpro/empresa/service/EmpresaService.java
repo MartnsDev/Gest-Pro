@@ -29,8 +29,7 @@ public class EmpresaService {
     private final VerificarPlanoOperation verificarPlano;
     private final PasswordEncoder         passwordEncoder;
 
-    // ─── CRUD padrão ──────────────────────────────────────────────────────
-
+    // CRUD padrão
     @Transactional
     public EmpresaResponse criar(CriarEmpresaRequest req) {
         Usuario dono = usuarioRepository.findByEmail(req.getEmailUsuario())
@@ -101,13 +100,7 @@ public class EmpresaService {
                         "Empresa não encontrada com o ID: " + id)));
     }
 
-    // ─── Exclusão com confirmação por senha ───────────────────────────────
-
-    /**
-     * Valida a senha do usuário e exclui a empresa com todos os dados.
-     * Usuários que fazem login pelo Google (sem senha) não podem usar esta rota —
-     * retorna erro orientando a usar outro método.
-     */
+    // Exclusão com confirmação por senha
     @Transactional
     public void excluirComSenha(Long empresaId, String emailUsuario, String senhaInformada) {
         Empresa empresa = empresaRepository.findByIdWithDono(empresaId)
@@ -138,8 +131,7 @@ public class EmpresaService {
         log.info("Empresa {} excluída com sucesso pelo usuário {}", empresaId, emailUsuario);
     }
 
-    // ─── Helpers privados ─────────────────────────────────────────────────
-
+    // Helpers privados
     private EmpresaResponse mapToResponse(Empresa empresa) {
         EmpresaResponse res = new EmpresaResponse();
         res.setId(empresa.getId());

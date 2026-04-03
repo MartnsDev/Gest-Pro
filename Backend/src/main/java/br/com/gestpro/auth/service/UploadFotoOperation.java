@@ -2,7 +2,7 @@ package br.com.gestpro.auth.service;
 
 import br.com.gestpro.infra.exception.ApiException;
 import com.cloudinary.Cloudinary;
-import com.cloudinary.Transformation; // Importação necessária
+import com.cloudinary.Transformation;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

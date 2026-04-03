@@ -7,7 +7,6 @@ import br.com.gestpro.cliente.repository.ClienteRepository;
 import br.com.gestpro.empresa.model.Empresa;
 import br.com.gestpro.empresa.repository.EmpresaRepository;
 import br.com.gestpro.infra.exception.ApiException;
-
 import br.com.gestpro.pedidos.CanalVenda;
 import br.com.gestpro.pedidos.Repository.PedidoRepository;
 import br.com.gestpro.pedidos.dto.ItemPedido;

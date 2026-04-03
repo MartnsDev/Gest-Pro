@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RelatorioServiceImpl implements RelatorioServiceInterface {
 
-    private static final String PATH     = "/api/v1/relatorios";
+    private static final String PATH = "/api/v1/relatorios";
     private static final DateTimeFormatter FMT_DT =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter FMT_DAY =
@@ -121,8 +121,6 @@ public class RelatorioServiceImpl implements RelatorioServiceInterface {
         rel.setValorCancelado(valCancel);
 
         // ── Origem (pizza) ────────────────────────────────────────────────
-        double recPdv     = toDouble(dashboardRepository.somaPdvMes(id));     // approx — usa mês; para precisão exata teríamos query por período
-        double recPedidos = toDouble(dashboardRepository.somaPedidosMes(id));
         // Sobrescreve com valores reais do período via faturamentoPeriodo já calculado
         // Usa as queries separadas de PDV e Pedidos para o período:
         double recPdvPeriodo     = toDouble(dashboardRepository.somaPdvPeriodo(id, inicio, fim));
@@ -157,7 +155,7 @@ public class RelatorioServiceImpl implements RelatorioServiceInterface {
         List<RelatorioDTO.PagamentoItem> pags = pagMap.entrySet().stream().map(e -> {
                     double tot = e.getValue()[1] / 100.0;
                     RelatorioDTO.PagamentoItem p = new RelatorioDTO.PagamentoItem(e.getKey(), e.getValue()[0], tot);
-                    p.setPercentual(totalPag > 0 ? (tot / totalPag) * 100 : 0);
+                    p.setPercentual(totalPag > 0 ? tot / totalPag * 100 : 0);
                     return p;
                 }).sorted(Comparator.comparingDouble(RelatorioDTO.PagamentoItem::getTotal).reversed())
                 .collect(Collectors.toList());

@@ -7,17 +7,14 @@ import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.plano.stripe.model.Assinatura;
 import br.com.gestpro.plano.stripe.repository.AssinaturaRepository;
-import com.stripe.model.Subscription;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
@@ -28,17 +25,6 @@ public class VerificarPlanoOperation {
     private final UsuarioRepository usuarioRepository;
     private final AssinaturaRepository assinaturaRepository;
 
-    // ─── Ponto de entrada único ───────────────────────────────────────────────
-
-    /**
-     * Valida se o usuário tem acesso ativo.
-     * Delega para o fluxo correto conforme o tipo de plano.
-     * <p>
-     * - EXPERIMENTAL → valida por dataPrimeiroLogin + 7 dias
-     * - Planos pagos  → valida pelo dataVencimento real da Stripe
-     * <p>
-     * Se expirado ou bloqueado: atualiza o banco e lança 403.
-     */
     @Transactional
     public void validarAcesso(Usuario usuario) {
         if (usuario.getTipoPlano() == TipoPlano.EXPERIMENTAL) {
@@ -48,13 +34,11 @@ public class VerificarPlanoOperation {
         }
     }
 
-    // Em VerificarPlanoOperation.java — adicione este método:
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void validarAcessoIsolado(Usuario usuario) {
         validarAcesso(usuario);
     }
 
-    // ─── Fluxo EXPERIMENTAL ───────────────────────────────────────────────────
     private void validarAcessoExperimental(Usuario usuario) {
         LocalDateTime inicio = (usuario.getDataPrimeiroLogin() != null)
                 ? usuario.getDataPrimeiroLogin()
@@ -72,11 +56,9 @@ public class VerificarPlanoOperation {
         }
     }
 
-    // ─── Fluxo PAGO (Básico / Pro / Premium) ─────────────────────────────────
     private void validarAcessoPago(Usuario usuario) {
         Optional<Assinatura> assinaturaOpt = assinaturaRepository.findByUsuarioEmail(usuario.getEmail());
 
-        // Sem assinatura no banco → nunca pagou ou registro corrompido
         if (assinaturaOpt.isEmpty()) {
             bloquearUsuario(usuario);
             throw new ApiException(
@@ -88,7 +70,6 @@ public class VerificarPlanoOperation {
 
         Assinatura assinatura = assinaturaOpt.get();
 
-        // Status vindo dos webhooks da Stripe (CANCELADO, INADIMPLENTE, VENCIDO)
         if (!"ATIVO".equals(assinatura.getStatus())) {
             bloquearUsuario(usuario);
             throw new ApiException(
@@ -99,14 +80,9 @@ public class VerificarPlanoOperation {
             );
         }
 
-        // dataVencimento = current_period_end da Stripe (atualizado a cada renovação)
-       // if (LocalDate.now().isAfter(assinatura.getDataVencimento())) {
-
-
-            // Só bloqueia se a data de vencimento for ANTERIOR a hoje
             if (assinatura.getDataVencimento().isBefore(LocalDate.now())) {
             bloquearUsuario(usuario);
-            // Marca como VENCIDO no banco também (webhook pode ter atrasado)
+
             assinatura.setStatus("VENCIDO");
             assinaturaRepository.save(assinatura);
             throw new ApiException(
@@ -118,11 +94,6 @@ public class VerificarPlanoOperation {
         }
     }
 
-    // ─── Validação de limites ─────────────────────────────────────────────────
-
-    /**
-     * Valida se o usuário pode cadastrar mais uma empresa.
-     */
     @Transactional
     public void validarLimiteEmpresas(Usuario usuario, long empresasAtuais) {
         validarAcesso(usuario);
@@ -144,9 +115,8 @@ public class VerificarPlanoOperation {
         }
     }
 
-    /**
-     * Valida se o usuário pode abrir mais um caixa na empresa.
-     */
+
+    // Valida se o usuário pode abrir mais um caixa na empresa.
     @Transactional
     public void validarLimiteCaixas(Usuario usuario, long caixasAbertosNaEmpresa) {
         validarAcesso(usuario);
@@ -167,17 +137,6 @@ public class VerificarPlanoOperation {
         }
     }
 
-    private LocalDate extrairVencimento(Subscription subscription) {
-        return Instant.ofEpochSecond(subscription.getCurrentPeriodEnd())
-                .atZone(ZoneId.of("America/Sao_Paulo")) // Força o fuso correto
-                .toLocalDate();
-    }
-    // ─── Consultas informativas ───────────────────────────────────────────────
-
-    /**
-     * Retorna quantos dias restam no plano atual.
-     * Retorna 0 se expirado ou sem assinatura.
-     */
     public long calcularDiasRestantes(Usuario usuario) {
         LocalDate hoje = LocalDate.now();
 
@@ -196,8 +155,6 @@ public class VerificarPlanoOperation {
                 .orElse(0L);
     }
 
-    // ─── Helpers privados ─────────────────────────────────────────────────────
-
     private void bloquearUsuario(Usuario usuario) {
         if (usuario.getStatusAcesso() != StatusAcesso.INATIVO) {
             usuario.setStatusAcesso(StatusAcesso.INATIVO);
@@ -205,9 +162,6 @@ public class VerificarPlanoOperation {
         }
     }
 
-    /**
-     * Formata o status para mensagem amigável ao usuário
-     */
     private String formatarStatus(String status) {
         return switch (status) {
             case "CANCELADO" -> "cancelada";

@@ -42,13 +42,12 @@ public class CadastroManualOperation {
     public Usuario execute(String nome, String email, String senha,
                            MultipartFile foto, String baseUrl, String path) throws IOException {
 
-
         Optional<Usuario> existenteOpt = usuarioRepository.findByEmail(email);
 
         if (existenteOpt.isPresent()) {
             Usuario existente = existenteOpt.get();
 
-            //  Conta criada via Google → converter para manual
+            //  Conta criada via Google -> converter para manual
             if (existente.isLoginGoogle()) {
                 atualizarUsuarioGoogleExistente(existente, nome, senha, foto);
                 usuarioRepository.save(existente);
@@ -79,8 +78,6 @@ public class CadastroManualOperation {
 
         return usuario;
     }
-
-
 
    // Criar Novo Usuario
     private Usuario criarNovoUsuario(String nome, String email, String senha, MultipartFile foto) throws IOException {

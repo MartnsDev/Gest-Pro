@@ -141,11 +141,5 @@ public class CaixaServiceImpl implements CaixaServiceInterface {
                 .build();
     }
 
-    private void validarPermissaoFechamento(Caixa caixa, String emailUsuario) {
-        boolean ehSistema = "sistema@gestpro.auto".equals(emailUsuario);
-        if (!ehSistema && !caixa.getUsuario().getEmail().equals(emailUsuario)) {
-            throw new ApiException("Você não tem permissão para fechar este caixa", HttpStatus.FORBIDDEN, ".");
-        }
-    }
 
 }

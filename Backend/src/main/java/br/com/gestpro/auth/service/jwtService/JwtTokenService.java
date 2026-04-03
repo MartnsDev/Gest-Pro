@@ -18,8 +18,4 @@ public class JwtTokenService implements JwtTokenServiceInterface {
         return jwtService.gerarToken(usuario);
     }
 
-    @Override
-    public Long extrairId(String token) {
-        return jwtService.getUsuarioIdFromToken(token);
-    }
 }

@@ -1,6 +1,5 @@
 package br.com.gestpro.auth.service;
 
-
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
 import org.springframework.stereotype.Component;

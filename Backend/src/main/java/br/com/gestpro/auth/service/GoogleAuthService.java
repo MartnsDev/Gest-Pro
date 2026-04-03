@@ -2,11 +2,13 @@ package br.com.gestpro.auth.service;
 
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
-import br.com.gestpro.plano.service.VerificarPlanoOperation;
 import br.com.gestpro.infra.jwt.JwtService;
 import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
+import br.com.gestpro.plano.service.VerificarPlanoOperation;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,8 +47,7 @@ public class GoogleAuthService {
                     try {
                         verificarPlano.validarAcessoIsolado(u);
                     } catch (Exception e) {
-                        // O status já foi alterado para INATIVO dentro do validarAcessoTemporario
-                        // Deixamos o fluxo seguir para o usuário conseguir ver o Dashboard/Planos
+                        logger.warn("Usuário com plano inválido ao logar: {}", e.getMessage());
                     }
 
                     return usuarioRepository.save(u);
@@ -75,4 +76,5 @@ public class GoogleAuthService {
     public String gerarToken(Usuario usuario) {
         return jwtService.gerarToken(usuario);
     }
+    private static final Logger logger = LoggerFactory.getLogger(LoginManualOperation.class);
 }

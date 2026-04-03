@@ -1,7 +1,6 @@
 package br.com.gestpro.caixa.scheduler;
 
 import br.com.gestpro.caixa.model.Caixa;
-import br.com.gestpro.caixa.repository.CaixaRepository;
 import br.com.gestpro.caixa.service.CaixaServiceInterface;
 import br.com.gestpro.caixa.dto.caixa.FecharCaixaRequest;
 import lombok.RequiredArgsConstructor;

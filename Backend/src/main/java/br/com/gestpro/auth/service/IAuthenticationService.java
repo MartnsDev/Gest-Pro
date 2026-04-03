@@ -2,7 +2,6 @@ package br.com.gestpro.auth.service;
 
 import br.com.gestpro.auth.dto.AuthDTO.LoginResponse;
 import br.com.gestpro.auth.model.Usuario;
-import br.com.gestpro.plano.TipoPlano;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.multipart.MultipartFile;
 
