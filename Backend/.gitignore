@@ -48,6 +48,7 @@ uploads/
 # Scripts com credenciais reais
 set-env-secrets.ps1
 set-env-secrets.sh
+set-env-dev.ps1
 .env
 .env.local
 .env.production
