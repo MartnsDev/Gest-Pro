@@ -1551,12 +1551,13 @@ const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
 ───────────────────────────────────────────── */
 const Footer = () => {
   const links = [
-    { label: "Como usar", href: "/como-usar" },
-    { label: "Termos", href: "/termos" },
+    { label: "Como usar",   href: "/como-usar"  },
+    { label: "Suporte",     href: "/contato"    }, // ← NOVO
+    { label: "Termos",      href: "/termos"      },
     { label: "Privacidade", href: "/privacidade" },
-    { label: "Contato", href: "/contato" },
+    { label: "Contato",     href: "/contato"     },
   ];
-
+ 
   return (
     <footer
       style={{
@@ -1578,9 +1579,11 @@ const Footer = () => {
         }}
       >
         <Logo size="small" />
+ 
         <span style={{ fontSize: 12, color: "rgba(148,163,184,0.4)" }}>
           © {new Date().getFullYear()} GestPro · Todos os direitos reservados
         </span>
+ 
         <div style={{ display: "flex", gap: 24 }}>
           {links.map((l) => (
             <a
@@ -1589,7 +1592,9 @@ const Footer = () => {
               style={{
                 fontSize: 14,
                 color:
-                  l.label === "Como usar" ? "#10b981" : "rgba(148,163,184,0.5)",
+                  l.label === "Como usar"
+                    ? "#10b981"
+                    : "rgba(148,163,184,0.5)",
                 textDecoration: "none",
                 fontWeight: l.label === "Como usar" ? 600 : 400,
                 transition: "color .2s",
@@ -1597,7 +1602,9 @@ const Footer = () => {
               onMouseEnter={(e) => (e.currentTarget.style.color = "#10b981")}
               onMouseLeave={(e) =>
                 (e.currentTarget.style.color =
-                  l.label === "Como usar" ? "#10b981" : "rgba(148,163,184,0.5)")
+                  l.label === "Como usar"
+                    ? "#10b981"
+                    : "rgba(148,163,184,0.5)")
               }
             >
               {l.label}
@@ -1608,7 +1615,6 @@ const Footer = () => {
     </footer>
   );
 };
-
 /* ─────────────────────────────────────────────
    ROOT EXPORT
 ───────────────────────────────────────────── */
