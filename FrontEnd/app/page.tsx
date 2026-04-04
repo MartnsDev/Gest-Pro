@@ -1551,11 +1551,10 @@ const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
 ───────────────────────────────────────────── */
 const Footer = () => {
   const links = [
-    { label: "Como usar",   href: "/como-usar"  },
-    { label: "Suporte",     href: "/contato"    }, // ← NOVO
+    { label: "Como usar",   href: "/como-usar"   },
     { label: "Termos",      href: "/termos"      },
     { label: "Privacidade", href: "/privacidade" },
-    { label: "Contato",     href: "/contato"     },
+    { label: "Suporte & Contato", href: "/contato"},
   ];
  
   return (
@@ -1615,6 +1614,7 @@ const Footer = () => {
     </footer>
   );
 };
+
 /* ─────────────────────────────────────────────
    ROOT EXPORT
 ───────────────────────────────────────────── */
