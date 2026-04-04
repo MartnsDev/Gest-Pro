@@ -380,13 +380,13 @@ const CHANNELS = [
     icon:<IcoWhatsApp />, title:"WhatsApp",
     badge:"Mais rápido", badgeColor:"#10b981",
     desc:"Atendimento direto e ágil. Ideal para dúvidas rápidas do dia a dia.",
-    info:"Seg–Sex, 8h–18h", href:"https://wa.me/5511999999999", cta:"Falar agora",
+    info:"Seg–Sex, 8h–18h", href:"https://wa.me/5511932649629", cta:"Falar agora",
   },
   {
     icon:<IcoMail />, title:"E-mail",
     badge:"Detalhado", badgeColor:"#6366f1",
     desc:"Para questões mais complexas. Respondemos em até 24 horas úteis.",
-    info:"Resposta em até 24h", href:"mailto:suporte@gestpro.app", cta:"Enviar e-mail",
+    info:"Resposta em até 24h", href:"mailto:gestprosuporte@gmail.com", cta:"Enviar e-mail",
   },
   {
     icon:<IcoBook />, title:"Documentação",
@@ -576,8 +576,8 @@ const ContactSection = () => (
           <div className="card fade-up d1" style={{ padding:"28px" }}>
             <h3 style={{ fontSize:15, fontWeight:700, color:"#f1f5f9", marginBottom:20 }}>Informações de contato</h3>
             {[
-              { icon:<IcoMail />,     label:"E-mail",   val:"suporte@gestpro.app" },
-              { icon:<IcoWhatsApp />, label:"WhatsApp", val:"+55 (11) 99999-9999" },
+              { icon:<IcoMail />,     label:"E-mail",   val:"gestprosuporte@gmail.com" },
+              { icon:<IcoWhatsApp />, label:"WhatsApp", val:"+55 (11) 93264-9629" },
               { icon:<IcoClock />,    label:"Horário",  val:"Seg–Sex, 8h às 18h"  },
             ].map((item, i) => (
               <div key={i} style={{

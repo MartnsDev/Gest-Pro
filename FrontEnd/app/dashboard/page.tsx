@@ -16,7 +16,7 @@ import {
   CheckCircle2,
   X,
   ShoppingBag,
-} from "lucide-react";
+}from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getUsuario,
