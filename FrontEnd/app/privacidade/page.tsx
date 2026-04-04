@@ -1089,7 +1089,7 @@ export default function PrivacidadePage() {
             >
               Privacidade
             </Link>
-            <Link href="/suporte" className={styles.footerLink}>
+            <Link href="/contato" className={styles.footerLink}>
               Suporte
             </Link>
           </div>
