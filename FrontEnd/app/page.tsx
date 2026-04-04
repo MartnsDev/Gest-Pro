@@ -62,7 +62,7 @@ const Star = () => (
 );
 
 /* ─────────────────────────────────────────────
-   GLOBAL STYLES — design do Arquivo 1
+   GLOBAL STYLES
 ───────────────────────────────────────────── */
 const GlobalStyles = () => (
   <style>{`
@@ -106,7 +106,6 @@ const GlobalStyles = () => (
     .d4 { animation-delay: .5s; }
     .d5 { animation-delay: .65s; }
 
-    /* ── Botões do Arquivo 1 ── */
     .btn-primary {
       background: #10b981;
       color: #fff;
@@ -148,7 +147,6 @@ const GlobalStyles = () => (
       color: #10b981;
     }
 
-    /* ── Cards do Arquivo 1 ── */
     .card {
       background: rgba(13,15,18,0.6);
       border: 1px solid rgba(255,255,255,0.06);
@@ -166,7 +164,6 @@ const GlobalStyles = () => (
       border-radius: 12px;
     }
 
-    /* ── Mobile menu overlay ── */
     .mob-menu {
       position: fixed; inset: 0; z-index: 200;
       background: rgba(5,6,8,0.98);
@@ -180,12 +177,10 @@ const GlobalStyles = () => (
     @media(max-width:1024px){
       .desktop-only { display: none !important; }
       .mobile-only  { display: flex !important; }
-      .hero-grid    { flex-direction: column !important; }
-      .hero-content { align-items: center !important; text-align: center !important; }
       .plans-grid   { grid-template-columns: repeat(2, 1fr) !important; }
     }
     @media(max-width:768px){
-      .hero-text        { font-size: 32px !important; line-height: 1.2 !important; }
+      .hero-text        { font-size: 36px !important; line-height: 1.2 !important; }
       .section-title    { font-size: 28px !important; }
       .features-grid    { grid-template-columns: 1fr !important; }
       .plans-grid       { grid-template-columns: 1fr !important; }
@@ -199,7 +194,7 @@ const GlobalStyles = () => (
 );
 
 /* ─────────────────────────────────────────────
-   BACKGROUND — idêntico ao Arquivo 1
+   BACKGROUND
 ───────────────────────────────────────────── */
 const Background = () => (
   <div
@@ -236,32 +231,29 @@ const Background = () => (
           "radial-gradient(ellipse at center, rgba(16,185,129,0.08) 0%, transparent 70%)",
       }}
     />
-
-    {
-      <div
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 1,
+        overflow: "hidden",
+      }}
+    >
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
         style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 1,
-          overflow: "hidden",
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          opacity: 0.25,
         }}
       >
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            opacity: 0.15,
-          }}
-        >
-          <source src="/videos/video-teste-comprensado.mp4" type="video/mp4" />
-        </video>
-      </div>
-    }
+        <source src="/videos/video-teste-comprensado.mp4" type="video/mp4" />
+      </video>
+    </div>
   </div>
 );
 
@@ -305,7 +297,7 @@ const Logo = ({ size = "default" }: { size?: "default" | "small" }) => {
 };
 
 /* ─────────────────────────────────────────────
-   NAV — estilo Arquivo 1 + lógica Arquivo 2
+   NAV
 ───────────────────────────────────────────── */
 const Nav = ({ onLogin, onRegister }: NavProps) => {
   const [scrolled, setScrolled] = useState(false);
@@ -480,67 +472,7 @@ const Nav = ({ onLogin, onRegister }: NavProps) => {
 };
 
 /* ─────────────────────────────────────────────
-   DASHBOARD PREVIEW — do Arquivo 2
-───────────────────────────────────────────── */
-const DashboardPreview = () => (
-  <div
-    style={{
-      width: "100%",
-      maxWidth: 600,
-      borderRadius: 20,
-      overflow: "hidden",
-      border: "1px solid rgba(255,255,255,0.08)",
-      boxShadow: "0 40px 80px rgba(0,0,0,0.5)",
-    }}
-  >
-    <div
-      style={{
-        background: "#0d0f12",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-        padding: "10px 16px",
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-      }}
-    >
-      {["#ff5f57", "#ffbd2e", "#28c840"].map((c) => (
-        <div
-          key={c}
-          style={{ width: 11, height: 11, borderRadius: "80%", background: c }}
-        />
-      ))}
-      <div
-        style={{
-          flex: 1,
-          height: 22,
-          borderRadius: 6,
-          background: "rgba(255,255,255,0.05)",
-          marginLeft: 12,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 10,
-          color: "rgba(255,255,255,0.3)",
-        }}
-      >
-        gestpro.app/dashboard
-      </div>
-    </div>
-    <img
-      src="/images/dashboard3.png"
-      alt="GestPro Dashboard"
-      style={{
-        width: "100%",
-        height: "auto",
-        display: "block",
-        borderRadius: "0 0 20px 20px",
-      }}
-    />
-  </div>
-);
-
-/* ─────────────────────────────────────────────
-   HERO — layout Arquivo 2 + estilo Arquivo 1
+   HERO — texto centralizado, sem imagem
 ───────────────────────────────────────────── */
 const lojistas = [
   { nome: "Kelly", img: "/logistas-img/kelly.jpg" },
@@ -558,190 +490,162 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
       minHeight: "100vh",
       display: "flex",
       alignItems: "center",
+      justifyContent: "center",
       padding: "120px 24px 80px",
     }}
   >
-    <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+    <div
+      style={{
+        maxWidth: 780,
+        margin: "0 auto",
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        gap: 28,
+      }}
+    >
+      {/* Badge */}
       <div
-        className="hero-grid"
-        style={{ display: "flex", alignItems: "center", gap: 80 }}
+        className="fade-up"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 16px",
+          background: "rgba(16,185,129,0.1)",
+          border: "1px solid rgba(16,185,129,0.2)",
+          borderRadius: 100,
+        }}
       >
-        {/* Lado esquerdo */}
-        <div
-          className="hero-content"
+        <span
+          className="blink"
           style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            gap: 28,
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: "#10b981",
+            display: "inline-block",
+          }}
+        />
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: "#10b981",
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
           }}
         >
-          {/* Badge */}
-          <div
-            className="fade-up"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "8px 16px",
-              background: "rgba(16,185,129,0.1)",
-              border: "1px solid rgba(16,185,129,0.2)",
-              borderRadius: 100,
-            }}
-          >
-            <span
-              className="blink"
+          Gestão de Vendas Inteligente
+        </span>
+      </div>
+
+      {/* Headline */}
+      <h1
+        className="hero-text fade-up d1"
+        style={{
+          fontSize: 68,
+          fontWeight: 700,
+          lineHeight: 1.1,
+          color: "#f1f5f9",
+          letterSpacing: "-0.03em",
+        }}
+      >
+        Seu negócio,
+        <br />
+        <span style={{ color: "#10b981" }}>no controle.</span>
+      </h1>
+
+      {/* Sub */}
+      <p
+        className="fade-up d2"
+        style={{
+          fontSize: 18,
+          lineHeight: 1.7,
+          color: "rgba(148,163,184,0.8)",
+          maxWidth: 520,
+        }}
+      >
+        Caixa, vendas, estoque e relatórios em um único painel.
+        <br />
+        Feito para lojistas que querem crescer sem complicação.
+      </p>
+
+      {/* CTAs */}
+      <div
+        className="fade-up d3"
+        style={{
+          display: "flex",
+          gap: 16,
+          flexWrap: "wrap",
+          justifyContent: "center",
+        }}
+      >
+        <button
+          className="btn-primary"
+          onClick={onRegister}
+          style={{ padding: "16px 32px", fontSize: 16 }}
+        >
+          Começar grátis <ArrowRight />
+        </button>
+        <button
+          className="btn-outline"
+          onClick={onLogin}
+          style={{ padding: "16px 26px", fontSize: 16 }}
+        >
+          Já tenho conta
+        </button>
+      </div>
+
+      {/* Social proof */}
+      <div
+        className="fade-up d4"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          marginTop: 4,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {lojistas.slice(0, 5).map((lojista, i) => (
+            <div
+              key={lojista.nome}
               style={{
-                width: 6,
-                height: 6,
+                width: 36,
+                height: 36,
                 borderRadius: "50%",
-                background: "#10b981",
-                display: "inline-block",
-              }}
-            />
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                color: "#10b981",
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
+                border: "3px solid #050608",
+                marginLeft: i > 0 ? -12 : 0,
+                overflow: "hidden",
+                background: "#1e293b",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 10 - i,
+                position: "relative",
               }}
             >
-              Gestão de Vendas Inteligente
-            </span>
-          </div>
-
-          {/* Headline */}
-          <h1
-            className="hero-text fade-up d1"
-            style={{
-              fontSize: 56,
-              fontWeight: 700,
-              lineHeight: 1.1,
-              color: "#f1f5f9",
-              letterSpacing: "-0.03em",
-            }}
-          >
-            Seu negócio,
-            <br />
-            <span style={{ color: "#10b981" }}>no controle.</span>
-          </h1>
-
-          {/* Sub */}
-          <p
-            className="fade-up d2"
-            style={{
-              fontSize: 18,
-              lineHeight: 1.7,
-              color: "rgba(148,163,184,0.8)",
-              maxWidth: 480,
-            }}
-          >
-            Caixa, vendas, estoque e relatórios em um único painel.
-            <br />
-            Feito para lojistas que querem crescer sem complicação.
-          </p>
-
-          {/* CTAs */}
-          <div
-            className="fade-up d3"
-            style={{ display: "flex", gap: 16, flexWrap: "wrap" }}
-          >
-            <button
-              className="btn-primary"
-              onClick={onRegister}
-              style={{ padding: "16px 32px", fontSize: 16 }}
-            >
-              Começar grátis <ArrowRight />
-            </button>
-            <button
-              className="btn-outline"
-              onClick={onLogin}
-              style={{ padding: "16px 26px", fontSize: 16 }}
-            >
-              Já tenho conta
-            </button>
-          </div>
-
-          {/* Social proof — avatares reais do Arquivo 2 */}
-          <div
-            className="fade-up d4"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-              marginTop: 12,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center" }}>
-              {lojistas.slice(0, 5).map((lojista, i) => (
-                <div
-                  key={lojista.nome}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "50%",
-                    border: "3px solid #050608",
-                    marginLeft: i > 0 ? -12 : 0,
-                    overflow: "hidden",
-                    background: "#1e293b",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 10 - i,
-                  }}
-                >
-                  <img
-                    src={lojista.img}
-                    alt={lojista.nome}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                </div>
-              ))}
+              <img
+                src={lojista.img}
+                alt={lojista.nome}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
             </div>
-            <div>
-              <div style={{ fontWeight: 700, color: "#f1f5f9", fontSize: 14 }}>
-                +1.200 lojistas
-              </div>
-              <div style={{ color: "rgba(148,163,184,0.6)", fontSize: 13 }}>
-                já usam o GestPro
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
-
-        {/* Lado direito — preview flutuante */}
-        <div
-          className="desktop-only float"
-          style={{
-            flex: 1,
-            display: "flex",
-            justifyContent: "center",
-            position: "relative",
-          }}
-        >
-          <div
-            className="spin-slow"
-            style={{
-              position: "absolute",
-              width: 500,
-              height: 500,
-              borderRadius: "50%",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
-              border: "1px dashed rgba(16,185,129,0.1)",
-              pointerEvents: "none",
-            }}
-          />
-          <div className="pulse-glow">
-            <DashboardPreview />
+        <div style={{ textAlign: "left" }}>
+          <div style={{ fontWeight: 700, color: "#f1f5f9", fontSize: 14 }}>
+            +1.200 lojistas
+          </div>
+          <div style={{ color: "rgba(148,163,184,0.6)", fontSize: 13 }}>
+            já usam o GestPro
           </div>
         </div>
       </div>
@@ -750,7 +654,7 @@ const Hero = ({ onRegister, onLogin }: HeroProps) => (
 );
 
 /* ─────────────────────────────────────────────
-   STATS — dados do Arquivo 2, estilo Arquivo 1
+   STATS
 ───────────────────────────────────────────── */
 const Stats = () => {
   const stats = [
@@ -805,7 +709,7 @@ const Stats = () => {
 };
 
 /* ─────────────────────────────────────────────
-   FEATURES — dados do Arquivo 2, cards do Arquivo 1
+   FEATURES
 ───────────────────────────────────────────── */
 const Features = () => {
   const feats = [
@@ -961,7 +865,7 @@ const Features = () => {
 };
 
 /* ─────────────────────────────────────────────
-   HOW IT WORKS — passos do Arquivo 2, cards do Arquivo 1
+   HOW IT WORKS
 ───────────────────────────────────────────── */
 const HowItWorks = () => {
   const steps = [
@@ -1091,7 +995,7 @@ const HowItWorks = () => {
 };
 
 /* ─────────────────────────────────────────────
-   PLANS — planos do Arquivo 2, estilo Arquivo 1
+   PLANS
 ───────────────────────────────────────────── */
 const Plans = ({ onRegister }: PlansProps) => {
   const plans = [
@@ -1386,7 +1290,7 @@ const Plans = ({ onRegister }: PlansProps) => {
 };
 
 /* ─────────────────────────────────────────────
-   TESTIMONIALS — do Arquivo 2, estilo Arquivo 1
+   TESTIMONIALS
 ───────────────────────────────────────────── */
 const quotes = [
   {
@@ -1511,7 +1415,7 @@ const Testimonials = () => (
 );
 
 /* ─────────────────────────────────────────────
-   CTA FINAL — lógica do Arquivo 2, estilo Arquivo 1
+   CTA FINAL
 ───────────────────────────────────────────── */
 const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
   <section style={{ position: "relative", zIndex: 10, padding: "80px 24px" }}>
@@ -1643,7 +1547,7 @@ const CTAFinal = ({ onRegister, onLogin }: CTAProps) => (
 );
 
 /* ─────────────────────────────────────────────
-   FOOTER — links do Arquivo 2, estilo Arquivo 1
+   FOOTER
 ───────────────────────────────────────────── */
 const Footer = () => {
   const links = [
