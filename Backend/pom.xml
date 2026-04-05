@@ -51,6 +51,12 @@
     ══════════════════════════════════════════ -->
     <dependencies>
 
+        <!-- WebFlux (WebClient para chamadas externas) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
         <!-- ── Spring Core ──────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

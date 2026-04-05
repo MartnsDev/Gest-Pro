@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   X,
   ShoppingBag,
+  FileText,
 }from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +53,7 @@ import AbrirCaixa from "./acoesRapidas/AbrirCaixa";
 import PaginaAcaoRapida from "./acoesRapidas/PaginaAcaoRapida";
 import MobileNav from "./components/MobileNav";
 import Pedidos from "./components/Pedidos";
+import NotasFiscais from "./components/NotasFiscais";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 type Secao =
@@ -67,7 +69,8 @@ type Secao =
   | "produto-rapido"
   | "cliente-rapido"
   | "caixa-rapido"
-  | "pedidos";
+  | "pedidos"
+  | "notafiscal";
 
 const BASE =
   process.env.NEXT_PUBLIC_API_URL ??
@@ -314,9 +317,10 @@ function DashboardInner({
     pedidos: "Pedidos",
     clientes: "Clientes",
     relatorios: "Relatórios",
-    configuracoes: "Configurações",
     empresas: "Empresas",
     planos: "Planos",
+    notafiscal: "Notas Fiscais",
+    configuracoes: "Configurações",
     "produto-rapido": "Novo Produto",
     "cliente-rapido": "Novo Cliente",
     "caixa-rapido": "Abrir Caixa",
@@ -352,6 +356,8 @@ function DashboardInner({
         );
       case "empresas":
         return <GerenciarEmpresas />;
+      case "notafiscal":
+        return <NotasFiscais />;
       case "planos":
         return <Planos />;
       case "produto-rapido":
@@ -555,6 +561,7 @@ function DashboardInner({
                   { id: "clientes", label: "Clientes", icon: <Users /> },
                   { id: "relatorios", label: "Relatórios", icon: <BarChart3 /> },
                   { id: "empresas", label: "Empresas", icon: <Building2 /> },
+                  { id: "notafiscal", label: "Notas Fiscais", icon: <FileText /> },
                   {
                     id: "configuracoes",
                     label: "Configurações",
