@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -51,4 +52,17 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
             @Param("fim")       LocalDateTime fim,
             Pageable pageable
     );
+
+    @Query("""
+    SELECT MAX(CAST(SUBSTRING(n.numero, LENGTH(:prefixo) + 1) AS long))
+    FROM NotaFiscal n
+    WHERE n.empresaId = :empresaId
+      AND n.numero LIKE CONCAT(:prefixo, '%')
+    """)
+    Optional<Long> findMaxNumeroSequencial(
+            @Param("empresaId") String empresaId,
+            @Param("prefixo") String prefixo
+    );
+
+    boolean existsByNumero(String numero);
 }

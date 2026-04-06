@@ -25,10 +25,24 @@ public class BuscaPorId {
     public Map<String, Object> buscarPorId(UUID id) {
         NotaFiscal nota = notaRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nota " + id + " não encontrada."));
+
         List<ItemNotaFiscal> itens = itemRepo.findByNotaFiscalId(id);
+
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("nota", nota);
-        result.put("itens", itens);
+
+        result.put("nota", Map.of(
+                "id", nota.getId(),
+                "numero", nota.getNumero(),
+                "clienteNome", nota.getClienteNome(),
+                "total", nota.getTotal()
+        ));
+
+        result.put("itens", itens.stream().map(i -> Map.of(
+                "id", i.getId(),
+                "descricao", i.getDescricao(),
+                "quantidade", i.getQuantidade(),
+                "valor", i.getValorTotal()
+        )).toList());
 
         return result;
     }

@@ -1,20 +1,21 @@
 package br.com.gestpro.nota.service;
 
 import br.com.gestpro.nota.dto.NotaFiscalDTOs;
-import br.com.gestpro.nota.service.validacoes.*;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface NotaFiscalInterface {
 
-    BuscaPorId buscarPorId(UUID id);
-    BuscarMunicipios buscarMunicipios(String uf);
-    Cancelar cancelar(NotaFiscalDTOs.CancelarNotaDTO dto);
-    ConsultarCEP consultarCep(String cep);
-    ConsultarCNPJ consultarCNPJ(String cnpj);
-    Criar criar(NotaFiscalDTOs.CriarNotaFiscalDTO dto, String usuarioId);
-    Emitir emitir(UUID id);
-    Listar listar(NotaFiscalDTOs.FilterNotaFiscalDTO filter);
+    Map<String, Object> buscarPorId(UUID id);
+    List<Map<String, Object>> buscarMunicipios(String uf);
+    Map<String, Object> cancelar(NotaFiscalDTOs.CancelarNotaDTO dto);
+    Map<String, Object> consultarCep(String cep);
+    Map<String, Object> consultarCNPJ(String cnpj);
+    Map<String, Object> criar(NotaFiscalDTOs.CriarNotaFiscalDTO dto, String usuarioId);
+    Map<String, Object> emitir(UUID id);
+    Map<String, Object> listar(NotaFiscalDTOs.FilterNotaFiscalDTO filter);
     NotaFiscalDTOs.EstatisticasDTO estatisticas(String empresaId);
-    GerarDadosDanfe gerarDadosDanfe(UUID id);
+    Map<String, Object> gerarDadosDanfe(UUID id);
 }

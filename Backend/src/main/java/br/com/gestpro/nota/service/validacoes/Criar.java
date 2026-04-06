@@ -23,15 +23,15 @@ public class Criar {
     private final NotaFiscalRepository notaRepo;
 
     public Criar(ItemNotaFiscalRepository itemRepo, BuscaPorId buscarPorId, NotaFiscalRepository notaRepo) {
-        this.itemRepo = itemRepo;
+        this.itemRepo    = itemRepo;
         this.buscarPorId = buscarPorId;
-        this.notaRepo = notaRepo;
+        this.notaRepo    = notaRepo;
     }
 
     @Transactional
     public Map<String, Object> criar(NotaFiscalDTOs.CriarNotaFiscalDTO dto, String usuarioId) {
         EmpresaInfo empresa = buscarDadosEmpresa(dto.getEmpresaId());
-        String numero = gerarNumeroNota(dto.getEmpresaId());
+        String numero = gerarNumeroUnico(dto.getEmpresaId());
 
         List<ItemCalc> itensCalc = dto.getItens().stream().map(item -> {
             BigDecimal descPct = item.getDesconto() != null ? item.getDesconto() : BigDecimal.ZERO;
@@ -41,13 +41,13 @@ public class Criar {
             return new ItemCalc(item, total);
         }).toList();
 
-        BigDecimal subtotal     = itensCalc.stream().map(i -> i.total()).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal descontoPct  = dto.getDesconto()  != null ? dto.getDesconto()  : BigDecimal.ZERO;
-        BigDecimal valorDesc    = subtotal.multiply(descontoPct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        BigDecimal baseCalculo  = subtotal.subtract(valorDesc);
-        BigDecimal impostosPct  = dto.getImpostos()  != null ? dto.getImpostos()  : BigDecimal.ZERO;
-        BigDecimal valorImp     = baseCalculo.multiply(impostosPct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        BigDecimal total        = baseCalculo.add(valorImp).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal subtotal    = itensCalc.stream().map(ItemCalc::total).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal descontoPct = dto.getDesconto()  != null ? dto.getDesconto()  : BigDecimal.ZERO;
+        BigDecimal valorDesc   = subtotal.multiply(descontoPct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal baseCalculo = subtotal.subtract(valorDesc);
+        BigDecimal impostosPct = dto.getImpostos()  != null ? dto.getImpostos()  : BigDecimal.ZERO;
+        BigDecimal valorImp    = baseCalculo.multiply(impostosPct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal total       = baseCalculo.add(valorImp).setScale(2, RoundingMode.HALF_UP);
 
         NotaFiscal nota = NotaFiscal.builder()
                 .numero(numero)
@@ -93,14 +93,14 @@ public class Criar {
                     .descricao(i.getDescricao())
                     .codigo(i.getCodigo())
                     .ncm(i.getNcm())
-                    .cfop(i.getCfop() != null ? i.getCfop() : "5102")
+                    .cfop(i.getCfop()     != null ? i.getCfop()     : "5102")
                     .unidade(i.getUnidade() != null ? i.getUnidade() : "UN")
                     .quantidade(i.getQuantidade())
                     .valorUnitario(i.getValorUnitario())
-                    .desconto(i.getDesconto()  != null ? i.getDesconto()  : BigDecimal.ZERO)
-                    .icms(i.getIcms()          != null ? i.getIcms()      : BigDecimal.ZERO)
-                    .pis(i.getPis()            != null ? i.getPis()       : BigDecimal.ZERO)
-                    .cofins(i.getCofins()      != null ? i.getCofins()    : BigDecimal.ZERO)
+                    .desconto(i.getDesconto() != null ? i.getDesconto() : BigDecimal.ZERO)
+                    .icms(i.getIcms()         != null ? i.getIcms()     : BigDecimal.ZERO)
+                    .pis(i.getPis()           != null ? i.getPis()      : BigDecimal.ZERO)
+                    .cofins(i.getCofins()     != null ? i.getCofins()   : BigDecimal.ZERO)
                     .valorTotal(ic.total())
                     .build());
         });
@@ -108,17 +108,30 @@ public class Criar {
         return buscarPorId.buscarPorId(salva.getId());
     }
 
+    /**
+     * Gera número único incrementando até encontrar um não existente.
+     * Evita colisão em caso de notas deletadas ou gaps na sequência.
+     */
+    private String gerarNumeroUnico(String empresaId) {
+        int ano = LocalDateTime.now().getYear();
+        // Busca o maior número já usado para esta empresa no ano corrente
+        String prefixo = "NF-" + ano + "-";
+        long proximoSeq = notaRepo.findMaxNumeroSequencial(empresaId, prefixo)
+                .map(max -> max + 1)
+                .orElse(1L);
+
+        // Garante unicidade mesmo em casos de concorrência ou gaps
+        String numero;
+        do {
+            numero = prefixo + String.format("%06d", proximoSeq);
+            proximoSeq++;
+        } while (notaRepo.existsByNumero(numero));
+
+        return numero;
+    }
+
     private EmpresaInfo buscarDadosEmpresa(String empresaId) {
-        // TODO: injete seu EmpresaRepository e busque pelo empresaId
+        // TODO: injete EmpresaRepository e busque pelo empresaId
         return new EmpresaInfo("GestPro Empresa", "", "", "", "", "", "", "", "");
     }
-
-    private String gerarNumeroNota(String empresaId) {
-        int ano    = LocalDateTime.now().getYear();
-        long count = notaRepo.countByEmpresaId(empresaId);
-        return "NF-" + ano + "-" + String.format("%06d", count + 1);
-    }
 }
-
-
-
