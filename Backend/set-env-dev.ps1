@@ -34,7 +34,14 @@ $env:GOOGLE_REDIRECT_URI = "http://localhost:8080/login/oauth2/code/google"
 $env:STRIPE_API_KEY        = ""
 $env:STRIPE_WEBHOOK_SECRET = ""
 
+$env:BASIC_AUTH_USER     = "teste"
+$env:BASIC_AUTH_PASSWORD = "0000"
+
 Write-Host "✅ Variaveis DEV configuradas." -ForegroundColor Cyan
+
+.\mvnw clean install -DskipTests
+java -jar target/gestpro-backend-0.0.1-SNAPSHOT.jar
+
 
 # ==============================================================
 #  EXECUÇÃO — descomente o que precisar

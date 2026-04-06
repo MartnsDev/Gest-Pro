@@ -5,7 +5,9 @@ import { useState, useEffect, useCallback } from "react";
 // ─── Types ────────────────────────────────────────────────
 type Status = "RASCUNHO" | "EMITIDA" | "CANCELADA";
 type TipoNota = "NFe" | "NFS" | "NFCE";
-type FormaPagamento = "DINHEIRO" | "CARTAO_CREDITO" | "CARTAO_DEBITO" | "PIX" | "BOLETO" | "TRANSFERENCIA";
+type FormaPagamento =
+  | "DINHEIRO" | "CARTAO_CREDITO" | "CARTAO_DEBITO"
+  | "PIX" | "BOLETO" | "TRANSFERENCIA";
 
 interface ItemNota {
   id?: string;
@@ -64,15 +66,15 @@ interface Estatisticas {
 
 // ─── Config ───────────────────────────────────────────────
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-const EMPRESA_ID = "empresa-1"; // ajuste conforme auth
+const EMPRESA_ID = "empresa-1";
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 
-const statusColor: Record<Status, string> = {
-  RASCUNHO:  "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30",
-  EMITIDA:   "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
-  CANCELADA: "bg-red-500/20 text-red-300 border border-red-500/30",
+const statusCfg: Record<Status, { label: string; cls: string; dot: string }> = {
+  RASCUNHO:  { label: "Rascunho",  cls: "text-amber-400 bg-amber-400/10 border border-amber-400/20",   dot: "bg-amber-400" },
+  EMITIDA:   { label: "Emitida",   cls: "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20", dot: "bg-emerald-400" },
+  CANCELADA: { label: "Cancelada", cls: "text-red-400 bg-red-400/10 border border-red-400/20",         dot: "bg-red-400" },
 };
 
 const tipoLabel: Record<TipoNota, string> = { NFe: "NF-e", NFS: "NFS-e", NFCE: "NFC-e" };
@@ -81,85 +83,111 @@ const pgtoLabel: Record<FormaPagamento, string> = {
   PIX: "PIX", BOLETO: "Boleto", TRANSFERENCIA: "Transferência",
 };
 
-// ─── Componentes auxiliares ───────────────────────────────
+// ─── SVG Icons ────────────────────────────────────────────
+const IcReceipt = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+  </svg>
+);
+const IcPlus = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+  </svg>
+);
+const IcSearch = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0016.803 15.803z" />
+  </svg>
+);
+const IcCheck = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+  </svg>
+);
+const IcEye = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+const IcTrending = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+  </svg>
+);
+
+// ─── Badge ────────────────────────────────────────────────
 function Badge({ status }: { status: Status }) {
+  const c = statusCfg[status];
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${statusColor[status]}`}>
-      {status}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${c.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+      {c.label}
     </span>
   );
 }
 
-function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }) {
+// ─── StatCard ─────────────────────────────────────────────
+function StatCard({ label, value, sub, icon, iconBg }: {
+  label: string; value: string | number; sub?: string;
+  icon: React.ReactNode; iconBg: string;
+}) {
   return (
-    <div className="bg-[#1a1f2e] border border-white/5 rounded-xl p-4 flex flex-col gap-1">
-      <span className="text-xs text-gray-400 uppercase tracking-wider">{label}</span>
-      <span className={`text-2xl font-bold ${accent ?? "text-white"}`}>{value}</span>
-      {sub && <span className="text-xs text-gray-500">{sub}</span>}
+    <div className="bg-[#1a1d27] border border-white/[0.06] rounded-xl p-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs text-[#6b7280] font-medium uppercase tracking-wider">{label}</p>
+          <p className="text-2xl font-bold text-white mt-1.5">{value}</p>
+          {sub && <p className="text-xs text-[#4b5563] mt-1">{sub}</p>}
+        </div>
+        <div className={`p-2.5 rounded-lg ${iconBg}`}>{icon}</div>
+      </div>
     </div>
   );
 }
 
-// ─── Formulário de item ───────────────────────────────────
-function ItemRow({ item, idx, onChange, onRemove }: {
-  item: ItemNota;
-  idx: number;
-  onChange: (idx: number, field: keyof ItemNota, value: string | number) => void;
-  onRemove: (idx: number) => void;
-}) {
-  const total = (item.quantidade ?? 0) * (item.valorUnitario ?? 0) *
-    (1 - (item.desconto ?? 0) / 100);
+// ─── Field wrapper ────────────────────────────────────────
+const IC = "w-full bg-[#0f1117] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#374151] focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/10 transition-all";
 
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="bg-[#1a1f2e] border border-white/5 rounded-xl p-4 relative">
-      <button
-        type="button"
-        onClick={() => onRemove(idx)}
-        className="absolute top-3 right-3 text-gray-500 hover:text-red-400 text-lg leading-none"
-      >×</button>
+    <div>
+      <label className="block text-[11px] text-[#6b7280] font-medium uppercase tracking-wide mb-1.5">{label}</label>
+      {children}
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+// ─── ItemRow ─────────────────────────────────────────────
+function ItemRow({ item, idx, onChange, onRemove }: {
+  item: ItemNota; idx: number;
+  onChange: (i: number, f: keyof ItemNota, v: string | number) => void;
+  onRemove: (i: number) => void;
+}) {
+  const total = (item.quantidade ?? 0) * (item.valorUnitario ?? 0) * (1 - (item.desconto ?? 0) / 100);
+  return (
+    <div className="bg-[#0f1117] border border-white/[0.06] rounded-xl p-4 relative">
+      <button type="button" onClick={() => onRemove(idx)}
+        className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center rounded-md text-[#6b7280] hover:text-red-400 hover:bg-red-400/10 transition-all text-base">
+        ×
+      </button>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pr-8">
         <div className="col-span-2">
-          <label className="label">Descrição *</label>
-          <input className="input" value={item.descricao}
-            onChange={e => onChange(idx, "descricao", e.target.value)} placeholder="Nome do produto/serviço" />
+          <Field label="Descrição *">
+            <input className={IC} value={item.descricao}
+              onChange={e => onChange(idx, "descricao", e.target.value)} placeholder="Nome do produto/serviço" />
+          </Field>
         </div>
-        <div>
-          <label className="label">Código</label>
-          <input className="input" value={item.codigo ?? ""}
-            onChange={e => onChange(idx, "codigo", e.target.value)} placeholder="SKU" />
-        </div>
-        <div>
-          <label className="label">NCM</label>
-          <input className="input" value={item.ncm ?? ""}
-            onChange={e => onChange(idx, "ncm", e.target.value)} placeholder="0000.00.00" />
-        </div>
-        <div>
-          <label className="label">Qtd *</label>
-          <input className="input" type="number" min="0.001" step="0.001" value={item.quantidade}
-            onChange={e => onChange(idx, "quantidade", parseFloat(e.target.value) || 0)} />
-        </div>
-        <div>
-          <label className="label">Vlr Unitário *</label>
-          <input className="input" type="number" min="0" step="0.01" value={item.valorUnitario}
-            onChange={e => onChange(idx, "valorUnitario", parseFloat(e.target.value) || 0)} />
-        </div>
-        <div>
-          <label className="label">Desconto %</label>
-          <input className="input" type="number" min="0" max="100" value={item.desconto ?? 0}
-            onChange={e => onChange(idx, "desconto", parseFloat(e.target.value) || 0)} />
-        </div>
-        <div>
-          <label className="label">ICMS %</label>
-          <input className="input" type="number" min="0" max="100" value={item.icms ?? 0}
-            onChange={e => onChange(idx, "icms", parseFloat(e.target.value) || 0)} />
-        </div>
+        <Field label="Código"><input className={IC} value={item.codigo ?? ""} onChange={e => onChange(idx, "codigo", e.target.value)} placeholder="SKU" /></Field>
+        <Field label="NCM"><input className={IC} value={item.ncm ?? ""} onChange={e => onChange(idx, "ncm", e.target.value)} placeholder="0000.00.00" /></Field>
+        <Field label="Quantidade *"><input className={IC} type="number" min="0.001" step="0.001" value={item.quantidade} onChange={e => onChange(idx, "quantidade", parseFloat(e.target.value) || 0)} /></Field>
+        <Field label="Valor Unitário *"><input className={IC} type="number" min="0" step="0.01" value={item.valorUnitario} onChange={e => onChange(idx, "valorUnitario", parseFloat(e.target.value) || 0)} /></Field>
+        <Field label="Desconto %"><input className={IC} type="number" min="0" max="100" value={item.desconto ?? 0} onChange={e => onChange(idx, "desconto", parseFloat(e.target.value) || 0)} /></Field>
+        <Field label="ICMS %"><input className={IC} type="number" min="0" max="100" value={item.icms ?? 0} onChange={e => onChange(idx, "icms", parseFloat(e.target.value) || 0)} /></Field>
       </div>
-
-      <div className="mt-3 flex justify-end">
-        <span className="text-sm text-gray-400">
-          Total: <span className="text-emerald-400 font-semibold">{fmt(total)}</span>
-        </span>
+      <div className="mt-3 pt-3 border-t border-white/[0.05] flex justify-between text-xs">
+        <span className="text-[#4b5563]">Item {idx + 1}</span>
+        <span className="text-[#9ca3af]">Total: <span className="text-emerald-400 font-semibold">{fmt(total)}</span></span>
       </div>
     </div>
   );
@@ -167,133 +195,125 @@ function ItemRow({ item, idx, onChange, onRemove }: {
 
 // ─── Modal Detalhes ───────────────────────────────────────
 function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
-  nota: NotaFiscal;
-  onClose: () => void;
+  nota: NotaFiscal; onClose: () => void;
   onEmitir: (id: string) => void;
-  onCancelar: (id: string) => void;
+  onCancelar: (id: string, motivo: string) => void;
 }) {
   const [motivo, setMotivo] = useState("");
   const [showCancelar, setShowCancelar] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-[#12161f] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-start justify-between p-6 border-b border-white/5">
-          <div>
-            <h2 className="text-xl font-bold text-white">{nota.numero}</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge status={nota.status} />
-              <span className="text-xs text-gray-400">{tipoLabel[nota.tipo]}</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-[#131620] border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400"><IcReceipt /></div>
+            <div>
+              <h2 className="text-sm font-semibold text-white">{nota.numero}</h2>
+              <p className="text-xs text-[#6b7280] mt-0.5">{tipoLabel[nota.tipo]} · {nota.empresaNome}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl leading-none">×</button>
+          <div className="flex items-center gap-3">
+            <Badge status={nota.status} />
+            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6b7280] hover:text-white hover:bg-white/10 transition-all text-lg">×</button>
+          </div>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Emissor / Cliente */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-[#1a1f2e] rounded-xl p-4">
-              <p className="text-xs text-gray-400 uppercase mb-2">Emissor</p>
-              <p className="text-white font-medium">{nota.empresaNome}</p>
-            </div>
-            <div className="bg-[#1a1f2e] rounded-xl p-4">
-              <p className="text-xs text-gray-400 uppercase mb-2">Destinatário</p>
-              <p className="text-white font-medium">{nota.clienteNome}</p>
-              {nota.clienteCpfCnpj && <p className="text-sm text-gray-400">{nota.clienteCpfCnpj}</p>}
-              {nota.clienteEmail && <p className="text-sm text-gray-400">{nota.clienteEmail}</p>}
-            </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            {[{ l: "Emissor", n: nota.empresaNome, s: undefined }, { l: "Destinatário", n: nota.clienteNome, s: nota.clienteCpfCnpj }]
+              .map(({ l, n, s }) => (
+                <div key={l} className="bg-[#0f1117] border border-white/[0.06] rounded-xl p-4">
+                  <p className="text-[10px] text-[#6b7280] uppercase tracking-wider mb-2">{l}</p>
+                  <p className="text-sm font-medium text-white">{n}</p>
+                  {s && <p className="text-xs text-[#6b7280] mt-0.5">{s}</p>}
+                  {l === "Destinatário" && nota.clienteEmail && <p className="text-xs text-[#6b7280] mt-0.5">{nota.clienteEmail}</p>}
+                </div>
+              ))}
           </div>
 
-          {/* Itens */}
           {nota.itens && nota.itens.length > 0 && (
-            <div>
-              <p className="text-xs text-gray-400 uppercase mb-2">Itens</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-gray-400 border-b border-white/5">
-                      <th className="text-left pb-2">Descrição</th>
-                      <th className="text-right pb-2">Qtd</th>
-                      <th className="text-right pb-2">Unit.</th>
-                      <th className="text-right pb-2">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {nota.itens.map((item, i) => (
-                      <tr key={i} className="border-b border-white/5 last:border-0">
-                        <td className="py-2 text-white">{item.descricao}</td>
-                        <td className="py-2 text-right text-gray-300">{item.quantidade}</td>
-                        <td className="py-2 text-right text-gray-300">{fmt(item.valorUnitario)}</td>
-                        <td className="py-2 text-right text-emerald-400 font-medium">{fmt(item.valorTotal ?? 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="bg-[#0f1117] border border-white/[0.06] rounded-xl overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-white/[0.06]">
+                <p className="text-[10px] text-[#6b7280] uppercase tracking-wider">Itens</p>
               </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-white/[0.04]">
+                    {["Descrição", "Qtd", "Unit.", "Total"].map((h, i) => (
+                      <th key={h} className={`px-4 py-2 text-[#4b5563] font-medium ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {nota.itens.map((item, i) => (
+                    <tr key={i} className="border-b border-white/[0.03] last:border-0">
+                      <td className="px-4 py-2.5 text-white">{item.descricao}</td>
+                      <td className="px-4 py-2.5 text-right text-[#9ca3af]">{item.quantidade}</td>
+                      <td className="px-4 py-2.5 text-right text-[#9ca3af]">{fmt(item.valorUnitario)}</td>
+                      <td className="px-4 py-2.5 text-right text-emerald-400 font-semibold">{fmt(item.valorTotal ?? 0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
-          {/* Totais */}
-          <div className="bg-[#1a1f2e] rounded-xl p-4 space-y-1">
-            <div className="flex justify-between text-sm text-gray-400">
-              <span>Subtotal</span><span>{fmt(nota.subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-400">
-              <span>Desconto ({nota.desconto}%)</span><span>-{fmt(nota.valorDesconto)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-400">
-              <span>Impostos ({nota.impostos}%)</span><span>+{fmt(nota.valorImpostos)}</span>
-            </div>
-            <div className="flex justify-between text-base font-bold text-white pt-2 border-t border-white/10">
-              <span>Total</span><span className="text-emerald-400">{fmt(nota.total)}</span>
+          <div className="bg-[#0f1117] border border-white/[0.06] rounded-xl p-4 space-y-2">
+            <div className="flex justify-between text-xs text-[#6b7280]"><span>Subtotal</span><span className="text-[#9ca3af]">{fmt(nota.subtotal)}</span></div>
+            <div className="flex justify-between text-xs"><span className="text-[#6b7280]">Desconto ({nota.desconto}%)</span><span className="text-red-400">-{fmt(nota.valorDesconto)}</span></div>
+            <div className="flex justify-between text-xs"><span className="text-[#6b7280]">Impostos ({nota.impostos}%)</span><span className="text-amber-400">+{fmt(nota.valorImpostos)}</span></div>
+            <div className="flex justify-between pt-2.5 border-t border-white/[0.06]">
+              <span className="text-sm font-semibold text-white">Total</span>
+              <span className="text-base font-bold text-emerald-400">{fmt(nota.total)}</span>
             </div>
           </div>
 
-          {/* Chave / Protocolo */}
+          <div className="flex items-center justify-between bg-[#0f1117] border border-white/[0.06] rounded-xl px-4 py-3 text-xs">
+            <span className="text-[#6b7280]">Forma de Pagamento</span>
+            <span className="text-white font-medium">{pgtoLabel[nota.formaPagamento]}</span>
+          </div>
+
           {nota.chaveAcesso && (
-            <div className="bg-[#1a1f2e] rounded-xl p-4">
-              <p className="text-xs text-gray-400 uppercase mb-1">Chave de Acesso</p>
-              <p className="text-xs font-mono text-gray-300 break-all">{nota.chaveAcesso}</p>
-              {nota.protocolo && <p className="text-xs text-gray-500 mt-1">Protocolo: {nota.protocolo}</p>}
+            <div className="bg-[#0f1117] border border-white/[0.06] rounded-xl p-4">
+              <p className="text-[10px] text-[#6b7280] uppercase tracking-wider mb-2">Chave de Acesso</p>
+              <p className="text-xs font-mono text-emerald-400/80 break-all leading-relaxed">{nota.chaveAcesso}</p>
+              {nota.protocolo && <p className="text-[10px] text-[#4b5563] mt-2">Protocolo: {nota.protocolo}</p>}
             </div>
           )}
 
-          {/* Cancelamento */}
           {nota.status === "CANCELADA" && nota.motivoCancelamento && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-              <p className="text-xs text-red-400 uppercase mb-1">Motivo do Cancelamento</p>
-              <p className="text-sm text-red-300">{nota.motivoCancelamento}</p>
+            <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
+              <p className="text-[10px] text-red-400 uppercase tracking-wider mb-1">Motivo do Cancelamento</p>
+              <p className="text-xs text-red-300/80">{nota.motivoCancelamento}</p>
             </div>
           )}
 
-          {/* Ações */}
-          <div className="flex flex-wrap gap-2 pt-2">
+          <div className="flex flex-wrap gap-2 pt-1">
             {nota.status === "RASCUNHO" && (
-              <button
-                onClick={() => onEmitir(nota.id)}
-                className="btn-primary"
-              >
-                ✓ Emitir Nota
+              <button onClick={() => onEmitir(nota.id)}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold rounded-lg transition-all">
+                <IcCheck /> Emitir Nota
               </button>
             )}
             {nota.status === "EMITIDA" && !showCancelar && (
-              <button onClick={() => setShowCancelar(true)} className="btn-danger">
+              <button onClick={() => setShowCancelar(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-medium rounded-lg border border-red-500/20 transition-all">
                 ✕ Cancelar Nota
               </button>
             )}
             {showCancelar && (
               <div className="w-full flex gap-2">
-                <input
-                  className="input flex-1"
-                  placeholder="Motivo do cancelamento..."
-                  value={motivo}
-                  onChange={e => setMotivo(e.target.value)}
-                />
-                <button
-                  onClick={() => { if (motivo.trim()) onCancelar(nota.id); }}
-                  className="btn-danger shrink-0"
-                >Confirmar</button>
-                <button onClick={() => setShowCancelar(false)} className="btn-ghost shrink-0">Voltar</button>
+                <input className={IC + " flex-1"} placeholder="Informe o motivo do cancelamento..."
+                  value={motivo} onChange={e => setMotivo(e.target.value)} />
+                <button onClick={() => { if (motivo.trim()) onCancelar(nota.id, motivo); }}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-400 text-white text-sm font-semibold rounded-lg transition-all shrink-0">
+                  Confirmar
+                </button>
+                <button onClick={() => setShowCancelar(false)}
+                  className="px-3 py-2 bg-white/[0.04] hover:bg-white/[0.08] text-[#9ca3af] text-sm rounded-lg transition-all border border-white/[0.06] shrink-0">
+                  Voltar
+                </button>
               </div>
             )}
           </div>
@@ -303,18 +323,17 @@ function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
   );
 }
 
-// ─── Wizard de Criação ────────────────────────────────────
+// ─── Modal Criar ─────────────────────────────────────────
 const EMPTY_ITEM: ItemNota = {
   produtoId: "", descricao: "", codigo: "", ncm: "", cfop: "5102",
   unidade: "UN", quantidade: 1, valorUnitario: 0, desconto: 0, icms: 0, pis: 0, cofins: 0,
 };
+const STEPS = ["Destinatário", "Itens", "Financeiro"];
 
 function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () => void }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Form state
   const [tipo, setTipo] = useState<TipoNota>("NFe");
   const [clienteNome, setClienteNome] = useState("");
   const [clienteCpfCnpj, setClienteCpfCnpj] = useState("");
@@ -330,7 +349,6 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>("PIX");
   const [observacoes, setObservacoes] = useState("");
 
-  // CEP auto-fill
   const buscarCep = async () => {
     const cep = clienteCep.replace(/\D/g, "");
     if (cep.length !== 8) return;
@@ -344,7 +362,6 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
     } catch {}
   };
 
-  // CNPJ auto-fill
   const buscarCnpj = async () => {
     const cnpj = clienteCpfCnpj.replace(/\D/g, "");
     if (cnpj.length !== 14) return;
@@ -355,19 +372,18 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
       if (d.nome) setClienteNome(d.nome);
       if (d.telefone) setClienteTelefone(d.telefone);
       if (d.email) setClienteEmail(d.email);
-      if (d.cep) { setClienteCep(d.cep); }
+      if (d.cep) setClienteCep(d.cep);
       if (d.logradouro) setClienteEndereco(`${d.logradouro}, ${d.numero ?? ""}`);
       if (d.municipio) setClienteCidade(d.municipio);
       if (d.uf) setClienteEstado(d.uf);
     } catch {}
   };
 
-  const updateItem = (idx: number, field: keyof ItemNota, value: string | number) => {
-    setItens(prev => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it));
-  };
+  const updateItem = (idx: number, field: keyof ItemNota, value: string | number) =>
+    setItens(prev => prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
 
-  const subtotal = itens.reduce((acc, it) =>
-    acc + (it.quantidade ?? 0) * (it.valorUnitario ?? 0) * (1 - (it.desconto ?? 0) / 100), 0);
+  const subtotal = itens.reduce(
+    (acc, it) => acc + (it.quantidade ?? 0) * (it.valorUnitario ?? 0) * (1 - (it.desconto ?? 0) / 100), 0);
   const valorDesc = subtotal * (desconto / 100);
   const base = subtotal - valorDesc;
   const valorImp = base * (impostos / 100);
@@ -376,194 +392,157 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
   const handleSubmit = async () => {
     setLoading(true); setError("");
     try {
-      const payload = {
-        empresaId: EMPRESA_ID, tipo,
-        clienteNome, clienteCpfCnpj, clienteEmail, clienteTelefone,
-        clienteCep, clienteEndereco, clienteCidade, clienteEstado,
-        itens: itens.map(i => ({
-          produtoId: i.produtoId || crypto.randomUUID(),
-          descricao: i.descricao, codigo: i.codigo, ncm: i.ncm,
-          cfop: i.cfop || "5102", unidade: i.unidade || "UN",
-          quantidade: i.quantidade, valorUnitario: i.valorUnitario,
-          desconto: i.desconto, icms: i.icms, pis: i.pis, cofins: i.cofins,
-        })),
-        desconto, impostos, formaPagamento, observacoes,
-      };
       const r = await fetch(`${API}/notas-fiscais`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          empresaId: EMPRESA_ID, tipo,
+          clienteNome, clienteCpfCnpj, clienteEmail, clienteTelefone,
+          clienteCep, clienteEndereco, clienteCidade, clienteEstado,
+          itens: itens.map(i => ({
+            produtoId: i.produtoId || crypto.randomUUID(),
+            descricao: i.descricao, codigo: i.codigo, ncm: i.ncm,
+            cfop: i.cfop || "5102", unidade: i.unidade || "UN",
+            quantidade: i.quantidade, valorUnitario: i.valorUnitario,
+            desconto: i.desconto, icms: i.icms, pis: i.pis, cofins: i.cofins,
+          })),
+          desconto, impostos, formaPagamento, observacoes,
+        }),
       });
       if (!r.ok) { const e = await r.json(); throw new Error(e.message ?? "Erro ao criar nota"); }
-      onCreate();
-      onClose();
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+      onCreate(); onClose();
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-[#12161f] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-[#131620] border border-white/[0.08] rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/5">
-          <div>
-            <h2 className="text-xl font-bold text-white">Nova Nota Fiscal</h2>
-            <div className="flex gap-2 mt-2">
-              {[1, 2, 3].map(s => (
-                <div key={s} className={`h-1.5 w-16 rounded-full transition-colors ${s <= step ? "bg-emerald-500" : "bg-white/10"}`} />
-              ))}
+        <div className="px-6 py-5 border-b border-white/[0.06]">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400"><IcReceipt /></div>
+              <div>
+                <h2 className="text-sm font-semibold text-white">Nova Nota Fiscal</h2>
+                <p className="text-xs text-[#6b7280]">Passo {step} de {STEPS.length} — {STEPS[step - 1]}</p>
+              </div>
             </div>
+            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6b7280] hover:text-white hover:bg-white/10 transition-all">×</button>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">×</button>
+          {/* Stepper */}
+          <div className="flex items-center">
+            {STEPS.map((s, i) => (
+              <div key={s} className="flex items-center flex-1 last:flex-none">
+                <div className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-all
+                    ${i + 1 < step ? "bg-emerald-500 border-emerald-500 text-black" :
+                      i + 1 === step ? "border-emerald-500 text-emerald-400 bg-emerald-500/10" :
+                      "border-white/10 text-[#4b5563]"}`}>
+                    {i + 1 < step ? "✓" : i + 1}
+                  </div>
+                  <span className={`text-xs font-medium hidden sm:block ${i + 1 <= step ? "text-white" : "text-[#4b5563]"}`}>{s}</span>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div className={`flex-1 h-px mx-3 transition-all ${i + 1 < step ? "bg-emerald-500/50" : "bg-white/[0.06]"}`} />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Step 1: Tipo + Cliente */}
+          {/* Step 1 */}
           {step === 1 && (
             <>
-              <h3 className="text-sm font-semibold text-gray-400 uppercase">Tipo & Destinatário</h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2 mb-1">
                 {(["NFe", "NFS", "NFCE"] as TipoNota[]).map(t => (
-                  <button key={t} type="button"
-                    onClick={() => setTipo(t)}
-                    className={`p-3 rounded-xl border text-sm font-medium transition-all
-                      ${tipo === t ? "bg-emerald-500/20 border-emerald-500 text-emerald-300" : "bg-[#1a1f2e] border-white/5 text-gray-400 hover:border-white/20"}`}>
-                    {tipoLabel[t]}
+                  <button key={t} type="button" onClick={() => setTipo(t)}
+                    className={`p-3.5 rounded-xl border text-center transition-all
+                      ${tipo === t ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" :
+                        "bg-[#0f1117] border-white/[0.06] text-[#6b7280] hover:border-white/20 hover:text-white"}`}>
+                    <div className="text-sm font-semibold">{tipoLabel[t]}</div>
+                    <div className="text-[10px] mt-0.5 opacity-60">{t === "NFe" ? "Produtos" : t === "NFS" ? "Serviços" : "Consumidor"}</div>
                   </button>
                 ))}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="label">CPF / CNPJ</label>
-                  <input className="input" value={clienteCpfCnpj}
-                    onChange={e => setClienteCpfCnpj(e.target.value)}
-                    onBlur={buscarCnpj} placeholder="Auto-preenchimento CNPJ" />
-                </div>
-                <div>
-                  <label className="label">Nome do Cliente *</label>
-                  <input className="input" value={clienteNome}
-                    onChange={e => setClienteNome(e.target.value)} placeholder="Nome ou Razão Social" />
-                </div>
-                <div>
-                  <label className="label">E-mail</label>
-                  <input className="input" type="email" value={clienteEmail}
-                    onChange={e => setClienteEmail(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">Telefone</label>
-                  <input className="input" value={clienteTelefone}
-                    onChange={e => setClienteTelefone(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">CEP</label>
-                  <input className="input" value={clienteCep}
-                    onChange={e => setClienteCep(e.target.value)}
-                    onBlur={buscarCep} placeholder="Auto-preenchimento" />
-                </div>
-                <div>
-                  <label className="label">Endereço</label>
-                  <input className="input" value={clienteEndereco}
-                    onChange={e => setClienteEndereco(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">Cidade</label>
-                  <input className="input" value={clienteCidade}
-                    onChange={e => setClienteCidade(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">Estado</label>
-                  <input className="input" value={clienteEstado}
-                    onChange={e => setClienteEstado(e.target.value)} maxLength={2} placeholder="UF" />
-                </div>
+                <Field label="CPF / CNPJ"><input className={IC} value={clienteCpfCnpj} onChange={e => setClienteCpfCnpj(e.target.value)} onBlur={buscarCnpj} placeholder="Auto-preench. CNPJ ao sair" /></Field>
+                <Field label="Nome do Cliente *"><input className={IC} value={clienteNome} onChange={e => setClienteNome(e.target.value)} placeholder="Nome ou Razão Social" /></Field>
+                <Field label="E-mail"><input className={IC} type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder="email@exemplo.com" /></Field>
+                <Field label="Telefone"><input className={IC} value={clienteTelefone} onChange={e => setClienteTelefone(e.target.value)} placeholder="(00) 00000-0000" /></Field>
+                <Field label="CEP"><input className={IC} value={clienteCep} onChange={e => setClienteCep(e.target.value)} onBlur={buscarCep} placeholder="Auto-preench. endereço" /></Field>
+                <Field label="Endereço"><input className={IC} value={clienteEndereco} onChange={e => setClienteEndereco(e.target.value)} /></Field>
+                <Field label="Cidade"><input className={IC} value={clienteCidade} onChange={e => setClienteCidade(e.target.value)} /></Field>
+                <Field label="UF"><input className={IC} value={clienteEstado} onChange={e => setClienteEstado(e.target.value)} maxLength={2} placeholder="SP" /></Field>
               </div>
             </>
           )}
 
-          {/* Step 2: Itens */}
+          {/* Step 2 */}
           {step === 2 && (
             <>
-              <h3 className="text-sm font-semibold text-gray-400 uppercase">Itens da Nota</h3>
               <div className="space-y-3">
                 {itens.map((item, idx) => (
-                  <ItemRow key={idx} item={item} idx={idx}
-                    onChange={updateItem} onRemove={i => setItens(prev => prev.filter((_, j) => j !== i))} />
+                  <ItemRow key={idx} item={item} idx={idx} onChange={updateItem}
+                    onRemove={i => setItens(prev => prev.filter((_, j) => j !== i))} />
                 ))}
               </div>
-              <button
-                type="button"
-                onClick={() => setItens(prev => [...prev, { ...EMPTY_ITEM }])}
-                className="w-full py-2.5 border border-dashed border-white/20 rounded-xl text-sm text-gray-400 hover:border-emerald-500/50 hover:text-emerald-400 transition-colors"
-              >
-                + Adicionar Item
+              <button type="button" onClick={() => setItens(prev => [...prev, { ...EMPTY_ITEM }])}
+                className="w-full py-3 border border-dashed border-white/10 rounded-xl text-sm text-[#6b7280] hover:border-emerald-500/40 hover:text-emerald-400 hover:bg-emerald-500/[0.03] transition-all flex items-center justify-center gap-2">
+                <IcPlus /> Adicionar Item
               </button>
             </>
           )}
 
-          {/* Step 3: Financeiro */}
+          {/* Step 3 */}
           {step === 3 && (
             <>
-              <h3 className="text-sm font-semibold text-gray-400 uppercase">Financeiro & Confirmação</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="label">Desconto Geral %</label>
-                  <input className="input" type="number" min="0" max="100" value={desconto}
-                    onChange={e => setDesconto(parseFloat(e.target.value) || 0)} />
-                </div>
-                <div>
-                  <label className="label">Impostos %</label>
-                  <input className="input" type="number" min="0" max="100" value={impostos}
-                    onChange={e => setImpostos(parseFloat(e.target.value) || 0)} />
-                </div>
-                <div>
-                  <label className="label">Forma de Pagamento</label>
-                  <select className="input" value={formaPagamento}
-                    onChange={e => setFormaPagamento(e.target.value as FormaPagamento)}>
-                    {(Object.keys(pgtoLabel) as FormaPagamento[]).map(k => (
-                      <option key={k} value={k}>{pgtoLabel[k]}</option>
-                    ))}
+                <Field label="Desconto Geral %"><input className={IC} type="number" min="0" max="100" value={desconto} onChange={e => setDesconto(parseFloat(e.target.value) || 0)} /></Field>
+                <Field label="Impostos %"><input className={IC} type="number" min="0" max="100" value={impostos} onChange={e => setImpostos(parseFloat(e.target.value) || 0)} /></Field>
+                <Field label="Forma de Pagamento">
+                  <select className={IC + " cursor-pointer"} value={formaPagamento} onChange={e => setFormaPagamento(e.target.value as FormaPagamento)}>
+                    {(Object.keys(pgtoLabel) as FormaPagamento[]).map(k => <option key={k} value={k}>{pgtoLabel[k]}</option>)}
                   </select>
-                </div>
+                </Field>
               </div>
-              <div>
-                <label className="label">Observações</label>
-                <textarea className="input resize-none" rows={2} value={observacoes}
-                  onChange={e => setObservacoes(e.target.value)} />
-              </div>
-
+              <Field label="Observações">
+                <textarea className={IC + " resize-none"} rows={2} value={observacoes} onChange={e => setObservacoes(e.target.value)} placeholder="Observações adicionais..." />
+              </Field>
               {/* Resumo */}
-              <div className="bg-[#1a1f2e] rounded-xl p-4 space-y-1.5 text-sm">
-                <div className="flex justify-between text-gray-400"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
-                <div className="flex justify-between text-gray-400"><span>Desconto ({desconto}%)</span><span>-{fmt(valorDesc)}</span></div>
-                <div className="flex justify-between text-gray-400"><span>Impostos ({impostos}%)</span><span>+{fmt(valorImp)}</span></div>
-                <div className="flex justify-between font-bold text-white pt-2 border-t border-white/10">
-                  <span>Total</span><span className="text-emerald-400 text-base">{fmt(total)}</span>
+              <div className="bg-[#0f1117] border border-white/[0.06] rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/[0.05]">
+                  <p className="text-[10px] text-[#6b7280] uppercase tracking-wider">Resumo da Nota</p>
+                </div>
+                <div className="p-4 space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-[#6b7280]">Subtotal ({itens.length} {itens.length === 1 ? "item" : "itens"})</span><span className="text-[#9ca3af]">{fmt(subtotal)}</span></div>
+                  <div className="flex justify-between"><span className="text-[#6b7280]">Desconto ({desconto}%)</span><span className="text-red-400">-{fmt(valorDesc)}</span></div>
+                  <div className="flex justify-between"><span className="text-[#6b7280]">Impostos ({impostos}%)</span><span className="text-amber-400">+{fmt(valorImp)}</span></div>
+                  <div className="flex justify-between pt-3 border-t border-white/[0.06]">
+                    <span className="text-sm font-semibold text-white">Total</span>
+                    <span className="text-base font-bold text-emerald-400">{fmt(total)}</span>
+                  </div>
                 </div>
               </div>
             </>
           )}
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && (
+            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
+              {error}
+            </div>
+          )}
 
-          {/* Navigation */}
-          <div className="flex justify-between pt-2">
-            <button
-              type="button"
-              onClick={() => step > 1 ? setStep(s => s - 1) : onClose()}
-              className="btn-ghost"
-            >{step === 1 ? "Cancelar" : "← Voltar"}</button>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => {
-                if (step < 3) setStep(s => s + 1);
-                else handleSubmit();
-              }}
-              className="btn-primary"
-            >
-              {loading ? "Salvando..." : step === 3 ? "Criar Rascunho ✓" : "Próximo →"}
+          <div className="flex justify-between pt-1">
+            <button type="button" onClick={() => step > 1 ? setStep(s => s - 1) : onClose()}
+              className="px-4 py-2 bg-white/[0.04] hover:bg-white/[0.08] text-[#9ca3af] text-sm rounded-lg transition-all border border-white/[0.06]">
+              {step === 1 ? "Cancelar" : "← Voltar"}
+            </button>
+            <button type="button" disabled={loading}
+              onClick={() => step < 3 ? setStep(s => s + 1) : handleSubmit()}
+              className="flex items-center gap-2 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-all">
+              {loading ? "Salvando..." : step === 3 ? <><IcCheck /> Criar Rascunho</> : "Próximo →"}
             </button>
           </div>
         </div>
@@ -596,9 +575,9 @@ export default function NotasFiscaisPage() {
       });
       const r = await fetch(`${API}/notas-fiscais?${params}`);
       const d = await r.json();
-      setNotas(d.data ?? []);
-      setTotalPages(d.pages ?? 1);
-    } catch { setNotas([]); } finally { setLoading(false); }
+      setNotas(d.data ?? []); setTotalPages(d.pages ?? 1);
+    } catch { setNotas([]); }
+    finally { setLoading(false); }
   }, [page, filterStatus, filterTipo, search]);
 
   const fetchStats = useCallback(async () => {
@@ -619,15 +598,13 @@ export default function NotasFiscaisPage() {
     setDetalhe({ ...d.nota, itens: d.itens });
   };
 
-  const handleCancelar = async (id: string) => {
-    const motivo = (document.querySelector('input[placeholder="Motivo do cancelamento..."]') as HTMLInputElement)?.value;
+  const handleCancelar = async (id: string, motivo: string) => {
     await fetch(`${API}/notas-fiscais/cancelar`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, motivoCancelamento: motivo }),
     });
-    await fetchNotas(); await fetchStats();
-    setDetalhe(null);
+    await fetchNotas(); await fetchStats(); setDetalhe(null);
   };
 
   const openDetalhe = async (id: string) => {
@@ -637,114 +614,134 @@ export default function NotasFiscaisPage() {
   };
 
   return (
-    <>
-      <style>{`
-        .input { @apply w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 transition-colors; }
-        .label { @apply block text-xs text-gray-400 mb-1; }
-        .btn-primary { @apply px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-lg text-sm transition-colors disabled:opacity-50; }
-        .btn-danger  { @apply px-4 py-2 bg-red-500/80 hover:bg-red-500 text-white font-semibold rounded-lg text-sm transition-colors; }
-        .btn-ghost   { @apply px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 font-medium rounded-lg text-sm transition-colors; }
-      `}</style>
-
-      <div className="min-h-screen bg-[#0d1117] text-white p-6 space-y-6">
+    <div className="min-h-screen bg-[#0f1117] text-white">
+      <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">🧾 Notas Fiscais</h1>
-            <p className="text-sm text-gray-400 mt-0.5">Gerencie NFe, NFS-e e NFC-e</p>
+            <h1 className="text-xl font-semibold text-white">Notas Fiscais</h1>
+            <p className="text-sm text-[#4b5563] mt-0.5">Gerencie NF-e, NFS-e e NFC-e</p>
           </div>
-          <button onClick={() => setShowCriar(true)} className="btn-primary">
-            + Nova Nota
+          <button onClick={() => setShowCriar(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold rounded-lg transition-all">
+            <IcPlus /> Nova Nota
           </button>
         </div>
 
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <StatCard label="Total" value={stats.total} />
-            <StatCard label="Emitidas" value={stats.emitidas} accent="text-emerald-400" />
-            <StatCard label="Rascunhos" value={stats.rascunhos} accent="text-yellow-400" />
-            <StatCard label="Canceladas" value={stats.canceladas} accent="text-red-400" />
-            <StatCard label="Faturado (mês)" value={fmt(stats.valorTotalMes)} accent="text-emerald-400" sub="notas emitidas" />
+            <StatCard label="Total de Notas" value={stats.total} icon={<IcReceipt />} iconBg="bg-white/[0.04]" />
+            <StatCard label="Emitidas" value={stats.emitidas} icon={<IcCheck />} iconBg="bg-emerald-500/10" />
+            <StatCard label="Rascunhos" value={stats.rascunhos} icon={<IcReceipt />} iconBg="bg-amber-500/10" />
+            <StatCard label="Canceladas" value={stats.canceladas} icon={<IcReceipt />} iconBg="bg-red-500/10" />
+            <StatCard label="Faturado no Mês" value={fmt(stats.valorTotalMes)} sub="notas emitidas" icon={<IcTrending />} iconBg="bg-emerald-500/10" />
           </div>
         )}
 
         {/* Filtros */}
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="input w-48"
-            placeholder="Buscar cliente..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-          />
-          <select className="input w-36" value={filterStatus}
-            onChange={e => { setFilterStatus(e.target.value as Status | ""); setPage(1); }}>
-            <option value="">Todos status</option>
+        <div className="bg-[#1a1d27] border border-white/[0.06] rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+          <span className="text-[#4b5563]"><IcSearch /></span>
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <IcSearch />
+            <input
+              className="w-full bg-[#0f1117] border border-white/[0.06] rounded-lg pl-3 pr-3 py-2 text-sm text-white placeholder-[#374151] focus:outline-none focus:border-emerald-500/40 transition-all"
+              placeholder="Buscar por cliente..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+            />
+          </div>
+          <select className="bg-[#0f1117] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/40 transition-all cursor-pointer"
+            value={filterStatus} onChange={e => { setFilterStatus(e.target.value as Status | ""); setPage(1); }}>
+            <option value="">Todos os status</option>
             <option value="RASCUNHO">Rascunho</option>
             <option value="EMITIDA">Emitida</option>
             <option value="CANCELADA">Cancelada</option>
           </select>
-          <select className="input w-32" value={filterTipo}
-            onChange={e => { setFilterTipo(e.target.value as TipoNota | ""); setPage(1); }}>
-            <option value="">Todos tipos</option>
+          <select className="bg-[#0f1117] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/40 transition-all cursor-pointer"
+            value={filterTipo} onChange={e => { setFilterTipo(e.target.value as TipoNota | ""); setPage(1); }}>
+            <option value="">Todos os tipos</option>
             <option value="NFe">NF-e</option>
             <option value="NFS">NFS-e</option>
             <option value="NFCE">NFC-e</option>
           </select>
+          {(filterStatus || filterTipo || search) && (
+            <button onClick={() => { setSearch(""); setFilterStatus(""); setFilterTipo(""); setPage(1); }}
+              className="text-xs text-[#6b7280] hover:text-red-400 transition-colors">
+              Limpar filtros ×
+            </button>
+          )}
         </div>
 
         {/* Tabela */}
-        <div className="bg-[#1a1f2e] border border-white/5 rounded-2xl overflow-hidden">
+        <div className="bg-[#1a1d27] border border-white/[0.06] rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-white/[0.05] flex items-center justify-between">
+            <p className="text-[10px] text-[#6b7280] uppercase tracking-wider font-medium">
+              {loading ? "Carregando..." : `${notas.length} nota${notas.length !== 1 ? "s" : ""} encontrada${notas.length !== 1 ? "s" : ""}`}
+            </p>
+          </div>
+
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-gray-400">
-              <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mr-2" />
-              Carregando...
+            <div className="flex items-center justify-center py-20 gap-3 text-[#4b5563]">
+              <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm">Carregando...</span>
             </div>
           ) : notas.length === 0 ? (
-            <div className="text-center py-16 text-gray-500">
-              <p className="text-4xl mb-2">🧾</p>
-              <p>Nenhuma nota encontrada</p>
-              <button onClick={() => setShowCriar(true)} className="btn-primary mt-4">Criar Primeira Nota</button>
+            <div className="text-center py-20">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-white/[0.03] rounded-xl mb-3 text-[#4b5563]"><IcReceipt /></div>
+              <p className="text-sm text-[#6b7280]">Nenhuma nota fiscal encontrada</p>
+              <p className="text-xs text-[#4b5563] mt-1 mb-4">
+                {search || filterStatus || filterTipo ? "Tente ajustar os filtros" : "Crie sua primeira nota fiscal"}
+              </p>
+              {!search && !filterStatus && !filterTipo && (
+                <button onClick={() => setShowCriar(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold rounded-lg transition-all mx-auto">
+                  <IcPlus /> Nova Nota
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-gray-400 text-xs uppercase border-b border-white/5">
-                    <th className="text-left px-4 py-3">Número</th>
-                    <th className="text-left px-4 py-3">Tipo</th>
-                    <th className="text-left px-4 py-3">Cliente</th>
-                    <th className="text-left px-4 py-3">Status</th>
-                    <th className="text-right px-4 py-3">Total</th>
-                    <th className="text-left px-4 py-3">Pagamento</th>
-                    <th className="text-left px-4 py-3">Data</th>
-                    <th className="px-4 py-3"></th>
+                  <tr className="border-b border-white/[0.04]">
+                    {["Número", "Tipo", "Cliente", "Status", "Total", "Pagamento", "Data", ""].map((h, i) => (
+                      <th key={i} className={`px-4 py-3 text-[10px] font-medium text-[#4b5563] uppercase tracking-wider ${i === 4 || i === 5 || i === 6 ? "text-right" : "text-left"}`}>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {notas.map(nota => (
-                    <tr key={nota.id}
-                      className="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors cursor-pointer"
-                      onClick={() => openDetalhe(nota.id)}>
-                      <td className="px-4 py-3 font-mono text-xs text-gray-300">{nota.numero}</td>
+                    <tr key={nota.id} onClick={() => openDetalhe(nota.id)}
+                      className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] cursor-pointer transition-colors group">
                       <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 bg-white/5 rounded text-xs text-gray-300">
-                          {tipoLabel[nota.tipo]}
-                        </span>
+                        <span className="font-mono text-xs text-[#6b7280] group-hover:text-white transition-colors">{nota.numero}</span>
                       </td>
-                      <td className="px-4 py-3 text-white font-medium truncate max-w-[150px]">{nota.clienteNome}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 bg-white/[0.04] border border-white/[0.06] rounded-md text-[10px] text-[#9ca3af]">{tipoLabel[nota.tipo]}</span>
+                      </td>
+                      <td className="px-4 py-3 max-w-[180px]">
+                        <p className="text-sm text-white truncate">{nota.clienteNome}</p>
+                        {nota.clienteCpfCnpj && <p className="text-[10px] text-[#4b5563] mt-0.5">{nota.clienteCpfCnpj}</p>}
+                      </td>
                       <td className="px-4 py-3"><Badge status={nota.status} /></td>
-                      <td className="px-4 py-3 text-right text-emerald-400 font-semibold">{fmt(nota.total)}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{pgtoLabel[nota.formaPagamento]}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">
-                        {new Date(nota.createdAt).toLocaleDateString("pt-BR")}
+                      <td className="px-4 py-3 text-right">
+                        <span className="text-sm font-semibold text-emerald-400">{fmt(nota.total)}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={e => { e.stopPropagation(); openDetalhe(nota.id); }}
-                          className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded hover:bg-white/10"
-                        >Ver →</button>
+                        <span className="text-xs text-[#6b7280]">{pgtoLabel[nota.formaPagamento]}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="text-xs text-[#4b5563]">{new Date(nota.createdAt).toLocaleDateString("pt-BR")}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={e => { e.stopPropagation(); openDetalhe(nota.id); }}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[#6b7280] hover:text-white hover:bg-white/[0.06] rounded-lg text-xs transition-all opacity-0 group-hover:opacity-100">
+                          <IcEye /> Ver
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -757,21 +754,26 @@ export default function NotasFiscaisPage() {
         {/* Paginação */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn-ghost px-3 py-1.5 text-xs disabled:opacity-30">← Anterior</button>
-            <span className="text-sm text-gray-400">{page} / {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn-ghost px-3 py-1.5 text-xs disabled:opacity-30">Próximo →</button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-3 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-30 text-[#9ca3af] text-xs rounded-lg border border-white/[0.06] transition-all">
+              ← Anterior
+            </button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
+              <button key={p} onClick={() => setPage(p)}
+                className={`w-8 h-8 text-xs rounded-lg transition-all ${p === page ? "bg-emerald-500 text-black font-semibold" : "text-[#6b7280] hover:bg-white/[0.06]"}`}>
+                {p}
+              </button>
+            ))}
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-3 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-30 text-[#9ca3af] text-xs rounded-lg border border-white/[0.06] transition-all">
+              Próximo →
+            </button>
           </div>
         )}
       </div>
 
-      {/* Modais */}
-      {showCriar && (
-        <ModalCriar onClose={() => setShowCriar(false)} onCreate={() => { fetchNotas(); fetchStats(); }} />
-      )}
-      {detalhe && (
-        <ModalDetalhes nota={detalhe} onClose={() => setDetalhe(null)}
-          onEmitir={handleEmitir} onCancelar={handleCancelar} />
-      )}
-    </>
+      {showCriar && <ModalCriar onClose={() => setShowCriar(false)} onCreate={() => { fetchNotas(); fetchStats(); }} />}
+      {detalhe && <ModalDetalhes nota={detalhe} onClose={() => setDetalhe(null)} onEmitir={handleEmitir} onCancelar={handleCancelar} />}
+    </div>
   );
 }
