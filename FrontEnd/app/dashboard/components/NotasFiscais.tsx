@@ -2,7 +2,38 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-// ─── Types ────────────────────────────────────────────────
+// ─── Auth helpers (inline, compatible with api-v2.ts pattern) ────────────────
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
+
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return (
+    sessionStorage.getItem("jwt_token") ??
+    document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
+    null
+  );
+}
+
+async function fetchAuth<T>(path: string, opts: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(opts.headers as Record<string, string> ?? {}),
+    },
+    ...opts,
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => null);
+    throw new Error(e?.mensagem ?? e?.message ?? `Erro ${res.status}`);
+  }
+  return res.json();
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 type Status = "RASCUNHO" | "EMITIDA" | "CANCELADA";
 type TipoNota = "NFe" | "NFS" | "NFCE";
 type FormaPagamento =
@@ -64,17 +95,16 @@ interface Estatisticas {
   valorTotalMes: number;
 }
 
-// ─── Config ───────────────────────────────────────────────
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+// ─── Config ───────────────────────────────────────────────────────────────────
 const EMPRESA_ID = "empresa-1";
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 
 const statusCfg: Record<Status, { label: string; cls: string; dot: string }> = {
-  RASCUNHO:  { label: "Rascunho",  cls: "text-amber-400 bg-amber-400/10 border border-amber-400/20",   dot: "bg-amber-400" },
-  EMITIDA:   { label: "Emitida",   cls: "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20", dot: "bg-emerald-400" },
-  CANCELADA: { label: "Cancelada", cls: "text-red-400 bg-red-400/10 border border-red-400/20",         dot: "bg-red-400" },
+  RASCUNHO:  { label: "Rascunho",  cls: "text-amber-400 bg-amber-400/10 border border-amber-400/20",        dot: "bg-amber-400" },
+  EMITIDA:   { label: "Emitida",   cls: "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20",  dot: "bg-emerald-400" },
+  CANCELADA: { label: "Cancelada", cls: "text-red-400 bg-red-400/10 border border-red-400/20",              dot: "bg-red-400" },
 };
 
 const tipoLabel: Record<TipoNota, string> = { NFe: "NF-e", NFS: "NFS-e", NFCE: "NFC-e" };
@@ -83,10 +113,10 @@ const pgtoLabel: Record<FormaPagamento, string> = {
   PIX: "PIX", BOLETO: "Boleto", TRANSFERENCIA: "Transferência",
 };
 
-// ─── SVG Icons ────────────────────────────────────────────
-const IcReceipt = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+const IcReceipt = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
   </svg>
 );
 const IcPlus = () => (
@@ -115,8 +145,21 @@ const IcTrending = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
   </svg>
 );
+const IcX = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+const IcBan = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+  </svg>
+);
 
-// ─── Badge ────────────────────────────────────────────────
+// ─── Shared input style ───────────────────────────────────────────────────────
+const IC = "w-full bg-[#0f1117] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#374151] focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/10 transition-all";
+
+// ─── Badge ────────────────────────────────────────────────────────────────────
 function Badge({ status }: { status: Status }) {
   const c = statusCfg[status];
   return (
@@ -127,7 +170,7 @@ function Badge({ status }: { status: Status }) {
   );
 }
 
-// ─── StatCard ─────────────────────────────────────────────
+// ─── StatCard ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, icon, iconBg }: {
   label: string; value: string | number; sub?: string;
   icon: React.ReactNode; iconBg: string;
@@ -146,9 +189,7 @@ function StatCard({ label, value, sub, icon, iconBg }: {
   );
 }
 
-// ─── Field wrapper ────────────────────────────────────────
-const IC = "w-full bg-[#0f1117] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#374151] focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/10 transition-all";
-
+// ─── Field ────────────────────────────────────────────────────────────────────
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
@@ -158,7 +199,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-// ─── ItemRow ─────────────────────────────────────────────
+// ─── ItemRow ──────────────────────────────────────────────────────────────────
+const EMPTY_ITEM: ItemNota = {
+  produtoId: "", descricao: "", codigo: "", ncm: "", cfop: "5102",
+  unidade: "UN", quantidade: 1, valorUnitario: 0, desconto: 0, icms: 0, pis: 0, cofins: 0,
+};
+
 function ItemRow({ item, idx, onChange, onRemove }: {
   item: ItemNota; idx: number;
   onChange: (i: number, f: keyof ItemNota, v: string | number) => void;
@@ -168,8 +214,8 @@ function ItemRow({ item, idx, onChange, onRemove }: {
   return (
     <div className="bg-[#0f1117] border border-white/[0.06] rounded-xl p-4 relative">
       <button type="button" onClick={() => onRemove(idx)}
-        className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center rounded-md text-[#6b7280] hover:text-red-400 hover:bg-red-400/10 transition-all text-base">
-        ×
+        className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center rounded-md text-[#6b7280] hover:text-red-400 hover:bg-red-400/10 transition-all">
+        <IcX />
       </button>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pr-8">
         <div className="col-span-2">
@@ -178,12 +224,24 @@ function ItemRow({ item, idx, onChange, onRemove }: {
               onChange={e => onChange(idx, "descricao", e.target.value)} placeholder="Nome do produto/serviço" />
           </Field>
         </div>
-        <Field label="Código"><input className={IC} value={item.codigo ?? ""} onChange={e => onChange(idx, "codigo", e.target.value)} placeholder="SKU" /></Field>
-        <Field label="NCM"><input className={IC} value={item.ncm ?? ""} onChange={e => onChange(idx, "ncm", e.target.value)} placeholder="0000.00.00" /></Field>
-        <Field label="Quantidade *"><input className={IC} type="number" min="0.001" step="0.001" value={item.quantidade} onChange={e => onChange(idx, "quantidade", parseFloat(e.target.value) || 0)} /></Field>
-        <Field label="Valor Unitário *"><input className={IC} type="number" min="0" step="0.01" value={item.valorUnitario} onChange={e => onChange(idx, "valorUnitario", parseFloat(e.target.value) || 0)} /></Field>
-        <Field label="Desconto %"><input className={IC} type="number" min="0" max="100" value={item.desconto ?? 0} onChange={e => onChange(idx, "desconto", parseFloat(e.target.value) || 0)} /></Field>
-        <Field label="ICMS %"><input className={IC} type="number" min="0" max="100" value={item.icms ?? 0} onChange={e => onChange(idx, "icms", parseFloat(e.target.value) || 0)} /></Field>
+        <Field label="Código">
+          <input className={IC} value={item.codigo ?? ""} onChange={e => onChange(idx, "codigo", e.target.value)} placeholder="SKU" />
+        </Field>
+        <Field label="NCM">
+          <input className={IC} value={item.ncm ?? ""} onChange={e => onChange(idx, "ncm", e.target.value)} placeholder="0000.00.00" />
+        </Field>
+        <Field label="Quantidade *">
+          <input className={IC} type="number" min="0.001" step="0.001" value={item.quantidade} onChange={e => onChange(idx, "quantidade", parseFloat(e.target.value) || 0)} />
+        </Field>
+        <Field label="Valor Unitário *">
+          <input className={IC} type="number" min="0" step="0.01" value={item.valorUnitario} onChange={e => onChange(idx, "valorUnitario", parseFloat(e.target.value) || 0)} />
+        </Field>
+        <Field label="Desconto %">
+          <input className={IC} type="number" min="0" max="100" value={item.desconto ?? 0} onChange={e => onChange(idx, "desconto", parseFloat(e.target.value) || 0)} />
+        </Field>
+        <Field label="ICMS %">
+          <input className={IC} type="number" min="0" max="100" value={item.icms ?? 0} onChange={e => onChange(idx, "icms", parseFloat(e.target.value) || 0)} />
+        </Field>
       </div>
       <div className="mt-3 pt-3 border-t border-white/[0.05] flex justify-between text-xs">
         <span className="text-[#4b5563]">Item {idx + 1}</span>
@@ -193,7 +251,7 @@ function ItemRow({ item, idx, onChange, onRemove }: {
   );
 }
 
-// ─── Modal Detalhes ───────────────────────────────────────
+// ─── Modal Detalhes ───────────────────────────────────────────────────────────
 function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
   nota: NotaFiscal; onClose: () => void;
   onEmitir: (id: string) => void;
@@ -201,10 +259,23 @@ function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
 }) {
   const [motivo, setMotivo] = useState("");
   const [showCancelar, setShowCancelar] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleEmitir = async () => {
+    setLoading(true);
+    try { await onEmitir(nota.id); } finally { setLoading(false); }
+  };
+
+  const handleCancelar = async () => {
+    if (!motivo.trim()) return;
+    setLoading(true);
+    try { await onCancelar(nota.id, motivo); } finally { setLoading(false); }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-[#131620] border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400"><IcReceipt /></div>
@@ -215,23 +286,33 @@ function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
           </div>
           <div className="flex items-center gap-3">
             <Badge status={nota.status} />
-            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6b7280] hover:text-white hover:bg-white/10 transition-all text-lg">×</button>
+            <button onClick={onClose}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6b7280] hover:text-white hover:bg-white/10 transition-all">
+              <IcX />
+            </button>
           </div>
         </div>
 
         <div className="p-6 space-y-4">
+          {/* Emissor / Destinatário */}
           <div className="grid grid-cols-2 gap-3">
-            {[{ l: "Emissor", n: nota.empresaNome, s: undefined }, { l: "Destinatário", n: nota.clienteNome, s: nota.clienteCpfCnpj }]
-              .map(({ l, n, s }) => (
-                <div key={l} className="bg-[#0f1117] border border-white/[0.06] rounded-xl p-4">
-                  <p className="text-[10px] text-[#6b7280] uppercase tracking-wider mb-2">{l}</p>
-                  <p className="text-sm font-medium text-white">{n}</p>
-                  {s && <p className="text-xs text-[#6b7280] mt-0.5">{s}</p>}
-                  {l === "Destinatário" && nota.clienteEmail && <p className="text-xs text-[#6b7280] mt-0.5">{nota.clienteEmail}</p>}
-                </div>
-              ))}
+            {[
+              { l: "Emissor",      n: nota.empresaNome,  s: undefined },
+              { l: "Destinatário", n: nota.clienteNome,  s: nota.clienteCpfCnpj },
+            ].map(({ l, n, s }) => (
+              <div key={l} className="bg-[#0f1117] border border-white/[0.06] rounded-xl p-4">
+                <p className="text-[10px] text-[#6b7280] uppercase tracking-wider mb-2">{l}</p>
+                <p className="text-sm font-medium text-white">{n}</p>
+                {s && <p className="text-xs text-[#6b7280] mt-0.5">{s}</p>}
+                {l === "Destinatário" && nota.clienteEmail &&
+                  <p className="text-xs text-[#6b7280] mt-0.5">{nota.clienteEmail}</p>}
+                {l === "Destinatário" && nota.clienteCidade &&
+                  <p className="text-xs text-[#6b7280] mt-0.5">{nota.clienteCidade}{nota.clienteEstado ? ` / ${nota.clienteEstado}` : ""}</p>}
+              </div>
+            ))}
           </div>
 
+          {/* Itens */}
           {nota.itens && nota.itens.length > 0 && (
             <div className="bg-[#0f1117] border border-white/[0.06] rounded-xl overflow-hidden">
               <div className="px-4 py-2.5 border-b border-white/[0.06]">
@@ -240,7 +321,7 @@ function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-white/[0.04]">
-                    {["Descrição", "Qtd", "Unit.", "Total"].map((h, i) => (
+                    {["Descrição", "Qtd", "Unit.", "Desc %", "Total"].map((h, i) => (
                       <th key={h} className={`px-4 py-2 text-[#4b5563] font-medium ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>
                     ))}
                   </tr>
@@ -248,9 +329,13 @@ function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
                 <tbody>
                   {nota.itens.map((item, i) => (
                     <tr key={i} className="border-b border-white/[0.03] last:border-0">
-                      <td className="px-4 py-2.5 text-white">{item.descricao}</td>
-                      <td className="px-4 py-2.5 text-right text-[#9ca3af]">{item.quantidade}</td>
+                      <td className="px-4 py-2.5 text-white">
+                        {item.descricao}
+                        {item.codigo && <span className="ml-1 text-[#4b5563]">({item.codigo})</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-[#9ca3af]">{item.quantidade} {item.unidade}</td>
                       <td className="px-4 py-2.5 text-right text-[#9ca3af]">{fmt(item.valorUnitario)}</td>
+                      <td className="px-4 py-2.5 text-right text-[#9ca3af]">{item.desconto ?? 0}%</td>
                       <td className="px-4 py-2.5 text-right text-emerald-400 font-semibold">{fmt(item.valorTotal ?? 0)}</td>
                     </tr>
                   ))}
@@ -259,6 +344,7 @@ function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
             </div>
           )}
 
+          {/* Totais */}
           <div className="bg-[#0f1117] border border-white/[0.06] rounded-xl p-4 space-y-2">
             <div className="flex justify-between text-xs text-[#6b7280]"><span>Subtotal</span><span className="text-[#9ca3af]">{fmt(nota.subtotal)}</span></div>
             <div className="flex justify-between text-xs"><span className="text-[#6b7280]">Desconto ({nota.desconto}%)</span><span className="text-red-400">-{fmt(nota.valorDesconto)}</span></div>
@@ -269,11 +355,21 @@ function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
             </div>
           </div>
 
+          {/* Pagamento */}
           <div className="flex items-center justify-between bg-[#0f1117] border border-white/[0.06] rounded-xl px-4 py-3 text-xs">
             <span className="text-[#6b7280]">Forma de Pagamento</span>
             <span className="text-white font-medium">{pgtoLabel[nota.formaPagamento]}</span>
           </div>
 
+          {/* Data emissão */}
+          {nota.dataEmissao && (
+            <div className="flex items-center justify-between bg-[#0f1117] border border-white/[0.06] rounded-xl px-4 py-3 text-xs">
+              <span className="text-[#6b7280]">Data de Emissão</span>
+              <span className="text-white font-medium">{new Date(nota.dataEmissao).toLocaleString("pt-BR")}</span>
+            </div>
+          )}
+
+          {/* Chave de acesso */}
           {nota.chaveAcesso && (
             <div className="bg-[#0f1117] border border-white/[0.06] rounded-xl p-4">
               <p className="text-[10px] text-[#6b7280] uppercase tracking-wider mb-2">Chave de Acesso</p>
@@ -282,6 +378,7 @@ function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
             </div>
           )}
 
+          {/* Cancelamento */}
           {nota.status === "CANCELADA" && nota.motivoCancelamento && (
             <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
               <p className="text-[10px] text-red-400 uppercase tracking-wider mb-1">Motivo do Cancelamento</p>
@@ -289,26 +386,27 @@ function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
             </div>
           )}
 
+          {/* Ações */}
           <div className="flex flex-wrap gap-2 pt-1">
             {nota.status === "RASCUNHO" && (
-              <button onClick={() => onEmitir(nota.id)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold rounded-lg transition-all">
-                <IcCheck /> Emitir Nota
+              <button onClick={handleEmitir} disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-all">
+                <IcCheck /> {loading ? "Emitindo..." : "Emitir Nota"}
               </button>
             )}
             {nota.status === "EMITIDA" && !showCancelar && (
               <button onClick={() => setShowCancelar(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-medium rounded-lg border border-red-500/20 transition-all">
-                ✕ Cancelar Nota
+                <IcBan /> Cancelar Nota
               </button>
             )}
             {showCancelar && (
               <div className="w-full flex gap-2">
                 <input className={IC + " flex-1"} placeholder="Informe o motivo do cancelamento..."
-                  value={motivo} onChange={e => setMotivo(e.target.value)} />
-                <button onClick={() => { if (motivo.trim()) onCancelar(nota.id, motivo); }}
-                  className="px-4 py-2 bg-red-500 hover:bg-red-400 text-white text-sm font-semibold rounded-lg transition-all shrink-0">
-                  Confirmar
+                  value={motivo} onChange={e => setMotivo(e.target.value)} autoFocus />
+                <button onClick={handleCancelar} disabled={loading || !motivo.trim()}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-400 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all shrink-0">
+                  {loading ? "..." : "Confirmar"}
                 </button>
                 <button onClick={() => setShowCancelar(false)}
                   className="px-3 py-2 bg-white/[0.04] hover:bg-white/[0.08] text-[#9ca3af] text-sm rounded-lg transition-all border border-white/[0.06] shrink-0">
@@ -323,17 +421,15 @@ function ModalDetalhes({ nota, onClose, onEmitir, onCancelar }: {
   );
 }
 
-// ─── Modal Criar ─────────────────────────────────────────
-const EMPTY_ITEM: ItemNota = {
-  produtoId: "", descricao: "", codigo: "", ncm: "", cfop: "5102",
-  unidade: "UN", quantidade: 1, valorUnitario: 0, desconto: 0, icms: 0, pis: 0, cofins: 0,
-};
+// ─── Modal Criar ──────────────────────────────────────────────────────────────
 const STEPS = ["Destinatário", "Itens", "Financeiro"];
 
 function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () => void }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Step 1
   const [tipo, setTipo] = useState<TipoNota>("NFe");
   const [clienteNome, setClienteNome] = useState("");
   const [clienteCpfCnpj, setClienteCpfCnpj] = useState("");
@@ -343,7 +439,11 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
   const [clienteEndereco, setClienteEndereco] = useState("");
   const [clienteCidade, setClienteCidade] = useState("");
   const [clienteEstado, setClienteEstado] = useState("");
+
+  // Step 2
   const [itens, setItens] = useState<ItemNota[]>([{ ...EMPTY_ITEM }]);
+
+  // Step 3
   const [desconto, setDesconto] = useState(0);
   const [impostos, setImpostos] = useState(0);
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>("PIX");
@@ -353,9 +453,7 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
     const cep = clienteCep.replace(/\D/g, "");
     if (cep.length !== 8) return;
     try {
-      const r = await fetch(`${API}/notas-fiscais/utils/cep/${cep}`);
-      if (!r.ok) return;
-      const d = await r.json();
+      const d = await fetchAuth<any>(`/notas-fiscais/utils/cep/${cep}`);
       setClienteEndereco(d.logradouro ?? "");
       setClienteCidade(d.cidade ?? "");
       setClienteEstado(d.estado ?? "");
@@ -366,9 +464,7 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
     const cnpj = clienteCpfCnpj.replace(/\D/g, "");
     if (cnpj.length !== 14) return;
     try {
-      const r = await fetch(`${API}/notas-fiscais/utils/cnpj/${cnpj}`);
-      if (!r.ok) return;
-      const d = await r.json();
+      const d = await fetchAuth<any>(`/notas-fiscais/utils/cnpj/${cnpj}`);
       if (d.nome) setClienteNome(d.nome);
       if (d.telefone) setClienteTelefone(d.telefone);
       if (d.email) setClienteEmail(d.email);
@@ -389,12 +485,17 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
   const valorImp = base * (impostos / 100);
   const total = base + valorImp;
 
+  const canNext = () => {
+    if (step === 1) return clienteNome.trim().length > 0;
+    if (step === 2) return itens.length > 0 && itens.every(i => i.descricao.trim() && i.quantidade > 0 && i.valorUnitario >= 0);
+    return true;
+  };
+
   const handleSubmit = async () => {
     setLoading(true); setError("");
     try {
-      const r = await fetch(`${API}/notas-fiscais`, {
+      await fetchAuth("/notas-fiscais", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           empresaId: EMPRESA_ID, tipo,
           clienteNome, clienteCpfCnpj, clienteEmail, clienteTelefone,
@@ -409,7 +510,6 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
           desconto, impostos, formaPagamento, observacoes,
         }),
       });
-      if (!r.ok) { const e = await r.json(); throw new Error(e.message ?? "Erro ao criar nota"); }
       onCreate(); onClose();
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
@@ -428,7 +528,9 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
                 <p className="text-xs text-[#6b7280]">Passo {step} de {STEPS.length} — {STEPS[step - 1]}</p>
               </div>
             </div>
-            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6b7280] hover:text-white hover:bg-white/10 transition-all">×</button>
+            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6b7280] hover:text-white hover:bg-white/10 transition-all">
+              <IcX />
+            </button>
           </div>
           {/* Stepper */}
           <div className="flex items-center">
@@ -452,34 +554,54 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Step 1 */}
+          {/* Step 1 — Destinatário */}
           {step === 1 && (
             <>
               <div className="grid grid-cols-3 gap-2 mb-1">
                 {(["NFe", "NFS", "NFCE"] as TipoNota[]).map(t => (
                   <button key={t} type="button" onClick={() => setTipo(t)}
                     className={`p-3.5 rounded-xl border text-center transition-all
-                      ${tipo === t ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" :
-                        "bg-[#0f1117] border-white/[0.06] text-[#6b7280] hover:border-white/20 hover:text-white"}`}>
+                      ${tipo === t
+                        ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400"
+                        : "bg-[#0f1117] border-white/[0.06] text-[#6b7280] hover:border-white/20 hover:text-white"}`}>
                     <div className="text-sm font-semibold">{tipoLabel[t]}</div>
-                    <div className="text-[10px] mt-0.5 opacity-60">{t === "NFe" ? "Produtos" : t === "NFS" ? "Serviços" : "Consumidor"}</div>
+                    <div className="text-[10px] mt-0.5 opacity-60">
+                      {t === "NFe" ? "Produtos" : t === "NFS" ? "Serviços" : "Consumidor"}
+                    </div>
                   </button>
                 ))}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Field label="CPF / CNPJ"><input className={IC} value={clienteCpfCnpj} onChange={e => setClienteCpfCnpj(e.target.value)} onBlur={buscarCnpj} placeholder="Auto-preench. CNPJ ao sair" /></Field>
-                <Field label="Nome do Cliente *"><input className={IC} value={clienteNome} onChange={e => setClienteNome(e.target.value)} placeholder="Nome ou Razão Social" /></Field>
-                <Field label="E-mail"><input className={IC} type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder="email@exemplo.com" /></Field>
-                <Field label="Telefone"><input className={IC} value={clienteTelefone} onChange={e => setClienteTelefone(e.target.value)} placeholder="(00) 00000-0000" /></Field>
-                <Field label="CEP"><input className={IC} value={clienteCep} onChange={e => setClienteCep(e.target.value)} onBlur={buscarCep} placeholder="Auto-preench. endereço" /></Field>
-                <Field label="Endereço"><input className={IC} value={clienteEndereco} onChange={e => setClienteEndereco(e.target.value)} /></Field>
-                <Field label="Cidade"><input className={IC} value={clienteCidade} onChange={e => setClienteCidade(e.target.value)} /></Field>
-                <Field label="UF"><input className={IC} value={clienteEstado} onChange={e => setClienteEstado(e.target.value)} maxLength={2} placeholder="SP" /></Field>
+                <Field label="CPF / CNPJ">
+                  <input className={IC} value={clienteCpfCnpj} onChange={e => setClienteCpfCnpj(e.target.value)}
+                    onBlur={buscarCnpj} placeholder="Auto-preench. CNPJ ao sair" />
+                </Field>
+                <Field label="Nome do Cliente *">
+                  <input className={IC} value={clienteNome} onChange={e => setClienteNome(e.target.value)} placeholder="Nome ou Razão Social" />
+                </Field>
+                <Field label="E-mail">
+                  <input className={IC} type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder="email@exemplo.com" />
+                </Field>
+                <Field label="Telefone">
+                  <input className={IC} value={clienteTelefone} onChange={e => setClienteTelefone(e.target.value)} placeholder="(00) 00000-0000" />
+                </Field>
+                <Field label="CEP">
+                  <input className={IC} value={clienteCep} onChange={e => setClienteCep(e.target.value)} onBlur={buscarCep} placeholder="Auto-preench. endereço" />
+                </Field>
+                <Field label="Endereço">
+                  <input className={IC} value={clienteEndereco} onChange={e => setClienteEndereco(e.target.value)} />
+                </Field>
+                <Field label="Cidade">
+                  <input className={IC} value={clienteCidade} onChange={e => setClienteCidade(e.target.value)} />
+                </Field>
+                <Field label="UF">
+                  <input className={IC} value={clienteEstado} onChange={e => setClienteEstado(e.target.value)} maxLength={2} placeholder="SP" />
+                </Field>
               </div>
             </>
           )}
 
-          {/* Step 2 */}
+          {/* Step 2 — Itens */}
           {step === 2 && (
             <>
               <div className="space-y-3">
@@ -495,15 +617,21 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
             </>
           )}
 
-          {/* Step 3 */}
+          {/* Step 3 — Financeiro */}
           {step === 3 && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Field label="Desconto Geral %"><input className={IC} type="number" min="0" max="100" value={desconto} onChange={e => setDesconto(parseFloat(e.target.value) || 0)} /></Field>
-                <Field label="Impostos %"><input className={IC} type="number" min="0" max="100" value={impostos} onChange={e => setImpostos(parseFloat(e.target.value) || 0)} /></Field>
+                <Field label="Desconto Geral %">
+                  <input className={IC} type="number" min="0" max="100" value={desconto} onChange={e => setDesconto(parseFloat(e.target.value) || 0)} />
+                </Field>
+                <Field label="Impostos %">
+                  <input className={IC} type="number" min="0" max="100" value={impostos} onChange={e => setImpostos(parseFloat(e.target.value) || 0)} />
+                </Field>
                 <Field label="Forma de Pagamento">
                   <select className={IC + " cursor-pointer"} value={formaPagamento} onChange={e => setFormaPagamento(e.target.value as FormaPagamento)}>
-                    {(Object.keys(pgtoLabel) as FormaPagamento[]).map(k => <option key={k} value={k}>{pgtoLabel[k]}</option>)}
+                    {(Object.keys(pgtoLabel) as FormaPagamento[]).map(k => (
+                      <option key={k} value={k}>{pgtoLabel[k]}</option>
+                    ))}
                   </select>
                 </Field>
               </div>
@@ -516,9 +644,18 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
                   <p className="text-[10px] text-[#6b7280] uppercase tracking-wider">Resumo da Nota</p>
                 </div>
                 <div className="p-4 space-y-2 text-xs">
-                  <div className="flex justify-between"><span className="text-[#6b7280]">Subtotal ({itens.length} {itens.length === 1 ? "item" : "itens"})</span><span className="text-[#9ca3af]">{fmt(subtotal)}</span></div>
-                  <div className="flex justify-between"><span className="text-[#6b7280]">Desconto ({desconto}%)</span><span className="text-red-400">-{fmt(valorDesc)}</span></div>
-                  <div className="flex justify-between"><span className="text-[#6b7280]">Impostos ({impostos}%)</span><span className="text-amber-400">+{fmt(valorImp)}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6b7280]">Subtotal ({itens.length} {itens.length === 1 ? "item" : "itens"})</span>
+                    <span className="text-[#9ca3af]">{fmt(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6b7280]">Desconto ({desconto}%)</span>
+                    <span className="text-red-400">-{fmt(valorDesc)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6b7280]">Impostos ({impostos}%)</span>
+                    <span className="text-amber-400">+{fmt(valorImp)}</span>
+                  </div>
                   <div className="flex justify-between pt-3 border-t border-white/[0.06]">
                     <span className="text-sm font-semibold text-white">Total</span>
                     <span className="text-base font-bold text-emerald-400">{fmt(total)}</span>
@@ -539,7 +676,7 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
               className="px-4 py-2 bg-white/[0.04] hover:bg-white/[0.08] text-[#9ca3af] text-sm rounded-lg transition-all border border-white/[0.06]">
               {step === 1 ? "Cancelar" : "← Voltar"}
             </button>
-            <button type="button" disabled={loading}
+            <button type="button" disabled={loading || !canNext()}
               onClick={() => step < 3 ? setStep(s => s + 1) : handleSubmit()}
               className="flex items-center gap-2 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-all">
               {loading ? "Salvando..." : step === 3 ? <><IcCheck /> Criar Rascunho</> : "Próximo →"}
@@ -551,17 +688,17 @@ function ModalCriar({ onClose, onCreate }: { onClose: () => void; onCreate: () =
   );
 }
 
-// ─── Página Principal ─────────────────────────────────────
+// ─── Página Principal ─────────────────────────────────────────────────────────
 export default function NotasFiscaisPage() {
-  const [notas, setNotas] = useState<NotaFiscal[]>([]);
-  const [stats, setStats] = useState<Estatisticas | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showCriar, setShowCriar] = useState(false);
-  const [detalhe, setDetalhe] = useState<NotaFiscal | null>(null);
-  const [search, setSearch] = useState("");
+  const [notas, setNotas]           = useState<NotaFiscal[]>([]);
+  const [stats, setStats]           = useState<Estatisticas | null>(null);
+  const [loading, setLoading]       = useState(true);
+  const [showCriar, setShowCriar]   = useState(false);
+  const [detalhe, setDetalhe]       = useState<NotaFiscal | null>(null);
+  const [search, setSearch]         = useState("");
   const [filterStatus, setFilterStatus] = useState<Status | "">("");
-  const [filterTipo, setFilterTipo] = useState<TipoNota | "">("");
-  const [page, setPage] = useState(1);
+  const [filterTipo, setFilterTipo]     = useState<TipoNota | "">("");
+  const [page, setPage]             = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   const fetchNotas = useCallback(async () => {
@@ -570,11 +707,10 @@ export default function NotasFiscaisPage() {
       const params = new URLSearchParams({
         empresaId: EMPRESA_ID, page: String(page), limit: "15",
         ...(filterStatus && { status: filterStatus }),
-        ...(filterTipo && { tipo: filterTipo }),
-        ...(search && { clienteNome: search }),
+        ...(filterTipo   && { tipo: filterTipo }),
+        ...(search       && { clienteNome: search }),
       });
-      const r = await fetch(`${API}/notas-fiscais?${params}`);
-      const d = await r.json();
+      const d = await fetchAuth<{ data: NotaFiscal[]; pages: number }>(`/notas-fiscais?${params}`);
       setNotas(d.data ?? []); setTotalPages(d.pages ?? 1);
     } catch { setNotas([]); }
     finally { setLoading(false); }
@@ -582,8 +718,8 @@ export default function NotasFiscaisPage() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/notas-fiscais/stats/${EMPRESA_ID}`);
-      setStats(await r.json());
+      const s = await fetchAuth<Estatisticas>(`/notas-fiscais/stats/${EMPRESA_ID}`);
+      setStats(s);
     } catch {}
   }, []);
 
@@ -591,27 +727,26 @@ export default function NotasFiscaisPage() {
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
   const handleEmitir = async (id: string) => {
-    await fetch(`${API}/notas-fiscais/${id}/emitir`, { method: "PATCH" });
+    await fetchAuth(`/notas-fiscais/${id}/emitir`, { method: "PATCH" });
     await fetchNotas(); await fetchStats();
-    const r = await fetch(`${API}/notas-fiscais/${id}`);
-    const d = await r.json();
+    const d = await fetchAuth<{ nota: NotaFiscal; itens: ItemNota[] }>(`/notas-fiscais/${id}`);
     setDetalhe({ ...d.nota, itens: d.itens });
   };
 
   const handleCancelar = async (id: string, motivo: string) => {
-    await fetch(`${API}/notas-fiscais/cancelar`, {
+    await fetchAuth(`/notas-fiscais/cancelar`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, motivoCancelamento: motivo }),
     });
     await fetchNotas(); await fetchStats(); setDetalhe(null);
   };
 
   const openDetalhe = async (id: string) => {
-    const r = await fetch(`${API}/notas-fiscais/${id}`);
-    const d = await r.json();
+    const d = await fetchAuth<{ nota: NotaFiscal; itens: ItemNota[] }>(`/notas-fiscais/${id}`);
     setDetalhe({ ...d.nota, itens: d.itens });
   };
+
+  const hasFilters = filterStatus || filterTipo || search;
 
   return (
     <div className="min-h-screen bg-[#0f1117] text-white">
@@ -632,44 +767,45 @@ export default function NotasFiscaisPage() {
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <StatCard label="Total de Notas" value={stats.total} icon={<IcReceipt />} iconBg="bg-white/[0.04]" />
-            <StatCard label="Emitidas" value={stats.emitidas} icon={<IcCheck />} iconBg="bg-emerald-500/10" />
-            <StatCard label="Rascunhos" value={stats.rascunhos} icon={<IcReceipt />} iconBg="bg-amber-500/10" />
-            <StatCard label="Canceladas" value={stats.canceladas} icon={<IcReceipt />} iconBg="bg-red-500/10" />
-            <StatCard label="Faturado no Mês" value={fmt(stats.valorTotalMes)} sub="notas emitidas" icon={<IcTrending />} iconBg="bg-emerald-500/10" />
+            <StatCard label="Total de Notas"  value={stats.total}             icon={<IcReceipt />}  iconBg="bg-white/[0.04]" />
+            <StatCard label="Emitidas"         value={stats.emitidas}          icon={<IcCheck />}    iconBg="bg-emerald-500/10" />
+            <StatCard label="Rascunhos"        value={stats.rascunhos}         icon={<IcReceipt />}  iconBg="bg-amber-500/10" />
+            <StatCard label="Canceladas"       value={stats.canceladas}        icon={<IcBan />}      iconBg="bg-red-500/10" />
+            <StatCard label="Faturado no Mês"  value={fmt(stats.valorTotalMes)} sub="notas emitidas" icon={<IcTrending />} iconBg="bg-emerald-500/10" />
           </div>
         )}
 
         {/* Filtros */}
         <div className="bg-[#1a1d27] border border-white/[0.06] rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
-          <span className="text-[#4b5563]"><IcSearch /></span>
           <div className="relative flex-1 min-w-[180px] max-w-xs">
-            <IcSearch />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#374151]"><IcSearch /></span>
             <input
-              className="w-full bg-[#0f1117] border border-white/[0.06] rounded-lg pl-3 pr-3 py-2 text-sm text-white placeholder-[#374151] focus:outline-none focus:border-emerald-500/40 transition-all"
+              className="w-full bg-[#0f1117] border border-white/[0.06] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#374151] focus:outline-none focus:border-emerald-500/40 transition-all"
               placeholder="Buscar por cliente..."
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
             />
           </div>
-          <select className="bg-[#0f1117] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/40 transition-all cursor-pointer"
+          <select
+            className="bg-[#0f1117] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/40 transition-all cursor-pointer"
             value={filterStatus} onChange={e => { setFilterStatus(e.target.value as Status | ""); setPage(1); }}>
             <option value="">Todos os status</option>
             <option value="RASCUNHO">Rascunho</option>
             <option value="EMITIDA">Emitida</option>
             <option value="CANCELADA">Cancelada</option>
           </select>
-          <select className="bg-[#0f1117] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/40 transition-all cursor-pointer"
+          <select
+            className="bg-[#0f1117] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/40 transition-all cursor-pointer"
             value={filterTipo} onChange={e => { setFilterTipo(e.target.value as TipoNota | ""); setPage(1); }}>
             <option value="">Todos os tipos</option>
             <option value="NFe">NF-e</option>
             <option value="NFS">NFS-e</option>
             <option value="NFCE">NFC-e</option>
           </select>
-          {(filterStatus || filterTipo || search) && (
+          {hasFilters && (
             <button onClick={() => { setSearch(""); setFilterStatus(""); setFilterTipo(""); setPage(1); }}
-              className="text-xs text-[#6b7280] hover:text-red-400 transition-colors">
-              Limpar filtros ×
+              className="text-xs text-[#6b7280] hover:text-red-400 transition-colors flex items-center gap-1">
+              <IcX /> Limpar filtros
             </button>
           )}
         </div>
@@ -689,12 +825,14 @@ export default function NotasFiscaisPage() {
             </div>
           ) : notas.length === 0 ? (
             <div className="text-center py-20">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-white/[0.03] rounded-xl mb-3 text-[#4b5563]"><IcReceipt /></div>
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-white/[0.03] rounded-xl mb-3 text-[#4b5563]">
+                <IcReceipt className="w-6 h-6" />
+              </div>
               <p className="text-sm text-[#6b7280]">Nenhuma nota fiscal encontrada</p>
               <p className="text-xs text-[#4b5563] mt-1 mb-4">
-                {search || filterStatus || filterTipo ? "Tente ajustar os filtros" : "Crie sua primeira nota fiscal"}
+                {hasFilters ? "Tente ajustar os filtros" : "Crie sua primeira nota fiscal"}
               </p>
-              {!search && !filterStatus && !filterTipo && (
+              {!hasFilters && (
                 <button onClick={() => setShowCriar(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold rounded-lg transition-all mx-auto">
                   <IcPlus /> Nova Nota
@@ -707,7 +845,8 @@ export default function NotasFiscaisPage() {
                 <thead>
                   <tr className="border-b border-white/[0.04]">
                     {["Número", "Tipo", "Cliente", "Status", "Total", "Pagamento", "Data", ""].map((h, i) => (
-                      <th key={i} className={`px-4 py-3 text-[10px] font-medium text-[#4b5563] uppercase tracking-wider ${i === 4 || i === 5 || i === 6 ? "text-right" : "text-left"}`}>
+                      <th key={i} className={`px-4 py-3 text-[10px] font-medium text-[#4b5563] uppercase tracking-wider
+                        ${i === 4 || i === 5 || i === 6 ? "text-right" : "text-left"}`}>
                         {h}
                       </th>
                     ))}
@@ -721,7 +860,9 @@ export default function NotasFiscaisPage() {
                         <span className="font-mono text-xs text-[#6b7280] group-hover:text-white transition-colors">{nota.numero}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-1 bg-white/[0.04] border border-white/[0.06] rounded-md text-[10px] text-[#9ca3af]">{tipoLabel[nota.tipo]}</span>
+                        <span className="px-2 py-1 bg-white/[0.04] border border-white/[0.06] rounded-md text-[10px] text-[#9ca3af]">
+                          {tipoLabel[nota.tipo]}
+                        </span>
                       </td>
                       <td className="px-4 py-3 max-w-[180px]">
                         <p className="text-sm text-white truncate">{nota.clienteNome}</p>
@@ -735,7 +876,9 @@ export default function NotasFiscaisPage() {
                         <span className="text-xs text-[#6b7280]">{pgtoLabel[nota.formaPagamento]}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="text-xs text-[#4b5563]">{new Date(nota.createdAt).toLocaleDateString("pt-BR")}</span>
+                        <span className="text-xs text-[#4b5563]">
+                          {new Date(nota.createdAt).toLocaleDateString("pt-BR")}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <button onClick={e => { e.stopPropagation(); openDetalhe(nota.id); }}
@@ -760,7 +903,8 @@ export default function NotasFiscaisPage() {
             </button>
             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
               <button key={p} onClick={() => setPage(p)}
-                className={`w-8 h-8 text-xs rounded-lg transition-all ${p === page ? "bg-emerald-500 text-black font-semibold" : "text-[#6b7280] hover:bg-white/[0.06]"}`}>
+                className={`w-8 h-8 text-xs rounded-lg transition-all
+                  ${p === page ? "bg-emerald-500 text-black font-semibold" : "text-[#6b7280] hover:bg-white/[0.06]"}`}>
                 {p}
               </button>
             ))}
@@ -772,8 +916,20 @@ export default function NotasFiscaisPage() {
         )}
       </div>
 
-      {showCriar && <ModalCriar onClose={() => setShowCriar(false)} onCreate={() => { fetchNotas(); fetchStats(); }} />}
-      {detalhe && <ModalDetalhes nota={detalhe} onClose={() => setDetalhe(null)} onEmitir={handleEmitir} onCancelar={handleCancelar} />}
+      {showCriar && (
+        <ModalCriar
+          onClose={() => setShowCriar(false)}
+          onCreate={() => { fetchNotas(); fetchStats(); }}
+        />
+      )}
+      {detalhe && (
+        <ModalDetalhes
+          nota={detalhe}
+          onClose={() => setDetalhe(null)}
+          onEmitir={handleEmitir}
+          onCancelar={handleCancelar}
+        />
+      )}
     </div>
   );
 }
