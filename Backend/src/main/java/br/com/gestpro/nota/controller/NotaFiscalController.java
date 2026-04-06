@@ -1,8 +1,7 @@
 package br.com.gestpro.nota.controller;
 
-
 import br.com.gestpro.nota.dto.NotaFiscalDTOs;
-import br.com.gestpro.nota.service.NotaFiscalService;
+import br.com.gestpro.nota.service.NotaFiscalServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,7 +16,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NotaFiscalController {
 
-    private final NotaFiscalService service;
+    private final NotaFiscalServiceImpl service;
 
     /* ── CRIAR RASCUNHO ──────────────────────────────── */
     @PostMapping
@@ -26,19 +25,19 @@ public class NotaFiscalController {
             @Valid @RequestBody NotaFiscalDTOs.CriarNotaFiscalDTO dto,
             @RequestHeader(value = "X-Usuario-Id", defaultValue = "anon") String usuarioId
     ) {
-        return service.criar(dto, usuarioId);
+        return (Map<String, Object>) service.criar(dto, usuarioId);
     }
 
     /* ── EMITIR ──────────────────────────────────────── */
     @PatchMapping("/{id}/emitir")
     public Map<String, Object> emitir(@PathVariable UUID id) {
-        return service.emitir(id);
+        return (Map<String, Object>) service.emitir(id);
     }
 
     /* ── CANCELAR ────────────────────────────────────── */
     @PatchMapping("/cancelar")
     public Map<String, Object> cancelar(@Valid @RequestBody NotaFiscalDTOs.CancelarNotaDTO dto) {
-        return service.cancelar(dto);
+        return (Map<String, Object>) service.cancelar(dto);
     }
 
     /* ── ESTATÍSTICAS ────────────────────────────────── */
@@ -50,36 +49,36 @@ public class NotaFiscalController {
     /* ── CEP ─────────────────────────────────────────── */
     @GetMapping("/utils/cep/{cep}")
     public Map<String, Object> consultarCep(@PathVariable String cep) {
-        return service.consultarCep(cep);
+        return (Map<String, Object>) service.consultarCep(cep);
     }
 
     /* ── CNPJ ────────────────────────────────────────── */
     @GetMapping("/utils/cnpj/{cnpj}")
     public Map<String, Object> consultarCnpj(@PathVariable String cnpj) {
-        return service.consultarCnpj(cnpj);
+        return (Map<String, Object>) service.consultarCNPJ(cnpj);
     }
 
     /* ── MUNICÍPIOS ──────────────────────────────────── */
     @GetMapping("/utils/municipios/{uf}")
     public List<Map<String, Object>> municipios(@PathVariable String uf) {
-        return service.buscarMunicipios(uf);
+        return (List<Map<String, Object>>) service.buscarMunicipios(uf);
     }
 
     /* ── DANFE ───────────────────────────────────────── */
     @GetMapping("/{id}/danfe")
     public Map<String, Object> danfe(@PathVariable UUID id) {
-        return service.gerarDadosDanfe(id);
+        return (Map<String, Object>) service.gerarDadosDanfe(id);
     }
 
     /* ── BUSCAR POR ID ───────────────────────────────── */
     @GetMapping("/{id}")
     public Map<String, Object> buscarPorId(@PathVariable UUID id) {
-        return service.buscarPorId(id);
+        return (Map<String, Object>) service.buscarPorId(id);
     }
 
     /* ── LISTAR ─────────────────────────────────────── */
     @GetMapping
     public Map<String, Object> listar(@ModelAttribute NotaFiscalDTOs.FilterNotaFiscalDTO filter) {
-        return service.listar(filter);
+        return (Map<String, Object>) service.listar(filter);
     }
 }

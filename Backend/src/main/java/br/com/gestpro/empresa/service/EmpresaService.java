@@ -28,6 +28,7 @@ public class EmpresaService {
     private final UsuarioRepository       usuarioRepository;
     private final VerificarPlanoOperation verificarPlano;
     private final PasswordEncoder         passwordEncoder;
+    private final VerificarCNPJ           verificarCNPJ;
 
     // CRUD padrão
     @Transactional
@@ -40,6 +41,7 @@ public class EmpresaService {
         long totalEmpresasDono = rawCount instanceof Number n ? n.longValue() : 0L;
 
         verificarPlano.validarLimiteEmpresas(dono, totalEmpresasDono);
+        verificarCNPJ.consultarCnpj(req.getCnpj());
 
         Empresa empresa = new Empresa();
         empresa.setNomeFantasia(req.getNomeFantasia());
