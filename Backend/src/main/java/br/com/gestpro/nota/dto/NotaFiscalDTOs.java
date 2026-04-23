@@ -14,60 +14,68 @@ import java.util.UUID;
 
 public class NotaFiscalDTOs {
 
-    // ─── CriarItemNotaDTO ─────────────────────────────────
+    // ─── CriarItemNotaDTO ─────────────────────────────────────────────────────
     @Data
     public static class CriarItemNotaDTO {
 
-        @NotBlank
+        @NotBlank(message = "ID do produto é obrigatório")
         private String produtoId;
 
-        @NotBlank
+        @NotBlank(message = "Descrição do item é obrigatória")
         private String descricao;
 
         private String codigo;
         private String ncm;
+
+        @Pattern(regexp = "\\d{4}", message = "CFOP deve ter 4 dígitos")
         private String cfop;
+
+        @Size(max = 6, message = "Unidade deve ter no máximo 6 caracteres")
         private String unidade;
 
-        @NotNull
-        @DecimalMin("0.001")
+        @NotNull(message = "Quantidade é obrigatória")
+        @DecimalMin(value = "0.001", message = "Quantidade deve ser maior que zero")
         private BigDecimal quantidade;
 
-        @NotNull
-        @DecimalMin("0")
+        @NotNull(message = "Valor unitário é obrigatório")
+        @DecimalMin(value = "0", message = "Valor unitário não pode ser negativo")
         private BigDecimal valorUnitario;
 
-        @DecimalMin("0") @DecimalMax("100")
+        @DecimalMin(value = "0", message = "Desconto não pode ser negativo")
+        @DecimalMax(value = "100", message = "Desconto não pode exceder 100%")
         private BigDecimal desconto;
 
-        @DecimalMin("0") @DecimalMax("100")
+        @DecimalMin(value = "0", message = "ICMS não pode ser negativo")
+        @DecimalMax(value = "100", message = "ICMS não pode exceder 100%")
         private BigDecimal icms;
 
-        @DecimalMin("0") @DecimalMax("100")
+        @DecimalMin(value = "0", message = "PIS não pode ser negativo")
+        @DecimalMax(value = "100", message = "PIS não pode exceder 100%")
         private BigDecimal pis;
 
-        @DecimalMin("0") @DecimalMax("100")
+        @DecimalMin(value = "0", message = "COFINS não pode ser negativo")
+        @DecimalMax(value = "100", message = "COFINS não pode exceder 100%")
         private BigDecimal cofins;
     }
 
-    // ─── CriarNotaFiscalDTO ───────────────────────────────
+    // ─── CriarNotaFiscalDTO ───────────────────────────────────────────────────
     @Data
     public static class CriarNotaFiscalDTO {
 
-        @NotBlank
+        @NotBlank(message = "ID da empresa é obrigatório")
         private String empresaId;
 
-        @NotNull
+        @NotNull(message = "Tipo da nota é obrigatório")
         private TipoNota tipo;
 
         private String clienteId;
 
-        @NotBlank
+        @NotBlank(message = "Nome do cliente é obrigatório")
         private String clienteNome;
 
         private String clienteCpfCnpj;
 
-        @Email
+        @Email(message = "E-mail do cliente inválido")
         private String clienteEmail;
 
         private String clienteTelefone;
@@ -76,35 +84,38 @@ public class NotaFiscalDTOs {
         private String clienteEstado;
         private String clienteCep;
 
-        @NotEmpty
+        @NotEmpty(message = "A nota deve ter pelo menos 1 item")
         @Valid
         private List<CriarItemNotaDTO> itens;
 
-        @DecimalMin("0") @DecimalMax("100")
+        @DecimalMin(value = "0", message = "Desconto não pode ser negativo")
+        @DecimalMax(value = "100", message = "Desconto não pode exceder 100%")
         private BigDecimal desconto;
 
-        @DecimalMin("0") @DecimalMax("100")
+        @DecimalMin(value = "0", message = "Impostos não pode ser negativo")
+        @DecimalMax(value = "100", message = "Impostos não pode exceder 100%")
         private BigDecimal impostos;
 
-        @NotNull
+        @NotNull(message = "Forma de pagamento é obrigatória")
         private FormaPagamento formaPagamento;
 
         private String vendaId;
         private String observacoes;
     }
 
-    // ─── CancelarNotaDTO ──────────────────────────────────
+    // ─── CancelarNotaDTO ──────────────────────────────────────────────────────
     @Data
     public static class CancelarNotaDTO {
 
-        @NotNull
+        @NotNull(message = "ID da nota é obrigatório")
         private UUID id;
 
-        @NotBlank
+        @NotBlank(message = "Motivo do cancelamento é obrigatório")
+        @Size(min = 5, message = "Motivo deve ter pelo menos 5 caracteres")
         private String motivoCancelamento;
     }
 
-    // ─── FilterNotaFiscalDTO ──────────────────────────────
+    // ─── FilterNotaFiscalDTO ──────────────────────────────────────────────────
     @Data
     public static class FilterNotaFiscalDTO {
 
@@ -115,14 +126,15 @@ public class NotaFiscalDTOs {
         private String dataInicio;
         private String dataFim;
 
-        @Min(1)
+        @Min(value = 1, message = "Página deve ser maior que zero")
         private Integer page = 1;
 
-        @Min(1) @Max(100)
+        @Min(value = 1, message = "Limite deve ser pelo menos 1")
+        @Max(value = 100, message = "Limite máximo é 100")
         private Integer limit = 20;
     }
 
-    // ─── EstatisticasDTO ──────────────────────────────────
+    // ─── EstatisticasDTO ──────────────────────────────────────────────────────
     @Data
     public static class EstatisticasDTO {
         private long total;
@@ -132,7 +144,7 @@ public class NotaFiscalDTOs {
         private BigDecimal valorTotalMes;
     }
 
-    // ─── NotaFiscalResponseDTO ────────────────────────────
+    // ─── NotaFiscalResponseDTO ────────────────────────────────────────────────
     @Data
     public static class NotaFiscalResponseDTO {
         private UUID id;

@@ -5,8 +5,17 @@ import br.com.gestpro.nota.dto.NotaFiscalDTOs;
 import br.com.gestpro.nota.repository.NotaFiscalRepository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Serviço responsável por calcular estatísticas de notas fiscais de uma empresa.
+ *
+ * Retorna:
+ * - Total de notas cadastradas
+ * - Quantidade por status (EMITIDA, RASCUNHO, CANCELADA)
+ * - Valor total faturado no mês corrente (apenas notas EMITIDAS)
+ */
 public class Estastisticas {
 
     private final NotaFiscalRepository notaRepo;
@@ -16,16 +25,27 @@ public class Estastisticas {
     }
 
     public NotaFiscalDTOs.EstatisticasDTO estatisticas(String empresaId) {
-        LocalDateTime inicioMes = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
-        LocalDateTime fimMes    = inicioMes.plusMonths(1).minusSeconds(1);
+
+        // Totais por status
+        long total      = notaRepo.countByEmpresaId(empresaId);
+        long emitidas   = notaRepo.countByEmpresaIdAndStatus(empresaId, NotaFiscalStatus.EMITIDA);
+        long rascunhos  = notaRepo.countByEmpresaIdAndStatus(empresaId, NotaFiscalStatus.RASCUNHO);
+        long canceladas = notaRepo.countByEmpresaIdAndStatus(empresaId, NotaFiscalStatus.CANCELADA);
+
+        // Faturamento do mês corrente
+        LocalDate hoje    = LocalDate.now();
+        LocalDateTime ini = hoje.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime fim = hoje.withDayOfMonth(hoje.lengthOfMonth()).atTime(23, 59, 59);
+
+        BigDecimal valorMes = notaRepo.sumTotalEmitidoNoPeriodo(empresaId, ini, fim);
+        if (valorMes == null) valorMes = BigDecimal.ZERO;
 
         NotaFiscalDTOs.EstatisticasDTO dto = new NotaFiscalDTOs.EstatisticasDTO();
-        dto.setTotal(notaRepo.countByEmpresaId(empresaId));
-        dto.setEmitidas(notaRepo.countByEmpresaIdAndStatus(empresaId, NotaFiscalStatus.EMITIDA));
-        dto.setRascunhos(notaRepo.countByEmpresaIdAndStatus(empresaId, NotaFiscalStatus.RASCUNHO));
-        dto.setCanceladas(notaRepo.countByEmpresaIdAndStatus(empresaId, NotaFiscalStatus.CANCELADA));
-        BigDecimal valorMes = notaRepo.sumTotalEmitidoNoPeriodo(empresaId, inicioMes, fimMes);
-        dto.setValorTotalMes(valorMes != null ? valorMes : BigDecimal.ZERO);
+        dto.setTotal(total);
+        dto.setEmitidas(emitidas);
+        dto.setRascunhos(rascunhos);
+        dto.setCanceladas(canceladas);
+        dto.setValorTotalMes(valorMes);
         return dto;
     }
 }

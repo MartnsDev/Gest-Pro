@@ -18,15 +18,11 @@ public interface VendaRepository extends JpaRepository<Venda, Long> {
     // ----------------------------
     // MÉTODOS AUTOMÁTICOS
     // ----------------------------
-
     List<Venda> findByCaixaId(Long idCaixa);
 
     List<Venda> findByCaixa(Caixa caixa);
 
-
-
     // MÉTODOS COM @QUERY (AGREGAÇÃO / JOIN)
-
 
     @Query("""
                SELECT new br.com.gestpro.dashboard.dto.ProdutoVendasDTO(

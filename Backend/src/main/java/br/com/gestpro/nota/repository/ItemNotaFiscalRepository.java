@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface ItemNotaFiscalRepository extends JpaRepository<ItemNotaFiscal, UUID> {
     List<ItemNotaFiscal> findByNotaFiscalId(UUID notaFiscalId);
+    void deleteByNotaFiscalId(UUID notaFiscalId);
 }

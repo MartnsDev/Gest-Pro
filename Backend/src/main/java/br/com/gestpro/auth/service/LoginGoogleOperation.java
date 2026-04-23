@@ -2,6 +2,7 @@ package br.com.gestpro.auth.service;
 
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
+import br.com.gestpro.infra.exception.ApiException;
 import br.com.gestpro.infra.jwt.JwtService;
 import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
@@ -25,7 +26,7 @@ public class LoginGoogleOperation {
         this.jwtService = jwtService;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {ApiException.class})
     public Usuario execute(String email, String nome, String foto) {
 
         return usuarioRepository.findByEmail(email)
@@ -46,12 +47,7 @@ public class LoginGoogleOperation {
                     }
 
                     // Verifica expiração do plano — atualiza status sem bloquear o login
-                    try {
                         verificarPlano.validarAcesso(u);
-                    } catch (Exception ignored) {
-                        // Status já foi atualizado para INATIVO dentro de validarAcesso.
-                        // O usuário consegue logar e é redirecionado para /pagamento.
-                    }
 
                     return usuarioRepository.save(u);
                 })

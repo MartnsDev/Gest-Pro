@@ -36,7 +36,7 @@ public class NotaFiscal {
     @Builder.Default
     private NotaFiscalStatus status = NotaFiscalStatus.RASCUNHO;
 
-    // Emissor
+    // ── Emissor ───────────────────────────────────────────────────────────────
     @Column(nullable = false)
     private String empresaId;
     private String empresaNome;
@@ -49,7 +49,7 @@ public class NotaFiscal {
     private String empresaTelefone;
     private String empresaEmail;
 
-    // Destinatário
+    // ── Destinatário ──────────────────────────────────────────────────────────
     private String clienteId;
 
     @Column(nullable = false)
@@ -63,7 +63,7 @@ public class NotaFiscal {
     private String clienteEstado;
     private String clienteCep;
 
-    // Financeiro
+    // ── Financeiro ────────────────────────────────────────────────────────────
     @Column(precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal subtotal = BigDecimal.ZERO;
@@ -97,6 +97,7 @@ public class NotaFiscal {
     @Column(columnDefinition = "TEXT")
     private String observacoes;
 
+    // ── Dados fiscais ─────────────────────────────────────────────────────────
     private String chaveAcesso;
     private String protocolo;
     private LocalDateTime dataEmissao;

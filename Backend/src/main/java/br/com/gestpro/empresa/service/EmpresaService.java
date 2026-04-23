@@ -29,6 +29,7 @@ public class EmpresaService {
     private final VerificarPlanoOperation verificarPlano;
     private final PasswordEncoder         passwordEncoder;
     private final VerificarCNPJ           verificarCNPJ;
+    private final VerificarCPF            verificarCPF;
 
     // CRUD padrão
     @Transactional
@@ -40,8 +41,30 @@ public class EmpresaService {
         Object rawCount = empresaRepository.countByDonoId(dono.getId());
         long totalEmpresasDono = rawCount instanceof Number n ? n.longValue() : 0L;
 
-        verificarPlano.validarLimiteEmpresas(dono, totalEmpresasDono);
-        verificarCNPJ.consultarCnpj(req.getCnpj());
+        // Só entra na lógica se o campo NÃO for nulo e NÃO estiver em branco
+        if (req.getCnpj() != null && !req.getCnpj().isBlank()) {
+
+            // Limpa pontos e traços para contar apenas os números
+            String documento = req.getCnpj().replaceAll("\\D", "");
+
+            if (documento.length() == 11) {
+                // É um CPF: tenta consultar
+                verificarCPF.consultarCpf(documento);
+
+            } else if (documento.length() == 14) {
+                // É um CNPJ: tenta consultar
+                verificarCNPJ.consultarCnpj(documento);
+
+            } else {
+                // Tem caracteres, mas a quantidade é inválida
+                throw new ApiException(
+                        "Erro de Validação",
+                        HttpStatus.BAD_REQUEST,
+                        "Quantidade de caracteres inválida. Informe 11 dígitos para CPF ou 14 para CNPJ."
+                );
+            }
+        }
+
 
         Empresa empresa = new Empresa();
         empresa.setNomeFantasia(req.getNomeFantasia());

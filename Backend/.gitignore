@@ -62,6 +62,93 @@ target/
 *.iml
 .vscode/
 
+# ==============================================================================
+# Maven / Spring Boot
+# ==============================================================================
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# Exceções (Mantém o Maven Wrapper)
+!.mvn/wrapper/maven-wrapper.jar
+
+# ==============================================================================
+# Java
+# ==============================================================================
+*.class
+*.log
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# ==============================================================================
+# IntelliJ IDEA (Sua IDE)
+# ==============================================================================
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# ==============================================================================
+# VS Code / Eclipse / NetBeans (Caso outros devs usem)
+# ==============================================================================
+.vscode/
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ==============================================================================
+# Variáveis de Ambiente e Segurança (NUNCA commitar)
+# ==============================================================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+application-local.properties
+application-local.yml
+*.jks
+run.sh
+
+
+# ==============================================================================
+# Sistema Operacional (Arquivos de cache)
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ==============================================================================
+# Específicos do seu Projeto
+# ==============================================================================
+# Ignora o executável do Stripe CLI local
+stripe.exe
 
 
 

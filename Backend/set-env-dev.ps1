@@ -14,7 +14,7 @@ $env:APP_PROFILE = "dev"
 # ── Banco de dados (Docker local) ─────────────
 $env:DB_URL      = "jdbc:mysql://localhost:3307/gestpro?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo"
 $env:DB_USERNAME = "root"
-$env:DB_PASSWORD = "5517"
+$env:DB_PASSWORD = "5555"
 
 # ── Redis (Docker local) ───────────────────────
 $env:SPRING_DATA_REDIS_HOST     = "localhost"

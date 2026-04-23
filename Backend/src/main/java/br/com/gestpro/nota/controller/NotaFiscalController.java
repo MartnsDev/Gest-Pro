@@ -11,6 +11,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Controller REST do módulo de Notas Fiscais.
+ *
+ * Base path: /notas-fiscais
+ *
+ * Endpoints:
+ *  POST   /notas-fiscais                       → criar rascunho
+ *  PATCH  /notas-fiscais/{id}/emitir           → emitir nota
+ *  PATCH  /notas-fiscais/cancelar              → cancelar nota
+ *  GET    /notas-fiscais                       → listar (com filtros)
+ *  GET    /notas-fiscais/{id}                  → buscar por ID
+ *  GET    /notas-fiscais/{id}/danfe            → dados do DANFE
+ *  GET    /notas-fiscais/stats/{empresaId}     → estatísticas
+ *  GET    /notas-fiscais/utils/cep/{cep}       → consulta CEP
+ *  GET    /notas-fiscais/utils/cnpj/{cnpj}     → consulta CNPJ
+ *  GET    /notas-fiscais/utils/municipios/{uf} → lista municípios
+ */
 @RestController
 @RequestMapping("/notas-fiscais")
 @RequiredArgsConstructor
@@ -18,7 +35,7 @@ public class NotaFiscalController {
 
     private final NotaFiscalServiceImpl notaFiscalService;
 
-    /* ── CRIAR RASCUNHO ──────────────────────────────── */
+    // ── CRIAR RASCUNHO ────────────────────────────────────────────────────────
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Object> criar(
@@ -28,57 +45,63 @@ public class NotaFiscalController {
         return notaFiscalService.criar(dto, usuarioId);
     }
 
-    /* ── EMITIR ──────────────────────────────────────── */
+    // ── EMITIR ────────────────────────────────────────────────────────────────
     @PatchMapping("/{id}/emitir")
     public Map<String, Object> emitir(@PathVariable UUID id) {
         return notaFiscalService.emitir(id);
     }
 
-    /* ── CANCELAR ────────────────────────────────────── */
+    // ── CANCELAR ──────────────────────────────────────────────────────────────
     @PatchMapping("/cancelar")
-    public Map<String, Object> cancelar(@Valid @RequestBody NotaFiscalDTOs.CancelarNotaDTO dto) {
+    public Map<String, Object> cancelar(
+            @Valid @RequestBody NotaFiscalDTOs.CancelarNotaDTO dto
+    ) {
         return notaFiscalService.cancelar(dto);
     }
 
-    /* ── ESTATÍSTICAS ────────────────────────────────── */
+    // ── ESTATÍSTICAS ──────────────────────────────────────────────────────────
     @GetMapping("/stats/{empresaId}")
-    public NotaFiscalDTOs.EstatisticasDTO estatisticas(@PathVariable String empresaId) {
+    public NotaFiscalDTOs.EstatisticasDTO estatisticas(
+            @PathVariable String empresaId
+    ) {
         return notaFiscalService.estatisticas(empresaId);
     }
 
-    /* ── CEP ─────────────────────────────────────────── */
+    // ── CEP ───────────────────────────────────────────────────────────────────
     @GetMapping("/utils/cep/{cep}")
     public Map<String, Object> consultarCep(@PathVariable String cep) {
         return notaFiscalService.consultarCep(cep);
     }
 
-    /* ── CNPJ ────────────────────────────────────────── */
+    // ── CNPJ ──────────────────────────────────────────────────────────────────
     @GetMapping("/utils/cnpj/{cnpj}")
     public Map<String, Object> consultarCnpj(@PathVariable String cnpj) {
         return notaFiscalService.consultarCNPJ(cnpj);
     }
 
-    /* ── MUNICÍPIOS ──────────────────────────────────── */
+    // ── MUNICÍPIOS ────────────────────────────────────────────────────────────
     @GetMapping("/utils/municipios/{uf}")
     public List<Map<String, Object>> municipios(@PathVariable String uf) {
         return notaFiscalService.buscarMunicipios(uf);
     }
 
-    /* ── DANFE ───────────────────────────────────────── */
+    // ── DANFE ─────────────────────────────────────────────────────────────────
     @GetMapping("/{id}/danfe")
     public Map<String, Object> danfe(@PathVariable UUID id) {
         return notaFiscalService.gerarDadosDanfe(id);
     }
 
-    /* ── BUSCAR POR ID ───────────────────────────────── */
+    // ── BUSCAR POR ID ─────────────────────────────────────────────────────────
     @GetMapping("/{id}")
     public Map<String, Object> buscarPorId(@PathVariable UUID id) {
         return notaFiscalService.buscarPorId(id);
     }
 
-    /* ── LISTAR ─────────────────────────────────────── */
+    // ── LISTAR ───────────────────────────────────────────────────────────────
     @GetMapping
-    public Map<String, Object> listar(@ModelAttribute NotaFiscalDTOs.FilterNotaFiscalDTO filter) {
+    public Map<String, Object> listar(
+            @ModelAttribute NotaFiscalDTOs.FilterNotaFiscalDTO filter
+    ) {
         return notaFiscalService.listar(filter);
     }
 }

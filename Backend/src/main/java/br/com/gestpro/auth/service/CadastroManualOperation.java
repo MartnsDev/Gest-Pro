@@ -135,7 +135,7 @@ public class CadastroManualOperation {
     private void enviarEmailConfirmacao(Usuario usuario, String baseUrl) {
 
         try {
-            String linkConfirmacao = baseUrl + "auth/confirmar?token=" + usuario.getTokenConfirmacao();
+            String linkConfirmacao = baseUrl + "/auth/confirmar?token=" + usuario.getTokenConfirmacao();
             // Produção
               emailService.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
             // Testes

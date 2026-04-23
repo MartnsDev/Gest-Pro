@@ -847,7 +847,7 @@ export default function TermosPage() {
             <Link href="/privacidade" className={styles.footerLink}>
               Privacidade
             </Link>
-            <Link href="/suporte" className={styles.footerLink}>
+            <Link href="/contato" className={styles.footerLink}>
               Suporte
             </Link>
           </div>

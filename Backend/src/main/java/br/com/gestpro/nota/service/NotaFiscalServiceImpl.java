@@ -11,6 +11,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Implementação principal do serviço de notas fiscais.
+ *
+ * Cada operação é delegada a uma classe especializada no pacote validacoes,
+ * seguindo o padrão de decomposição por responsabilidade única (SRP).
+ */
 @Service
 public class NotaFiscalServiceImpl implements NotaFiscalInterface {
 
@@ -30,17 +36,17 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
             ItemNotaFiscalRepository itemRepo,
             WebClient webClient
     ) {
-        this.buscaPorId      = new BuscaPorId(notaRepo, itemRepo);
+        this.buscaPorId       = new BuscaPorId(notaRepo, itemRepo);
         this.buscarMunicipios = new BuscarMunicipios(webClient);
-        this.consultarCEP    = new ConsultarCEP(webClient);
-        this.consultarCNPJ   = new ConsultarCNPJ(webClient);
-        this.cancelar        = new Cancelar(notaRepo, buscaPorId);
-        this.criar           = new Criar(itemRepo, buscaPorId, notaRepo);
+        this.consultarCEP     = new ConsultarCEP(webClient);
+        this.consultarCNPJ    = new ConsultarCNPJ(webClient);
+        this.cancelar         = new Cancelar(notaRepo, buscaPorId);
+        this.criar            = new Criar(itemRepo, buscaPorId, notaRepo);
         GerarChaveAcesso gerarChaveAcesso = new GerarChaveAcesso();
-        this.emitir          = new Emitir(notaRepo, buscaPorId, gerarChaveAcesso);
-        this.listar          = new Listar(notaRepo);
-        this.estatisticas    = new Estastisticas(notaRepo);
-        this.gerarDadosDanfe = new GerarDadosDanfe(notaRepo, itemRepo);
+        this.emitir           = new Emitir(notaRepo, buscaPorId, gerarChaveAcesso);
+        this.listar           = new Listar(notaRepo);
+        this.estatisticas     = new Estastisticas(notaRepo);
+        this.gerarDadosDanfe  = new GerarDadosDanfe(notaRepo, itemRepo);
     }
 
     @Override

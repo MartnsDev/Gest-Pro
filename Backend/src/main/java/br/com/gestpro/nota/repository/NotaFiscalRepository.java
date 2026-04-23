@@ -46,7 +46,7 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
     Page<NotaFiscal> findWithFilters(
             @Param("empresaId") String empresaId,
             @Param("status")    NotaFiscalStatus status,
-            @Param("tipo") TipoNota tipo,
+            @Param("tipo")      TipoNota tipo,
             @Param("nome")      String nome,
             @Param("inicio")    LocalDateTime inicio,
             @Param("fim")       LocalDateTime fim,
@@ -54,14 +54,14 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
     );
 
     @Query("""
-    SELECT MAX(CAST(SUBSTRING(n.numero, LENGTH(:prefixo) + 1) AS long))
-    FROM NotaFiscal n
-    WHERE n.empresaId = :empresaId
-      AND n.numero LIKE CONCAT(:prefixo, '%')
-    """)
+        SELECT MAX(CAST(SUBSTRING(n.numero, LENGTH(:prefixo) + 1) AS long))
+        FROM NotaFiscal n
+        WHERE n.empresaId = :empresaId
+          AND n.numero LIKE CONCAT(:prefixo, '%')
+        """)
     Optional<Long> findMaxNumeroSequencial(
             @Param("empresaId") String empresaId,
-            @Param("prefixo") String prefixo
+            @Param("prefixo")   String prefixo
     );
 
     boolean existsByNumero(String numero);
