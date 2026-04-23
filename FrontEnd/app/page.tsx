@@ -5,7 +5,12 @@ import Link from 'next/link';
 import { 
   Menu, X, Check, Lock, Shield, Database, Mail, Clock,
   ChevronDown, ArrowRight, PlayCircle, Plus, Star, Zap, Instagram, Github,
-  BarChart3, Activity, Layers, Users, Building2
+  BarChart3, Activity, Layers, Users, Building2, NotebookPen, 
+  FileWarning, 
+  PackageSearch, 
+  CircleDollarSign, 
+  Dices, 
+  TimerOff
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────
@@ -334,14 +339,38 @@ const RotatingCarousel = () => {
 };
 
 const PainSection = () => {
-  const pains = [
-    { icon: "📓", title: "Anotação no caderno", text: "Registra à mão e no fim do dia não tem certeza do total. Cada erro custa dinheiro." },
-    { icon: "💔", title: "Planilha quebrada", text: "Cinco abas, fórmulas com erro, dados desatualizados. A informação está sempre errada." },
-    { icon: "📦", title: "Estoque misterioso", text: "Não sabe exatamente o que tem. Descobre que acabou quando o cliente já pediu." },
-    { icon: "🕳️", title: "Caixa que some", text: "O dia foi bom, mas o dinheiro não está lá. Sem controle de entrada e saída, sobra dúvida." },
-    { icon: "🎲", title: "Decisões no escuro", text: "Qual produto lucra mais? Sem dados, você chuta. E chute no negócio custa caro." },
-    { icon: "🔁", title: "Tempo desperdiçado", text: "Horas somando cupons e notas. Tempo que deveria ser investido em vender mais." }
-  ];
+const pains = [
+  { 
+    icon: <NotebookPen size={32} className="text-[#FF3B30]" />, 
+    title: "Anotação no caderno", 
+    text: "Registra à mão e no fim do dia não tem certeza do total. Cada erro custa dinheiro." 
+  },
+  { 
+    icon: <FileWarning size={32} className="text-[#FF3B30]" />, 
+    title: "Planilha quebrada", 
+    text: "Cinco abas, fórmulas com erro, dados desatualizados. A informação está sempre errada." 
+  },
+  { 
+    icon: <PackageSearch size={32} className="text-[#FF3B30]" />, 
+    title: "Estoque misterioso", 
+    text: "Não sabe exatamente o que tem. Descobre que acabou quando o cliente já pediu." 
+  },
+  { 
+    icon: <CircleDollarSign size={32} className="text-[#FF3B30]" />, 
+    title: "Caixa que some", 
+    text: "O dia foi bom, mas o dinheiro não está lá. Sem controle de entrada e saída, sobra dúvida." 
+  },
+  { 
+    icon: <Dices size={32} className="text-[#FF3B30]" />, 
+    title: "Decisões no escuro", 
+    text: "Qual produto lucra mais? Sem dados, você chuta. E chute no negócio custa caro." 
+  },
+  { 
+    icon: <TimerOff size={32} className="text-[#FF3B30]" />, 
+    title: "Tempo desperdiçado", 
+    text: "Horas somando cupons e notas. Tempo que deveria ser investido em vender mais." 
+  }
+];
 
   return (
     <section id="dor" className="py-24 lg:py-32 bg-[#080808] relative z-10">
