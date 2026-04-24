@@ -29,7 +29,7 @@ type TipoDesconto   = "REAIS"|"PORCENTAGEM";
 /* ─── Metadados de status ────────────────────────────────────────────────── */
 const STATUS_META: Record<StatusPedido,{label:string;color:string;bg:string;border:string;icon:React.ReactNode}> = {
   PENDENTE:   {label:"Pendente",   color:"#f59e0b", bg:"rgba(245,158,11,0.12)", border:"rgba(245,158,11,0.4)",  icon:<Clock size={12}/>},
-  CONFIRMADO: {label:"Confirmado", color:"#10b981", bg:"rgba(16,185,129,0.12)", border:"rgba(16,185,129,0.4)",  icon:<CheckCircle2 size={12}/>},
+  CONFIRMADO: {label:"Confirmado", color:"#80a99b", bg:"rgba(16,185,129,0.12)", border:"rgba(16,185,129,0.4)",  icon:<CheckCircle2 size={12}/>},
   ENVIADO:    {label:"Enviado",    color:"#3b82f6", bg:"rgba(59,130,246,0.12)", border:"rgba(59,130,246,0.4)",  icon:<Truck size={12}/>},
   ENTREGUE:   {label:"Entregue",   color:"#10b981", bg:"rgba(16,185,129,0.18)", border:"rgba(16,185,129,0.5)",  icon:<Check size={12}/>},
   CANCELADO:  {label:"Cancelado",  color:"#ef4444", bg:"rgba(239,68,68,0.12)",  border:"rgba(239,68,68,0.4)",   icon:<Ban size={12}/>},
@@ -71,8 +71,8 @@ const fmtData = (s?:any) => {
 
 async function fetchAuth<T>(path:string,opts?:RequestInit):Promise<T> {
   const token=(typeof window!=="undefined"
-    ?sessionStorage.getItem("jwt_token")??document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1]??null
-    :null)??"";
+    ?sessionStorage.getItem("jwt_token")??document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1]??null:null
+    )??"";
   const res=await fetch(
     `${process.env.NEXT_PUBLIC_API_URL??"https://gestpro-backend-production.up.railway.app"}${path}`,
     {credentials:"include",headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})}, ...opts},

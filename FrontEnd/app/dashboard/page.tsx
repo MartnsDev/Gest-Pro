@@ -53,7 +53,7 @@ import AbrirCaixa from "./acoesRapidas/AbrirCaixa";
 import PaginaAcaoRapida from "./acoesRapidas/PaginaAcaoRapida";
 import MobileNav from "./components/MobileNav";
 import Pedidos from "./components/Pedidos";
-import NotasFiscais from "./components/NotasFiscais";
+import NotasFiscais from "./components/NotaFiscal";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 type Secao =

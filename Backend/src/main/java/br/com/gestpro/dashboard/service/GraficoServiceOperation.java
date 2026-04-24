@@ -43,7 +43,19 @@ public class GraficoServiceOperation {
     // Top produtos por empresa (PDV + Pedidos)
     @Transactional(readOnly = true)
     public List<ProdutoVendasDTO> vendasPorProduto(Long empresaId) {
-        return graficoRepository.countVendasPorProdutoRaw(empresaId);
+        // 1. Busca os dados brutos como Object[]
+        List<Object[]> raw = graficoRepository.countVendasPorProdutoRaw(empresaId);
+
+        // 2. Faz o mapeamento manual para o DTO
+        return raw.stream().map(o -> {
+            // Assume que a query retorna: SELECT nome_produto, quantidade_vendida
+            String nomeProduto = o[0] != null ? o[0].toString() : "Desconhecido";
+
+            // Converte o retorno numérico de forma segura para evitar NullPointer
+            long quantidade = o[1] != null ? ((Number) o[1]).longValue() : 0L;
+
+            return new ProdutoVendasDTO(nomeProduto, quantidade);
+        }).toList();
     }
 
     // Vendas diárias da semana — PDV + Pedidos

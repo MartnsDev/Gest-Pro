@@ -39,7 +39,7 @@ public interface GraficoRepository extends JpaRepository<Venda, Long> {
         """, nativeQuery = true)
     List<Object[]> countVendasPorFormaPagamentoRaw(@Param("empresaId") Long empresaId);
 
-    // ── Top 5 produtos por empresa (PDV + Pedidos) ─────────────────────────
+    // Top 5 produtos por empresa (PDV + Pedidos)
     @Query(value = """
         SELECT nome, SUM(quantidade) AS quantidade
         FROM (
@@ -63,7 +63,7 @@ public interface GraficoRepository extends JpaRepository<Venda, Long> {
         ORDER BY quantidade DESC
         LIMIT 5
         """, nativeQuery = true)
-    List<ProdutoVendasDTO> countVendasPorProdutoRaw(@Param("empresaId") Long empresaId);
+    List<Object[]> countVendasPorProdutoRaw(@Param("empresaId") Long empresaId);
 
     // ── Vendas diárias por empresa (PDV + Pedidos) ─────────────────────────
     @Query(value = """
