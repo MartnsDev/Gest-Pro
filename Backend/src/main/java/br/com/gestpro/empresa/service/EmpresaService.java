@@ -24,53 +24,36 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EmpresaService {
 
-    private final EmpresaRepository       empresaRepository;
-    private final UsuarioRepository       usuarioRepository;
+    private final EmpresaRepository        empresaRepository;
+    private final UsuarioRepository        usuarioRepository;
     private final VerificarPlanoOperation verificarPlano;
-    private final PasswordEncoder         passwordEncoder;
-    private final VerificarCNPJ           verificarCNPJ;
-    private final VerificarCPF            verificarCPF;
+    private final PasswordEncoder          passwordEncoder;
+    private final VerificarCNPJ            verificarCNPJ;
+    private final VerificarCPF             verificarCPF;
 
-    // CRUD padrão
     @Transactional
     public EmpresaResponse criar(CriarEmpresaRequest req) {
         Usuario dono = usuarioRepository.findByEmail(req.getEmailUsuario())
-                .orElseThrow(() -> new ApiException(
-                        "Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
+                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
 
-        Object rawCount = empresaRepository.countByDonoId(dono.getId());
-        long totalEmpresasDono = rawCount instanceof Number n ? n.longValue() : 0L;
+        long totalEmpresasAtivas = empresaRepository.countByDonoIdAndAtivoTrue(dono.getId());
+        int limiteEmpresas = dono.getTipoPlano().getLimiteEmpresas();
 
-        // Só entra na lógica se o campo NÃO for nulo e NÃO estiver em branco
-        if (req.getCnpj() != null && !req.getCnpj().isBlank()) {
-
-            // Limpa pontos e traços para contar apenas os números
-            String documento = req.getCnpj().replaceAll("\\D", "");
-
-            if (documento.length() == 11) {
-                // É um CPF: tenta consultar
-                verificarCPF.consultarCpf(documento);
-
-            } else if (documento.length() == 14) {
-                // É um CNPJ: tenta consultar
-                verificarCNPJ.consultarCnpj(documento);
-
-            } else {
-                // Tem caracteres, mas a quantidade é inválida
-                throw new ApiException(
-                        "Erro de Validação",
-                        HttpStatus.BAD_REQUEST,
-                        "Quantidade de caracteres inválida. Informe 11 dígitos para CPF ou 14 para CNPJ."
-                );
-            }
+        if (totalEmpresasAtivas >= limiteEmpresas) {
+            throw new ApiException(
+                    "Limite atingido. Seu plano permite gerenciar no máximo " + limiteEmpresas + " empresa(s) ativa(s).",
+                    HttpStatus.FORBIDDEN, "/empresas"
+            );
         }
 
+        // CHAMA A API AQUI: Se der erro, ele nem chega na linha de baixo
+        validarDocumentoFiscal(req.getCnpj());
 
         Empresa empresa = new Empresa();
         empresa.setNomeFantasia(req.getNomeFantasia());
         empresa.setCnpj(req.getCnpj());
         empresa.setDono(dono);
-        empresa.setAtiva(true);
+        empresa.setAtivo(true);
         empresa.setPlano(dono.getTipoPlano());
 
         return mapToResponse(empresaRepository.save(empresa));
@@ -82,14 +65,21 @@ public class EmpresaService {
                 .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada"));
 
         if (!empresa.getDono().getEmail().equals(req.getEmailUsuario()))
-            throw new ApiException(
-                    "Você não tem permissão para editar esta empresa.",
-                    HttpStatus.FORBIDDEN, "/empresas");
+            throw new ApiException("Você não tem permissão para editar esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
 
         verificarPlano.validarAcesso(empresa.getDono());
 
+        // Se o usuário tentar mudar o CNPJ na edição, valida na API de novo!
+        if (req.getCnpj() != null && !req.getCnpj().equals(empresa.getCnpj())) {
+            validarDocumentoFiscal(req.getCnpj());
+        }
+
         empresa.setNomeFantasia(req.getNomeFantasia());
         empresa.setCnpj(req.getCnpj());
+
+        if (req.getAtivo() != null) {
+            empresa.setAtivo(req.getAtivo());
+        }
 
         return mapToResponse(empresaRepository.save(empresa));
     }
@@ -99,12 +89,12 @@ public class EmpresaService {
         Empresa empresa = empresaRepository.findByIdWithDono(id)
                 .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada"));
 
-        if (!empresa.getDono().getEmail().equals(emailUsuario))
-            throw new ApiException(
-                    "Você não tem permissão para excluir esta empresa.",
-                    HttpStatus.FORBIDDEN, "/empresas");
+        if (!empresa.getDono().getEmail().equals(emailUsuario)) {
+            throw new ApiException("Você não tem permissão para excluir esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
+        }
 
-        empresaRepository.deleteById(id);
+        empresa.setAtivo(false); // Soft Delete
+        empresaRepository.save(empresa);
     }
 
     @Transactional(readOnly = true)
@@ -113,6 +103,8 @@ public class EmpresaService {
                 .orElseThrow(() -> new ApiException(
                         "Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
 
+        // Opcional: Se quiser que o endpoint só retorne as ativas por padrão,
+        // mude o repositório. Como o frontend tem abas, mandar todas é ideal.
         return empresaRepository.findByDonoId(usuario.getId()).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -125,38 +117,23 @@ public class EmpresaService {
                         "Empresa não encontrada com o ID: " + id)));
     }
 
-    // Exclusão com confirmação por senha
     @Transactional
-    public void excluirComSenha(Long empresaId, String emailUsuario, String senhaInformada) {
-        Empresa empresa = empresaRepository.findByIdWithDono(empresaId)
-                .orElseThrow(() -> new ApiException(
-                        "Empresa não encontrada", HttpStatus.NOT_FOUND, "/empresas"));
+    public void excluirComSenha(Long id, String emailUsuario, String senha) {
+        Empresa empresa = empresaRepository.findByIdWithDono(id)
+                .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada"));
 
-        if (!empresa.getDono().getEmail().equals(emailUsuario))
-            throw new ApiException(
-                    "Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
+        if (!empresa.getDono().getEmail().equals(emailUsuario)) {
+            throw new ApiException("Você não tem permissão para excluir esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
+        }
 
-        Usuario usuario = empresa.getDono();
+        if (!passwordEncoder.matches(senha, empresa.getDono().getSenha())) {
+            throw new ApiException("Senha incorreta.", HttpStatus.UNAUTHORIZED, "/empresas");
+        }
 
-        // Usuário Google não tem senha — bloqueia com mensagem clara
-        if (usuario.getSenha() == null || usuario.getSenha().isBlank())
-            throw new ApiException(
-                    "Sua conta usa login pelo Google e não possui senha cadastrada. " +
-                            "Entre em contato com o suporte para excluir a empresa.",
-                    HttpStatus.BAD_REQUEST, "/empresas");
-
-        // Valida a senha informada contra o hash no banco
-        if (!passwordEncoder.matches(senhaInformada, usuario.getSenha()))
-            throw new ApiException(
-                    "Senha incorreta. Tente novamente.",
-                    HttpStatus.UNAUTHORIZED, "/empresas");
-
-        empresaRepository.deleteById(empresaId);
-
-        log.info("Empresa {} excluída com sucesso pelo usuário {}", empresaId, emailUsuario);
+        empresa.setAtivo(false); // Soft Delete
+        empresaRepository.save(empresa);
     }
 
-    // Helpers privados
     private EmpresaResponse mapToResponse(Empresa empresa) {
         EmpresaResponse res = new EmpresaResponse();
         res.setId(empresa.getId());
@@ -164,6 +141,42 @@ public class EmpresaService {
         res.setCnpj(empresa.getCnpj());
         res.setPlanoNome(empresa.getDono().getTipoPlano().name());
         res.setLimiteCaixas(empresa.getDono().getTipoPlano().getLimiteCaixasPorEmpresa());
+
+        res.setAtivo(empresa.getAtivo());
+
         return res;
+    }
+
+    private void validarDocumentoFiscal(String documentoBruto) {
+        if (documentoBruto == null || documentoBruto.isBlank()) {
+            return; // Documento é opcional, passa direto se estiver vazio.
+        }
+
+        String documento = documentoBruto.replaceAll("\\D", "");
+
+        try {
+            if (documento.length() == 11) {
+                verificarCPF.consultarCpf(documento);
+            } else if (documento.length() == 14) {
+                verificarCNPJ.consultarCnpj(documento);
+            } else {
+                throw new ApiException(
+                        "Quantidade de caracteres inválida. Informe 11 dígitos para CPF ou 14 para CNPJ.",
+                        HttpStatus.BAD_REQUEST,
+                        "/empresas"
+                );
+            }
+        } catch (Exception e) {
+            // Verifica se o erro gerado pela sua classe VerificarCPF/CNPJ contém "503" ou "offline"
+            if (e.getMessage() != null && (e.getMessage().contains("503") || e.getMessage().toLowerCase().contains("offline"))) {
+                throw new ApiException(
+                        "O serviço de consulta de CPF/CNPJ está temporariamente fora do ar. Como o documento é opcional, você pode deixar o campo vazio para cadastrar a loja agora e preenchê-lo mais tarde.",
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "/empresas"
+                );
+            }
+
+            throw e;
+        }
     }
 }

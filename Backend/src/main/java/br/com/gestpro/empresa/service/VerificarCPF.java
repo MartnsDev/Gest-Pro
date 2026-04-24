@@ -1,65 +1,74 @@
 package br.com.gestpro.empresa.service;
 
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
 public class VerificarCPF {
 
-    private final WebClient webClient;
-
-    public VerificarCPF(WebClient webClient) {
-        this.webClient = webClient;
-    }
-
+    // -------------------------------------------------------------------------
+    // Validação matemática local — sem API, sem custo, sem LGPD
+    // -------------------------------------------------------------------------
     public Map<String, Object> consultarCpf(String cpf) {
-        // Limpa caracteres especiais
         String limpo = cpf.replaceAll("\\D", "");
 
         if (limpo.length() != 11) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CPF deve conter 11 dígitos.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "CPF deve conter 11 dígitos.");
         }
 
-        Map<String, Object> data;
-
-        try {
-            // Exemplo utilizando uma URL de API (Substitua pela sua URL de provedor)
-            data = webClient.get()
-                    .uri("https://api.exemplo.com/v1/cpf/" + limpo)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, response ->
-                            Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "CPF não encontrado ou limite de buscas atingido.")))
-                    .onStatus(HttpStatusCode::is5xxServerError, response ->
-                            Mono.error(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Serviço de consulta de CPF indisponível.")))
-                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                    .block(Duration.ofSeconds(10));
-
-        } catch (ResponseStatusException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Erro ao consultar CPF. O serviço pode estar offline.");
+        if (!isFormatoValido(limpo)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "CPF inválido: todos os dígitos são iguais.");
         }
 
-        if (data == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Nenhum dado retornado para este CPF.");
+        if (!isDigitosValidos(limpo)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "CPF inválido: dígitos verificadores incorretos.");
         }
 
-        // Mapeamento organizado dos dados (Baseado em retornos comuns de APIs de CPF)
         Map<String, Object> r = new LinkedHashMap<>();
-        r.put("cpf", data.get("cpf"));
-        r.put("nome", data.get("nome"));
-        r.put("dataNascimento", data.get("data_nascimento"));
-        r.put("situacao", data.get("situacao")); // Ex: "REGULAR"
-
+        r.put("cpf",      formatarCpf(limpo));
+        r.put("valido",   true);
+        r.put("situacao", "FORMATO_VALIDO");
+        r.put("obs",      "Validação matemática confirmada. Para verificar situação cadastral " +
+                "na Receita Federal, integre com SintegraWS, CPF.CNPJ ou serviço similar " +
+                "mediante token e conformidade com a LGPD.");
         return r;
+    }
+
+    // -------------------------------------------------------------------------
+    // Rejeita CPFs com todos os dígitos iguais (000.000.000-00, etc.)
+    // -------------------------------------------------------------------------
+    private boolean isFormatoValido(String cpf) {
+        return !cpf.chars().allMatch(c -> c == cpf.charAt(0));
+    }
+
+    // -------------------------------------------------------------------------
+    // Algoritmo oficial da Receita Federal para os dois dígitos verificadores
+    // -------------------------------------------------------------------------
+    private boolean isDigitosValidos(String cpf) {
+        return calcularDigito(cpf, 9) == Character.getNumericValue(cpf.charAt(9))
+                && calcularDigito(cpf, 10) == Character.getNumericValue(cpf.charAt(10));
+    }
+
+    private int calcularDigito(String cpf, int posicoes) {
+        int soma = 0;
+        for (int i = 0; i < posicoes; i++) {
+            soma += Character.getNumericValue(cpf.charAt(i)) * (posicoes + 1 - i);
+        }
+        int resto = (soma * 10) % 11;
+        return (resto == 10 || resto == 11) ? 0 : resto;
+    }
+
+    // -------------------------------------------------------------------------
+    // Formata: 12345678901 → 123.456.789-01
+    // -------------------------------------------------------------------------
+    private String formatarCpf(String cpf) {
+        return cpf.replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
     }
 }

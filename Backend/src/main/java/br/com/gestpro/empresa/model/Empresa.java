@@ -29,9 +29,10 @@ public class Empresa {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario dono;
 
-    @Enumerated(EnumType.STRING) // Salva o nome (ex: "PRO") no banco
+    @Enumerated(EnumType.STRING)
     @Column(name = "tipo_plano", nullable = false)
     private TipoPlano plano;
 
-    private boolean ativa = true;
+    @Column(name = "ativo", nullable = false)
+    private Boolean ativo = true;
 }

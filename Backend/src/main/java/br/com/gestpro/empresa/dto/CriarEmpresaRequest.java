@@ -13,4 +13,6 @@ public class CriarEmpresaRequest {
     private String nomeFantasia;
 
     private String cnpj;
+
+    private Boolean ativo;
 }

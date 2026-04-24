@@ -19,4 +19,6 @@ public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
 
     @Query("SELECT e FROM Empresa e JOIN FETCH e.dono WHERE e.id = :id")
     Optional<Empresa> findByIdWithDono(@Param("id") Long id);
+
+    long countByDonoIdAndAtivoTrue(Long donoId);
 }
