@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Building2,
   Plus,
@@ -16,6 +16,8 @@ import {
   ShieldAlert,
   Eye,
   EyeOff,
+  Archive,
+  RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,12 +28,15 @@ interface Empresa {
   cnpj: string;
   planoNome: string;
   limiteCaixas: number;
+  ativo: boolean; // Adicionado para controlar o Soft Delete
 }
 
 interface Props {
   onEmpresaSelecionada?: (empresa: Empresa) => void;
   modoSelecao?: boolean;
 }
+
+type AbaTipo = "ativas" | "inativas";
 
 /* ─── Helper fetch ───────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
@@ -42,7 +47,7 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
         null)
       : null) ?? "";
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
+    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
     {
       credentials: "include",
       headers: {
@@ -71,7 +76,7 @@ const inp: React.CSSProperties = {
   outline: "none",
 };
 
-/* ─── Modal de exclusão por senha ────────────────────────────────────────── */
+/* ─── Modal de arquivamento por senha ────────────────────────────────────── */
 function ModalExclusao({
   empresa,
   onClose,
@@ -79,7 +84,7 @@ function ModalExclusao({
 }: {
   empresa: Empresa;
   onClose: () => void;
-  onExcluida: () => void;
+  onExcluida: (id: number) => void;
 }) {
   const [senha, setSenha] = useState("");
   const [showSenha, setShowSenha] = useState(false);
@@ -98,8 +103,8 @@ function ModalExclusao({
         method: "DELETE",
         body: JSON.stringify({ senha }),
       });
-      toast.success(`"${empresa.nomeFantasia}" excluída com sucesso.`);
-      onExcluida();
+      toast.success(`A loja "${empresa.nomeFantasia}" foi arquivada.`);
+      onExcluida(empresa.id);
       onClose();
     } catch (e: any) {
       setErro(e.message);
@@ -125,7 +130,7 @@ function ModalExclusao({
       <div
         style={{
           background: "var(--surface-elevated)",
-          border: "1px solid rgba(239,68,68,0.3)",
+          border: "1px solid rgba(245,158,11,0.3)",
           borderRadius: 14,
           padding: 28,
           width: "100%",
@@ -147,14 +152,14 @@ function ModalExclusao({
                 width: 42,
                 height: 42,
                 borderRadius: 10,
-                background: "rgba(239,68,68,0.1)",
+                background: "rgba(245,158,11,0.1)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <ShieldAlert size={20} color="#ef4444" />
+              <Archive size={20} color="#f59e0b" />
             </div>
             <div>
               <h2
@@ -165,7 +170,7 @@ function ModalExclusao({
                   margin: 0,
                 }}
               >
-                Excluir Empresa
+                Arquivar Empresa
               </h2>
               <p
                 style={{
@@ -192,12 +197,12 @@ function ModalExclusao({
           </button>
         </div>
 
-        {/* Aviso */}
+        {/* Aviso de Arquivamento */}
         <div
           style={{
             padding: "12px 14px",
-            background: "rgba(239,68,68,0.07)",
-            border: "1px solid rgba(239,68,68,0.2)",
+            background: "rgba(245,158,11,0.07)",
+            border: "1px solid rgba(245,158,11,0.2)",
             borderRadius: 10,
             marginBottom: 20,
           }}
@@ -206,11 +211,11 @@ function ModalExclusao({
             style={{
               fontSize: 13,
               fontWeight: 600,
-              color: "#ef4444",
+              color: "#f59e0b",
               margin: "0 0 6px",
             }}
           >
-            ⚠️ Ação irreversível
+            ⚠️ Arquivamento de Loja
           </p>
           <p
             style={{
@@ -220,12 +225,7 @@ function ModalExclusao({
               lineHeight: 1.6,
             }}
           >
-            Todos os dados de{" "}
-            <strong style={{ color: "var(--foreground)" }}>
-              {empresa.nomeFantasia}
-            </strong>{" "}
-            serão removidos permanentemente: produtos, vendas, clientes, caixas
-            e relatórios.
+            A empresa <strong style={{ color: "var(--foreground)" }}>{empresa.nomeFantasia}</strong> não aparecerá mais no sistema. No entanto, seus dados de histórico (vendas e relatórios) <strong>serão preservados</strong> para segurança contábil.
           </p>
         </div>
 
@@ -322,7 +322,7 @@ function ModalExclusao({
               gap: 7,
               padding: "10px 0",
               background:
-                excluindo || !senha.trim() ? "rgba(239,68,68,0.4)" : "#ef4444",
+                excluindo || !senha.trim() ? "rgba(245,158,11,0.4)" : "#f59e0b",
               border: "none",
               borderRadius: 9,
               color: "#fff",
@@ -338,17 +338,15 @@ function ModalExclusao({
                   size={14}
                   style={{ animation: "spin 1s linear infinite" }}
                 />{" "}
-                Excluindo...
+                Arquivando...
               </>
             ) : (
               <>
-                <Trash2 size={14} /> Confirmar exclusão
+                <Archive size={14} /> Confirmar arquivamento
               </>
             )}
           </button>
         </div>
-
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
   );
@@ -372,10 +370,19 @@ export default function GerenciarEmpresas({
   const [empresaParaExcluir, setEmpresaParaExcluir] = useState<Empresa | null>(
     null,
   );
+  
+  // Novo estado para controlar as abas
+  const [abaAtiva, setAbaAtiva] = useState<AbaTipo>("ativas");
 
   const carregar = async () => {
     try {
-      setEmpresas(await fetchAuth<Empresa[]>("/api/v1/empresas"));
+      // Como o backend agora deve retornar todas as empresas (ou você pode ajustar a rota para trazer todas, caso ele esteja filtrando por padrão)
+      const data = await fetchAuth<Empresa[]>("/api/v1/empresas");
+      
+      // Se a sua API antiga não retornar o campo 'ativo', vamos simular que tudo está ativo por padrão
+      const empresasComStatus = data.map(emp => ({ ...emp, ativo: emp.ativo !== false }));
+      
+      setEmpresas(empresasComStatus);
     } catch (e: any) {
       setErro(e.message);
     } finally {
@@ -386,6 +393,18 @@ export default function GerenciarEmpresas({
   useEffect(() => {
     carregar();
   }, []);
+
+  // Lógica para filtrar empresas com base na aba selecionada
+  const lista = useMemo(() => {
+    return empresas.filter(emp => abaAtiva === "ativas" ? emp.ativo : !emp.ativo);
+  }, [empresas, abaAtiva]);
+
+  const stats = useMemo(() => {
+    return {
+      ativas: empresas.filter(e => e.ativo).length,
+      inativas: empresas.filter(e => !e.ativo).length
+    };
+  }, [empresas]);
 
   const ok = (msg: string) => {
     setSucesso(msg);
@@ -406,16 +425,26 @@ export default function GerenciarEmpresas({
     setSalvandoId(id);
     setErro("");
     try {
-      await fetchAuth(`/api/v1/empresas/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          ...editForm,
+      const targetEmpresa = empresas.find(e => e.id === id);
+      
+      // Enviamos apenas os campos necessários, assim como fizemos em Produtos
+      const bodyClean = {
+          nomeFantasia: editForm.nomeFantasia,
           cnpj: editForm.cnpj.trim() || null,
-        }),
+          ativo: targetEmpresa?.ativo // Preserva o status atual
+      };
+
+      const updated = await fetchAuth<Empresa>(`/api/v1/empresas/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(bodyClean),
       });
+      
+      // Força a garantir que o 'ativo' não venha undefined do servidor
+      updated.ativo = updated.ativo !== false;
+      
+      setEmpresas(prev => prev.map(e => e.id === id ? updated : e));
       ok("Empresa atualizada!");
       setEditandoId(null);
-      await carregar();
     } catch (e: any) {
       setErro(e.message);
     } finally {
@@ -438,12 +467,40 @@ export default function GerenciarEmpresas({
       ok("Empresa cadastrada com sucesso!");
       setForm({ nomeFantasia: "", cnpj: "" });
       setCriando(false);
+      setAbaAtiva("ativas"); // Volta pra aba de ativas ao criar
       await carregar();
     } catch (e: any) {
       setErro(e.message);
     } finally {
       setSalvando(false);
     }
+  };
+
+  const handleEmpresaExcluida = (id: number) => {
+      // Como é soft delete, nós só mudamos a flag em vez de remover do array
+      setEmpresas(prev => prev.map(e => e.id === id ? { ...e, ativo: false } : e));
+      toast.success("Empresa arquivada com sucesso. Você pode encontrá-la na aba 'Inativas'.");
+  };
+
+  const handleRestaurar = async (emp: Empresa) => {
+      try {
+          // Prepara o body sem campos que a API não aceita
+          const bodyClean = {
+              nomeFantasia: emp.nomeFantasia,
+              cnpj: emp.cnpj,
+              ativo: true // A mágica da restauração
+          };
+          
+          await fetchAuth(`/api/v1/empresas/${emp.id}`, {
+              method: "PUT",
+              body: JSON.stringify(bodyClean),
+          });
+          
+          setEmpresas(prev => prev.map(e => e.id === emp.id ? { ...e, ativo: true } : e));
+          toast.success("Empresa restaurada com sucesso!");
+      } catch (e: any) {
+          toast.error("Erro ao restaurar: " + e.message);
+      }
   };
 
   if (loading)
@@ -482,10 +539,7 @@ export default function GerenciarEmpresas({
         <ModalExclusao
           empresa={empresaParaExcluir}
           onClose={() => setEmpresaParaExcluir(null)}
-          onExcluida={() => {
-            carregar();
-            setEmpresaParaExcluir(null);
-          }}
+          onExcluida={handleEmpresaExcluida}
         />
       )}
 
@@ -517,7 +571,7 @@ export default function GerenciarEmpresas({
           >
             {modoSelecao
               ? "Escolha a empresa para abrir o caixa"
-              : "Gerencie suas lojas e empresas"}
+              : "Gerencie suas lojas e filiais"}
           </p>
         </div>
         {!modoSelecao && (
@@ -532,11 +586,11 @@ export default function GerenciarEmpresas({
               gap: 8,
               padding: "9px 16px",
               background: "var(--primary)",
-              color: "#fff",
+              color: "#000",
               border: "none",
               borderRadius: 8,
               fontSize: 13,
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: "pointer",
             }}
           >
@@ -544,6 +598,27 @@ export default function GerenciarEmpresas({
           </button>
         )}
       </div>
+
+      {/* Abas de Navegação */}
+      {!modoSelecao && (
+        <div style={{ display: "flex", gap: 20, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
+          <button 
+            onClick={() => setAbaAtiva("ativas")}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: abaAtiva === "ativas" ? 700 : 500, color: abaAtiva === "ativas" ? "var(--primary)" : "var(--foreground-muted)", position: "relative", paddingBottom: 6 }}
+          >
+            Ativas ({stats.ativas})
+            {abaAtiva === "ativas" && <div style={{ position: "absolute", bottom: -13, left: 0, right: 0, height: 2, background: "var(--primary)", borderRadius: 2 }} />}
+          </button>
+          
+          <button 
+            onClick={() => setAbaAtiva("inativas")}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: abaAtiva === "inativas" ? 700 : 500, color: abaAtiva === "inativas" ? "var(--destructive)" : "var(--foreground-muted)", position: "relative", paddingBottom: 6 }}
+          >
+            Arquivadas ({stats.inativas})
+            {abaAtiva === "inativas" && <div style={{ position: "absolute", bottom: -13, left: 0, right: 0, height: 2, background: "var(--destructive)", borderRadius: 2 }} />}
+          </button>
+        </div>
+      )}
 
       {/* Feedback */}
       {sucesso && (
@@ -650,11 +725,11 @@ export default function GerenciarEmpresas({
                 style={{
                   padding: "9px 20px",
                   background: "var(--primary)",
-                  color: "#fff",
+                  color: "#000",
                   border: "none",
                   borderRadius: 8,
                   fontSize: 13,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: salvando ? "not-allowed" : "pointer",
                   opacity: salvando ? 0.7 : 1,
                 }}
@@ -684,7 +759,7 @@ export default function GerenciarEmpresas({
       )}
 
       {/* Lista */}
-      {empresas.length === 0 ? (
+      {lista.length === 0 ? (
         <div
           style={{
             display: "flex",
@@ -699,29 +774,31 @@ export default function GerenciarEmpresas({
             textAlign: "center",
           }}
         >
-          <Building2 size={40} color="var(--foreground-subtle)" />
+          {abaAtiva === "ativas" ? <Building2 size={40} color="var(--foreground-subtle)" /> : <Archive size={40} color="var(--foreground-subtle)" />}
           <p style={{ fontSize: 14, color: "var(--foreground-muted)" }}>
-            Nenhuma empresa cadastrada ainda.
+            {abaAtiva === "ativas" ? "Nenhuma empresa ativa encontrada." : "Nenhuma empresa foi arquivada ainda."}
           </p>
-          <button
-            onClick={() => setCriando(true)}
-            style={{
-              padding: "9px 18px",
-              background: "var(--primary)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Cadastrar primeira empresa
-          </button>
+          {abaAtiva === "ativas" && !criando && !modoSelecao && (
+            <button
+              onClick={() => setCriando(true)}
+              style={{
+                padding: "9px 18px",
+                background: "var(--primary)",
+                color: "#000",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Cadastrar primeira empresa
+            </button>
+          )}
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {empresas.map((emp) => {
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, opacity: abaAtiva === "inativas" ? 0.8 : 1 }}>
+          {lista.map((emp) => {
             const editando = editandoId === emp.id;
             const salvEste = salvandoId === emp.id;
 
@@ -799,11 +876,11 @@ export default function GerenciarEmpresas({
                           gap: 6,
                           padding: "7px 14px",
                           background: "var(--primary)",
-                          color: "#fff",
+                          color: "#000",
                           border: "none",
                           borderRadius: 7,
                           fontSize: 12,
-                          fontWeight: 600,
+                          fontWeight: 700,
                           cursor: salvEste ? "not-allowed" : "pointer",
                           opacity: salvEste ? 0.7 : 1,
                         }}
@@ -841,7 +918,7 @@ export default function GerenciarEmpresas({
                       justifyContent: "space-between",
                       cursor: modoSelecao ? "pointer" : "default",
                     }}
-                    onClick={() => modoSelecao && onEmpresaSelecionada?.(emp)}
+                    onClick={() => modoSelecao && abaAtiva === "ativas" && onEmpresaSelecionada?.(emp)}
                   >
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 14 }}
@@ -851,14 +928,14 @@ export default function GerenciarEmpresas({
                           width: 40,
                           height: 40,
                           borderRadius: 10,
-                          background: "var(--primary-muted)",
+                          background: abaAtiva === "ativas" ? "var(--primary-muted)" : "rgba(245,158,11,0.1)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           flexShrink: 0,
                         }}
                       >
-                        <Store size={18} color="var(--primary)" />
+                        {abaAtiva === "ativas" ? <Store size={18} color="var(--primary)" /> : <Archive size={18} color="#f59e0b" />}
                       </div>
                       <div>
                         <p
@@ -867,6 +944,7 @@ export default function GerenciarEmpresas({
                             fontWeight: 600,
                             color: "var(--foreground)",
                             margin: 0,
+                            textDecoration: abaAtiva === "inativas" ? "line-through" : "none"
                           }}
                         >
                           {emp.nomeFantasia}
@@ -886,7 +964,7 @@ export default function GerenciarEmpresas({
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 8 }}
                     >
-                      {!modoSelecao && (
+                      {!modoSelecao && abaAtiva === "ativas" && (
                         <>
                           <button
                             onClick={(e) => {
@@ -925,7 +1003,7 @@ export default function GerenciarEmpresas({
                               e.stopPropagation();
                               setEmpresaParaExcluir(emp);
                             }}
-                            title="Excluir empresa"
+                            title="Arquivar empresa"
                             style={{
                               display: "flex",
                               alignItems: "center",
@@ -933,28 +1011,61 @@ export default function GerenciarEmpresas({
                               width: 32,
                               height: 32,
                               background: "var(--surface-overlay)",
-                              border: "1px solid rgba(239,68,68,0.3)",
+                              border: "1px solid rgba(245,158,11,0.3)",
                               borderRadius: 7,
-                              color: "#ef4444",
+                              color: "#f59e0b",
                               cursor: "pointer",
                               transition: "all .15s",
                             }}
                             onMouseEnter={(e) => {
                               const b = e.currentTarget as HTMLButtonElement;
-                              b.style.background = "rgba(239,68,68,0.08)";
-                              b.style.borderColor = "#ef4444";
+                              b.style.background = "rgba(245,158,11,0.1)";
+                              b.style.borderColor = "#f59e0b";
                             }}
                             onMouseLeave={(e) => {
                               const b = e.currentTarget as HTMLButtonElement;
                               b.style.background = "var(--surface-overlay)";
-                              b.style.borderColor = "rgba(239,68,68,0.3)";
+                              b.style.borderColor = "rgba(245,158,11,0.3)";
                             }}
                           >
-                            <Trash2 size={13} />
+                            <Archive size={13} />
                           </button>
                         </>
                       )}
-                      {modoSelecao && (
+                      
+                      {!modoSelecao && abaAtiva === "inativas" && (
+                         <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRestaurar(emp);
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "6px 12px",
+                              background: "transparent",
+                              border: "1px solid rgba(16,185,129,0.3)",
+                              borderRadius: 7,
+                              color: "var(--success)",
+                              fontSize: 12,
+                              cursor: "pointer",
+                              transition: "all .15s",
+                            }}
+                            onMouseEnter={(e) => {
+                              const b = e.currentTarget as HTMLButtonElement;
+                              b.style.background = "rgba(16,185,129,0.1)";
+                            }}
+                            onMouseLeave={(e) => {
+                              const b = e.currentTarget as HTMLButtonElement;
+                              b.style.background = "transparent";
+                            }}
+                          >
+                            <RotateCcw size={13} /> Restaurar
+                          </button>
+                      )}
+
+                      {modoSelecao && abaAtiva === "ativas" && (
                         <ChevronRight
                           size={18}
                           color="var(--foreground-subtle)"
