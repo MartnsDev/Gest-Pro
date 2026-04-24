@@ -12,6 +12,7 @@ import br.com.gestpro.produto.repository.ProdutoRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 
@@ -115,14 +116,24 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
     @Transactional
     public void excluir(Long id, String emailUsuario) {
         Produto produto = produtoRepository.findById(id)
-                .orElseThrow(() -> new ApiException(
-                        "Produto não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos/" + id));
-        if (!produto.getUsuario().getEmail().equals(emailUsuario))
-            throw new ApiException(
-                    "Sem permissão para excluir este produto.", HttpStatus.FORBIDDEN, "/api/v1/produtos/" + id);
-        produtoRepository.deleteById(id);
-    }
+                .orElseThrow(() -> new ApiException("Produto não encontrado", HttpStatus.NOT_FOUND, "/api/v1/produtos/" + id));
 
+        if (!produto.getUsuario().getEmail().equals(emailUsuario)) {
+            throw new ApiException("Sem permissão para excluir este produto.", HttpStatus.FORBIDDEN, "/api/v1/produtos/" + id);
+        }
+
+        // 1. Pergunta ao banco se o produto já foi vendido alguma vez
+        boolean temVenda = produtoRepository.isProdutoVinculadoAVenda(id);
+
+        if (temVenda) {
+            // 2A. Já foi vendido? Fazemos o SOFT DELETE (Arquivamento)
+            produto.setAtivo(false);
+            produtoRepository.save(produto);
+        } else {
+            // 2B. Nunca foi vendido? Apagamos de verdade (Hard Delete)
+            produtoRepository.delete(produto);
+        }
+    }
     @Override
     @Transactional(readOnly = true)
     public List<Produto> listarPorEmpresa(Long empresaId) {

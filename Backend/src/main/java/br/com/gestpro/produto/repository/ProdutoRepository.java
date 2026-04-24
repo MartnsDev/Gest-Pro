@@ -27,4 +27,7 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
 
     @Query("SELECT COUNT(p) FROM Produto p WHERE p.empresa = :empresa AND p.ativo = true")
     long countByEmpresaAndAtivoTrue(@Param("empresa") Empresa empresa);
+
+    @Query("SELECT COUNT(iv) > 0 FROM ItemVenda iv WHERE iv.produto.id = :produtoId")
+    boolean isProdutoVinculadoAVenda(@Param("produtoId") Long produtoId);
 }

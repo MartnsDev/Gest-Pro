@@ -31,6 +31,7 @@ interface Produto {
   preco: number;
   quantidadeEstoque: number;
   categoria?: string;
+  ativo?: boolean;
 }
 interface ItemCarrinho {
   produto: Produto;
@@ -708,15 +709,13 @@ function ModalNovaVenda({
       .catch(() => toast.error("Erro ao carregar produtos"));
   }, [empresaId]);
 
-  const filtrados = useMemo(
-    () =>
-      produtos.filter(
-        (p) =>
-          p.quantidadeEstoque > 0 &&
-          p.nome.toLowerCase().includes(busca.toLowerCase()),
-      ),
-    [produtos, busca],
-  );
+ const filtrados = useMemo(() =>
+    produtos.filter(p => 
+      p.ativo !== false && 
+      p.quantidadeEstoque > 0 && 
+      p.nome.toLowerCase().includes(busca.toLowerCase())
+    ),
+  [produtos, busca]);
 
   const addItem = (p: Produto) =>
     setCarrinho((prev) => {

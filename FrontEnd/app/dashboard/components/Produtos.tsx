@@ -3,25 +3,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { useEmpresa } from "../context/Empresacontext";
 import {
-  PlusCircle,
-  Search,
-  Edit2,
-  Trash2,
-  X,
-  Check,
-  Package,
-  ChevronUp,
-  ChevronDown,
-  AlertTriangle,
-  Boxes,
-  Tag,
-  Barcode,
-  Ruler,
-  DollarSign,
-  ShoppingCart,
-  Minus,
-  Plus,
-  Zap,
+  PlusCircle, Search, Edit2, Trash2, X, Check, Package, 
+  ChevronUp, ChevronDown, AlertTriangle, Boxes, Tag, 
+  Barcode, Ruler, DollarSign, ShoppingCart, Minus, Plus, Zap, Archive, RotateCcw,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -63,44 +48,27 @@ const LIMITE_PRODUTOS: Record<string, number> = {
 };
 
 const FORM_VAZIO: ProdutoForm = {
-  nome: "",
-  categoria: "",
-  descricao: "",
-  unidade: "UN",
-  codigoBarras: "",
-  preco: "",
-  precoCusto: "",
-  quantidadeEstoque: "",
-  estoqueMinimo: "",
-  ativo: true,
+  nome: "", categoria: "", descricao: "", unidade: "UN",
+  codigoBarras: "", preco: "", precoCusto: "",
+  quantidadeEstoque: "", estoqueMinimo: "", ativo: true,
 };
 
 const UNIDADES = ["UN", "KG", "G", "L", "ML", "CX", "PCT", "PAR", "M", "CM"];
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?: number | null) =>
-  v != null
-    ? new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      }).format(v)
-    : "—";
+  v != null ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v) : "—";
 
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
   const token =
     (typeof window !== "undefined"
-      ? (sessionStorage.getItem("jwt_token") ??
-        document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
-        null)
+      ? (sessionStorage.getItem("jwt_token") ?? document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? null)
       : null) ?? "";
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
+    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
     {
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       ...opts,
     },
   );
@@ -108,56 +76,34 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
     const err = await res.json().catch(() => null);
     throw new Error(err?.mensagem ?? `Erro ${res.status}`);
   }
+  if (res.status === 204) return {} as T;
   return res.json();
 }
 
 /* ─── Estilos ────────────────────────────────────────────────────────────── */
 const inp: React.CSSProperties = {
-  width: "100%",
-  padding: "9px 12px",
-  background: "var(--surface-overlay)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  color: "var(--foreground)",
-  fontSize: 13,
-  outline: "none",
+  width: "100%", padding: "9px 12px", background: "var(--surface-overlay)",
+  border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)",
+  fontSize: 13, outline: "none",
 };
 const btnPrimary: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "9px 16px",
-  background: "var(--primary)",
-  border: "none",
-  borderRadius: 8,
-  color: "#fff",
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: "pointer",
+  display: "flex", alignItems: "center", gap: 6, padding: "9px 16px",
+  background: "var(--primary)", border: "none", borderRadius: 8,
+  color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer",
 };
 const btnGhost: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "8px 12px",
-  background: "transparent",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  color: "var(--foreground-muted)",
-  fontSize: 13,
-  cursor: "pointer",
+  display: "flex", alignItems: "center", gap: 6, padding: "8px 12px",
+  background: "transparent", border: "1px solid var(--border)", borderRadius: 8,
+  color: "var(--foreground-muted)", fontSize: 13, cursor: "pointer",
+};
+const btnDanger: React.CSSProperties = {
+  display: "flex", alignItems: "center", gap: 6, padding: "9px 16px",
+  background: "var(--destructive)", border: "none", borderRadius: 8,
+  color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
 };
 
 /* ─── Barra de uso de produtos ───────────────────────────────────────────── */
-function BarraUsoProdutos({
-  total,
-  plano,
-  onUpgrade,
-}: {
-  total: number;
-  plano: string;
-  onUpgrade: () => void;
-}) {
+function BarraUsoProdutos({ total, plano, onUpgrade }: { total: number; plano: string; onUpgrade: () => void; }) {
   const limite = LIMITE_PRODUTOS[plano] ?? 999999;
   const ilimitado = limite >= 999999;
   const restantes = ilimitado ? null : Math.max(limite - total, 0);
@@ -170,7 +116,7 @@ function BarraUsoProdutos({
     <div style={{ padding: "12px 16px", background: critico ? "rgba(239,68,68,0.07)" : "var(--surface-elevated)", border: `1px solid ${critico ? "rgba(239,68,68,0.25)" : aviso ? "rgba(245,158,11,0.2)" : "var(--border)"}`, borderRadius: 10, display: "flex", alignItems: "center", gap: 14 }}>
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-          <span style={{ fontSize: 12, color: "var(--foreground-muted)", fontWeight: 500 }}>Produtos cadastrados</span>
+          <span style={{ fontSize: 12, color: "var(--foreground-muted)", fontWeight: 500 }}>Capacidade de Produtos Ativos</span>
           <span style={{ fontSize: 12, fontWeight: 700, color: ilimitado ? "var(--foreground)" : cor, display: "inline-flex", alignItems: "center", gap: 10 }}>
             {ilimitado ? <>{total} <span style={{ opacity: 0.5 }}>·</span> Ilimitado</> : <>{total} / {limite}<span style={{ color: "var(--foreground-muted)", fontWeight: 600 }}>· Restam {restantes}</span></>}
           </span>
@@ -183,7 +129,7 @@ function BarraUsoProdutos({
         {critico && <p style={{ fontSize: 11, color: "#ef4444", margin: "5px 0 0" }}>Você está perto do limite. Faça upgrade para cadastrar produtos ilimitados.</p>}
       </div>
       {(critico || aviso) && (
-        <button onClick={onUpgrade} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", background: cor, border: "none", borderRadius: 7, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+        <button onClick={onUpgrade} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", background: cor, border: "none", borderRadius: 7, color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
           <Zap size={12} /> Fazer upgrade
         </button>
       )}
@@ -191,7 +137,37 @@ function BarraUsoProdutos({
   );
 }
 
-/* ─── Modal Produto ──────────────────────────────────────────────────────── */
+/* ─── Modal Confirmar Exclusão/Arquivamento ──────────────────────────────── */
+function ModalConfirmarExclusao({ produto, onConfirmar, onClose, saving }: { produto: Produto; onConfirmar: () => Promise<void>; onClose: () => void; saving: boolean; }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="animate-fade-in" style={{ background: "var(--surface-elevated)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 14, padding: 28, width: "100%", maxWidth: 400, textAlign: "center" }}>
+        
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <Archive size={28} color="var(--destructive)" />
+        </div>
+        
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--foreground)", margin: "0 0 8px" }}>Excluir / Arquivar Produto?</h2>
+        <p style={{ fontSize: 14, color: "var(--foreground-muted)", marginBottom: 24, lineHeight: 1.5 }}>
+          Você está removendo <strong style={{ color: "var(--foreground)" }}>{produto.nome}</strong>. <br/><br/>
+          <span style={{ fontSize: 12 }}>
+            💡 <strong>Nota:</strong> Se este produto já possuir histórico de vendas, ele será apenas <strong>arquivado</strong> para proteger seus relatórios financeiros.
+          </span>
+        </p>
+        
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} disabled={saving} style={{ ...btnGhost, flex: 1, justifyContent: "center" }}>Cancelar</button>
+          <button onClick={onConfirmar} disabled={saving} style={{ ...btnDanger, flex: 1, justifyContent: "center", opacity: saving ? 0.6 : 1 }}>
+            {saving ? "Processando..." : "Confirmar"}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+/* ─── Modal Produto (Criação/Edição) ─────────────────────────────────────── */
 function ModalProduto({ produto, categorias, onSave, onClose, saving }: {
   produto?: Produto; categorias: string[]; onSave: (f: ProdutoForm) => Promise<void>; onClose: () => void; saving: boolean;
 }) {
@@ -239,9 +215,18 @@ function ModalProduto({ produto, categorias, onSave, onClose, saving }: {
               </select>
             </div>
           </div>
-          <div>
-            <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}><Barcode size={11} style={{ marginRight: 4 }} />Código de Barras</label>
-            <input style={inp} value={form.codigoBarras} onChange={(e) => set("codigoBarras", e.target.value)} placeholder="EAN-13, EAN-8..." />
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}><Barcode size={11} style={{ marginRight: 4 }} />Código de Barras</label>
+              <input style={inp} value={form.codigoBarras} onChange={(e) => set("codigoBarras", e.target.value)} placeholder="EAN-13..." />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>Ativo</label>
+               <select style={{ ...inp, cursor: "pointer" }} value={form.ativo ? "true" : "false"} onChange={(e) => set("ativo", e.target.value === "true")}>
+                <option value="true">Sim</option>
+                <option value="false">Não (Arquivado)</option>
+              </select>
+            </div>
           </div>
           <div>
             <p style={{ fontSize: 12, color: "var(--foreground-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Precificação</p>
@@ -256,7 +241,7 @@ function ModalProduto({ produto, categorias, onSave, onClose, saving }: {
               </div>
             </div>
             {lucro != null && (
-              <div style={{ marginTop: 10, padding: "10px 14px", background: lucro >= 0 ? "var(--success-muted)" : "var(--destructive-muted)", border: `1px solid ${lucro >= 0 ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+              <div style={{ marginTop: 10, padding: "10px 14px", background: lucro >= 0 ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${lucro >= 0 ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                 <span style={{ color: "var(--foreground-muted)" }}>Lucro unitário</span>
                 <div style={{ display: "flex", gap: 16 }}>
                   <span style={{ fontWeight: 700, color: lucro >= 0 ? "var(--success)" : "var(--destructive)" }}>{fmt(lucro)}</span>
@@ -282,10 +267,6 @@ function ModalProduto({ produto, categorias, onSave, onClose, saving }: {
             <label style={{ fontSize: 12, color: "var(--foreground-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>Descrição</label>
             <textarea style={{ ...inp, resize: "vertical", minHeight: 68 }} value={form.descricao} onChange={(e) => set("descricao", e.target.value)} placeholder="Observações opcionais..." />
           </div>
-          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-            <input type="checkbox" checked={form.ativo} onChange={(e) => set("ativo", e.target.checked)} style={{ accentColor: "var(--primary)", width: 15, height: 15 }} />
-            <span style={{ fontSize: 13, color: "var(--foreground-muted)" }}>Produto ativo</span>
-          </label>
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
             <button type="button" onClick={onClose} style={{ ...btnGhost, flex: 1, justifyContent: "center" }}>Cancelar</button>
             <button type="submit" disabled={saving} style={{ ...btnPrimary, flex: 2, justifyContent: "center", opacity: saving ? 0.7 : 1 }}>
@@ -335,37 +316,15 @@ function ModalEstoque({ produto, onSave, onClose, saving }: {
 
 /* ─── Componente principal ───────────────────────────────────────────────── */
 type SortKey = "nome" | "categoria" | "preco" | "quantidadeEstoque" | "margemLucro";
-type ModalState = { tipo: "produto"; produto?: Produto } | { tipo: "estoque"; produto: Produto } | null;
+type ModalState = { tipo: "produto"; produto?: Produto } | { tipo: "estoque"; produto: Produto } | { tipo: "excluir"; produto: Produto } | null;
+type AbaTipo = "ativos" | "alerta" | "esgotados" | "inativos";
 
-/* ─── Célula de nome com truncamento + tooltip nativo ────────────────────── */
 function NomeProduto({ nome, unidade }: { nome: string; unidade?: string }) {
-  const MAX = 22;
-  const truncado = nome.length > MAX;
-
+  const MAX = 24;
   return (
-    <td style={{ padding: "9px 12px", maxWidth: 200 }}>
-      {/* title nativo = tooltip que aparece no hover em qualquer browser */}
-      <p
-        title={nome}
-        style={{
-          fontSize: 13,
-          fontWeight: 500,
-          color: "var(--foreground)",
-          margin: 0,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          maxWidth: 190,
-          cursor: truncado ? "help" : "default",
-        }}
-      >
-        {nome}
-      </p>
-      {unidade && (
-        <span style={{ fontSize: 10, color: "var(--foreground-subtle)" }}>
-          {unidade}
-        </span>
-      )}
+    <td style={{ padding: "12px", maxWidth: 220 }}>
+      <p title={nome} style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nome}</p>
+      {unidade && <span style={{ fontSize: 10, color: "var(--foreground-subtle)" }}>{unidade}</span>}
     </td>
   );
 }
@@ -379,15 +338,12 @@ export default function Produtos({ onNavegar }: { onNavegar?: (s: string) => voi
   const [saving, setSaving]       = useState(false);
   const [filtro, setFiltro]       = useState("");
   const [catFiltro, setCatFiltro] = useState("");
+  const [abaAtiva, setAbaAtiva]   = useState<AbaTipo>("ativos");
   const [sortKey, setSortKey]     = useState<SortKey>("nome");
   const [sortAsc, setSortAsc]     = useState(true);
   const [modal, setModal]         = useState<ModalState>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const categorias = useMemo(
-    () => [...new Set(produtos.map((p) => p.categoria).filter(Boolean) as string[])],
-    [produtos],
-  );
+  const categorias = useMemo(() => [...new Set(produtos.map((p) => p.categoria).filter(Boolean) as string[])], [produtos]);
 
   const carregar = async () => {
     if (!empresaAtiva) return;
@@ -399,54 +355,48 @@ export default function Produtos({ onNavegar }: { onNavegar?: (s: string) => voi
       ]);
       if (prods.status === "fulfilled")  setProdutos(prods.value);
       if (perfil.status === "fulfilled") setPlanoAtual(perfil.value.tipoPlano);
-    } catch {
-      toast.error("Erro ao carregar produtos");
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error("Erro ao carregar produtos"); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { carregar(); }, [empresaAtiva?.id]);
 
-  const handleSort = (k: SortKey) => {
-    if (sortKey === k) setSortAsc((v) => !v);
-    else { setSortKey(k); setSortAsc(true); }
-  };
+  // CÁLCULO DAS ESTATÍSTICAS
+  const stats = useMemo(() => {
+    return {
+      ativos: produtos.filter(p => p.ativo).length,
+      alerta: produtos.filter(p => p.ativo && p.quantidadeEstoque > 0 && p.quantidadeEstoque <= (p.estoqueMinimo || 0)).length,
+      esgotados: produtos.filter(p => p.ativo && p.quantidadeEstoque === 0).length,
+      inativos: produtos.filter(p => !p.ativo).length
+    };
+  }, [produtos]);
 
-  const lista = useMemo(
-    () =>
-      produtos
-        .filter((p) => p.nome.toLowerCase().includes(filtro.toLowerCase()) && (!catFiltro || p.categoria === catFiltro))
-        .sort((a, b) => {
-          const va = (a as any)[sortKey] ?? "";
-          const vb = (b as any)[sortKey] ?? "";
-          if (typeof va === "string") return sortAsc ? va.localeCompare(String(vb)) : String(vb).localeCompare(va);
-          return sortAsc ? Number(va) - Number(vb) : Number(vb) - Number(va);
-        }),
-    [produtos, filtro, catFiltro, sortKey, sortAsc],
-  );
+  const limite = LIMITE_PRODUTOS[planoAtual] ?? 999999;
+  const atingiuLimite = stats.ativos >= limite;
 
-  const totalAtivos   = useMemo(() => produtos.filter((p) => p.ativo).length, [produtos]);
-  const limite        = LIMITE_PRODUTOS[planoAtual] ?? 999999;
-  const atingiuLimite = totalAtivos >= limite;
+  const lista = useMemo(() => {
+    return produtos
+      .filter((p) => {
+        if (abaAtiva === "inativos") return !p.ativo;
+        if (!p.ativo) return false;
+        if (abaAtiva === "alerta") return p.quantidadeEstoque > 0 && p.quantidadeEstoque <= (p.estoqueMinimo || 0);
+        if (abaAtiva === "esgotados") return p.quantidadeEstoque === 0;
+        return true; // Aba ativos
+      })
+      .filter((p) => p.nome.toLowerCase().includes(filtro.toLowerCase()) && (!catFiltro || p.categoria === catFiltro))
+      .sort((a, b) => {
+        const va = (a as any)[sortKey] ?? "";
+        const vb = (b as any)[sortKey] ?? "";
+        if (typeof va === "string") return sortAsc ? va.localeCompare(String(vb)) : String(vb).localeCompare(va);
+        return sortAsc ? Number(va) - Number(vb) : Number(vb) - Number(va);
+      });
+  }, [produtos, filtro, catFiltro, abaAtiva, sortKey, sortAsc]);
 
   const handleSalvar = async (form: ProdutoForm) => {
-    if (!empresaAtiva) { toast.error("Selecione uma empresa primeiro."); return; }
+    if (!empresaAtiva) return;
     setSaving(true);
     try {
-      const body = {
-        empresaId: empresaAtiva.id,
-        nome: form.nome,
-        categoria: form.categoria || null,
-        descricao: form.descricao || null,
-        unidade: form.unidade || null,
-        codigoBarras: form.codigoBarras || null,
-        preco: parseFloat(form.preco),
-        precoCusto: form.precoCusto ? parseFloat(form.precoCusto) : null,
-        quantidadeEstoque: parseInt(form.quantidadeEstoque),
-        estoqueMinimo: parseInt(form.estoqueMinimo) || 0,
-        ativo: form.ativo,
-      };
+      const body = { empresaId: empresaAtiva.id, nome: form.nome, categoria: form.categoria || null, descricao: form.descricao || null, unidade: form.unidade || null, codigoBarras: form.codigoBarras || null, preco: parseFloat(form.preco), precoCusto: form.precoCusto ? parseFloat(form.precoCusto) : null, quantidadeEstoque: parseInt(form.quantidadeEstoque), estoqueMinimo: parseInt(form.estoqueMinimo) || 0, ativo: form.ativo };
       const editing = modal?.tipo === "produto" && modal.produto;
       if (editing) {
         const updated = await fetchAuth<Produto>(`/api/v1/produtos/${modal.produto!.id}`, { method: "PUT", body: JSON.stringify(body) });
@@ -462,232 +412,204 @@ export default function Produtos({ onNavegar }: { onNavegar?: (s: string) => voi
     finally { setSaving(false); }
   };
 
-  const handleEstoque = async (novoEstoque: number) => {
+const handleEstoque = async (novoEstoque: number) => {
     if (modal?.tipo !== "estoque") return;
     setSaving(true);
     try {
       const p = modal.produto;
+      
+      // Montamos o body limpo, sem o "id", exatamente como o backend espera
+      const body = {
+        empresaId: empresaAtiva?.id,
+        nome: p.nome,
+        categoria: p.categoria || null,
+        descricao: p.descricao || null,
+        unidade: p.unidade || null,
+        codigoBarras: p.codigoBarras || null,
+        preco: p.preco,
+        precoCusto: p.precoCusto || null,
+        quantidadeEstoque: novoEstoque, 
+        estoqueMinimo: p.estoqueMinimo || 0,
+        ativo: p.ativo
+      };
+
       const updated = await fetchAuth<Produto>(`/api/v1/produtos/${p.id}`, {
         method: "PUT",
-        body: JSON.stringify({ empresaId: empresaAtiva?.id, nome: p.nome, categoria: p.categoria, descricao: p.descricao, unidade: p.unidade, codigoBarras: p.codigoBarras, preco: p.preco, precoCusto: p.precoCusto, quantidadeEstoque: novoEstoque, estoqueMinimo: p.estoqueMinimo, ativo: p.ativo }),
+        body: JSON.stringify(body),
       });
+      
       setProdutos((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
       toast.success("Estoque atualizado!");
       setModal(null);
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { 
+      toast.error(e.message); 
+    } finally { 
+      setSaving(false); 
+    }
+  };
+
+  const handleExcluir = async () => {
+    if (modal?.tipo !== "excluir") return;
+    const id = modal.produto.id;
+    setSaving(true);
+    try {
+      await fetchAuth(`/api/v1/produtos/${id}`, { method: "DELETE" });
+      setProdutos((prev) => prev.map((p) => (p.id === id ? { ...p, ativo: false } : p)));
+      toast.success("Produto arquivado com sucesso!");
+      setModal(null);
+    } catch (e: any) { toast.error(e.message); setModal(null); }
     finally { setSaving(false); }
   };
 
-  const handleExcluir = async (id: number) => {
-    if (!confirm("Excluir este produto?")) return;
-    setDeletingId(id);
+const handleRestaurar = async (p: Produto) => {
     try {
-      await fetchAuth(`/api/v1/produtos/${id}`, { method: "DELETE" });
-      setProdutos((prev) => prev.filter((p) => p.id !== id));
-      toast.success("Produto excluído!");
-    } catch (e: any) { toast.error(e.message); }
-    finally { setDeletingId(null); }
+      // Montamos o body limpo, sem o "id" e campos calculados, exatamente como o DTO espera
+      const body = {
+        empresaId: empresaAtiva?.id,
+        nome: p.nome,
+        categoria: p.categoria || null,
+        descricao: p.descricao || null,
+        unidade: p.unidade || null,
+        codigoBarras: p.codigoBarras || null,
+        preco: p.preco,
+        precoCusto: p.precoCusto || null,
+        quantidadeEstoque: p.quantidadeEstoque,
+        estoqueMinimo: p.estoqueMinimo || 0,
+        ativo: true // ⬅️ Aqui está a mágica da restauração
+      };
+
+      const updated = await fetchAuth<Produto>(`/api/v1/produtos/${p.id}`, { 
+        method: "PUT", 
+        body: JSON.stringify(body) 
+      });
+      
+      setProdutos((prev) => prev.map((x) => (x.id === p.id ? updated : x)));
+      toast.success("Produto restaurado com sucesso!");
+    } catch (e: any) { 
+      toast.error(e.message); 
+    }
   };
 
-  /* Cabeçalho de coluna clicável */
   const Th = ({ k, label }: { k: SortKey; label: string }) => (
-    <th
-      onClick={() => handleSort(k)}
-      style={{
-        padding: "8px 12px",
-        fontSize: 11,
-        fontWeight: 600,
-        color: "var(--foreground-muted)",
-        textTransform: "uppercase",
-        letterSpacing: ".06em",
-        cursor: "pointer",
-        textAlign: "left",
-        background: "var(--surface)",
-        whiteSpace: "nowrap",
-        userSelect: "none",
-      }}
-    >
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-        {label}
-        {sortKey === k && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-      </span>
+    <th onClick={() => handleSort(k)} style={{ padding: "10px 12px", fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", cursor: "pointer", textAlign: "left", background: "var(--surface)", userSelect: "none" }}>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{label}{sortKey === k && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}</span>
     </th>
   );
 
-  if (!empresaAtiva)
-    return (
-      <div style={{ padding: 48, textAlign: "center", color: "var(--foreground-muted)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-        <Package size={40} color="var(--foreground-subtle)" />
-        <p style={{ fontSize: 14 }}>Selecione uma empresa no menu superior para ver os produtos.</p>
-      </div>
-    );
+  if (!empresaAtiva) return <div style={{ padding: 48, textAlign: "center", color: "var(--foreground-muted)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}><Package size={40} color="var(--foreground-subtle)" /><p>Selecione uma empresa para ver os produtos.</p></div>;
 
   return (
     <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}>
-
+      
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Produtos</h2>
-          <p style={{ fontSize: 13, color: "var(--foreground-muted)", marginTop: 3 }}>
-            {empresaAtiva.nomeFantasia} · {produtos.length} produto(s)
-          </p>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Produtos</h2>
+          <p style={{ fontSize: 13, color: "var(--foreground-muted)", marginTop: 3 }}>{empresaAtiva.nomeFantasia} · {produtos.length} cadastrados</p>
         </div>
-        <button
-          style={{ ...btnPrimary, opacity: atingiuLimite ? 0.5 : 1, cursor: atingiuLimite ? "not-allowed" : "pointer" }}
-          onClick={() => {
-            if (atingiuLimite) { toast.error(`Limite de ${limite} produtos atingido. Faça upgrade para o Pro!`); onNavegar?.("planos"); return; }
+        <button style={btnPrimary} disabled={atingiuLimite} onClick={() => {
+            if (atingiuLimite) { toast.error(`Limite atingido. Faça upgrade!`); onNavegar?.("planos"); return; }
             setModal({ tipo: "produto" });
-          }}
-        >
+        }}>
           <PlusCircle size={15} /> Novo Produto
         </button>
       </div>
 
-      {/* Barra de uso */}
-      <BarraUsoProdutos total={totalAtivos} plano={planoAtual} onUpgrade={() => onNavegar?.("planos")} />
+      <BarraUsoProdutos total={stats.ativos} plano={planoAtual} onUpgrade={() => onNavegar?.("planos")} />
 
-      {/* Filtros */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-          <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-subtle)" }} />
-          <input style={{ ...inp, paddingLeft: 32 }} placeholder="Buscar produto..." value={filtro} onChange={(e) => setFiltro(e.target.value)} />
+      {/* ABAS E FILTROS */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
+        <div style={{ display: "flex", gap: 16, overflowX: "auto" }}>
+          {[
+            { id: "ativos", label: "Ativos", count: stats.ativos, color: "var(--primary)" },
+            { id: "alerta", label: "Em Alerta", count: stats.alerta, color: "#f59e0b", icon: <AlertTriangle size={12} /> },
+            { id: "esgotados", label: "Sem Estoque", count: stats.esgotados, color: "#ef4444", icon: <AlertCircle size={12} /> },
+            { id: "inativos", label: "Inativos", count: stats.inativos, color: "var(--foreground-muted)", icon: <Archive size={12} /> }
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setAbaAtiva(tab.id as AbaTipo)} style={{ 
+              background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: abaAtiva === tab.id ? 700 : 500, 
+              color: abaAtiva === tab.id ? tab.color : "var(--foreground-muted)", position: "relative", paddingBottom: 6,
+              display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap"
+            }}>
+              {tab.icon} {tab.label} ({tab.count})
+              {abaAtiva === tab.id && <div style={{ position: "absolute", bottom: -13, left: 0, right: 0, height: 2, background: tab.color, borderRadius: 2 }} />}
+            </button>
+          ))}
         </div>
-        <select style={{ ...inp, width: "auto", cursor: "pointer" }} value={catFiltro} onChange={(e) => setCatFiltro(e.target.value)}>
-          <option value="">Todas as categorias</option>
-          {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        {(filtro || catFiltro) && (
-          <button style={btnGhost} onClick={() => { setFiltro(""); setCatFiltro(""); }}>
-            <X size={13} /> Limpar
-          </button>
-        )}
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ position: "relative", minWidth: 200 }}>
+            <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-subtle)" }} />
+            <input style={{ ...inp, paddingLeft: 32 }} placeholder="Filtrar produtos..." value={filtro} onChange={(e) => setFiltro(e.target.value)} />
+          </div>
+          <select style={{ ...inp, width: "auto" }} value={catFiltro} onChange={(e) => setCatFiltro(e.target.value)}>
+            <option value="">Categorias</option>
+            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
       </div>
 
-      {/* Tabela compacta */}
+      {/* Tabela */}
       <div style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
                 <Th k="nome" label="Produto" />
-                <Th k="categoria" label="Cat." />
+                <Th k="categoria" label="Categoria" />
                 <Th k="preco" label="Venda" />
-                <th style={{ padding: "8px 12px", fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", textAlign: "left", background: "var(--surface)", whiteSpace: "nowrap" }}>Custo</th>
-                <Th k="margemLucro" label="%" />
+                <th style={{ padding: "10px 12px", fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", background: "var(--surface)" }}>Custo</th>
+                <Th k="margemLucro" label="Lucro %" />
                 <Th k="quantidadeEstoque" label="Qtd" />
-                <th style={{ padding: "8px 12px", fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".06em", textAlign: "left", background: "var(--surface)", whiteSpace: "nowrap" }}>Ações</th>
+                <th style={{ padding: "10px 12px", fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", background: "var(--surface)", textAlign: "right" }}>Ações</th>
               </tr>
             </thead>
-            <tbody>
-              {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} style={{ padding: "9px 12px" }}>
-                        <div className="skeleton" style={{ height: 12, width: j === 0 ? "70%" : "50%", borderRadius: 6 }} />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : lista.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 48, color: "var(--foreground-subtle)" }}>
-                      <Package size={36} />
-                      <p style={{ fontSize: 14 }}>Nenhum produto encontrado</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                lista.map((p) => {
-                  const baixo = p.estoqueMinimo != null && p.quantidadeEstoque <= p.estoqueMinimo && p.quantidadeEstoque > 0;
-                  const zerado = p.quantidadeEstoque === 0;
-                  return (
-                    <tr
-                      key={p.id}
-                      style={{ borderTop: "1px solid var(--border-subtle)" }}
-                      onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "var(--surface-overlay)")}
-                      onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")}
-                    >
-                      {/* ── Nome truncado com tooltip nativo ── */}
-                      <NomeProduto nome={p.nome} unidade={p.unidade} />
-
-                      {/* Categoria */}
-                      <td style={{ padding: "9px 12px" }}>
-                        {p.categoria && (
-                          <span title={p.categoria} style={{ fontSize: 11, padding: "2px 7px", background: "var(--secondary-muted)", color: "var(--secondary)", borderRadius: 999, fontWeight: 500, whiteSpace: "nowrap", maxWidth: 90, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {p.categoria}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Preço venda */}
-                      <td style={{ padding: "9px 12px", fontSize: 13, color: "var(--foreground)", fontWeight: 600, whiteSpace: "nowrap" }}>
-                        {fmt(p.preco)}
-                      </td>
-
-                      {/* Custo */}
-                      <td style={{ padding: "9px 12px", fontSize: 12, color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
-                        {p.precoCusto != null ? fmt(p.precoCusto) : <span style={{ color: "var(--foreground-subtle)" }}>—</span>}
-                      </td>
-
-                      {/* Margem */}
-                      <td style={{ padding: "9px 12px" }}>
-                        {p.margemLucro != null ? (
-                          <span style={{ fontSize: 12, fontWeight: 600, color: p.margemLucro >= 30 ? "var(--success)" : p.margemLucro >= 10 ? "var(--warning)" : "var(--destructive)" }}>
-                            {Number(p.margemLucro).toFixed(1)}%
-                          </span>
+            <tbody style={{ opacity: loading ? 0.5 : 1 }}>
+              {lista.length === 0 ? (
+                <tr><td colSpan={7} style={{ padding: 60, textAlign: "center", color: "var(--foreground-subtle)" }}><Package size={32} style={{ margin: "0 auto 8px", opacity: 0.3 }} /><p>Nenhum produto nesta categoria.</p></td></tr>
+              ) : lista.map((p) => {
+                const alerta = p.ativo && p.quantidadeEstoque > 0 && p.quantidadeEstoque <= (p.estoqueMinimo || 0);
+                const esgotado = p.ativo && p.quantidadeEstoque === 0;
+                return (
+                  <tr key={p.id} style={{ borderTop: "1px solid var(--border-subtle)" }}>
+                    <NomeProduto nome={p.nome} unidade={p.unidade} />
+                    <td style={{ padding: "12px" }}>{p.categoria && <span style={{ fontSize: 11, padding: "2px 8px", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 6 }}>{p.categoria}</span>}</td>
+                    <td style={{ padding: "12px", fontSize: 13, fontWeight: 700 }}>{fmt(p.preco)}</td>
+                    <td style={{ padding: "12px", fontSize: 12, color: "var(--foreground-muted)" }}>{p.precoCusto != null ? fmt(p.precoCusto) : <span style={{ color: "var(--foreground-subtle)" }}>—</span>}</td>
+                    <td style={{ padding: "12px" }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: (p.margemLucro || 0) >= 20 ? "var(--success)" : "var(--warning)" }}>{p.margemLucro?.toFixed(1)}%</span>
+                    </td>
+                    <td style={{ padding: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: esgotado ? "var(--destructive)" : alerta ? "#f59e0b" : "var(--foreground)" }}>{p.quantidadeEstoque}</span>
+                        {esgotado && <AlertCircle size={14} color="var(--destructive)" />}
+                        {alerta && <AlertTriangle size={14} color="#f59e0b" />}
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px" }}>
+                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                        {abaAtiva !== "inativos" ? (
+                          <>
+                            <button onClick={() => setModal({ tipo: "estoque", produto: p })} style={{ ...btnGhost, padding: 6 }}><Boxes size={14} /></button>
+                            <button onClick={() => setModal({ tipo: "produto", produto: p })} style={{ ...btnGhost, padding: 6 }}><Edit2 size={14} /></button>
+                            <button onClick={() => setModal({ tipo: "excluir", produto: p })} style={{ ...btnGhost, padding: 6, color: "var(--destructive)", borderColor: "rgba(239,68,68,0.2)" }}><Trash2 size={14} /></button>
+                          </>
                         ) : (
-                          <span style={{ color: "var(--foreground-subtle)", fontSize: 12 }}>—</span>
+                          <button onClick={() => handleRestaurar(p)} style={{ ...btnGhost, padding: "6px 12px", color: "var(--success)", borderColor: "rgba(16,185,129,0.3)" }}><RotateCcw size={14} /> Restaurar</button>
                         )}
-                      </td>
-
-                      {/* Estoque */}
-                      <td style={{ padding: "9px 12px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: zerado ? "var(--destructive)" : baixo ? "var(--warning)" : "var(--success)" }}>
-                            {p.quantidadeEstoque}
-                          </span>
-                          {(zerado || baixo) && <AlertTriangle size={12} color={zerado ? "var(--destructive)" : "var(--warning)"} />}
-                        </div>
-                      </td>
-
-                      {/* Ações */}
-                      <td style={{ padding: "9px 12px" }}>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button title="Ajustar estoque" onClick={() => setModal({ tipo: "estoque", produto: p })} style={{ ...btnGhost, padding: "5px 7px" }}>
-                            <Boxes size={13} />
-                          </button>
-                          <button title="Editar" onClick={() => setModal({ tipo: "produto", produto: p })} style={{ ...btnGhost, padding: "5px 7px" }}>
-                            <Edit2 size={13} />
-                          </button>
-                          <button title="Excluir" onClick={() => handleExcluir(p.id)} disabled={deletingId === p.id} style={{ ...btnGhost, padding: "5px 7px", borderColor: "rgba(239,68,68,0.3)", color: "var(--destructive)", opacity: deletingId === p.id ? 0.5 : 1 }}>
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-
-        {!loading && lista.length > 0 && (
-          <div style={{ padding: "7px 12px", borderTop: "1px solid var(--border)", fontSize: 11, color: "var(--foreground-muted)" }}>
-            {lista.length} de {produtos.length} produto(s)
-          </div>
-        )}
       </div>
 
-      {modal?.tipo === "produto" && (
-        <ModalProduto produto={modal.produto} categorias={categorias} onSave={handleSalvar} onClose={() => setModal(null)} saving={saving} />
-      )}
-      {modal?.tipo === "estoque" && (
-        <ModalEstoque produto={modal.produto} onSave={handleEstoque} onClose={() => setModal(null)} saving={saving} />
-      )}
+      {modal?.tipo === "produto" && <ModalProduto produto={modal.produto} categorias={categorias} onSave={handleSalvar} onClose={() => setModal(null)} saving={saving} />}
+      {modal?.tipo === "estoque" && <ModalEstoque produto={modal.produto} onSave={handleEstoque} onClose={() => setModal(null)} saving={saving} />}
+      {modal?.tipo === "excluir" && <ModalConfirmarExclusao produto={modal.produto} onConfirmar={handleExcluir} onClose={() => setModal(null)} saving={saving} />}
     </div>
   );
 }
