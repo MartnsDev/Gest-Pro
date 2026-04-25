@@ -1,91 +1,68 @@
 package br.com.gestpro.nota.service.validacoes;
 
-import br.com.gestpro.nota.TipoNota;
-import br.com.gestpro.nota.model.NotaFiscal;
 
-import java.time.LocalDateTime;
+import br.com.gestpro.nota.model.NotaFiscal;
+import org.springframework.stereotype.Service;
+
+import java.security.SecureRandom;
 import java.time.format.DateTimeFormatter;
-import java.util.Random;
 
 /**
- * Gera a chave de acesso de 44 dígitos conforme o padrão NF-e/NFC-e.
- * Formato: cUF(2) + AAMM(4) + CNPJ(14) + mod(2) + serie(3) + nNF(9) + tpEmis(1) + cNF(8) + cDV(1)
+ * Gera a chave de acesso de 44 dígitos conforme especificação SEFAZ.
  *
- * Para fins de rascunho/demo (sem certificado A1), gera uma chave numérica válida.
- * Em produção, a chave é assinada junto com o XML pela SEFAZ.
+ * Composição da chave (44 dígitos):
+ * cUF(2) + AAMM(4) + CNPJ(14) + mod(2) + serie(3) + nNF(9) + tpEmis(1) + cNF(8) + cDV(1)
  */
+@Service
 public class GerarChaveAcesso {
 
-    private static final DateTimeFormatter AAMM = DateTimeFormatter.ofPattern("yyMM");
-    private static final Random RNG = new Random();
+    private static final SecureRandom RANDOM = new SecureRandom();
 
-    /**
-     * Gera a chave de acesso baseada nos dados da nota.
-     *
-     * @param nota  Entidade NotaFiscal já persistida (com número sequencial)
-     * @param cUF   Código IBGE da UF do emitente (ex: 35 = SP)
-     * @return      String com 44 dígitos
-     */
-    public String gerar(NotaFiscal nota, String cUF) {
-        String aamm    = AAMM.format(LocalDateTime.now());
-        String cnpj    = limparCnpj(nota.getEmpresaCnpj());
-        String modelo  = modeloPorTipo(nota.getTipo());
-        String serie   = "001";
-        String nNF     = String.format("%09d", extrairNumeroSequencial(nota.getNumero()));
-        String tpEmis  = "1"; // 1 = emissão normal
-        String cNF     = String.format("%08d", RNG.nextInt(100_000_000));
+    public String gerar(NotaFiscal nota, String cnpjEmitente, String ufCodigo) {
+        String aamm = nota.getDataEmissao().format(DateTimeFormatter.ofPattern("yyMM"));
+        String cnpj = cnpjEmitente.replaceAll("[^0-9]", "");
+        String modelo = nota.getTipo().getModelo();
+        String serie = String.format("%03d", Integer.parseInt(nota.getSerie() != null ? nota.getSerie() : "1"));
+        String nNF = String.format("%09d", nota.getNumeroNota());
+        String tpEmis = nota.getEmContingencia() != null && nota.getEmContingencia() ? "9" : "1"; // 1=normal, 9=contingência off-line
+        String cNF = String.format("%08d", RANDOM.nextInt(99999999));
 
-        String corpo = cUF + aamm + cnpj + modelo + serie + nNF + tpEmis + cNF;
+        String chaveSemDV = ufCodigo + aamm + cnpj + modelo + serie + nNF + tpEmis + cNF;
+        String dv = calcularDigitoVerificador(chaveSemDV);
 
-        // Garante 43 dígitos antes do dígito verificador
-        if (corpo.length() != 43) {
-            corpo = corpo.substring(0, Math.min(corpo.length(), 43));
-            while (corpo.length() < 43) corpo = "0" + corpo;
-        }
-
-        String cDV = String.valueOf(calcularDigitoVerificador(corpo));
-        return corpo + cDV;
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private String modeloPorTipo(TipoNota tipo) {
-        return switch (tipo) {
-            case NFe  -> "55";
-            case NFCE -> "65";
-            case NFS  -> "99"; // NFS-e não usa chave SEFAZ, mas mantemos para uniformidade
-        };
-    }
-
-    private String limparCnpj(String cnpj) {
-        if (cnpj == null) return "00000000000000";
-        String limpo = cnpj.replaceAll("\\D", "");
-        return String.format("%-14s", limpo).replace(' ', '0').substring(0, 14);
-    }
-
-    private long extrairNumeroSequencial(String numero) {
-        if (numero == null) return 1L;
-        // Número no formato "NF-2024-000001" → extrai apenas os dígitos finais
-        String[] partes = numero.split("[^0-9]+");
-        for (int i = partes.length - 1; i >= 0; i--) {
-            if (!partes[i].isEmpty()) {
-                try { return Long.parseLong(partes[i]); } catch (NumberFormatException ignored) {}
-            }
-        }
-        return 1L;
+        return chaveSemDV + dv;
     }
 
     /**
-     * Módulo 11 — padrão da SEFAZ para dígito verificador da chave de acesso.
+     * Algoritmo módulo 11 conforme especificação SEFAZ NT 2003.003
      */
-    public int calcularDigitoVerificador(String chave43) {
+    private String calcularDigitoVerificador(String chave) {
         int soma = 0;
-        int peso = 2;
-        for (int i = chave43.length() - 1; i >= 0; i--) {
-            soma += Character.getNumericValue(chave43.charAt(i)) * peso;
-            peso = (peso == 9) ? 2 : peso + 1;
+        int multiplicador = 2;
+
+        for (int i = chave.length() - 1; i >= 0; i--) {
+            soma += Character.getNumericValue(chave.charAt(i)) * multiplicador;
+            multiplicador = multiplicador == 9 ? 2 : multiplicador + 1;
         }
+
         int resto = soma % 11;
-        return (resto == 0 || resto == 1) ? 0 : 11 - resto;
+        int dv = (resto < 2) ? 0 : 11 - resto;
+        return String.valueOf(dv);
+    }
+
+    /**
+     * Retorna o código da UF conforme tabela IBGE
+     */
+    public static String getCodigoUf(String uf) {
+        return switch (uf.toUpperCase()) {
+            case "RO" -> "11"; case "AC" -> "12"; case "AM" -> "13"; case "RR" -> "14";
+            case "PA" -> "15"; case "AP" -> "16"; case "TO" -> "17"; case "MA" -> "21";
+            case "PI" -> "22"; case "CE" -> "23"; case "RN" -> "24"; case "PB" -> "25";
+            case "PE" -> "26"; case "AL" -> "27"; case "SE" -> "28"; case "BA" -> "29";
+            case "MG" -> "31"; case "ES" -> "32"; case "RJ" -> "33"; case "SP" -> "35";
+            case "PR" -> "41"; case "SC" -> "42"; case "RS" -> "43"; case "MS" -> "50";
+            case "MT" -> "51"; case "GO" -> "52"; case "DF" -> "53";
+            default -> "35"; // SP como fallback
+        };
     }
 }

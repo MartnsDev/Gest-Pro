@@ -1,83 +1,137 @@
 package br.com.gestpro.nota.service.validacoes;
 
+import br.com.gestpro.infra.exception.ApiException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Mono;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Consulta endereço pelo CEP via ViaCEP (https://viacep.com.br).
- * Formato de retorno normalizado para uso interno do GestPro.
- *
- * Campo retornado:
- *  - cep, logradouro, complemento, bairro, cidade, estado, ibge, gia, ddd, siafi
+ * Consulta endereço pelo CEP com tripla camada de segurança (Fallback).
+ * APIs utilizadas: ViaCEP -> BrasilAPI -> Postmon.
  */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class ConsultarCEP {
-
-    private static final String VIACEP_BASE = "https://viacep.com.br/ws";
 
     private final WebClient webClient;
 
-    public ConsultarCEP(WebClient webClient) {
-        this.webClient = webClient;
-    }
-
-    @SuppressWarnings("unchecked")
     public Map<String, Object> consultarCep(String cep) {
-
         String cepLimpo = cep != null ? cep.replaceAll("\\D", "") : "";
 
         if (cepLimpo.length() != 8) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "CEP inválido. Informe 8 dígitos (ex: 01310-100 ou 01310100)");
+            throw new ApiException(
+                    "CEP inválido. Informe 8 dígitos.",
+                    HttpStatus.BAD_REQUEST,
+                    "/api/nota-fiscal/cep"
+            );
         }
 
+        // TENTATIVA 1: ViaCEP
         try {
-            Map<?, ?> viaCepResp = webClient.get()
-                    .uri(VIACEP_BASE + "/" + cepLimpo + "/json/")
-                    .retrieve()
-                    .onStatus(status -> status.is4xxClientError(),
-                            resp -> resp.bodyToMono(String.class).map(body ->
-                                    new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                            "CEP não encontrado: " + cepLimpo)))
-                    .bodyToMono(Map.class)
-                    .block();
-
-            if (viaCepResp == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "CEP não encontrado: " + cepLimpo);
-            }
-
-            // ViaCEP retorna { "erro": true } quando o CEP não existe
-            if (Boolean.TRUE.equals(viaCepResp.get("erro"))) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "CEP não encontrado: " + cepLimpo);
-            }
-
-            // Normaliza resposta
-            Map<String, Object> resultado = new LinkedHashMap<>();
-            resultado.put("cep",          formatarCep(cepLimpo));
-            resultado.put("logradouro",   viaCepResp.get("logradouro"));
-            resultado.put("complemento",  viaCepResp.get("complemento"));
-            resultado.put("bairro",       viaCepResp.get("bairro"));
-            resultado.put("cidade",       viaCepResp.get("localidade")); // ViaCEP usa "localidade"
-            resultado.put("estado",       viaCepResp.get("uf"));         // ViaCEP usa "uf"
-            resultado.put("ibge",         viaCepResp.get("ibge"));
-            resultado.put("ddd",          viaCepResp.get("ddd"));
-            resultado.put("siafi",        viaCepResp.get("siafi"));
-            return resultado;
-
-        } catch (ResponseStatusException e) {
-            throw e;
+            return consultarViaCep(cepLimpo);
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
-                    "Erro ao consultar ViaCEP: " + e.getMessage());
+            log.warn("ViaCEP indisponível para o CEP {}. Tentando BrasilAPI...", cepLimpo);
+
+            // TENTATIVA 2: BrasilAPI
+            try {
+                return consultarBrasilApi(cepLimpo);
+            } catch (Exception e2) {
+                log.warn("BrasilAPI indisponível para o CEP {}. Tentando Postmon...", cepLimpo);
+
+                // TENTATIVA 3: Postmon
+                try {
+                    return consultarPostmon(cepLimpo);
+                } catch (Exception e3) {
+                    log.error("Todas as APIs de CEP falharam para o CEP {}", cepLimpo);
+                    throw new ApiException(
+                            "Todos os serviços de consulta de CEP estão instáveis. Por favor, preencha o endereço manualmente.",
+                            HttpStatus.BAD_GATEWAY,
+                            "/api/nota-fiscal/cep"
+                    );
+                }
+            }
         }
     }
 
-    private String formatarCep(String cep8) {
-        return cep8.substring(0, 5) + "-" + cep8.substring(5);
+    private Map<String, Object> consultarViaCep(String cep) {
+        Map<?, ?> resp = webClient.get()
+                .uri("https://viacep.com.br/ws/" + cep + "/json/")
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+
+        if (resp == null || Boolean.TRUE.equals(resp.get("erro"))) {
+            throw new RuntimeException("CEP não encontrado");
+        }
+
+        return montarResposta(
+                (String) resp.get("logradouro"),
+                (String) resp.get("complemento"),
+                (String) resp.get("bairro"),
+                (String) resp.get("localidade"),
+                (String) resp.get("uf"),
+                (String) resp.get("ibge"),
+                cep
+        );
+    }
+
+    private Map<String, Object> consultarBrasilApi(String cep) {
+        Map<?, ?> resp = webClient.get()
+                .uri("https://brasilapi.com.br/api/cep/v1/" + cep)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+
+        if (resp == null) throw new RuntimeException("Falha na BrasilAPI");
+
+        return montarResposta(
+                (String) resp.get("street"),
+                "", // BrasilAPI v1 não traz complemento por padrão
+                (String) resp.get("neighborhood"),
+                (String) resp.get("city"),
+                (String) resp.get("state"),
+                "", // IBGE não disponível na v1
+                cep
+        );
+    }
+
+    private Map<String, Object> consultarPostmon(String cep) {
+        Map<?, ?> resp = webClient.get()
+                .uri("https://api.postmon.com.br/v1/cep/" + cep)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+
+        if (resp == null) throw new RuntimeException("Falha no Postmon");
+
+        return montarResposta(
+                (String) resp.get("logradouro"),
+                (String) resp.get("complemento"),
+                (String) resp.get("bairro"),
+                (String) resp.get("cidade"),
+                (String) resp.get("estado"),
+                (String) ((Map<?,?>)resp.get("cidade_info")).get("codigo_ibge"),
+                cep
+        );
+    }
+
+    private Map<String, Object> montarResposta(String logradouro, String complemento, String bairro,
+                                               String cidade, String estado, String ibge, String cep) {
+        Map<String, Object> resultado = new LinkedHashMap<>();
+        resultado.put("cep", cep.substring(0, 5) + "-" + cep.substring(5));
+        resultado.put("logradouro", logradouro);
+        resultado.put("complemento", complemento);
+        resultado.put("bairro", bairro);
+        resultado.put("cidade", cidade);
+        resultado.put("estado", estado);
+        resultado.put("ibge", ibge);
+        return resultado;
     }
 }

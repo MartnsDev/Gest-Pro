@@ -1,68 +1,89 @@
 package br.com.gestpro.nota.repository;
 
+
 import br.com.gestpro.nota.NotaFiscalStatus;
 import br.com.gestpro.nota.TipoNota;
 import br.com.gestpro.nota.model.NotaFiscal;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.awt.print.Pageable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
-public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
+public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, Long> {
 
-    long countByEmpresaId(String empresaId);
+    List<NotaFiscal> findByEmpresaIdOrderByDataEmissaoDesc(Long empresaId);
 
-    long countByEmpresaIdAndStatus(String empresaId, NotaFiscalStatus status);
+    List<NotaFiscal> findByEmpresaIdAndStatusOrderByDataEmissaoDesc(Long empresaId, NotaFiscalStatus status);
 
-    @Query("""
-        SELECT COALESCE(SUM(n.total), 0) FROM NotaFiscal n
-        WHERE n.empresaId = :empresaId
-          AND n.status = 'EMITIDA'
-          AND n.dataEmissao BETWEEN :inicio AND :fim
-        """)
-    BigDecimal sumTotalEmitidoNoPeriodo(
-            @Param("empresaId") String empresaId,
+    List<NotaFiscal> findByEmpresaIdAndTipoOrderByDataEmissaoDesc(Long empresaId, TipoNota tipo);
+
+    Optional<NotaFiscal> findByChaveAcesso(String chaveAcesso);
+
+    // Busca o maior número de nota para controle sequencial
+    @Query("SELECT MAX(n.numeroNota) FROM NotaFiscal n WHERE n.empresaId = :empresaId AND n.tipo = :tipo AND n.serie = :serie")
+    Optional<Long> findMaxNumeroByEmpresaIdAndTipoAndSerie(
+            @Param("empresaId") Long empresaId,
+            @Param("tipo") TipoNota tipo,
+            @Param("serie") String serie
+    );
+
+    // Notas em contingência aguardando transmissão
+    List<NotaFiscal> findByEmpresaIdAndEmContingenciaAndStatus(
+            Long empresaId, Boolean emContingencia, NotaFiscalStatus status
+    );
+
+    // Notas por período para exportação do contador
+    @Query("SELECT n FROM NotaFiscal n WHERE n.empresaId = :empresaId " +
+            "AND n.dataEmissao >= :inicio AND n.dataEmissao <= :fim " +
+            "AND n.status IN ('AUTORIZADA', 'CANCELADA') " +
+            "ORDER BY n.numeroNota")
+    List<NotaFiscal> findByEmpresaIdAndPeriodo(
+            @Param("empresaId") Long empresaId,
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
     );
 
-    @Query("""
-        SELECT n FROM NotaFiscal n WHERE
-        (:empresaId IS NULL OR n.empresaId = :empresaId) AND
-        (:status    IS NULL OR n.status    = :status)    AND
-        (:tipo      IS NULL OR n.tipo      = :tipo)      AND
-        (:nome      IS NULL OR LOWER(n.clienteNome) LIKE LOWER(CONCAT('%', :nome, '%'))) AND
-        (:inicio    IS NULL OR n.createdAt >= :inicio)   AND
-        (:fim       IS NULL OR n.createdAt <= :fim)
-        """)
+    // Estatísticas por empresa
+    @Query("SELECT COUNT(n), n.status FROM NotaFiscal n WHERE n.empresaId = :empresaId GROUP BY n.status")
+    List<Object[]> countByStatus(@Param("empresaId") Long empresaId);
+
+    @Query("SELECT SUM(n.valorTotal) FROM NotaFiscal n WHERE n.empresaId = :empresaId AND n.status = 'AUTORIZADA' AND n.dataEmissao >= :inicio")
+    Optional<java.math.BigDecimal> sumValorAutorizadasByPeriodo(
+            @Param("empresaId") Long empresaId,
+            @Param("inicio") LocalDateTime inicio
+    );
+
+    @Query("SELECT SUM(n.valorTotal) FROM NotaFiscal n WHERE n.empresaId = :empresaId AND n.status = :status AND n.dataEmissao BETWEEN :inicio AND :fim")
+    BigDecimal sumValorTotalByEmpresaIdAndStatusAndDataEmissaoBetween(
+            @Param("empresaId") Long empresaId,
+            @Param("status") NotaFiscalStatus status,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim
+    );
+
+    @Query("SELECT n FROM NotaFiscal n WHERE " +
+            "(:empresaId IS NULL OR n.empresaId = :empresaId) AND " +
+            "(:status IS NULL OR n.status = :status) AND " +
+            "(:tipo IS NULL OR n.tipo = :tipo) AND " +
+            "(:clienteNome IS NULL OR LOWER(n.clienteNome) LIKE LOWER(CONCAT('%', :clienteNome, '%'))) AND " +
+            "(:inicio IS NULL OR n.createdAt >= :inicio) AND " +
+            "(:fim IS NULL OR n.createdAt <= :fim)")
     Page<NotaFiscal> findWithFilters(
-            @Param("empresaId") String empresaId,
-            @Param("status")    NotaFiscalStatus status,
-            @Param("tipo")      TipoNota tipo,
-            @Param("nome")      String nome,
-            @Param("inicio")    LocalDateTime inicio,
-            @Param("fim")       LocalDateTime fim,
-            Pageable pageable
-    );
+            Long empresaId,
+            NotaFiscalStatus status,
+            TipoNota tipo,
+            String clienteNome,
+            LocalDateTime inicio,
+            LocalDateTime fim,
+            Pageable pageable);
 
-    @Query("""
-        SELECT MAX(CAST(SUBSTRING(n.numero, LENGTH(:prefixo) + 1) AS long))
-        FROM NotaFiscal n
-        WHERE n.empresaId = :empresaId
-          AND n.numero LIKE CONCAT(:prefixo, '%')
-        """)
-    Optional<Long> findMaxNumeroSequencial(
-            @Param("empresaId") String empresaId,
-            @Param("prefixo")   String prefixo
-    );
-
-    boolean existsByNumero(String numero);
+    long countByEmpresaIdAndStatus(Long empresaId, NotaFiscalStatus status);
 }

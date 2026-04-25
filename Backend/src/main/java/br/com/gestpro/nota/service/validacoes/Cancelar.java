@@ -1,71 +1,88 @@
 package br.com.gestpro.nota.service.validacoes;
 
+import br.com.gestpro.infra.exception.ApiException;
 import br.com.gestpro.nota.NotaFiscalStatus;
-import br.com.gestpro.nota.dto.NotaFiscalDTOs;
+import br.com.gestpro.nota.dto.CancelarNotaRequest;
 import br.com.gestpro.nota.model.NotaFiscal;
 import br.com.gestpro.nota.repository.NotaFiscalRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * Serviço responsável por cancelar uma nota fiscal (EMITIDA → CANCELADA).
+ * Serviço responsável por processar o cancelamento interno de uma nota fiscal.
  *
  * Regras de negócio:
- * - Somente notas EMITIDAS podem ser canceladas.
- * - Após cancelamento, a nota fica com status CANCELADA e
- *   registra data e motivo do cancelamento.
- *
- * Produção: o cancelamento de NF-e exige envio do evento de cancelamento
- * ao WebService da SEFAZ dentro de 24h (prazo pode variar por estado).
+ * - Somente notas AUTORIZADAS podem ser canceladas.
+ * - Rascunhos (Em Digitação) devem ser apenas excluídos.
+ * - A justificativa deve ter no mínimo 15 caracteres (Exigência SEFAZ).
  */
+@Slf4j
+@Service
+@RequiredArgsConstructor // <-- Lombok injetando os repositórios
 public class Cancelar {
 
     private final NotaFiscalRepository notaRepo;
-    private final BuscaPorId           buscaPorId;
+    private final BuscaPorId buscaPorId;
 
-    public Cancelar(NotaFiscalRepository notaRepo,
-                    BuscaPorId buscaPorId) {
-        this.notaRepo   = notaRepo;
-        this.buscaPorId = buscaPorId;
-    }
+    public Map<String, Object> cancelar(CancelarNotaRequest request) {
 
-    public Map<String, Object> cancelar(NotaFiscalDTOs.CancelarNotaDTO dto) {
-
-        NotaFiscal nota = buscaPorId.buscarEntidade(dto.getId());
+        // Nota: Assumi que getNotaId() é o método do seu novo CancelarNotaRequest
+        NotaFiscal nota = buscaPorId.buscarEntidade(request.getNotaId());
 
         // 1. Validação de status
         if (nota.getStatus() == NotaFiscalStatus.CANCELADA) {
-            throw new ResponseStatusException(
+            log.warn("Tentativa de cancelar nota já cancelada: ID={}", nota.getId());
+            throw new ApiException(
+                    "Esta nota já está cancelada.",
                     HttpStatus.UNPROCESSABLE_ENTITY,
-                    "Esta nota já está cancelada");
+                    "/api/nota-fiscal/cancelar"
+            );
         }
 
-        if (nota.getStatus() == NotaFiscalStatus.RASCUNHO) {
-            throw new ResponseStatusException(
+        if (nota.getStatus() == NotaFiscalStatus.DIGITACAO) {
+            log.warn("Tentativa de cancelar rascunho: ID={}", nota.getId());
+            throw new ApiException(
+                    "Notas em digitação não precisam ser canceladas – exclua a nota diretamente na lixeira.",
                     HttpStatus.UNPROCESSABLE_ENTITY,
-                    "Rascunhos não precisam ser cancelados — exclua a nota diretamente");
+                    "/api/nota-fiscal/cancelar"
+            );
         }
 
-        // 2. Validação do motivo
-        String motivo = dto.getMotivoCancelamento();
-        if (motivo == null || motivo.isBlank() || motivo.trim().length() < 5) {
-            throw new ResponseStatusException(
+        if (nota.getStatus() != NotaFiscalStatus.AUTORIZADA) {
+            throw new ApiException(
+                    "Somente notas AUTORIZADAS pela SEFAZ podem ser canceladas.",
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "/api/nota-fiscal/cancelar"
+            );
+        }
+
+        // 2. Validação do motivo (SEFAZ exige 15 a 256 caracteres)
+        String motivo = request.getJustificativa();
+        if (motivo == null || motivo.isBlank() || motivo.trim().length() < 15) {
+            throw new ApiException(
+                    "A justificativa do cancelamento deve ter pelo menos 15 caracteres.",
                     HttpStatus.BAD_REQUEST,
-                    "Motivo do cancelamento deve ter pelo menos 5 caracteres");
+                    "/api/nota-fiscal/cancelar"
+            );
         }
 
-        // 3. Executar cancelamento
+        // 3. Executar cancelamento no banco de dados
+        // OBS: O envio do evento XML para a SEFAZ deve ser chamado a partir daqui ou no NotaFiscalServiceImpl
+        log.info("Marcando Nota Fiscal ID={} como CANCELADA. Motivo: {}", nota.getId(), motivo);
+
         nota.setStatus(NotaFiscalStatus.CANCELADA);
-        nota.setDataCancelamento(LocalDateTime.now());
-        nota.setMotivoCancelamento(motivo.trim());
+
+        // Salvamos a justificativa no motivo de rejeição/histórico para manter rastreabilidade
+        nota.setMotivoRejeicao("Cancelamento justificado: " + motivo.trim());
 
         NotaFiscal salva = notaRepo.save(nota);
 
         Map<String, Object> resposta = buscaPorId.notaParaMap(salva);
-        resposta.put("mensagem", "Nota fiscal cancelada com sucesso");
+        resposta.put("mensagem", "Nota fiscal cancelada com sucesso.");
         return resposta;
     }
 }

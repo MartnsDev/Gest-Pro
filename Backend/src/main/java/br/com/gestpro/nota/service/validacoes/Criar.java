@@ -1,161 +1,148 @@
 package br.com.gestpro.nota.service.validacoes;
 
+import br.com.gestpro.infra.exception.ApiException;
 import br.com.gestpro.nota.NotaFiscalStatus;
+import br.com.gestpro.nota.dto.CriarNotaRequest;
 import br.com.gestpro.nota.dto.ItemCalc;
-import br.com.gestpro.nota.dto.NotaFiscalDTOs;
 import br.com.gestpro.nota.model.ItemNotaFiscal;
 import br.com.gestpro.nota.model.NotaFiscal;
-import br.com.gestpro.nota.repository.ItemNotaFiscalRepository;
 import br.com.gestpro.nota.repository.NotaFiscalRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 /**
- * Serviço responsável por criar um rascunho de nota fiscal.
+ * Serviço responsável por criar um rascunho de nota fiscal (Modo Digitação).
  * Realiza o cálculo dos valores financeiros e persiste a nota e seus itens.
  */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class Criar {
 
-    private static final DateTimeFormatter ANO_FORMATTER = DateTimeFormatter.ofPattern("yyyy");
+    private final NotaFiscalRepository notaRepo;
+    private final BuscaPorId buscaPorId;
 
-    private final ItemNotaFiscalRepository itemRepo;
-    private final BuscaPorId               buscaPorId;
-    private final NotaFiscalRepository     notaRepo;
+    @Transactional
+    public Map<String, Object> criar(CriarNotaRequest request) {
 
-    public Criar(ItemNotaFiscalRepository itemRepo,
-                 BuscaPorId buscaPorId,
-                 NotaFiscalRepository notaRepo) {
-        this.itemRepo   = itemRepo;
-        this.buscaPorId = buscaPorId;
-        this.notaRepo   = notaRepo;
-    }
+        if (request.getItens() == null || request.getItens().isEmpty()) {
+            throw new ApiException(
+                    "A nota deve conter pelo menos um item.",
+                    HttpStatus.BAD_REQUEST,
+                    "/api/nota-fiscal"
+            );
+        }
 
-    public Map<String, Object> criar(NotaFiscalDTOs.CriarNotaFiscalDTO dto, String usuarioId) {
-
-        // 1. Calcular itens
-        List<ItemCalc> itensCalculados = calcularItens(dto.getItens());
-
-        // 2. Calcular totais da nota
-        BigDecimal subtotal = itensCalculados.stream()
-                .map(ItemCalc::total)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
-
-        BigDecimal pctDesconto = coalesce(dto.getDesconto(), BigDecimal.ZERO);
-        BigDecimal pctImpostos = coalesce(dto.getImpostos(), BigDecimal.ZERO);
-
-        BigDecimal valorDesconto = subtotal
-                .multiply(pctDesconto.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP))
-                .setScale(2, RoundingMode.HALF_UP);
-
-        BigDecimal baseImpostos = subtotal.subtract(valorDesconto);
-        BigDecimal valorImpostos = baseImpostos
-                .multiply(pctImpostos.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP))
-                .setScale(2, RoundingMode.HALF_UP);
-
-        BigDecimal total = baseImpostos.add(valorImpostos)
-                .setScale(2, RoundingMode.HALF_UP);
-
-        // 3. Gerar número sequencial
-        String numero = gerarNumero(dto.getEmpresaId(), dto.getTipo().name());
-
-        // 4. Construir e persistir nota
+        // 1. Instanciar a Nota (O Lombok Builder facilita muito aqui)
         NotaFiscal nota = NotaFiscal.builder()
-                .numero(numero)
-                .tipo(dto.getTipo())
-                .status(NotaFiscalStatus.RASCUNHO)
-                .empresaId(dto.getEmpresaId())
-                .clienteId(dto.getClienteId())
-                .clienteNome(dto.getClienteNome())
-                .clienteCpfCnpj(dto.getClienteCpfCnpj())
-                .clienteEmail(dto.getClienteEmail())
-                .clienteTelefone(dto.getClienteTelefone())
-                .clienteEndereco(dto.getClienteEndereco())
-                .clienteCidade(dto.getClienteCidade())
-                .clienteEstado(dto.getClienteEstado() != null
-                        ? dto.getClienteEstado().toUpperCase() : null)
-                .clienteCep(dto.getClienteCep())
-                .subtotal(subtotal)
-                .desconto(pctDesconto)
-                .valorDesconto(valorDesconto)
-                .impostos(pctImpostos)
-                .valorImpostos(valorImpostos)
-                .total(total)
-                .formaPagamento(dto.getFormaPagamento())
-                .vendaId(dto.getVendaId())
-                .observacoes(dto.getObservacoes())
+                .empresaId(request.getEmpresaId())
+                .clienteId(request.getClienteId())
+                .clienteNome(request.getClienteNome())
+                .clienteCpfCnpj(request.getClienteCpfCnpj())
+                .tipo(request.getTipo())
+                .naturezaOperacao(request.getNaturezaOperacao())
+                .formaPagamento(request.getFormaPagamento())
+                .serie(request.getSerie() != null ? request.getSerie() : "1")
+                .valorFrete(coalesce(request.getValorFrete(), BigDecimal.ZERO))
+                .valorDesconto(coalesce(request.getValorDesconto(), BigDecimal.ZERO))
+                .informacoesAdicionais(request.getInformacoesAdicionais())
+                .status(NotaFiscalStatus.DIGITACAO)
                 .build();
 
+        // 2. Gerar Número Sequencial real consultando o banco
+        Long proxNumero = notaRepo.findMaxNumeroByEmpresaIdAndTipoAndSerie(
+                        request.getEmpresaId(), request.getTipo(), nota.getSerie())
+                .map(n -> n + 1).orElse(1L);
+        nota.setNumeroNota(proxNumero);
+
+        // 3. Processar Itens e Acumular Totais
+        BigDecimal totalProdutos = BigDecimal.ZERO;
+        BigDecimal totalIcms = BigDecimal.ZERO;
+        BigDecimal totalPis = BigDecimal.ZERO;
+        BigDecimal totalCofins = BigDecimal.ZERO;
+        int numItem = 1;
+
+        for (ItemCalc ic : request.getItens()) {
+            // Usa o DTO ItemCalc para instanciar a entidade ItemNotaFiscal
+            ItemNotaFiscal item = ItemNotaFiscal.builder()
+                    .produtoId(ic.getProdutoId())
+                    .codigoProduto(ic.getCodigoProduto())
+                    .descricao(ic.getDescricao())
+                    .ncm(ic.getNcm())
+                    .cfop(coalesceStr(ic.getCfop(), "5102")) // Default para venda estadual
+                    .unidade(coalesceStr(ic.getUnidade(), "UN"))
+                    .quantidade(ic.getQuantidade())
+                    .valorUnitario(ic.getValorUnitario())
+                    .valorDesconto(coalesce(ic.getValorDesconto(), BigDecimal.ZERO))
+                    .valorBruto(ic.getValorBruto())
+                    .valorTotal(ic.getValorTotal())
+                    .csosn(ic.getCsosn())
+                    .cstIcms(ic.getCstIcms())
+                    .icmsAliquota(coalesce(ic.getIcmsAliquota(), BigDecimal.ZERO))
+                    .cstPis(ic.getCstPis())
+                    .pisAliquota(coalesce(ic.getPisAliquota(), BigDecimal.ZERO))
+                    .cstCofins(ic.getCstCofins())
+                    .cofinsAliquota(coalesce(ic.getCofinsAliquota(), BigDecimal.ZERO))
+                    .numeroItem(numItem++)
+                    .build();
+
+            // Cálculos exatos de impostos baseados na alíquota do DTO
+            if (item.getIcmsAliquota().compareTo(BigDecimal.ZERO) > 0) {
+                item.setIcmsBaseCalculo(item.getValorTotal());
+                item.setIcmsValor(calcularImposto(item.getValorTotal(), item.getIcmsAliquota()));
+                totalIcms = totalIcms.add(item.getIcmsValor());
+            }
+
+            if (item.getPisAliquota().compareTo(BigDecimal.ZERO) > 0) {
+                item.setPisBaseCalculo(item.getValorTotal());
+                item.setPisValor(calcularImposto(item.getValorTotal(), item.getPisAliquota()));
+                totalPis = totalPis.add(item.getPisValor());
+            }
+
+            if (item.getCofinsAliquota().compareTo(BigDecimal.ZERO) > 0) {
+                item.setCofinsBaseCalculo(item.getValorTotal());
+                item.setCofinsValor(calcularImposto(item.getValorTotal(), item.getCofinsAliquota()));
+                totalCofins = totalCofins.add(item.getCofinsValor());
+            }
+
+            totalProdutos = totalProdutos.add(item.getValorTotal());
+
+            // Adiciona o item à nota (O método addItem já faz o vínculo bidirecional)
+            nota.addItem(item);
+        }
+
+        // 4. Fechar Totais da Nota
+        nota.setValorProdutos(totalProdutos);
+        nota.setValorIcms(totalIcms);
+        nota.setValorPis(totalPis);
+        nota.setValorCofins(totalCofins);
+
+        // Total = Produtos + Frete - Desconto Global
+        nota.setValorTotal(totalProdutos
+                .add(nota.getValorFrete())
+                .subtract(nota.getValorDesconto()));
+
+        // 5. Salvar tudo (Cascade = ALL salva os itens automaticamente)
+        log.info("Salvando rascunho de Nota Fiscal: Tipo={} Número={}", nota.getTipo(), nota.getNumeroNota());
         NotaFiscal salva = notaRepo.save(nota);
 
-        // 5. Persistir itens
-        List<ItemNotaFiscal> itensSalvos = new ArrayList<>();
-        for (ItemCalc ic : itensCalculados) {
-            NotaFiscalDTOs.CriarItemNotaDTO d = ic.dto();
-            ItemNotaFiscal item = ItemNotaFiscal.builder()
-                    .notaFiscalId(salva.getId())
-                    .produtoId(d.getProdutoId())
-                    .descricao(d.getDescricao())
-                    .codigo(d.getCodigo())
-                    .ncm(d.getNcm())
-                    .cfop(coalesceStr(d.getCfop(), "5102"))
-                    .unidade(coalesceStr(d.getUnidade(), "UN"))
-                    .quantidade(d.getQuantidade())
-                    .valorUnitario(d.getValorUnitario())
-                    .desconto(coalesce(d.getDesconto(), BigDecimal.ZERO))
-                    .icms(coalesce(d.getIcms(), BigDecimal.ZERO))
-                    .pis(coalesce(d.getPis(), BigDecimal.ZERO))
-                    .cofins(coalesce(d.getCofins(), BigDecimal.ZERO))
-                    .valorTotal(ic.total())
-                    .build();
-            itensSalvos.add(itemRepo.save(item));
-        }
-
-        // 6. Retornar resposta completa
-        Map<String, Object> resultado = buscaPorId.notaParaMap(salva);
-        resultado.put("itens", itensSalvos.stream()
-                .map(buscaPorId::itemParaMap)
-                .toList());
-        return resultado;
+        // 6. Retorna o Map utilizando o serviço de busca
+        return buscaPorId.buscarPorId(salva.getId());
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────
+    // Helpers Matemáticos e de Nulidade
+    // ────────────────────────────────────────────────────────────────────────
 
-    private List<ItemCalc> calcularItens(List<NotaFiscalDTOs.CriarItemNotaDTO> dtos) {
-        List<ItemCalc> resultado = new ArrayList<>();
-        for (NotaFiscalDTOs.CriarItemNotaDTO d : dtos) {
-            BigDecimal qty  = d.getQuantidade();
-            BigDecimal unit = d.getValorUnitario();
-            BigDecimal desc = coalesce(d.getDesconto(), BigDecimal.ZERO);
-
-            BigDecimal bruto   = qty.multiply(unit);
-            BigDecimal desAmt  = bruto.multiply(desc.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
-            BigDecimal total   = bruto.subtract(desAmt).setScale(2, RoundingMode.HALF_UP);
-            resultado.add(new ItemCalc(d, total));
-        }
-        return resultado;
-    }
-
-    private String gerarNumero(String empresaId, String tipo) {
-        String ano    = LocalDateTime.now().format(ANO_FORMATTER);
-        String prefixo = tipo + "-" + ano + "-";
-
-        Long max = notaRepo.findMaxNumeroSequencial(empresaId, prefixo).orElse(0L);
-        long proximo = max + 1;
-
-        // Garante unicidade em caso de colisão
-        String candidato = prefixo + String.format("%06d", proximo);
-        while (notaRepo.existsByNumero(candidato)) {
-            proximo++;
-            candidato = prefixo + String.format("%06d", proximo);
-        }
-        return candidato;
+    private BigDecimal calcularImposto(BigDecimal base, BigDecimal aliquota) {
+        return base.multiply(aliquota).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal coalesce(BigDecimal val, BigDecimal fallback) {

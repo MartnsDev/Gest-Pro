@@ -1,68 +1,106 @@
 package br.com.gestpro.nota.model;
 
 import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "itens_nota_fiscal")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class ItemNotaFiscal {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(nullable = false)
-    private UUID notaFiscalId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nota_fiscal_id", nullable = false)
+    private NotaFiscal notaFiscal;
 
-    @Column(nullable = false)
-    private String produtoId;
+    @Column(name = "produto_id")
+    private Long produtoId;
 
-    @Column(nullable = false)
+    @Column(name = "codigo_produto", length = 60)
+    private String codigoProduto;
+
+    @Column(name = "descricao", length = 200, nullable = false)
     private String descricao;
 
-    private String codigo;
+    @Column(name = "ncm", length = 8, nullable = false)
     private String ncm;
 
-    @Builder.Default
-    private String cfop = "5102";
+    @Column(name = "cfop", length = 4, nullable = false)
+    private String cfop;
 
-    @Builder.Default
-    private String unidade = "UN";
+    @Column(name = "unidade", length = 6)
+    private String unidade;
 
-    @Column(precision = 10, scale = 3, nullable = false)
+    @Column(name = "quantidade", precision = 15, scale = 4, nullable = false)
     private BigDecimal quantidade;
 
-    @Column(precision = 10, scale = 2, nullable = false)
+    @Column(name = "valor_unitario", precision = 15, scale = 4, nullable = false)
     private BigDecimal valorUnitario;
 
-    @Column(precision = 5, scale = 2)
-    @Builder.Default
-    private BigDecimal desconto = BigDecimal.ZERO;
+    @Column(name = "valor_bruto", precision = 15, scale = 2)
+    private BigDecimal valorBruto;
 
-    @Column(precision = 5, scale = 2)
-    @Builder.Default
-    private BigDecimal icms = BigDecimal.ZERO;
+    @Column(name = "valor_desconto", precision = 15, scale = 2)
+    private BigDecimal valorDesconto = BigDecimal.ZERO;
 
-    @Column(precision = 5, scale = 2)
-    @Builder.Default
-    private BigDecimal pis = BigDecimal.ZERO;
-
-    @Column(precision = 5, scale = 2)
-    @Builder.Default
-    private BigDecimal cofins = BigDecimal.ZERO;
-
-    @Column(precision = 10, scale = 2, nullable = false)
+    @Column(name = "valor_total", precision = 15, scale = 2, nullable = false)
     private BigDecimal valorTotal;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
+    // Tributação ICMS
+    @Column(name = "csosn", length = 3)
+    private String csosn; // Para Simples Nacional
+
+    @Column(name = "cst_icms", length = 3)
+    private String cstIcms; // Para Lucro Presumido/Real
+
+    @Column(name = "icms_base_calculo", precision = 15, scale = 2)
+    private BigDecimal icmsBaseCalculo = BigDecimal.ZERO;
+
+    @Column(name = "icms_aliquota", precision = 5, scale = 2)
+    private BigDecimal icmsAliquota = BigDecimal.ZERO;
+
+    @Column(name = "icms_valor", precision = 15, scale = 2)
+    private BigDecimal icmsValor = BigDecimal.ZERO;
+
+    // Tributação PIS
+    @Column(name = "cst_pis", length = 2)
+    private String cstPis;
+
+    @Column(name = "pis_base_calculo", precision = 15, scale = 2)
+    private BigDecimal pisBaseCalculo = BigDecimal.ZERO;
+
+    @Column(name = "pis_aliquota", precision = 5, scale = 4)
+    private BigDecimal pisAliquota = BigDecimal.ZERO;
+
+    @Column(name = "pis_valor", precision = 15, scale = 2)
+    private BigDecimal pisValor = BigDecimal.ZERO;
+
+    // Tributação COFINS
+    @Column(name = "cst_cofins", length = 2)
+    private String cstCofins;
+
+    @Column(name = "cofins_base_calculo", precision = 15, scale = 2)
+    private BigDecimal cofinsBaseCalculo = BigDecimal.ZERO;
+
+    @Column(name = "cofins_aliquota", precision = 5, scale = 4)
+    private BigDecimal cofinsAliquota = BigDecimal.ZERO;
+
+    @Column(name = "cofins_valor", precision = 15, scale = 2)
+    private BigDecimal cofinsValor = BigDecimal.ZERO;
+
+    @Column(name = "numero_item")
+    private Integer numeroItem;
+
+    @Column(name = "informacoes_adicionais", length = 500)
+    private String informacoesAdicionais;
+
+    public void setNotaFiscal(NotaFiscal notaFiscal) {
+        this.notaFiscal = notaFiscal;
+    }
+
+    public NotaFiscal getNotaFiscal() {
+        return notaFiscal;
+    }
 }

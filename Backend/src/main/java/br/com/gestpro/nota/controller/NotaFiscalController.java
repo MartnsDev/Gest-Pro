@@ -1,107 +1,232 @@
 package br.com.gestpro.nota.controller;
 
-import br.com.gestpro.nota.dto.NotaFiscalDTOs;
+import br.com.gestpro.nota.NotaFiscalStatus;
+import br.com.gestpro.nota.dto.*;
+import br.com.gestpro.nota.model.*;
+import br.com.gestpro.nota.service.NotaFiscalInterface;
 import br.com.gestpro.nota.service.NotaFiscalServiceImpl;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
-/**
- * Controller REST do módulo de Notas Fiscais.
- *
- * Base path: /notas-fiscais
- *
- * Endpoints:
- *  POST   /notas-fiscais                       → criar rascunho
- *  PATCH  /notas-fiscais/{id}/emitir           → emitir nota
- *  PATCH  /notas-fiscais/cancelar              → cancelar nota
- *  GET    /notas-fiscais                       → listar (com filtros)
- *  GET    /notas-fiscais/{id}                  → buscar por ID
- *  GET    /notas-fiscais/{id}/danfe            → dados do DANFE
- *  GET    /notas-fiscais/stats/{empresaId}     → estatísticas
- *  GET    /notas-fiscais/utils/cep/{cep}       → consulta CEP
- *  GET    /notas-fiscais/utils/cnpj/{cnpj}     → consulta CNPJ
- *  GET    /notas-fiscais/utils/municipios/{uf} → lista municípios
- */
 @RestController
-@RequestMapping("/notas-fiscais")
+@RequestMapping("/api/nota-fiscal")
+@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class NotaFiscalController {
 
-    private final NotaFiscalServiceImpl notaFiscalService;
+    private final NotaFiscalInterface notaFiscalService;
+    private final NotaFiscalServiceImpl notaFiscalServiceImpl;
 
-    // ── CRIAR RASCUNHO ────────────────────────────────────────────────────────
+    // =====================================================================
+    // CRUD
+    // =====================================================================
+
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public Map<String, Object> criar(
-            @Valid @RequestBody NotaFiscalDTOs.CriarNotaFiscalDTO dto,
-            @RequestHeader(value = "X-Usuario-Id", defaultValue = "anon") String usuarioId
-    ) {
-        return notaFiscalService.criar(dto, usuarioId);
+    public ResponseEntity<ApiResponse<NotaFiscal>> criar(@RequestBody CriarNotaRequest request) {
+        try {
+            NotaFiscal nota = notaFiscalService.criar(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(nota));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.erro(e.getMessage()));
+        }
     }
 
-    // ── EMITIR ────────────────────────────────────────────────────────────────
-    @PatchMapping("/{id}/emitir")
-    public Map<String, Object> emitir(@PathVariable UUID id) {
-        return notaFiscalService.emitir(id);
-    }
-
-    // ── CANCELAR ──────────────────────────────────────────────────────────────
-    @PatchMapping("/cancelar")
-    public Map<String, Object> cancelar(
-            @Valid @RequestBody NotaFiscalDTOs.CancelarNotaDTO dto
-    ) {
-        return notaFiscalService.cancelar(dto);
-    }
-
-    // ── ESTATÍSTICAS ──────────────────────────────────────────────────────────
-    @GetMapping("/stats/{empresaId}")
-    public NotaFiscalDTOs.EstatisticasDTO estatisticas(
-            @PathVariable String empresaId
-    ) {
-        return notaFiscalService.estatisticas(empresaId);
-    }
-
-    // ── CEP ───────────────────────────────────────────────────────────────────
-    @GetMapping("/utils/cep/{cep}")
-    public Map<String, Object> consultarCep(@PathVariable String cep) {
-        return notaFiscalService.consultarCep(cep);
-    }
-
-    // ── CNPJ ──────────────────────────────────────────────────────────────────
-    @GetMapping("/utils/cnpj/{cnpj}")
-    public Map<String, Object> consultarCnpj(@PathVariable String cnpj) {
-        return notaFiscalService.consultarCNPJ(cnpj);
-    }
-
-    // ── MUNICÍPIOS ────────────────────────────────────────────────────────────
-    @GetMapping("/utils/municipios/{uf}")
-    public List<Map<String, Object>> municipios(@PathVariable String uf) {
-        return notaFiscalService.buscarMunicipios(uf);
-    }
-
-    // ── DANFE ─────────────────────────────────────────────────────────────────
-    @GetMapping("/{id}/danfe")
-    public Map<String, Object> danfe(@PathVariable UUID id) {
-        return notaFiscalService.gerarDadosDanfe(id);
-    }
-
-    // ── BUSCAR POR ID ─────────────────────────────────────────────────────────
     @GetMapping("/{id}")
-    public Map<String, Object> buscarPorId(@PathVariable UUID id) {
-        return notaFiscalService.buscarPorId(id);
+    public ResponseEntity<ApiResponse<NotaFiscal>> buscarPorId(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(notaFiscalService.buscarPorId(id)));
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
-    // ── LISTAR ───────────────────────────────────────────────────────────────
     @GetMapping
-    public Map<String, Object> listar(
-            @ModelAttribute NotaFiscalDTOs.FilterNotaFiscalDTO filter
+    public ResponseEntity<ApiResponse<List<NotaFiscalResumoResponse>>> listar(
+            @RequestParam Long empresaId,
+            @RequestParam(required = false) NotaFiscalStatus status
     ) {
-        return notaFiscalService.listar(filter);
+        return ResponseEntity.ok(ApiResponse.ok(notaFiscalService.listar(empresaId, status)));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> excluir(@PathVariable Long id) {
+        try {
+            notaFiscalService.excluir(id);
+            return ResponseEntity.ok(ApiResponse.ok(null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.erro(e.getMessage()));
+        }
+    }
+
+    // =====================================================================
+    // CICLO DE VIDA
+    // =====================================================================
+
+    @PostMapping("/{id}/emitir")
+    public ResponseEntity<ApiResponse<NotaFiscal>> emitir(@PathVariable Long id) {
+        try {
+            NotaFiscal nota = notaFiscalService.emitir(id);
+            return ResponseEntity.ok(ApiResponse.ok(nota));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(ApiResponse.erro(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/cancelar")
+    public ResponseEntity<ApiResponse<NotaFiscal>> cancelar(@RequestBody CancelarNotaRequest request) {
+        try {
+            NotaFiscal nota = notaFiscalService.cancelar(request);
+            return ResponseEntity.ok(ApiResponse.ok(nota));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.erro(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/inutilizar")
+    public ResponseEntity<ApiResponse<Void>> inutilizar(@RequestBody InutilizarRequest request) {
+        try {
+            notaFiscalService.inutilizar(request);
+            return ResponseEntity.ok(ApiResponse.ok(null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.erro(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/transmitir-contingencias")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> transmitirContingencias(@RequestParam Long empresaId) {
+        int qtd = notaFiscalService.transmitirContingencias(empresaId);
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("transmitidas", qtd)));
+    }
+
+    // =====================================================================
+    // DOWNLOADS
+    // =====================================================================
+
+    @GetMapping("/{id}/xml")
+    public ResponseEntity<byte[]> baixarXml(@PathVariable Long id) {
+        try {
+            byte[] xml = notaFiscalService.baixarXml(id);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_XML);
+            headers.setContentDisposition(ContentDisposition.attachment().filename("nfe-" + id + ".xml").build());
+            return ResponseEntity.ok().headers(headers).body(xml);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/{id}/danfe")
+    public ResponseEntity<byte[]> baixarDanfe(@PathVariable Long id) {
+        try {
+            byte[] pdf = notaFiscalService.gerarDanfePdf(id);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDisposition(ContentDisposition.attachment().filename("danfe-" + id + ".pdf").build());
+            return ResponseEntity.ok().headers(headers).body(pdf);
+        } catch (UnsupportedOperationException e) {
+            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // =====================================================================
+    // ÁREA DO CONTADOR
+    // =====================================================================
+
+    @GetMapping("/exportar/xml-mensal")
+    public ResponseEntity<byte[]> exportarXmlsMensal(
+            @RequestParam Long empresaId,
+            @RequestParam String periodo // formato: yyyy-MM
+    ) {
+        try {
+            YearMonth ym = YearMonth.parse(periodo);
+            byte[] zip = notaFiscalService.gerarZipXmlsMensal(empresaId, ym);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.valueOf("application/zip"));
+            headers.setContentDisposition(ContentDisposition.attachment()
+                    .filename("xmls-" + periodo + ".zip").build());
+            return ResponseEntity.ok().headers(headers).body(zip);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/exportar/sped")
+    public ResponseEntity<byte[]> exportarSped(
+            @RequestParam Long empresaId,
+            @RequestParam String periodo,
+            @RequestParam String tipo
+    ) {
+        try {
+            YearMonth ym = YearMonth.parse(periodo);
+            byte[] sped = notaFiscalService.gerarArquivoSped(empresaId, ym, tipo);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.TEXT_PLAIN);
+            headers.setContentDisposition(ContentDisposition.attachment()
+                    .filename("sped-" + tipo + "-" + periodo + ".txt").build());
+            return ResponseEntity.ok().headers(headers).body(sped);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        }
+    }
+
+    // =====================================================================
+    // CERTIFICADO DIGITAL
+    // =====================================================================
+
+    @PostMapping("/certificado/{empresaId}")
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadCertificado(
+            @PathVariable Long empresaId,
+            @RequestParam("arquivo") MultipartFile arquivo,
+            @RequestParam("senha") String senha
+    ) {
+        try {
+            byte[] pfxBytes = arquivo.getBytes();
+            notaFiscalServiceImpl.registrarCertificado(empresaId, pfxBytes, senha);
+            Map<String, String> info = notaFiscalServiceImpl
+                    .getAssinaturaService().getInfoCertificado(pfxBytes, senha);
+            return ResponseEntity.ok(ApiResponse.ok(info));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.erro(e.getMessage()));
+        }
+    }
+
+    // =====================================================================
+    // CONSULTAS AUXILIARES
+    // =====================================================================
+    @GetMapping("/cep/{cep}")
+    public ResponseEntity<Object> consultarCep(@PathVariable String cep) {
+        Object resultado = notaFiscalService.consultarCep(cep);
+        return resultado != null ? ResponseEntity.ok(resultado) : ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/cnpj/{cnpj}")
+    public ResponseEntity<Object> consultarCnpj(@PathVariable String cnpj) {
+        Object resultado = notaFiscalService.consultarCnpj(cnpj);
+        return resultado != null ? ResponseEntity.ok(resultado) : ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/chave/{chaveAcesso}")
+    public ResponseEntity<ApiResponse<NotaFiscal>> buscarPorChave(@PathVariable String chaveAcesso) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(notaFiscalService.buscarPorChaveAcesso(chaveAcesso)));
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/estatisticas")
+    public ResponseEntity<ApiResponse<EstatisticasResponse>> getEstatisticas(
+            @RequestParam Long empresaId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(notaFiscalService.getEstatisticas(empresaId)));
     }
 }

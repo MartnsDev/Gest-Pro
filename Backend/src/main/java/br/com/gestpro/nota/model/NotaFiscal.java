@@ -5,110 +5,161 @@ import br.com.gestpro.nota.NotaFiscalStatus;
 import br.com.gestpro.nota.TipoNota;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(name = "notas_fiscais")
-@Data
+@Table(name = "notas_fiscais", indexes = {
+        @Index(name = "idx_empresa_tipo_numero", columnList = "empresa_id, tipo, numero_nota"),
+        @Index(name = "idx_chave_acesso", columnList = "chave_acesso"),
+        @Index(name = "idx_status", columnList = "status")
+})
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class NotaFiscal {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String numero;
+    @Column(name = "empresa_id", nullable = false)
+    private Long empresaId;
+
+    @Column(name = "cliente_id")
+    private Long clienteId;
+
+    @Column(name = "cliente_nome", length = 200)
+    private String clienteNome;
+
+    @Column(name = "cliente_cpf_cnpj", length = 18)
+    private String clienteCpfCnpj;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 10)
     private TipoNota tipo;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private NotaFiscalStatus status = NotaFiscalStatus.RASCUNHO;
+    @Column(nullable = false, length = 20)
+    private NotaFiscalStatus status;
 
-    // ── Emissor ───────────────────────────────────────────────────────────────
-    @Column(nullable = false)
-    private String empresaId;
-    private String empresaNome;
-    private String empresaCnpj;
-    private String empresaInscricaoEstadual;
-    private String empresaEndereco;
-    private String empresaCidade;
-    private String empresaEstado;
-    private String empresaCep;
-    private String empresaTelefone;
-    private String empresaEmail;
+    @Column(name = "numero_nota")
+    private Long numeroNota;
 
-    // ── Destinatário ──────────────────────────────────────────────────────────
-    private String clienteId;
+    @Column(name = "serie", length = 3)
+    private String serie;
 
-    @Column(nullable = false)
-    private String clienteNome;
+    @Column(name = "chave_acesso", length = 44, unique = true)
+    private String chaveAcesso;
 
-    private String clienteCpfCnpj;
-    private String clienteEmail;
-    private String clienteTelefone;
-    private String clienteEndereco;
-    private String clienteCidade;
-    private String clienteEstado;
-    private String clienteCep;
-
-    // ── Financeiro ────────────────────────────────────────────────────────────
-    @Column(precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal subtotal = BigDecimal.ZERO;
-
-    @Column(precision = 5, scale = 2)
-    @Builder.Default
-    private BigDecimal desconto = BigDecimal.ZERO;
-
-    @Column(precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal valorDesconto = BigDecimal.ZERO;
-
-    @Column(precision = 5, scale = 2)
-    @Builder.Default
-    private BigDecimal impostos = BigDecimal.ZERO;
-
-    @Column(precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal valorImpostos = BigDecimal.ZERO;
-
-    @Column(precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal total = BigDecimal.ZERO;
+    @Column(name = "natureza_operacao", length = 100, nullable = false)
+    private String naturezaOperacao;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "forma_pagamento", length = 30)
+    private FormaPagamento formaPagamento;
+
+    @Column(name = "valor_produtos", precision = 15, scale = 2)
+    private BigDecimal valorProdutos;
+
     @Builder.Default
-    private FormaPagamento formaPagamento = FormaPagamento.DINHEIRO;
+    @Column(name = "valor_frete", precision = 15, scale = 2)
+    private BigDecimal valorFrete = BigDecimal.ZERO;
 
-    private String vendaId;
+    @Builder.Default
+    @Column(name = "valor_desconto", precision = 15, scale = 2)
+    private BigDecimal valorDesconto = BigDecimal.ZERO;
 
-    @Column(columnDefinition = "TEXT")
-    private String observacoes;
+    @Builder.Default
+    @Column(name = "valor_icms", precision = 15, scale = 2)
+    private BigDecimal valorIcms = BigDecimal.ZERO;
 
-    // ── Dados fiscais ─────────────────────────────────────────────────────────
-    private String chaveAcesso;
-    private String protocolo;
+    @Builder.Default
+    @Column(name = "valor_pis", precision = 15, scale = 2)
+    private BigDecimal valorPis = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "valor_cofins", precision = 15, scale = 2)
+    private BigDecimal valorCofins = BigDecimal.ZERO;
+
+    @Column(name = "valor_total", precision = 15, scale = 2, nullable = false)
+    private BigDecimal valorTotal;
+
+    @Column(name = "data_emissao", nullable = false)
     private LocalDateTime dataEmissao;
-    private LocalDateTime dataCancelamento;
 
-    @Column(columnDefinition = "TEXT")
-    private String motivoCancelamento;
+    @Column(name = "data_autorizacao")
+    private LocalDateTime dataAutorizacao;
 
-    @CreationTimestamp
+    @Column(name = "protocolo", length = 60)
+    private String protocolo;
+
+    @Column(name = "motivo_rejeicao", length = 1000)
+    private String motivoRejeicao;
+
+    @Column(name = "xml_enviado", columnDefinition = "TEXT")
+    private String xmlEnviado;
+
+    @Column(name = "xml_retorno", columnDefinition = "TEXT")
+    private String xmlRetorno;
+
+    @Column(name = "xml_autorizado", columnDefinition = "TEXT")
+    private String xmlAutorizado;
+
+    @Column(name = "danfe_pdf_path", length = 500)
+    private String danfePdfPath;
+
+    @Builder.Default
+    @Column(name = "em_contingencia")
+    private Boolean emContingencia = false;
+
+    @Column(name = "justificativa_contingencia", length = 500)
+    private String justificativaContingencia;
+
+    @Column(name = "informacoes_adicionais", length = 500)
+    private String informacoesAdicionais;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "notaFiscal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ItemNotaFiscal> itens = new ArrayList<>();
+
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // ========================================================================
+    // MÉTODOS DE CICLO DE VIDA (JPA) E HELPERS (Esses nós mantemos na mão!)
+    // ========================================================================
+
+    @PrePersist
+    void prePersist() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+        if (this.status == null) this.status = NotaFiscalStatus.DIGITACAO;
+        if (this.dataEmissao == null) this.dataEmissao = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // Helper para manter a sincronia bidirecional da lista de itens
+    public void addItem(ItemNotaFiscal item) {
+        itens.add(item);
+        item.setNotaFiscal(this);
+    }
+
+    // Helper para manter a sincronia bidirecional da lista de itens
+    public void removeItem(ItemNotaFiscal item) {
+        itens.remove(item);
+        item.setNotaFiscal(null);
+    }
 }
