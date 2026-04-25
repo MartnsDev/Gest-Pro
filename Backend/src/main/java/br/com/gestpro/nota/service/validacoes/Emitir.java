@@ -3,126 +3,88 @@ package br.com.gestpro.nota.service.validacoes;
 import br.com.gestpro.nota.NotaFiscalStatus;
 import br.com.gestpro.nota.model.NotaFiscal;
 import br.com.gestpro.nota.repository.NotaFiscalRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.UUID;
 
-/**
- * Serviço responsável por emitir uma nota fiscal (RASCUNHO → EMITIDA).
- *
- * Nesta versão (sem integração com SEFAZ), a emissão:
- *  1. Valida que a nota está em RASCUNHO
- *  2. Gera a chave de acesso (44 dígitos, Módulo 11)
- *  3. Gera um protocolo simulado
- *  4. Atualiza o status e registra a data de emissão
- *
- * Para integração real com a SEFAZ, substituir o bloco "simulação"
- * por chamada ao WebService estadual com o XML assinado (ICP-Brasil A1/A3).
- */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class Emitir {
 
     private final NotaFiscalRepository notaRepo;
     private final BuscaPorId           buscaPorId;
     private final GerarChaveAcesso     gerarChaveAcesso;
 
-    public Emitir(NotaFiscalRepository notaRepo,
-                  BuscaPorId buscaPorId,
-                  GerarChaveAcesso gerarChaveAcesso) {
-        this.notaRepo         = notaRepo;
-        this.buscaPorId       = buscaPorId;
-        this.gerarChaveAcesso = gerarChaveAcesso;
-    }
+    // =========================================================================
+    // Ação principal
+    // =========================================================================
 
-    public Map<String, Object> emitir(UUID id) {
+    @Transactional
+    public Map<String, Object> emitir(Long id) {
 
         NotaFiscal nota = buscaPorId.buscarEntidade(id);
 
         // 1. Validações de negócio
-        if (nota.getStatus() != NotaFiscalStatus.RASCUNHO) {
+        if (nota.getStatus() != NotaFiscalStatus.DIGITACAO
+                && nota.getStatus() != NotaFiscalStatus.REJEITADA) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY,
-                    "Somente notas em RASCUNHO podem ser emitidas. Status atual: " + nota.getStatus());
+                    "Somente notas em DIGITAÇÃO ou REJEITADAS podem ser (re)emitidas. "
+                            + "Status atual: " + nota.getStatus().getDescricao());
         }
 
-        if (nota.getTotal() == null || nota.getTotal().signum() < 0) {
+        if (nota.getValorTotal() == null || nota.getValorTotal().signum() <= 0) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY,
-                    "Total da nota não pode ser negativo para emissão");
+                    "O valor total da nota deve ser positivo para emissão.");
         }
 
-        // 2. Gerar chave de acesso
-        //    cUF padrão: usamos "35" (SP) quando não há estado do emitente cadastrado.
-        //    Produção: obter o cUF real a partir de empresaEstado.
-        String cUF = resolverCUF(nota.getEmpresaEstado());
-        String chaveAcesso = gerarChaveAcesso.gerar(nota, cUF);
+        // 2. Geração da chave de acesso
+        //    O cUF real deve vir do EmpresaService.
+        //    Enquanto isso, utilizamos "35" (SP) como padrão seguro para testes.
+        String cUF = "35";  // TODO: obter via empresaService.buscarPorId(nota.getEmpresaId()).getUf()
+        String cnpjEmitente = "00000000000191"; // TODO: idem, buscar CNPJ real
+        String chaveAcesso = gerarChaveAcesso.gerar(nota, cnpjEmitente, cUF);
 
-        // 3. Gerar protocolo simulado (em produção, vem da SEFAZ)
-        String protocolo = gerarProtocolo();
+        // 3. Protocolo no formato SEFAZ: "1" + cUF(2) + ano(4) + sequência(15)
+        String protocolo = gerarProtocolo(cUF);
 
-        // 4. Atualizar nota
-        nota.setStatus(NotaFiscalStatus.EMITIDA);
+        // 4. Persistência
+        nota.setStatus(NotaFiscalStatus.AUTORIZADA);
         nota.setChaveAcesso(chaveAcesso);
         nota.setProtocolo(protocolo);
-        nota.setDataEmissao(LocalDateTime.now());
+        nota.setDataAutorizacao(LocalDateTime.now());
+        nota.setMotivoRejeicao(null); // Limpa eventual motivo de rejeição anterior
 
         NotaFiscal salva = notaRepo.save(nota);
+        log.info("Nota fiscal ID={} emitida com sucesso. Chave={} Protocolo={}", id, chaveAcesso, protocolo);
 
         Map<String, Object> resposta = buscaPorId.notaParaMap(salva);
-        resposta.put("mensagem", "Nota fiscal emitida com sucesso");
+        resposta.put("mensagem", "Nota fiscal emitida com sucesso.");
         return resposta;
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // =========================================================================
+    // Helpers
+    // =========================================================================
 
     /**
-     * Mapeia a sigla do estado para o código IBGE da UF (cUF).
-     * Fonte: Tabela de Codificação dos Municípios do IBGE / NT 2011/004 SEFAZ.
+     * Gera um protocolo no formato padrão da SEFAZ:
+     * {@code "1" + cUF(2) + ano(4) + sequência(15 dígitos)}.
+     * Exemplo: {@code 135202400000000000001}.
      */
-    private String resolverCUF(String estado) {
-        if (estado == null || estado.isBlank()) return "35"; // SP como padrão
-        return switch (estado.toUpperCase().trim()) {
-            case "AC" -> "12";
-            case "AL" -> "27";
-            case "AP" -> "16";
-            case "AM" -> "13";
-            case "BA" -> "29";
-            case "CE" -> "23";
-            case "DF" -> "53";
-            case "ES" -> "32";
-            case "GO" -> "52";
-            case "MA" -> "21";
-            case "MT" -> "51";
-            case "MS" -> "50";
-            case "MG" -> "31";
-            case "PA" -> "15";
-            case "PB" -> "25";
-            case "PR" -> "41";
-            case "PE" -> "26";
-            case "PI" -> "22";
-            case "RJ" -> "33";
-            case "RN" -> "24";
-            case "RS" -> "43";
-            case "RO" -> "11";
-            case "RR" -> "14";
-            case "SC" -> "42";
-            case "SP" -> "35";
-            case "SE" -> "28";
-            case "TO" -> "17";
-            default   -> "35";
-        };
-    }
-
-    /**
-     * Gera um protocolo no formato usado pela SEFAZ:
-     * "1" + cUF(2) + ano(4) + sequencial(15 dígitos)
-     * Ex: 135202400000000000001
-     */
-    private String gerarProtocolo() {
+    private String gerarProtocolo(String cUF) {
         String timestamp = String.valueOf(System.currentTimeMillis());
-        return "1" + "35" + java.time.LocalDate.now().getYear()
-                + String.format("%015d", Long.parseLong(timestamp.substring(timestamp.length() - 10)));
+        String sequencia = String.format("%015d",
+                Long.parseLong(timestamp.substring(timestamp.length() - 10)));
+        return "1" + cUF + LocalDate.now().getYear() + sequencia;
     }
 }

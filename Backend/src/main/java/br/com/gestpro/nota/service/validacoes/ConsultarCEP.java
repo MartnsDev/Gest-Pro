@@ -11,10 +11,6 @@ import reactor.core.publisher.Mono;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Consulta endereço pelo CEP com tripla camada de segurança (Fallback).
- * APIs utilizadas: ViaCEP -> BrasilAPI -> Postmon.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor

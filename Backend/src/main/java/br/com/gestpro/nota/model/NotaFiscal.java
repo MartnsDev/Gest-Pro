@@ -11,11 +11,20 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Entidade principal do módulo fiscal. Representa qualquer documento fiscal
+ * eletrônico emitido pelo sistema (NF-e modelo 55, NFC-e modelo 65 e NFS-e).
+ *
+ * Usa Lombok (@Getter/@Setter/@Builder) para reduzir boilerplate.
+ * Os métodos de ciclo de vida JPA (@PrePersist/@PreUpdate) e os helpers
+ * bidirecionais da lista de itens são mantidos manualmente para garantir
+ * comportamento previsível que o Lombok não cobre.
+ */
 @Entity
 @Table(name = "notas_fiscais", indexes = {
         @Index(name = "idx_empresa_tipo_numero", columnList = "empresa_id, tipo, numero_nota"),
-        @Index(name = "idx_chave_acesso", columnList = "chave_acesso"),
-        @Index(name = "idx_status", columnList = "status")
+        @Index(name = "idx_chave_acesso",        columnList = "chave_acesso"),
+        @Index(name = "idx_status",              columnList = "status")
 })
 @Getter
 @Setter
@@ -27,6 +36,8 @@ public class NotaFiscal {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // ── Identificação ────────────────────────────────────────────────────────
 
     @Column(name = "empresa_id", nullable = false)
     private Long empresaId;
@@ -40,6 +51,8 @@ public class NotaFiscal {
     @Column(name = "cliente_cpf_cnpj", length = 18)
     private String clienteCpfCnpj;
 
+    // ── Tipo e Status ────────────────────────────────────────────────────────
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private TipoNota tipo;
@@ -47,6 +60,8 @@ public class NotaFiscal {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NotaFiscalStatus status;
+
+    // ── Numeração SEFAZ ──────────────────────────────────────────────────────
 
     @Column(name = "numero_nota")
     private Long numeroNota;
@@ -57,12 +72,16 @@ public class NotaFiscal {
     @Column(name = "chave_acesso", length = 44, unique = true)
     private String chaveAcesso;
 
+    // ── Dados Comerciais ─────────────────────────────────────────────────────
+
     @Column(name = "natureza_operacao", length = 100, nullable = false)
     private String naturezaOperacao;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "forma_pagamento", length = 30)
     private FormaPagamento formaPagamento;
+
+    // ── Valores Financeiros ──────────────────────────────────────────────────
 
     @Column(name = "valor_produtos", precision = 15, scale = 2)
     private BigDecimal valorProdutos;
@@ -90,6 +109,8 @@ public class NotaFiscal {
     @Column(name = "valor_total", precision = 15, scale = 2, nullable = false)
     private BigDecimal valorTotal;
 
+    // ── Protocolo e Retorno SEFAZ ────────────────────────────────────────────
+
     @Column(name = "data_emissao", nullable = false)
     private LocalDateTime dataEmissao;
 
@@ -102,17 +123,22 @@ public class NotaFiscal {
     @Column(name = "motivo_rejeicao", length = 1000)
     private String motivoRejeicao;
 
+    // ── XMLs armazenados ─────────────────────────────────────────────────────
+
     @Column(name = "xml_enviado", columnDefinition = "TEXT")
     private String xmlEnviado;
 
     @Column(name = "xml_retorno", columnDefinition = "TEXT")
     private String xmlRetorno;
 
+    /** XML assinado + protocolo de autorização embutido (o documento fiscal válido). */
     @Column(name = "xml_autorizado", columnDefinition = "TEXT")
     private String xmlAutorizado;
 
     @Column(name = "danfe_pdf_path", length = 500)
     private String danfePdfPath;
+
+    // ── Contingência Offline ─────────────────────────────────────────────────
 
     @Builder.Default
     @Column(name = "em_contingencia")
@@ -121,6 +147,8 @@ public class NotaFiscal {
     @Column(name = "justificativa_contingencia", length = 500)
     private String justificativaContingencia;
 
+    // ── Complementares ───────────────────────────────────────────────────────
+
     @Column(name = "informacoes_adicionais", length = 500)
     private String informacoesAdicionais;
 
@@ -128,21 +156,23 @@ public class NotaFiscal {
     @OneToMany(mappedBy = "notaFiscal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ItemNotaFiscal> itens = new ArrayList<>();
 
+    // ── Auditoria ────────────────────────────────────────────────────────────
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // ========================================================================
-    // MÉTODOS DE CICLO DE VIDA (JPA) E HELPERS (Esses nós mantemos na mão!)
-    // ========================================================================
+    // =========================================================================
+    // JPA Lifecycle
+    // =========================================================================
 
     @PrePersist
     void prePersist() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        if (this.status == null) this.status = NotaFiscalStatus.DIGITACAO;
+        if (this.status == null)    this.status    = NotaFiscalStatus.DIGITACAO;
         if (this.dataEmissao == null) this.dataEmissao = LocalDateTime.now();
     }
 
@@ -151,15 +181,24 @@ public class NotaFiscal {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // Helper para manter a sincronia bidirecional da lista de itens
+    // =========================================================================
+    // Helpers bidirecionais
+    // =========================================================================
+
+    /**
+     * Adiciona um item e garante que o vínculo bidirecional esteja correto.
+     * Use sempre este método (e não {@code getItens().add()}) para adicionar itens.
+     */
     public void addItem(ItemNotaFiscal item) {
-        itens.add(item);
-        item.setNotaFiscal(this);
+        this.itens.add(item);
+        item.vincularNota(this);
     }
 
-    // Helper para manter a sincronia bidirecional da lista de itens
+    /**
+     * Remove um item garantindo consistência bidirecional.
+     */
     public void removeItem(ItemNotaFiscal item) {
-        itens.remove(item);
-        item.setNotaFiscal(null);
+        this.itens.remove(item);
+        item.vincularNota(null);
     }
 }

@@ -25,21 +25,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Serviço de assinatura digital de XMLs NF-e usando certificado A1 (.pfx).
- * Implementa o padrão XML-DSig com RSA-SHA256 conforme exigido pela SEFAZ.
- */
+
 @Service
 public class AssinaturaDigitalService {
 
-    /**
-     * Assina o XML da NF-e com o certificado A1.
-     *
-     * @param xmlConteudo  XML da NF-e não assinado
-     * @param pfxBytes     Bytes do arquivo .pfx/.p12
-     * @param senhaCert    Senha do certificado
-     * @return XML assinado em string
-     */
     public String assinarXml(String xmlConteudo, byte[] pfxBytes, String senhaCert) throws Exception {
         // Carrega o certificado do KeyStore
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
@@ -126,9 +115,6 @@ public class AssinaturaDigitalService {
         return sw.toString();
     }
 
-    /**
-     * Valida se o certificado ainda está dentro da validade.
-     */
     public boolean isCertificadoValido(byte[] pfxBytes, String senhaCert) {
         try {
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
@@ -144,9 +130,6 @@ public class AssinaturaDigitalService {
         }
     }
 
-    /**
-     * Retorna informações do certificado para exibição na tela.
-     */
     public java.util.Map<String, String> getInfoCertificado(byte[] pfxBytes, String senhaCert) throws Exception {
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
         try (InputStream is = new ByteArrayInputStream(pfxBytes)) {

@@ -12,12 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Consulta a lista de municípios de uma UF via API do IBGE.
- * Endpoint: https://servicodados.ibge.gov.br/api/v1/localidades/estados/{uf}/municipios
- *
- * Retorna lista com { "id": 3550308, "nome": "São Paulo" }
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor // <-- Lombok: Injeta o WebClient pelo construtor automaticamente

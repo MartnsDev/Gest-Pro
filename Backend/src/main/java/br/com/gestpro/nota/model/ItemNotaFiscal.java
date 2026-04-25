@@ -1,10 +1,17 @@
 package br.com.gestpro.nota.model;
 
 import jakarta.persistence.*;
+import lombok.*;
+
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "itens_nota_fiscal")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ItemNotaFiscal {
 
     @Id
@@ -42,53 +49,70 @@ public class ItemNotaFiscal {
     @Column(name = "valor_bruto", precision = 15, scale = 2)
     private BigDecimal valorBruto;
 
+    @Builder.Default
     @Column(name = "valor_desconto", precision = 15, scale = 2)
     private BigDecimal valorDesconto = BigDecimal.ZERO;
 
     @Column(name = "valor_total", precision = 15, scale = 2, nullable = false)
     private BigDecimal valorTotal;
 
-    // Tributação ICMS
+    // ── Tributação ICMS ──────────────────────────────────────────────────────
+
+    /** Código de Situação da Operação do Simples Nacional. Usar para empresas no Simples. */
     @Column(name = "csosn", length = 3)
-    private String csosn; // Para Simples Nacional
+    private String csosn;
 
+    /** Código de Situação Tributária do ICMS. Usar para Lucro Presumido / Real. */
     @Column(name = "cst_icms", length = 3)
-    private String cstIcms; // Para Lucro Presumido/Real
+    private String cstIcms;
 
+    @Builder.Default
     @Column(name = "icms_base_calculo", precision = 15, scale = 2)
     private BigDecimal icmsBaseCalculo = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "icms_aliquota", precision = 5, scale = 2)
     private BigDecimal icmsAliquota = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "icms_valor", precision = 15, scale = 2)
     private BigDecimal icmsValor = BigDecimal.ZERO;
 
-    // Tributação PIS
+    // ── Tributação PIS ───────────────────────────────────────────────────────
+
     @Column(name = "cst_pis", length = 2)
     private String cstPis;
 
+    @Builder.Default
     @Column(name = "pis_base_calculo", precision = 15, scale = 2)
     private BigDecimal pisBaseCalculo = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "pis_aliquota", precision = 5, scale = 4)
     private BigDecimal pisAliquota = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "pis_valor", precision = 15, scale = 2)
     private BigDecimal pisValor = BigDecimal.ZERO;
 
-    // Tributação COFINS
+    // ── Tributação COFINS ────────────────────────────────────────────────────
+
     @Column(name = "cst_cofins", length = 2)
     private String cstCofins;
 
+    @Builder.Default
     @Column(name = "cofins_base_calculo", precision = 15, scale = 2)
     private BigDecimal cofinsBaseCalculo = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "cofins_aliquota", precision = 5, scale = 4)
     private BigDecimal cofinsAliquota = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "cofins_valor", precision = 15, scale = 2)
     private BigDecimal cofinsValor = BigDecimal.ZERO;
+
+    // ── Controle ─────────────────────────────────────────────────────────────
 
     @Column(name = "numero_item")
     private Integer numeroItem;
@@ -96,11 +120,13 @@ public class ItemNotaFiscal {
     @Column(name = "informacoes_adicionais", length = 500)
     private String informacoesAdicionais;
 
-    public void setNotaFiscal(NotaFiscal notaFiscal) {
-        this.notaFiscal = notaFiscal;
-    }
+    // ── Helper bidirecional (mantido manual, não interferir no @Builder) ─────
 
-    public NotaFiscal getNotaFiscal() {
-        return notaFiscal;
+    /**
+     * Vincula este item à sua nota fiscal (mantém a consistência bidirecional do JPA).
+     * Chamado internamente pelo {@code NotaFiscal#addItem}.
+     */
+    public void vincularNota(NotaFiscal notaFiscal) {
+        this.notaFiscal = notaFiscal;
     }
 }

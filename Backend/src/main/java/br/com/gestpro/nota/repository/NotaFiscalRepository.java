@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.awt.print.Pageable;
+import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -86,4 +86,6 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, Long> {
             Pageable pageable);
 
     long countByEmpresaIdAndStatus(Long empresaId, NotaFiscalStatus status);
+
+
 }
