@@ -7,6 +7,7 @@ interface Empresa {
   id: number;
   nomeFantasia: string;
   planoNome?: string;
+  ativo?: boolean; // Importante: deve estar presente para o filtro
 }
 
 interface CaixaInfo {
@@ -55,7 +56,12 @@ export default function SeletorEmpresa({
 
   useEffect(() => {
     fetchAuth<Empresa[]>("/api/v1/empresas")
-      .then(setEmpresas)
+      .then((data) => {
+        // ─── FILTRO AQUI ───
+        // Filtramos para manter apenas as empresas que não estão marcadas como inativas
+        const apenasAtivas = data.filter(emp => emp.ativo !== false);
+        setEmpresas(apenasAtivas);
+      })
       .catch(() => {});
   }, []);
 
@@ -164,7 +170,7 @@ export default function SeletorEmpresa({
                 margin: 0,
               }}
             >
-              Suas Empresas
+              Suas Empresas Ativas
             </p>
           </div>
 
@@ -177,7 +183,7 @@ export default function SeletorEmpresa({
                 textAlign: "center",
               }}
             >
-              Nenhuma empresa cadastrada
+              Nenhuma empresa ativa cadastrada
             </div>
           ) : (
             empresas.map((emp) => {

@@ -73,4 +73,14 @@ public class EmpresaController {
         empresaService.excluir(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{id}/exclusao-permanente")
+    public ResponseEntity<Void> excluirPermanentemente(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        empresaService.excluirPermanentementeComSenha(id, auth.getName(), body.get("senha"));
+        return ResponseEntity.noContent().build();
+    }
+
 }

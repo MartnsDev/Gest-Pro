@@ -20,7 +20,7 @@ public class Empresa {
     @Column(nullable = false)
     private String nomeFantasia;
 
-    @Column(unique = true)
+    @Column(name = "cnpj")
     private String cnpj;
 
     private String logotipoUrl;
@@ -35,4 +35,16 @@ public class Empresa {
 
     @Column(name = "ativo", nullable = false)
     private Boolean ativo = true;
+
+    // Dados CNPJ
+    @Column(name = "razao_social")
+    private String razaoSocial;
+
+    private String cep;
+    private String logradouro;
+    private String numero;
+    private String bairro;
+    private String cidade;
+    private String uf;
+    private String telefone;
 }

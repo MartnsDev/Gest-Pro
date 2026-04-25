@@ -14,11 +14,13 @@ public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
     // Busca todas as empresas que pertencem a um determinado usuário
     List<Empresa> findByDonoId(Long usuarioId);
 
-    @Query("SELECT COUNT(e) FROM Empresa e WHERE e.dono.id = :donoId")
-    Object countByDonoId(@Param("donoId") Long donoId);
+    long countByDonoId(Long donoId);
 
     @Query("SELECT e FROM Empresa e JOIN FETCH e.dono WHERE e.id = :id")
     Optional<Empresa> findByIdWithDono(@Param("id") Long id);
 
     long countByDonoIdAndAtivoTrue(Long donoId);
+
+    boolean existsByCnpj(String cnpj);
+    boolean existsByCnpjAndIdNot(String cnpj, Long id);
 }
