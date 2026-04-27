@@ -64,6 +64,21 @@ public class Usuario {
     private boolean loginGoogle = false;
 
     // ==============================
+    // Preferências de Notificação
+    // ==============================
+    @Column(name = "email_vendas", nullable = false)
+    private boolean emailVendas = false;
+
+    @Column(name = "email_relatorios", nullable = false)
+    private boolean emailRelatorios = false;
+
+    @Column(name = "alerta_estoque_zerado", nullable = false)
+    private boolean alertaEstoqueZerado = true;
+
+    @Column(name = "alerta_vencimento_plano", nullable = false)
+    private boolean alertaVencimentoPlano = true;
+
+    // ==============================
     // Regras automáticas de persistência
     // ==============================
     @PrePersist

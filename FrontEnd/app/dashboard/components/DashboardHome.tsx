@@ -33,6 +33,8 @@ import ModalRelatorioRapido from "../acoesRapidas/ModalRelatorioRapido";
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?: number | null) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 
+const API = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
+
 /* ─── ClientOnly & UI Components ─────────────────────────────────────────── */
 function ClientOnly({ children }: { children: ReactNode }) {
   const [ok, setOk] = useState(false);
@@ -74,6 +76,12 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
   const [vendasDiarias, setVendasDiarias] = useState<VendasDiariasData[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Estado das Preferências de Notificação
+  const [prefs, setPrefs] = useState({
+    alertaEstoqueZerado: true,
+    alertaVencimentoPlano: true,
+  });
+  
   // Estado para controlar qual Modal de Ação Rápida está aberto
   const [modalAtivo, setModalAtivo] = useState<"venda" | "produto" | "caixa" | "cliente" | "relatorio" | null>(null);
   const [alertasExpandido, setAlertasExpandido] = useState(false);
@@ -81,10 +89,32 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
   // Helper para navegação lateral
   const nav = (s: string) => onNavegar?.(s);
 
+  // Busca de Preferências de Alerta do Usuário
+  const fetchPreferencias = async () => {
+    try {
+      let token = null;
+      if (typeof window !== "undefined") {
+        token = sessionStorage.getItem("jwt_token") || localStorage.getItem("token") || localStorage.getItem("access_token");
+      }
+      const res = await fetch(`${API}/api/v1/configuracoes/notificacoes`, {
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPrefs(data);
+      }
+    } catch (e) {
+      console.warn("Aviso: Usando preferências de alerta padrão.");
+    }
+  };
+
   // Busca de dados utilizando o dashboardService centralizado
   const fetchDados = async (id: number) => {
     setLoading(true);
     try {
+      // Dispara a busca de preferências em paralelo com os dados do dashboard
+      fetchPreferencias();
+
       const [v, metodo, produto, diarias] = await Promise.allSettled([
         dashboardService.visaoGeral(id),
         dashboardService.vendasPorMetodo(id),
@@ -123,12 +153,24 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
     { title: "Custo Estoque", value: loading ? "—" : fmt(visao?.custos), icon: <Receipt size={16} />, accent: "warning" as const },
   ];
 
-  const todosAlertas = [
-    ...(visao?.alertas ?? []),
-    ...(visao?.planoUsuario && visao.planoUsuario.diasRestantes < 7 ? [`Plano ${visao.planoUsuario.tipoPlano}: ${visao.planoUsuario.diasRestantes} dia(s) restante(s)`] : []),
-  ];
-  const alertasProduto = todosAlertas.filter(a => a.startsWith("Estoque esgotado:"));
-  const alertasOutros = todosAlertas.filter(a => !a.startsWith("Estoque esgotado:"));
+  // ─── LÓGICA DE ALERTAS CONDICIONAIS ───
+  const alertasDoBackend = visao?.alertas ?? [];
+  
+  // Filtra os alertas de estoque APENAS se a preferência permitir
+  const alertasProduto = prefs.alertaEstoqueZerado 
+    ? alertasDoBackend.filter(a => a.startsWith("Estoque esgotado:")) 
+    : [];
+
+  // Outros alertas genéricos que o backend possa enviar
+  const alertasOutrosBackend = alertasDoBackend.filter(a => !a.startsWith("Estoque esgotado:"));
+
+  // Filtra alertas de plano APENAS se a preferência permitir
+  const alertasPlano = (prefs.alertaVencimentoPlano && visao?.planoUsuario && visao.planoUsuario.diasRestantes < 7) 
+    ? [`Plano ${visao.planoUsuario.tipoPlano}: ${visao.planoUsuario.diasRestantes} dia(s) restante(s)`] 
+    : [];
+
+  const alertasOutros = [...alertasOutrosBackend, ...alertasPlano];
+  const todosAlertas = [...alertasProduto, ...alertasOutros];
 
   // ─── AÇÕES RÁPIDAS (Configuradas para Modais ou Navegação) ───
   const acoes = [
@@ -249,7 +291,7 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
           {statsCards.map((c, i) => <StatsCard key={i} {...c} loading={loading} />)}
         </div>
 
-        {/* ── Alertas ── */}
+        {/* ── Alertas Controlados pelas Configurações ── */}
         {todosAlertas.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {alertasOutros.map((msg, i) => (

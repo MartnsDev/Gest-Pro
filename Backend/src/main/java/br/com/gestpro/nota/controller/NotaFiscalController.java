@@ -123,28 +123,25 @@ public class NotaFiscalController {
     }
 
     @GetMapping("/{id}/danfe")
-    public ResponseEntity<byte[]> baixarDanfe(@PathVariable Long id) {
+    public ResponseEntity<Object> baixarDanfe(@PathVariable Long id) {
         try {
             byte[] pdf = notaFiscalService.gerarDanfePdf(id);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
             headers.setContentDisposition(ContentDisposition.attachment().filename("danfe-" + id + ".pdf").build());
             return ResponseEntity.ok().headers(headers).body(pdf);
-        } catch (UnsupportedOperationException e) {
-            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
         } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.badRequest().body(ApiResponse.erro("Erro ao gerar DANFE: " + e.getMessage()));
         }
     }
 
     // =====================================================================
     // ÁREA DO CONTADOR
     // =====================================================================
-
     @GetMapping("/exportar/xml-mensal")
-    public ResponseEntity<byte[]> exportarXmlsMensal(
+    public ResponseEntity<Object> exportarXmlsMensal(
             @RequestParam Long empresaId,
-            @RequestParam String periodo // formato: yyyy-MM
+            @RequestParam String periodo
     ) {
         try {
             YearMonth ym = YearMonth.parse(periodo);
@@ -155,12 +152,14 @@ public class NotaFiscalController {
                     .filename("xmls-" + periodo + ".zip").build());
             return ResponseEntity.ok().headers(headers).body(zip);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            // Agora devolvemos o JSON de erro!
+            String msg = e.getMessage() != null ? e.getMessage() : "Nenhuma nota encontrada para o período selecionado.";
+            return ResponseEntity.badRequest().body(ApiResponse.erro(msg));
         }
     }
 
     @GetMapping("/exportar/sped")
-    public ResponseEntity<byte[]> exportarSped(
+    public ResponseEntity<Object> exportarSped(
             @RequestParam Long empresaId,
             @RequestParam String periodo,
             @RequestParam String tipo
@@ -173,15 +172,18 @@ public class NotaFiscalController {
             headers.setContentDisposition(ContentDisposition.attachment()
                     .filename("sped-" + tipo + "-" + periodo + ".txt").build());
             return ResponseEntity.ok().headers(headers).body(sped);
+        } catch (UnsupportedOperationException | java.lang.AbstractMethodError e) {
+            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                    .body(ApiResponse.erro("O módulo de SPED Fiscal será liberado na próxima atualização."));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.erro("Erro ao gerar SPED: " + e.getMessage()));
         }
     }
 
     // =====================================================================
     // CERTIFICADO DIGITAL
     // =====================================================================
-
     @PostMapping("/certificado/{empresaId}")
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadCertificado(
             @PathVariable Long empresaId,

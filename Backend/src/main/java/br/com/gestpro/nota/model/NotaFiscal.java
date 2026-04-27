@@ -11,15 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Entidade principal do módulo fiscal. Representa qualquer documento fiscal
- * eletrônico emitido pelo sistema (NF-e modelo 55, NFC-e modelo 65 e NFS-e).
- *
- * Usa Lombok (@Getter/@Setter/@Builder) para reduzir boilerplate.
- * Os métodos de ciclo de vida JPA (@PrePersist/@PreUpdate) e os helpers
- * bidirecionais da lista de itens são mantidos manualmente para garantir
- * comportamento previsível que o Lombok não cobre.
- */
+
 @Entity
 @Table(name = "notas_fiscais", indexes = {
         @Index(name = "idx_empresa_tipo_numero", columnList = "empresa_id, tipo, numero_nota"),
@@ -58,7 +50,7 @@ public class NotaFiscal {
     private TipoNota tipo;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 50)
     private NotaFiscalStatus status;
 
     // ── Numeração SEFAZ ──────────────────────────────────────────────────────
@@ -132,7 +124,8 @@ public class NotaFiscal {
     private String xmlRetorno;
 
     /** XML assinado + protocolo de autorização embutido (o documento fiscal válido). */
-    @Column(name = "xml_autorizado", columnDefinition = "TEXT")
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
     private String xmlAutorizado;
 
     @Column(name = "danfe_pdf_path", length = 500)
