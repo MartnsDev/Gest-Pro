@@ -13,12 +13,16 @@ import br.com.gestpro.produto.repository.ProdutoRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -33,13 +37,22 @@ public class MarketplaceConnectionService {
     private final MarketplaceProductLinkRepository linkRepository;
     private final EmpresaRepository empresaRepository;
     private final ProdutoRepository produtoRepository;
+    private final WebClient.Builder webClientBuilder;
 
-    // ─── Conexões ──────────────────────────────────────────────────────────────
+    @Value("${shopee.partner.id}")
+    private String shopeePartnerId;
 
-    /**
-     * Salva ou atualiza as credenciais de um marketplace para uma empresa.
-     * Se já existir uma conexão (mesmo marketplace + empresa), ela é atualizada.
-     */
+    @Value("${shopee.partner.key}")
+    private String shopeePartnerKey;
+
+    @Value("${mercadolivre.client.id}")
+    private String mlClientId;
+
+    @Value("${mercadolivre.client.secret}")
+    private String mlClientSecret;
+
+    // ─── Conexões ────────────────────────────────────────────────────────────────
+
     @Transactional
     public MarketplaceConnection conectar(
             Long empresaId,
@@ -75,9 +88,6 @@ public class MarketplaceConnectionService {
         return salva;
     }
 
-    /**
-     * Desativa a conexão (soft delete) — não apaga os vínculos de produto.
-     */
     @Transactional
     public void desconectar(Long empresaId, String emailUsuario, CanalVenda marketplace) {
         validarMarketplaceSuportado(marketplace);
@@ -99,11 +109,8 @@ public class MarketplaceConnectionService {
         return connectionRepository.findByEmpresaIdAndActiveTrue(empresaId);
     }
 
-    // ─── Vínculos produto ↔ anúncio ───────────────────────────────────────────
+    // ─── Vínculos produto ↔ anúncio ──────────────────────────────────────────────
 
-    /**
-     * Cria ou atualiza o vínculo entre um produto interno e um anúncio do marketplace.
-     */
     @Transactional
     public MarketplaceProductLink vincularProduto(
             Long empresaId,
@@ -116,13 +123,18 @@ public class MarketplaceConnectionService {
         validarMarketplaceSuportado(marketplace);
         buscarEmpresaComPermissao(empresaId, emailUsuario);
 
+        connectionRepository
+                .findByEmpresaIdAndMarketplaceAndActiveTrue(empresaId, marketplace)
+                .orElseThrow(() -> new ApiException(
+                        "Conecte o marketplace " + marketplace.name() + " antes de vincular produtos.",
+                        HttpStatus.UNPROCESSABLE_ENTITY, PATH));
+
         Produto produto = produtoRepository.findById(produtoId)
                 .orElseThrow(() -> new ApiException("Produto não encontrado", HttpStatus.NOT_FOUND, PATH));
 
         if (!produto.getEmpresa().getId().equals(empresaId))
             throw new ApiException("Produto não pertence a esta empresa.", HttpStatus.FORBIDDEN, PATH);
 
-        // Se já existe um vínculo para este anúncio, atualiza
         MarketplaceProductLink link = linkRepository
                 .findByMarketplaceAndAnuncioId(marketplace, anuncioId)
                 .orElseGet(MarketplaceProductLink::new);
@@ -153,7 +165,112 @@ public class MarketplaceConnectionService {
         return linkRepository.findByMarketplaceAndProduto_Empresa_Id(marketplace, empresaId);
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
+    // ─── OAuth callbacks ──────────────────────────────────────────────────────────
+
+    /**
+     * Shopee: troca o authorization code pelo access_token via HMAC auth.
+     * Documentação: https://open.shopee.com/documents?module=87&type=2&id=58
+     */
+    @Transactional
+    public void processarCallbackShopee(Long empresaId, String code, String shopId) {
+        log.info("Processando callback Shopee: empresaId={} shopId={}", empresaId, shopId);
+
+        Map<String, Object> body = Map.of(
+                "code", code,
+                "shop_id", Long.parseLong(shopId),
+                "partner_id", Long.parseLong(shopeePartnerId)
+        );
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resposta = webClientBuilder.build()
+                .post()
+                .uri("https://partner.shopeemobile.com/api/v2/auth/token/get")
+                .header("Authorization", "Bearer " + shopeePartnerKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+
+        if (resposta == null || resposta.containsKey("error")) {
+            String erro = resposta != null ? String.valueOf(resposta.get("message")) : "resposta nula";
+            log.error("Shopee retornou erro no callback: {}", erro);
+            throw new ApiException("Falha ao obter token Shopee: " + erro, HttpStatus.BAD_GATEWAY, PATH);
+        }
+
+        String accessToken  = String.valueOf(resposta.get("access_token"));
+        String refreshToken = String.valueOf(resposta.get("refresh_token"));
+        Long   expiresIn    = resposta.get("expire_in") != null
+                ? ((Number) resposta.get("expire_in")).longValue() : null;
+
+        salvarConexao(empresaId, CanalVenda.SHOPEE, shopId, accessToken, refreshToken, expiresIn);
+        log.info("Conexão Shopee salva: empresaId={} shopId={}", empresaId, shopId);
+    }
+
+    /**
+     * Mercado Livre: troca o authorization code pelo access_token via OAuth 2.0 padrão.
+     * Documentação: https://developers.mercadolivre.com.br/pt_br/autenticacao-e-autorizacao
+     *
+     * @param redirectUri deve ser idêntica à cadastrada no painel do app ML.
+     */
+    @Transactional
+    public void processarCallbackMercadoLivre(Long empresaId, String code, String redirectUri) {
+        log.info("Processando callback Mercado Livre: empresaId={}", empresaId);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resposta = webClientBuilder.build()
+                .post()
+                .uri("https://api.mercadolibre.com/oauth/token")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .bodyValue("grant_type=authorization_code"
+                        + "&client_id=" + mlClientId
+                        + "&client_secret=" + mlClientSecret
+                        + "&code=" + code
+                        + "&redirect_uri=" + redirectUri)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+
+        if (resposta == null || resposta.containsKey("error")) {
+            String erro = resposta != null ? String.valueOf(resposta.get("message")) : "resposta nula";
+            log.error("Mercado Livre retornou erro no callback: {}", erro);
+            throw new ApiException("Falha ao obter token Mercado Livre: " + erro, HttpStatus.BAD_GATEWAY, PATH);
+        }
+
+        String accessToken  = String.valueOf(resposta.get("access_token"));
+        String refreshToken = String.valueOf(resposta.get("refresh_token"));
+        String sellerId     = String.valueOf(resposta.get("user_id"));
+        Long   expiresIn    = resposta.get("expires_in") != null
+                ? ((Number) resposta.get("expires_in")).longValue() : null;
+
+        salvarConexao(empresaId, CanalVenda.MERCADO_LIVRE, sellerId, accessToken, refreshToken, expiresIn);
+        log.info("Conexão Mercado Livre salva: empresaId={} sellerId={}", empresaId, sellerId);
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+    private void salvarConexao(Long empresaId, CanalVenda marketplace, String sellerId,
+                               String accessToken, String refreshToken, Long expiresIn) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new ApiException("Empresa não encontrada", HttpStatus.NOT_FOUND, PATH));
+
+        MarketplaceConnection conn = connectionRepository
+                .findByEmpresaIdAndMarketplaceAndActiveTrue(empresaId, marketplace)
+                .orElseGet(() -> {
+                    MarketplaceConnection nova = new MarketplaceConnection();
+                    nova.setEmpresa(empresa);
+                    nova.setMarketplace(marketplace);
+                    return nova;
+                });
+
+        conn.setSellerId(sellerId);
+        conn.setAccessToken(accessToken);
+        conn.setRefreshToken(refreshToken);
+        conn.setTokenExpiresAt(expiresIn != null ? LocalDateTime.now().plusSeconds(expiresIn) : null);
+        conn.setActive(true);
+
+        connectionRepository.save(conn);
+    }
 
     private Empresa buscarEmpresaComPermissao(Long empresaId, String emailUsuario) {
         Empresa empresa = empresaRepository.findById(empresaId)

@@ -9,7 +9,7 @@ import {
   DollarSign, CreditCard, ShoppingBag, Truck, CheckCircle2,
   Clock, Ban, Edit2, Package, Trash2, AlertTriangle,
   Tag, MapPin, Wallet, ChevronDown, Link2, Link2Off,
-  Zap, Star, RefreshCw, TrendingUp
+  Zap, Star, RefreshCw, TrendingUp, Lock
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -55,23 +55,51 @@ const FORMAS: {value:FormaPagamento;label:string;icon:React.ReactNode}[] = [
 ];
 
 const CANAIS: { value: CanalVenda; label: string; icon: React.ReactNode }[] = [
-  { value: "WHATSAPP", label: "WhatsApp", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/whatsapp.svg" alt="WPP" width={14} height={14} /> },
-  { value: "INSTAGRAM", label: "Instagram", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/instagram.svg" alt="IG" width={14} height={14} /> },
-  { value: "MERCADO_LIVRE", label: "Mercado Livre", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/mercadolivre.svg" alt="ML" width={14} height={14} /> },
-  { value: "SHOPEE", label: "Shopee", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/shopee.svg" alt="Shopee" width={14} height={14} /> },
-  { value: "IFOOD", label: "iFood", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/ifood.svg" alt="iFood" width={14} height={14} /> },
-  { value: "TELEFONE", label: "Telefone", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/call.svg" alt="Tel" width={14} height={14} /> },
-  { value: "OUTRO", label: "Outro", icon: <Package size={14} /> }, 
+  { value: "WHATSAPP",     label: "WhatsApp",     icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/whatsapp.svg"      alt="WPP"    width={14} height={14}/> },
+  { value: "INSTAGRAM",    label: "Instagram",    icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/instagram.svg"     alt="IG"     width={14} height={14}/> },
+  { value: "MERCADO_LIVRE",label: "Mercado Livre",icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/mercadolivre.svg"  alt="ML"     width={14} height={14}/> },
+  { value: "SHOPEE",       label: "Shopee",       icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/shopee.svg"        alt="Shopee" width={14} height={14}/> },
+  { value: "IFOOD",        label: "iFood",        icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/ifood.svg"         alt="iFood"  width={14} height={14}/> },
+  { value: "TELEFONE",     label: "Telefone",     icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/call.svg"          alt="Tel"    width={14} height={14}/> },
+  { value: "OUTRO",        label: "Outro",        icon: <Package size={14}/> },
 ];
 
 const FORMA_LABEL: Record<string,string> = {
-  PIX:"Pix",DINHEIRO:"Dinheiro",CARTAO_DEBITO:"Débito",CARTAO_CREDITO:"Crédito",
+  PIX:"Pix", DINHEIRO:"Dinheiro", CARTAO_DEBITO:"Débito", CARTAO_CREDITO:"Crédito",
 };
 
 const MARKETPLACE_META: Record<MarketplaceKey,{label:string;icon:React.ReactNode;color:string;bg:string;border:string}> = {
-  SHOPEE:        {label:"Shopee",        icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/shopee.svg" alt="Shopee" width={22} height={22} />, color:"#993C1D", bg:"#FAECE7", border:"#F0997B"},
-  MERCADO_LIVRE: {label:"Mercado Livre", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/mercadolivre.svg" alt="ML" width={22} height={22} />, color:"#854F0B", bg:"#FAEEDA", border:"#EF9F27"},
+  SHOPEE:        {label:"Shopee",        icon:<img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/shopee.svg"       alt="Shopee" width={22} height={22}/>, color:"#993C1D", bg:"#FAECE7", border:"#F0997B"},
+  MERCADO_LIVRE: {label:"Mercado Livre", icon:<img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/mercadolivre.svg" alt="ML"     width={22} height={22}/>, color:"#854F0B", bg:"#FAEEDA", border:"#EF9F27"},
 };
+
+/* ─── URLs OAuth ─────────────────────────────────────────────────────────── */
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
+
+/**
+ * Monta a URL de autorização OAuth de cada marketplace.
+ * O `state` carrega o empresaId para o backend identificar no callback.
+ *
+ * Shopee:        https://partner.shopeemobile.com/api/v2/shop/auth_partner
+ * Mercado Livre: https://auth.mercadolivre.com.br/authorization
+ */
+function buildOAuthUrl(marketplace: MarketplaceKey, empresaId: number): string {
+  const callbackBase = `${API_URL}/api/v1/marketplace/callback`;
+  const state        = `empresaId=${empresaId}`;
+
+  if (marketplace === "SHOPEE") {
+    // Shopee exige partner_id e redirect_url na query string.
+    // O partner_id é público — pode ficar no env do frontend.
+    const partnerId   = process.env.NEXT_PUBLIC_SHOPEE_PARTNER_ID ?? "";
+    const redirectUrl = encodeURIComponent(`${callbackBase}/shopee`);
+    return `https://partner.shopeemobile.com/api/v2/shop/auth_partner?partner_id=${partnerId}&redirect=${redirectUrl}&state=${state}`;
+  }
+
+  // Mercado Livre
+  const clientId     = process.env.NEXT_PUBLIC_ML_CLIENT_ID ?? "";
+  const redirectUri  = encodeURIComponent(`${callbackBase}/mercadolivre`);
+  return `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
+}
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?:number|null) =>
@@ -91,7 +119,7 @@ async function fetchAuth<T>(path:string,opts?:RequestInit):Promise<T> {
     ?sessionStorage.getItem("jwt_token")??document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1]??null:null
     )??"";
   const res=await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL??"https://gestpro-backend-production.up.railway.app"}${path}`,
+    `${API_URL}${path}`,
     {credentials:"include",headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})}, ...opts},
   );
   if(!res.ok){const e=await res.json().catch(()=>null);throw new Error(e?.mensagem??`Erro ${res.status}`);}
@@ -112,7 +140,7 @@ function StatusBadge({status}:{status:string}) {
 }
 function CanalBadge({canal}:{canal:string}) {
   const m=CANAIS.find(c=>c.value===canal)??{label:canal,icon:<Package size={12}/>};
-  return <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,fontWeight:500,background:"var(--surface-overlay)",color:"var(--foreground-muted)",border:"1px solid var(--border)", display: "inline-flex", alignItems: "center", gap: 4}}>{m.icon} {m.label}</span>;
+  return <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,fontWeight:500,background:"var(--surface-overlay)",color:"var(--foreground-muted)",border:"1px solid var(--border)",display:"inline-flex",alignItems:"center",gap:4}}>{m.icon} {m.label}</span>;
 }
 function AutoBadge() {
   return (
@@ -197,76 +225,57 @@ function ModalConfirmarExclusao({titulo,descricao,onConfirmar,onCancelar,confirm
 }
 
 /* ─── ModalConectarMarketplace ───────────────────────────────────────────── */
-function ModalConectarMarketplace({empresaId,marketplace,onClose,onSucesso}:{
-  empresaId:number; marketplace:MarketplaceKey;
-  onClose:()=>void; onSucesso:(c:MarketplaceConnection)=>void;
+/**
+ * Redireciona o lojista para a página oficial de autorização OAuth do marketplace.
+ * O backend recebe o callback em:
+ *   Shopee:        GET /api/v1/marketplace/callback/shopee?code=...&shop_id=...&state=empresaId=X
+ *   Mercado Livre: GET /api/v1/marketplace/callback/mercadolivre?code=...&state=empresaId=X
+ * Após salvar o token, o backend redireciona para o frontend com ?sucesso=true ou ?erro=...
+ */
+function ModalConectarMarketplace({empresaId,marketplace,onClose}:{
+  empresaId:number; marketplace:MarketplaceKey; onClose:()=>void;
 }) {
   const meta = MARKETPLACE_META[marketplace];
-  const [sellerId,setSellerId]   = useState("");
-  const [accessToken,setToken]   = useState("");
-  const [salvando,setSalvando]   = useState(false);
 
-  const conectar = async () => {
-    if(!sellerId.trim()||!accessToken.trim()){
-      toast.error("Preencha todos os campos."); return;
-    }
-    setSalvando(true);
-    try {
-      const conn = await fetchAuth<MarketplaceConnection>(
-        `/api/v1/marketplace/empresa/${empresaId}/conectar`,
-        { method:"POST", body:JSON.stringify({ marketplace, sellerId, accessToken, expiresInSeconds: marketplace==="MERCADO_LIVRE"?21600:null }) }
-      );
-      onSucesso(conn);
-      toast.success(`${meta.label} conectado com sucesso!`);
-      onClose();
-    } catch(e:any){ toast.error(e.message); }
-    finally{ setSalvando(false); }
+  const irParaOAuth = () => {
+    const url = buildOAuthUrl(marketplace, empresaId);
+    // Redireciona na mesma aba — o backend devolve para /dashboard/pedidos?sucesso=true
+    window.location.href = url;
   };
 
   return (
-   <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}}
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:14,padding:28,width:"100%",maxWidth:440}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 24 }}>
-              {meta.icon}
-            </span>
+            <span style={{display:"flex",alignItems:"center",justifyContent:"center",width:24}}>{meta.icon}</span>
             <div>
               <h3 style={{fontSize:15,fontWeight:700,color:"var(--foreground)",margin:0}}>Conectar {meta.label}</h3>
-              <p style={{fontSize:12,color:"var(--foreground-muted)",margin:0}}>Cole as credenciais do painel de desenvolvedor</p>
+              <p style={{fontSize:12,color:"var(--foreground-muted)",margin:0}}>Integração segura via OAuth</p>
             </div>
           </div>
           <button onClick={onClose} style={{...btnG,padding:6,border:"none"}}><X size={16}/></button>
         </div>
 
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <div>
-            <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>
-              {marketplace==="SHOPEE"?"Shop ID":"Seller ID"}
-            </label>
-            <input style={inp} value={sellerId} onChange={e=>setSellerId(e.target.value)}
-              placeholder={marketplace==="SHOPEE"?"Ex: 123456789":"Ex: 987654321"}/>
-          </div>
-          <div>
-            <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Access Token</label>
-            <input style={inp} value={accessToken} onChange={e=>setToken(e.target.value)}
-              placeholder="Cole o token de acesso aqui..." type="password"/>
-          </div>
-
-          <div style={{padding:"10px 12px",background:"var(--surface-overlay)",borderRadius:8,fontSize:12,color:"var(--foreground-muted)",lineHeight:1.6}}>
-            {marketplace==="SHOPEE"
-              ? <>Acesse <a href="https://open.shopee.com" target="_blank" rel="noopener noreferrer" style={{color:"var(--primary)", fontWeight:600, textDecoration:"none"}}>open.shopee.com</a> → Meu App → credenciais para obter o Shop ID e Access Token.</>
-              : <>Acesse <a href="https://developers.mercadolivre.com.br" target="_blank" rel="noopener noreferrer" style={{color:"var(--primary)", fontWeight:600, textDecoration:"none"}}>developers.mercadolivre.com.br</a> → Meu App → OAuth para obter o Seller ID e token.</>
-            }
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div style={{padding:16,background:"var(--surface-overlay)",border:"1px solid var(--border-subtle)",borderRadius:10,fontSize:13,color:"var(--foreground-muted)",lineHeight:1.6}}>
+            <p style={{fontWeight:600,color:"var(--foreground)",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+              <Lock size={14} color="var(--primary)"/> Como funciona:
+            </p>
+            <ol style={{margin:0,paddingLeft:18,display:"flex",flexDirection:"column",gap:8}}>
+              <li>Você será redirecionado para a página oficial da <strong>{meta.label}</strong>.</li>
+              <li>Faça login na sua conta de lojista.</li>
+              <li>Clique em <strong>"Autorizar"</strong> quando solicitado.</li>
+              <li>Você voltará automaticamente ao GestPro com a conta conectada.</li>
+            </ol>
           </div>
 
           <div style={{display:"flex",gap:8,marginTop:4}}>
             <button onClick={onClose} style={{...btnG,flex:1,justifyContent:"center"}}>Cancelar</button>
-            <button onClick={conectar} disabled={salvando||!sellerId||!accessToken}
-              style={{...btnP,flex:2,justifyContent:"center",opacity:salvando||!sellerId||!accessToken?0.6:1}}>
-              {salvando?<><RefreshCw size={13} style={{animation:"spin 1s linear infinite"}}/> Conectando...</>
-                :<><Link2 size={14}/> Conectar {meta.label}</>}
+            <button onClick={irParaOAuth}
+              style={{...btnP,flex:2,justifyContent:"center",background:meta.color}}>
+              <Link2 size={14}/> Autorizar no {meta.label}
             </button>
           </div>
         </div>
@@ -281,12 +290,12 @@ function ModalVincularProduto({empresaId,marketplace,onClose,onSucesso}:{
   onClose:()=>void; onSucesso:(l:MarketplaceProductLink)=>void;
 }) {
   const meta = MARKETPLACE_META[marketplace];
-  const [produtos,setProdutos]   = useState<Produto[]>([]);
-  const [busca,setBusca]         = useState("");
-  const [produtoId,setProdutoId] = useState<number|null>(null);
-  const [anuncioId,setAnuncioId] = useState("");
-  const [anuncioTitulo,setTitulo]= useState("");
-  const [salvando,setSalvando]   = useState(false);
+  const [produtos,setProdutos]    = useState<Produto[]>([]);
+  const [busca,setBusca]          = useState("");
+  const [produtoId,setProdutoId]  = useState<number|null>(null);
+  const [anuncioId,setAnuncioId]  = useState("");
+  const [anuncioTitulo,setTitulo] = useState("");
+  const [salvando,setSalvando]    = useState(false);
 
   useEffect(()=>{
     fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`)
@@ -319,7 +328,7 @@ function ModalVincularProduto({empresaId,marketplace,onClose,onSucesso}:{
       <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:14,width:"100%",maxWidth:520,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 20px",borderBottom:"1px solid var(--border)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <span style={{ display:"flex", alignItems:"center", width: 24 }}>{meta.icon}</span>
+            <span style={{display:"flex",alignItems:"center",width:24}}>{meta.icon}</span>
             <h3 style={{fontSize:15,fontWeight:700,color:"var(--foreground)",margin:0}}>Vincular produto — {meta.label}</h3>
           </div>
           <button onClick={onClose} style={{...btnG,padding:6,border:"none"}}><X size={16}/></button>
@@ -363,8 +372,8 @@ function ModalVincularProduto({empresaId,marketplace,onClose,onSucesso}:{
             <div style={{padding:"10px 12px",background:"var(--surface-overlay)",borderRadius:8,fontSize:12,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
               <span style={{color:"var(--foreground-muted)"}}>{produtoSelecionado.nome}</span>
               <Link2 size={12} color="var(--primary)"/>
-              <span style={{color:"var(--foreground-muted)", display: "flex", alignItems: "center", gap: 6}}>
-                {React.cloneElement(meta.icon as React.ReactElement, { width: 14, height: 14 })} {anuncioId}
+              <span style={{color:"var(--foreground-muted)",display:"flex",alignItems:"center",gap:6}}>
+                {React.cloneElement(meta.icon as React.ReactElement,{width:14,height:14})} {anuncioId}
               </span>
             </div>
           )}
@@ -386,85 +395,47 @@ function ModalVincularProduto({empresaId,marketplace,onClose,onSucesso}:{
 function SecaoPremiumLock() {
   return (
     <div className="animate-fade-in" style={{display:"flex",flexDirection:"column",gap:0,borderRadius:14,overflow:"hidden",border:"1px solid var(--border)"}}>
-
-      {/* ── Hero banner ── */}
-      <div style={{
-        position:"relative",padding:"44px 32px 36px",
-        background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",
-        overflow:"hidden",textAlign:"center",
-      }}>
-        {/* Glow blobs */}
+      <div style={{position:"relative",padding:"44px 32px 36px",background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",overflow:"hidden",textAlign:"center"}}>
         <div style={{position:"absolute",top:-40,left:-40,width:180,height:180,borderRadius:"50%",background:"rgba(255,111,0,0.18)",filter:"blur(48px)",pointerEvents:"none"}}/>
         <div style={{position:"absolute",bottom:-40,right:-40,width:180,height:180,borderRadius:"50%",background:"rgba(234,179,8,0.15)",filter:"blur(48px)",pointerEvents:"none"}}/>
         <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:320,height:320,borderRadius:"50%",background:"rgba(59,130,246,0.07)",filter:"blur(60px)",pointerEvents:"none"}}/>
-
-        {/* Logos dos marketplaces */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16,marginBottom:24,position:"relative",zIndex:1}}>
-          
-          {/* ML logo */}
-          <div style={{
-            width:64,height:64,borderRadius:14,overflow:"hidden",
-            background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",
-            boxShadow:"0 8px 24px rgba(0,0,0,0.4)",
-            border:"2px solid rgba(255,255,255,0.15)",
-          }}>
-            <img
-              src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/mercadolivre.svg"
-              alt="Mercado Livre"
-              style={{width:40,height:40}}
-            />
+          <div style={{width:64,height:64,borderRadius:14,overflow:"hidden",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 8px 24px rgba(0,0,0,0.4)",border:"2px solid rgba(255,255,255,0.15)"}}>
+            <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/mercadolivre.svg" alt="Mercado Livre" style={{width:40,height:40}}/>
           </div>
-
-          {/* Conector animado */}
           <div style={{display:"flex",alignItems:"center",gap:4,position:"relative"}}>
             <div style={{width:8,height:8,borderRadius:"50%",background:"rgba(255,255,255,0.3)"}}/>
             <div style={{width:24,height:2,background:"linear-gradient(90deg,rgba(255,255,255,0.15),rgba(255,255,255,0.5),rgba(255,255,255,0.15))",borderRadius:2}}/>
-            <div style={{width:24,height:24,borderRadius:"50%",background:"linear-gradient(135deg,#FACC15,#F59E0B)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,boxShadow:"0 0 16px rgba(250,204,21,0.5)", color: "#000"}}>
+            <div style={{width:24,height:24,borderRadius:"50%",background:"linear-gradient(135deg,#FACC15,#F59E0B)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,boxShadow:"0 0 16px rgba(250,204,21,0.5)",color:"#000"}}>
               <Zap size={14}/>
             </div>
             <div style={{width:24,height:2,background:"linear-gradient(90deg,rgba(255,255,255,0.15),rgba(255,255,255,0.5),rgba(255,255,255,0.15))",borderRadius:2}}/>
             <div style={{width:8,height:8,borderRadius:"50%",background:"rgba(255,255,255,0.3)"}}/>
           </div>
-
-          {/* Shopee logo */}
-          <div style={{
-            width:64,height:64,borderRadius:14,overflow:"hidden",
-            background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",
-            boxShadow:"0 8px 24px rgba(0,0,0,0.4)",
-            border:"2px solid rgba(255,255,255,0.15)",
-          }}>
-            <img
-              src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/shopee.svg"
-              alt="Shopee"
-              style={{width:40,height:40}}
-            />
+          <div style={{width:64,height:64,borderRadius:14,overflow:"hidden",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 8px 24px rgba(0,0,0,0.4)",border:"2px solid rgba(255,255,255,0.15)"}}>
+            <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/shopee.svg" alt="Shopee" style={{width:40,height:40}}/>
           </div>
         </div>
-
-        {/* Badge premium */}
         <div style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 12px",borderRadius:99,background:"rgba(250,204,21,0.15)",border:"1px solid rgba(250,204,21,0.35)",marginBottom:12,position:"relative",zIndex:1}}>
           <span style={{fontSize:11,color:"#FACC15",fontWeight:700,letterSpacing:".04em"}}>★ RECURSO PREMIUM</span>
         </div>
-
         <h2 style={{fontSize:22,fontWeight:800,color:"#fff",margin:"0 0 10px",lineHeight:1.2,position:"relative",zIndex:1}}>
           Venda em todo lugar,<br/>
           <span style={{background:"linear-gradient(90deg,#FACC15,#F97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>gerencie em um só lugar</span>
         </h2>
         <p style={{fontSize:13,color:"rgba(255,255,255,0.6)",margin:0,lineHeight:1.6,maxWidth:400,marginLeft:"auto",marginRight:"auto",position:"relative",zIndex:1}}>
-          Conecte Shopee e Mercado Livre ao GestPro e esqueça o trabalho manual. Cada venda entra automaticamente no sistema.
+          Conecte Shopee e Mercado Livre ao GestPro e esqueça o trabalho manual.
         </p>
       </div>
-
-      {/* ── Cards de benefícios ── */}
       <div style={{padding:"24px 24px 0",background:"var(--surface-elevated)"}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           {[
-            {icon:<Package size={22} color="var(--primary)"/>, title:"Estoque automático",desc:"Cada venda debita o estoque sem você tocar em nada"},
-            {icon:<TrendingUp size={22} color="#3b82f6"/>, title:"Lucro em tempo real",desc:"Faturamento e margens calculados na hora da venda"},
-            {icon:<Zap size={22} color="#eab308"/>, title:"Zero digitação",desc:"Pedidos entram com todos os dados preenchidos"},
-            {icon:<Link2 size={22} color="#8b5cf6"/>, title:"Multi-canal",desc:"Shopee, Mercado Livre e vendas manuais no mesmo painel"},
+            {icon:<Package size={22} color="var(--primary)"/>,title:"Estoque automático",desc:"Cada venda debita o estoque sem você tocar em nada"},
+            {icon:<TrendingUp size={22} color="#3b82f6"/>,title:"Lucro em tempo real",desc:"Faturamento e margens calculados na hora da venda"},
+            {icon:<Zap size={22} color="#eab308"/>,title:"Zero digitação",desc:"Pedidos entram com todos os dados preenchidos"},
+            {icon:<Link2 size={22} color="#8b5cf6"/>,title:"Multi-canal",desc:"Shopee, Mercado Livre e vendas manuais no mesmo painel"},
           ].map((b,i)=>(
-            <div key={i} style={{padding:"14px 14px",background:"var(--surface-overlay)",borderRadius:10,border:"1px solid var(--border-subtle)"}}>
+            <div key={i} style={{padding:"14px",background:"var(--surface-overlay)",borderRadius:10,border:"1px solid var(--border-subtle)"}}>
               <div style={{marginBottom:10}}>{b.icon}</div>
               <p style={{fontSize:12,fontWeight:700,color:"var(--foreground)",margin:"0 0 3px"}}>{b.title}</p>
               <p style={{fontSize:11,color:"var(--foreground-muted)",margin:0,lineHeight:1.5}}>{b.desc}</p>
@@ -472,64 +443,49 @@ function SecaoPremiumLock() {
           ))}
         </div>
       </div>
-
-      {/* ── Como funciona (mini steps) ── */}
-      <div style={{padding:"20px 24px 0",background:"var(--surface-elevated)"}}>
-        <p style={{fontSize:10,fontWeight:700,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".08em",margin:"0 0 12px"}}>Como funciona</p>
-        <div style={{display:"flex",gap:0,position:"relative"}}>
-          <div style={{position:"absolute",top:16,left:16,right:16,height:2,background:"linear-gradient(90deg,var(--primary),rgba(16,185,129,0.2))",zIndex:0}}/>
-          {[
-            {n:"1",label:"Conecta sua conta"},
-            {n:"2",label:"Vincula os produtos"},
-            {n:"3",label:"Vende nos marketplaces"},
-            {n:"4",label:"GestPro faz o resto"},
-          ].map((s,i)=>(
-            <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:6,position:"relative",zIndex:1}}>
-              <div style={{width:32,height:32,borderRadius:"50%",background:i===3?"var(--primary)":"var(--surface-elevated)",border:`2px solid ${i===3?"var(--primary)":"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:i===3?"#000":"var(--foreground-muted)"}}>
-                {i===3?<Check size={16} strokeWidth={3}/>:s.n}
-              </div>
-              <p style={{fontSize:10,color:"var(--foreground-muted)",textAlign:"center",margin:0,lineHeight:1.4,maxWidth:60}}>{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── CTA ── */}
       <div style={{padding:"24px",background:"var(--surface-elevated)",display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
-        <Link href="/dashboard/planos" style={{
-          display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,
-          width:"100%",maxWidth:320,padding:"13px 0",
-          background:"linear-gradient(135deg,#FACC15,#F97316)",
-          border:"none",borderRadius:10,
-          color:"#7C2D00",fontSize:14,fontWeight:800,
-          cursor:"pointer",textDecoration:"none",
-          boxShadow:"0 6px 20px rgba(249,115,22,0.4)",
-          transition:"transform .15s, box-shadow .15s",
-        }}
+        <Link href="/dashboard/planos" style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,width:"100%",maxWidth:320,padding:"13px 0",background:"linear-gradient(135deg,#FACC15,#F97316)",border:"none",borderRadius:10,color:"#7C2D00",fontSize:14,fontWeight:800,cursor:"pointer",textDecoration:"none",boxShadow:"0 6px 20px rgba(249,115,22,0.4)",transition:"transform .15s, box-shadow .15s"}}
           onMouseEnter={e=>{(e.currentTarget as HTMLAnchorElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLAnchorElement).style.boxShadow="0 8px 24px rgba(249,115,22,0.5)";}}
           onMouseLeave={e=>{(e.currentTarget as HTMLAnchorElement).style.transform="translateY(0)";(e.currentTarget as HTMLAnchorElement).style.boxShadow="0 6px 20px rgba(249,115,22,0.4)";}}
         >
-          <Star size={16} style={{fill: "#7C2D00"}}/> Assinar Premium agora
+          <Star size={16} style={{fill:"#7C2D00"}}/> Assinar Premium agora
         </Link>
         <p style={{fontSize:11,color:"var(--foreground-subtle)",margin:0,textAlign:"center"}}>
           Shopee e Mercado Livre incluídos em todos os planos Premium
         </p>
       </div>
-
     </div>
   );
 }
 
 /* ─── SecaoIntegracoes ───────────────────────────────────────────────────── */
+/**
+ * Detecta retorno OAuth via query string (?sucesso=true ou ?erro=...) e exibe toast.
+ * Isso é necessário porque o backend redireciona para /dashboard/pedidos após o callback.
+ */
 function SecaoIntegracoes({empresaId}:{empresaId:number}) {
-  const [conexoes,setConexoes]         = useState<MarketplaceConnection[]>([]);
-  const [vinculos,setVinculos]         = useState<MarketplaceProductLink[]>([]);
-  const [loading,setLoading]           = useState(true);
-  const [modalConectar,setModalConectar]   = useState<MarketplaceKey|null>(null);
-  const [modalVincular,setModalVincular]   = useState<MarketplaceKey|null>(null);
-  const [desconectando,setDesconectando]   = useState<MarketplaceKey|null>(null);
-  const [confirmDesconectar,setConfirmDesc]= useState<MarketplaceKey|null>(null);
-  const [removendoVinculo,setRemovendo]    = useState<number|null>(null);
+  const [conexoes,setConexoes]           = useState<MarketplaceConnection[]>([]);
+  const [vinculos,setVinculos]           = useState<MarketplaceProductLink[]>([]);
+  const [loading,setLoading]             = useState(true);
+  const [modalConectar,setModalConectar] = useState<MarketplaceKey|null>(null);
+  const [modalVincular,setModalVincular] = useState<MarketplaceKey|null>(null);
+  const [desconectando,setDesconectando] = useState<MarketplaceKey|null>(null);
+  const [confirmDesconectar,setConfirmDesc] = useState<MarketplaceKey|null>(null);
+  const [removendoVinculo,setRemovendo]  = useState<number|null>(null);
+
+  // Detecta retorno do OAuth e exibe feedback
+  useEffect(()=>{
+    if(typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if(params.get("sucesso")==="true"){
+      toast.success("Marketplace conectado com sucesso!");
+      // Remove o query param da URL sem recarregar a página
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if(params.get("erro")){
+      toast.error("Falha na integração. Tente novamente.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  },[]);
 
   const carregarConexoes = useCallback(async()=>{
     setLoading(true);
@@ -546,7 +502,7 @@ function SecaoIntegracoes({empresaId}:{empresaId:number}) {
         }catch{}
       }
       setVinculos(allLinks);
-    }catch(e:any){toast.error("Erro ao carregar integrações");}
+    }catch{toast.error("Erro ao carregar integrações");}
     finally{setLoading(false);}
   },[empresaId]);
 
@@ -582,9 +538,7 @@ function SecaoIntegracoes({empresaId}:{empresaId:number}) {
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <Zap size={15} color="var(--primary)"/>
             <span style={{fontSize:14,fontWeight:700,color:"var(--foreground)"}}>Integrações</span>
-            <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:"rgba(234,179,8,0.15)",color:"#854F0B",fontWeight:600,border:"1px solid rgba(234,179,8,0.3)"}}>
-              ★ Premium
-            </span>
+            <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:"rgba(234,179,8,0.15)",color:"#854F0B",fontWeight:600,border:"1px solid rgba(234,179,8,0.3)"}}>★ Premium</span>
           </div>
           <span style={{fontSize:12,color:"var(--foreground-muted)"}}>Pedidos chegam automaticamente quando você vende nos marketplaces</span>
         </div>
@@ -592,19 +546,17 @@ function SecaoIntegracoes({empresaId}:{empresaId:number}) {
         {loading
           ?<div style={{padding:24,textAlign:"center",fontSize:13,color:"var(--foreground-muted)"}}>Carregando integrações...</div>
           :<div style={{padding:16,display:"flex",flexDirection:"column",gap:12}}>
-
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               {MARKETPLACES.map(mk=>{
                 const meta  = MARKETPLACE_META[mk];
                 const conn  = conexoes.find(c=>c.marketplace===mk);
                 const ativo = !!conn?.active;
                 const links = vinculos.filter(v=>v.marketplace===mk);
-
                 return (
                   <div key={mk} style={{border:`1px solid ${ativo?meta.border:"var(--border)"}`,borderRadius:10,padding:14,background:ativo?meta.bg:"var(--surface-overlay)",transition:"all .2s"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <span style={{ display:"flex", alignItems:"center", width: 24 }}>{meta.icon}</span>
+                        <span style={{display:"flex",alignItems:"center",width:24}}>{meta.icon}</span>
                         <div>
                           <p style={{fontSize:13,fontWeight:700,color:ativo?meta.color:"var(--foreground)",margin:0}}>{meta.label}</p>
                           <p style={{fontSize:11,margin:0,display:"flex",alignItems:"center",gap:4,color:ativo?meta.color:"var(--foreground-muted)"}}>
@@ -614,7 +566,6 @@ function SecaoIntegracoes({empresaId}:{empresaId:number}) {
                         </div>
                       </div>
                     </div>
-
                     {ativo?(
                       <>
                         <div style={{fontSize:11,color:meta.color,marginBottom:10,padding:"4px 8px",background:"rgba(255,255,255,0.4)",borderRadius:6}}>
@@ -650,12 +601,11 @@ function SecaoIntegracoes({empresaId}:{empresaId:number}) {
                     const meta=MARKETPLACE_META[v.marketplace];
                     return (
                       <div key={v.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"var(--surface-overlay)",borderRadius:8,border:"1px solid var(--border-subtle)"}}>
-                        <span style={{ display:"flex", alignItems:"center", width: 16 }}>{React.cloneElement(meta.icon as React.ReactElement, { width: 14, height: 14 })}</span>
+                        <span style={{display:"flex",alignItems:"center",width:16}}>{React.cloneElement(meta.icon as React.ReactElement,{width:14,height:14})}</span>
                         <div style={{flex:1,minWidth:0}}>
                           <p style={{fontSize:12,fontWeight:500,color:"var(--foreground)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.nomeProduto}</p>
                           <p style={{fontSize:11,color:"var(--foreground-muted)",margin:"1px 0 0"}}>
-                            <Link2 size={9} style={{display:"inline",marginRight:3}}/>
-                            {v.anuncioTitulo||v.anuncioId}
+                            <Link2 size={9} style={{display:"inline",marginRight:3}}/>{v.anuncioTitulo||v.anuncioId}
                           </p>
                         </div>
                         <button onClick={()=>removerVinculo(v.id)} disabled={removendoVinculo===v.id}
@@ -677,7 +627,6 @@ function SecaoIntegracoes({empresaId}:{empresaId:number}) {
           empresaId={empresaId}
           marketplace={modalConectar}
           onClose={()=>setModalConectar(null)}
-          onSucesso={conn=>{setConexoes(prev=>[...prev.filter(c=>c.marketplace!==conn.marketplace),conn]);}}
         />
       )}
       {modalVincular&&(
@@ -850,7 +799,7 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
                   {CANAIS.map(c=>(
                     <button key={c.value} onClick={()=>setCanal(c.value as CanalVenda)} style={{padding:"6px 8px",fontSize:11,display:"flex",alignItems:"center",gap:5,background:canal===c.value?"var(--primary-muted)":"var(--surface-overlay)",border:`1px solid ${canal===c.value?"var(--primary)":"var(--border)"}`,borderRadius:7,cursor:"pointer",color:canal===c.value?"var(--primary)":"var(--foreground-muted)",fontWeight:canal===c.value?600:400}}>
-                      {c.icon} {c.label} 
+                      {c.icon} {c.label}
                     </button>
                   ))}
                 </div>
@@ -974,7 +923,6 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:50,padding:16}}
         onClick={e=>e.target===e.currentTarget&&onClose()}>
         <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:14,padding:24,width:"100%",maxWidth:460,maxHeight:"92vh",overflowY:"auto",display:"flex",flexDirection:"column",gap:14}}>
-
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
             <div>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
@@ -1143,6 +1091,13 @@ export default function Pedidos() {
 
   useEffect(()=>{carregar();},[carregar]);
 
+  // Abre a aba de integrações automaticamente se voltou do OAuth com sucesso
+  useEffect(()=>{
+    if(typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if(params.get("sucesso")==="true") setAbaAtiva("integracoes");
+  },[]);
+
   const adicionarPedido=useCallback((p:Pedido)=>{
     setPedidos(prev=>[p,...prev]);
     toast.success(`Pedido #${p.id} registrado!`);
@@ -1179,10 +1134,10 @@ export default function Pedidos() {
       ),
   [pedidos,filtroStatus,busca]);
 
-  const ativos     = pedidos.filter(p=>p.status!=="CANCELADO");
-  const totalBruto = ativos.reduce((s,p)=>s+p.valorFinal,0);
-  const pendentes  = pedidos.filter(p=>p.status==="PENDENTE").length;
-  const automaticos= pedidos.filter(p=>p.observacao?.startsWith("Pedido automático")).length;
+  const ativos      = pedidos.filter(p=>p.status!=="CANCELADO");
+  const totalBruto  = ativos.reduce((s,p)=>s+p.valorFinal,0);
+  const pendentes   = pedidos.filter(p=>p.status==="PENDENTE").length;
+  const automaticos = pedidos.filter(p=>p.observacao?.startsWith("Pedido automático")).length;
 
   if(!empresaAtiva) return(
     <div style={{padding:48,textAlign:"center",color:"var(--foreground-muted)",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
@@ -1193,8 +1148,6 @@ export default function Pedidos() {
 
   return(
     <div style={{padding:28,display:"flex",flexDirection:"column",gap:20}}>
-
-      {/* Cabeçalho */}
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
         <div>
           <h2 style={{fontSize:18,fontWeight:700,color:"var(--foreground)",margin:0}}>Pedidos</h2>
@@ -1216,7 +1169,6 @@ export default function Pedidos() {
         </div>
       </div>
 
-      {/* KPIs */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:10}}>
         {[
           {label:"Total Faturado", value:fmt(totalBruto), destaque:true},
@@ -1234,49 +1186,27 @@ export default function Pedidos() {
         ))}
       </div>
 
-      {/* Abas — Pedidos | Integrações (só premium) */}
       <div style={{display:"flex",gap:0,borderBottom:"1px solid var(--border)"}}>
-        <button onClick={()=>setAbaAtiva("pedidos")} style={{
-          padding:"8px 16px",fontSize:13,cursor:"pointer",background:"none",border:"none",
-          color:abaAtiva==="pedidos"?"var(--foreground)":"var(--foreground-muted)",
-          fontWeight:abaAtiva==="pedidos"?600:400,
-          borderBottom:abaAtiva==="pedidos"?"2px solid var(--primary)":"2px solid transparent",
-          marginBottom:-1,
-        }}>
+        <button onClick={()=>setAbaAtiva("pedidos")} style={{padding:"8px 16px",fontSize:13,cursor:"pointer",background:"none",border:"none",color:abaAtiva==="pedidos"?"var(--foreground)":"var(--foreground-muted)",fontWeight:abaAtiva==="pedidos"?600:400,borderBottom:abaAtiva==="pedidos"?"2px solid var(--primary)":"2px solid transparent",marginBottom:-1}}>
           Pedidos
         </button>
-        <button onClick={()=>setAbaAtiva("integracoes")} style={{
-          padding:"8px 16px",fontSize:13,cursor:"pointer",background:"none",border:"none",
-          color:abaAtiva==="integracoes"?"var(--foreground)":"var(--foreground-muted)",
-          fontWeight:abaAtiva==="integracoes"?600:400,
-          borderBottom:abaAtiva==="integracoes"?"2px solid var(--primary)":"2px solid transparent",
-          marginBottom:-1,
-          display:"flex",alignItems:"center",gap:6,
-        }}>
+        <button onClick={()=>setAbaAtiva("integracoes")} style={{padding:"8px 16px",fontSize:13,cursor:"pointer",background:"none",border:"none",color:abaAtiva==="integracoes"?"var(--foreground)":"var(--foreground-muted)",fontWeight:abaAtiva==="integracoes"?600:400,borderBottom:abaAtiva==="integracoes"?"2px solid var(--primary)":"2px solid transparent",marginBottom:-1,display:"flex",alignItems:"center",gap:6}}>
           <Zap size={13}/> Integrações
           {!isPremium&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:99,background:"rgba(234,179,8,0.15)",color:"#854F0B",fontWeight:600,marginLeft:2}}>Premium</span>}
         </button>
       </div>
 
-      {/* Aba: Integrações */}
       {abaAtiva==="integracoes"&&(
         isPremium
           ?<SecaoIntegracoes empresaId={empresaAtiva.id}/>
           :<SecaoPremiumLock/>
       )}
 
-      {/* Aba: Pedidos */}
       {abaAtiva==="pedidos"&&(
         <>
-          {/* Filtros + busca */}
           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
             {["TODOS",...Object.keys(STATUS_META)].map(s=>(
-              <button key={s} onClick={()=>setFiltroStatus(s)} style={{
-                padding:"5px 12px",borderRadius:99,fontSize:12,fontWeight:500,cursor:"pointer",
-                background:filtroStatus===s?"var(--primary-muted)":"transparent",
-                border:`1px solid ${filtroStatus===s?"var(--primary)":"var(--border)"}`,
-                color:filtroStatus===s?"var(--primary)":"var(--foreground-muted)",
-              }}>
+              <button key={s} onClick={()=>setFiltroStatus(s)} style={{padding:"5px 12px",borderRadius:99,fontSize:12,fontWeight:500,cursor:"pointer",background:filtroStatus===s?"var(--primary-muted)":"transparent",border:`1px solid ${filtroStatus===s?"var(--primary)":"var(--border)"}`,color:filtroStatus===s?"var(--primary)":"var(--foreground-muted)"}}>
                 {s==="TODOS"?"Todos":STATUS_META[s as StatusPedido].label}
               </button>
             ))}
@@ -1287,7 +1217,6 @@ export default function Pedidos() {
             </div>
           </div>
 
-          {/* Lista */}
           {loading
             ?<div style={{textAlign:"center",color:"var(--foreground-muted)",fontSize:13,padding:32}}>Carregando...</div>
             :pedidosFiltrados.length===0
@@ -1331,7 +1260,6 @@ export default function Pedidos() {
         </>
       )}
 
-      {/* Modais globais */}
       {modalNovo&&(
         <ModalNovoPedido empresaId={empresaAtiva.id} onClose={()=>setModalNovo(false)} onSucesso={adicionarPedido}/>
       )}

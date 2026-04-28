@@ -4,36 +4,87 @@ import br.com.gestpro.marketplace.model.MarketplaceConnection;
 import br.com.gestpro.marketplace.model.MarketplaceProductLink;
 import br.com.gestpro.marketplace.service.MarketplaceConnectionService;
 import br.com.gestpro.pedidos.CanalVenda;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
-/**
- * Endpoints de gestão de integrações (apenas usuários Premium).
- - POST   /empresa/{empresaId}/conectar            salva credenciais OAuth
- - DELETE /empresa/{empresaId}/desconectar         desativa conexão
- - GET    /empresa/{empresaId}/conexoes            lista conexões ativas
- - POST   /empresa/{empresaId}/vinculos            cria vínculo produto ↔ anúncio
- - GET    /empresa/{empresaId}/vinculos            lista vínculos (filtrado por marketplace)
- - DELETE /empresa/{empresaId}/vinculos/{linkId}   remove vínculo
- */
 @RestController
 @RequestMapping("/api/v1/marketplace")
 @RequiredArgsConstructor
 public class MarketplaceConnectionController {
 
+    private static final Logger log = LoggerFactory.getLogger(MarketplaceConnectionController.class);
+
     private final MarketplaceConnectionService service;
 
-    //Conexões
+    @Value("${app.frontend.url}")
+    private String urlFrontend;
+
+    @Value("${app.base-url}")
+    private String urlApi;
+
+    // ─── Callbacks OAuth ─────────────────────────────────────────────────────────
+
+    /**
+     * Shopee OAuth callback.
+     * painel: https://minha-api.com/api/v1/marketplace/callback/shopee
+     * state deve ter o formato: "empresaId=<id>"
+     */
+    @GetMapping("/callback/shopee")
+    public void callbackShopee(
+            @RequestParam String code,
+            @RequestParam(required = false) String shop_id,
+            @RequestParam(required = false) String state,
+            HttpServletResponse response) throws IOException {
+
+        try {
+            Long empresaId = extrairEmpresaId(state);
+            service.processarCallbackShopee(empresaId, code, shop_id);
+            response.sendRedirect(urlFrontend + "/dashboard/pedidos?sucesso=true");
+        } catch (Exception e) {
+            log.error("Erro no callback Shopee: {}", e.getMessage(), e);
+            response.sendRedirect(urlFrontend + "/dashboard/pedidos?erro=integracao_falhou");
+        }
+    }
+
+    /**
+     * Mercado Livre OAuth callback.
+     * https://minhaAPI.com/api/v1/marketplace/callback/mercadolivre
+     * state deve ter o formato: "empresaId=<id>"
+     */
+    @GetMapping("/callback/mercadolivre")
+    public void callbackMercadoLivre(
+            @RequestParam String code,
+            @RequestParam(required = false) String state,
+            HttpServletResponse response) throws IOException {
+
+        try {
+            Long empresaId = extrairEmpresaId(state);
+            String redirectUri = urlApi + "/api/v1/marketplace/callback/mercadolivre";
+            service.processarCallbackMercadoLivre(empresaId, code, redirectUri);
+            response.sendRedirect(urlFrontend + "/dashboard/pedidos?sucesso=true");
+        } catch (Exception e) {
+            log.error("Erro no callback Mercado Livre: {}", e.getMessage(), e);
+            response.sendRedirect(urlFrontend + "/dashboard/pedidos?erro=integracao_falhou");
+        }
+    }
+
+    // ─── Conexões ────────────────────────────────────────────────────────────────
+
     @PostMapping("/empresa/{empresaId}/conectar")
     public ResponseEntity<MarketplaceConnection> conectar(
             @PathVariable Long empresaId,
@@ -67,7 +118,7 @@ public class MarketplaceConnectionController {
         return ResponseEntity.ok(service.listarConexoes(empresaId, auth.getName()));
     }
 
-    // Vínculos
+    // ─── Vínculos ────────────────────────────────────────────────────────────────
 
     @PostMapping("/empresa/{empresaId}/vinculos")
     public ResponseEntity<MarketplaceProductLink> vincular(
@@ -102,7 +153,15 @@ public class MarketplaceConnectionController {
         return ResponseEntity.noContent().build();
     }
 
-    //  Request bodies inline
+    // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+    private Long extrairEmpresaId(String state) {
+        if (state == null || !state.startsWith("empresaId="))
+            throw new IllegalArgumentException("Parâmetro 'state' ausente ou inválido: " + state);
+        return Long.parseLong(state.replace("empresaId=", "").trim());
+    }
+
+    // ─── Request bodies ──────────────────────────────────────────────────────────
 
     @Getter @Setter
     public static class ConectarRequest {
