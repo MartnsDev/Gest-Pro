@@ -6,5 +6,6 @@ public enum FormaDePagamento {
     CARTAO_DEBITO,
     CARTAO_CREDITO,
     BOLETO,
-    TRANSFERENCIA
+    TRANSFERENCIA,
+    OUTRO
 }

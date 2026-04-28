@@ -61,6 +61,8 @@ public class SecurityConfig {
                         .requestMatchers("/favicon.ico").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/dividas/**").authenticated()
+                        .requestMatchers("/api/v1/marketplace/**").authenticated()
+
                         .anyRequest().authenticated()
                 )
 

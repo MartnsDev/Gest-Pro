@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import { useEmpresa } from "../context/Empresacontext";
+import { getUsuario, type Usuario } from "@/lib/api-v2";
 import {
   Plus, X, Check, Search, ChevronRight, Store, Smartphone,
   DollarSign, CreditCard, ShoppingBag, Truck, CheckCircle2,
   Clock, Ban, Edit2, Package, Trash2, AlertTriangle,
-  Tag, MapPin, Wallet, ChevronDown,
+  Tag, MapPin, Wallet, ChevronDown, Link2, Link2Off,
+  Zap, Star, RefreshCw, TrendingUp
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,12 +24,20 @@ interface Pedido {
   enderecoEntrega?:string; dataPedido:string; dataAtualizacao:string;
   observacao?:string; motivoCancelamento?:string;
 }
+interface MarketplaceConnection {
+  id:number; marketplace:"SHOPEE"|"MERCADO_LIVRE"; sellerId:string;
+  active:boolean; tokenExpiresAt?:string; createdAt:string;
+}
+interface MarketplaceProductLink {
+  id:number; produtoId:number; nomeProduto:string;
+  anuncioId:string; anuncioTitulo?:string; marketplace:"SHOPEE"|"MERCADO_LIVRE";
+}
 type FormaPagamento = "PIX"|"DINHEIRO"|"CARTAO_DEBITO"|"CARTAO_CREDITO";
 type CanalVenda     = "WHATSAPP"|"INSTAGRAM"|"MERCADO_LIVRE"|"SHOPEE"|"IFOOD"|"TELEFONE"|"OUTRO";
 type StatusPedido   = "PENDENTE"|"CONFIRMADO"|"ENVIADO"|"ENTREGUE"|"CANCELADO";
-type TipoDesconto   = "REAIS"|"PORCENTAGEM";
+type MarketplaceKey = "SHOPEE"|"MERCADO_LIVRE";
 
-/* ─── Metadados de status ────────────────────────────────────────────────── */
+/* ─── Metadados ──────────────────────────────────────────────────────────── */
 const STATUS_META: Record<StatusPedido,{label:string;color:string;bg:string;border:string;icon:React.ReactNode}> = {
   PENDENTE:   {label:"Pendente",   color:"#f59e0b", bg:"rgba(245,158,11,0.12)", border:"rgba(245,158,11,0.4)",  icon:<Clock size={12}/>},
   CONFIRMADO: {label:"Confirmado", color:"#80a99b", bg:"rgba(16,185,129,0.12)", border:"rgba(16,185,129,0.4)",  icon:<CheckCircle2 size={12}/>},
@@ -34,7 +45,6 @@ const STATUS_META: Record<StatusPedido,{label:string;color:string;bg:string;bord
   ENTREGUE:   {label:"Entregue",   color:"#10b981", bg:"rgba(16,185,129,0.18)", border:"rgba(16,185,129,0.5)",  icon:<Check size={12}/>},
   CANCELADO:  {label:"Cancelado",  color:"#ef4444", bg:"rgba(239,68,68,0.12)",  border:"rgba(239,68,68,0.4)",   icon:<Ban size={12}/>},
 };
-// Status que podem ser selecionados manualmente (cancelado tem fluxo próprio)
 const STATUS_SELECIONAVEIS: StatusPedido[] = ["PENDENTE","CONFIRMADO","ENVIADO","ENTREGUE"];
 
 const FORMAS: {value:FormaPagamento;label:string;icon:React.ReactNode}[] = [
@@ -43,17 +53,24 @@ const FORMAS: {value:FormaPagamento;label:string;icon:React.ReactNode}[] = [
   {value:"CARTAO_DEBITO",label:"Débito",icon:<CreditCard size={13}/>},
   {value:"CARTAO_CREDITO",label:"Crédito",icon:<CreditCard size={13}/>},
 ];
-const CANAIS: {value:CanalVenda;label:string;emoji:string}[] = [
-  {value:"WHATSAPP",label:"WhatsApp",emoji:"💬"},
-  {value:"INSTAGRAM",label:"Instagram",emoji:"📸"},
-  {value:"MERCADO_LIVRE",label:"Mercado Livre",emoji:"🛒"},
-  {value:"SHOPEE",label:"Shopee",emoji:"🧡"},
-  {value:"IFOOD",label:"iFood",emoji:"🍔"},
-  {value:"TELEFONE",label:"Telefone",emoji:"📞"},
-  {value:"OUTRO",label:"Outro",emoji:"📦"},
+
+const CANAIS: { value: CanalVenda; label: string; icon: React.ReactNode }[] = [
+  { value: "WHATSAPP", label: "WhatsApp", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/whatsapp.svg" alt="WPP" width={14} height={14} /> },
+  { value: "INSTAGRAM", label: "Instagram", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/instagram.svg" alt="IG" width={14} height={14} /> },
+  { value: "MERCADO_LIVRE", label: "Mercado Livre", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/mercadolivre.svg" alt="ML" width={14} height={14} /> },
+  { value: "SHOPEE", label: "Shopee", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/shopee.svg" alt="Shopee" width={14} height={14} /> },
+  { value: "IFOOD", label: "iFood", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/ifood.svg" alt="iFood" width={14} height={14} /> },
+  { value: "TELEFONE", label: "Telefone", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/call.svg" alt="Tel" width={14} height={14} /> },
+  { value: "OUTRO", label: "Outro", icon: <Package size={14} /> }, 
 ];
+
 const FORMA_LABEL: Record<string,string> = {
   PIX:"Pix",DINHEIRO:"Dinheiro",CARTAO_DEBITO:"Débito",CARTAO_CREDITO:"Crédito",
+};
+
+const MARKETPLACE_META: Record<MarketplaceKey,{label:string;icon:React.ReactNode;color:string;bg:string;border:string}> = {
+  SHOPEE:        {label:"Shopee",        icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/shopee.svg" alt="Shopee" width={22} height={22} />, color:"#993C1D", bg:"#FAECE7", border:"#F0997B"},
+  MERCADO_LIVRE: {label:"Mercado Livre", icon: <img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/mercadolivre.svg" alt="ML" width={22} height={22} />, color:"#854F0B", bg:"#FAEEDA", border:"#EF9F27"},
 };
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
@@ -94,11 +111,18 @@ function StatusBadge({status}:{status:string}) {
   return <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,padding:"2px 8px",borderRadius:99,fontWeight:600,color:m.color,background:m.bg}}>{m.icon} {m.label}</span>;
 }
 function CanalBadge({canal}:{canal:string}) {
-  const m=CANAIS.find(c=>c.value===canal)??{label:canal,emoji:"📦"};
-  return <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,fontWeight:500,background:"var(--surface-overlay)",color:"var(--foreground-muted)",border:"1px solid var(--border)"}}>{m.emoji} {m.label}</span>;
+  const m=CANAIS.find(c=>c.value===canal)??{label:canal,icon:<Package size={12}/>};
+  return <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,fontWeight:500,background:"var(--surface-overlay)",color:"var(--foreground-muted)",border:"1px solid var(--border)", display: "inline-flex", alignItems: "center", gap: 4}}>{m.icon} {m.label}</span>;
+}
+function AutoBadge() {
+  return (
+    <span style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:10,padding:"1px 7px",borderRadius:99,fontWeight:600,background:"rgba(59,130,246,0.1)",color:"#3b82f6",border:"1px solid rgba(59,130,246,0.25)"}}>
+      <Zap size={9}/> automático
+    </span>
+  );
 }
 
-/* ─── Dropdown seletor de status ────────────────────────────────────────── */
+/* ─── SeletorStatus ──────────────────────────────────────────────────────── */
 function SeletorStatus({statusAtual,onChange,salvando}:{
   statusAtual:StatusPedido; onChange:(s:StatusPedido)=>void; salvando:boolean;
 }) {
@@ -106,52 +130,24 @@ function SeletorStatus({statusAtual,onChange,salvando}:{
   const meta=STATUS_META[statusAtual];
   return (
     <div style={{position:"relative"}}>
-      <button
-        onClick={()=>!salvando&&setOpen(v=>!v)}
-        disabled={salvando}
-        style={{
-          display:"flex",alignItems:"center",gap:6,padding:"8px 13px",
-          background:meta.bg,border:`1px solid ${meta.border}`,borderRadius:9,
-          cursor:salvando?"not-allowed":"pointer",color:meta.color,
-          fontSize:12,fontWeight:700,opacity:salvando?0.7:1,
-          transition:"all .15s",
-        }}
-      >
+      <button onClick={()=>!salvando&&setOpen(v=>!v)} disabled={salvando}
+        style={{display:"flex",alignItems:"center",gap:6,padding:"8px 13px",background:meta.bg,border:`1px solid ${meta.border}`,borderRadius:9,cursor:salvando?"not-allowed":"pointer",color:meta.color,fontSize:12,fontWeight:700,opacity:salvando?0.7:1,transition:"all .15s"}}>
         {meta.icon}
         {salvando?"Salvando...":meta.label}
         <ChevronDown size={11} style={{marginLeft:2,transform:open?"rotate(180deg)":"none",transition:"transform .15s"}}/>
       </button>
-
       {open&&(
         <>
-          {/* overlay para fechar ao clicar fora */}
           <div style={{position:"fixed",inset:0,zIndex:99}} onClick={()=>setOpen(false)}/>
-          <div style={{
-            position:"absolute",top:"calc(100% + 6px)",left:0,zIndex:100,
-            background:"var(--surface-elevated)",border:"1px solid var(--border)",
-            borderRadius:11,overflow:"hidden",minWidth:185,
-            boxShadow:"0 10px 32px rgba(0,0,0,0.32)",
-          }}>
-            <div style={{padding:"6px 10px",borderBottom:"1px solid var(--border)",fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em"}}>
-              Alterar status
-            </div>
+          <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,zIndex:100,background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:11,overflow:"hidden",minWidth:185,boxShadow:"0 10px 32px rgba(0,0,0,0.32)"}}>
+            <div style={{padding:"6px 10px",borderBottom:"1px solid var(--border)",fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em"}}>Alterar status</div>
             {STATUS_SELECIONAVEIS.map(s=>{
-              const sm=STATUS_META[s];
-              const ativo=s===statusAtual;
+              const sm=STATUS_META[s]; const ativo=s===statusAtual;
               return (
                 <button key={s} onClick={()=>{onChange(s);setOpen(false);}}
-                  style={{
-                    width:"100%",display:"flex",alignItems:"center",gap:9,
-                    padding:"10px 14px",border:"none",cursor:"pointer",
-                    background:ativo?sm.bg:"transparent",
-                    color:ativo?sm.color:"var(--foreground)",
-                    fontSize:13,fontWeight:ativo?700:400,
-                    borderLeft:ativo?`3px solid ${sm.color}`:"3px solid transparent",
-                    transition:"background .1s",
-                  }}
+                  style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:"10px 14px",border:"none",cursor:"pointer",background:ativo?sm.bg:"transparent",color:ativo?sm.color:"var(--foreground)",fontSize:13,fontWeight:ativo?700:400,borderLeft:ativo?`3px solid ${sm.color}`:"3px solid transparent",transition:"background .1s"}}
                   onMouseEnter={e=>(e.currentTarget as HTMLButtonElement).style.background=ativo?sm.bg:"var(--surface-overlay)"}
-                  onMouseLeave={e=>(e.currentTarget as HTMLButtonElement).style.background=ativo?sm.bg:"transparent"}
-                >
+                  onMouseLeave={e=>(e.currentTarget as HTMLButtonElement).style.background=ativo?sm.bg:"transparent"}>
                   {sm.icon} {sm.label}
                   {ativo&&<Check size={12} style={{marginLeft:"auto"}} color={sm.color}/>}
                 </button>
@@ -164,7 +160,7 @@ function SeletorStatus({statusAtual,onChange,salvando}:{
   );
 }
 
-/* ─── Seletor de forma de pagamento ─────────────────────────────────────── */
+/* ─── SeletorForma ───────────────────────────────────────────────────────── */
 function SeletorForma({value,onChange}:{value:FormaPagamento;onChange:(v:FormaPagamento)=>void}) {
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}}>
@@ -177,7 +173,7 @@ function SeletorForma({value,onChange}:{value:FormaPagamento;onChange:(v:FormaPa
   );
 }
 
-/* ─── Modal de confirmação de exclusão ──────────────────────────────────── */
+/* ─── ModalConfirmarExclusao ─────────────────────────────────────────────── */
 function ModalConfirmarExclusao({titulo,descricao,onConfirmar,onCancelar,confirmando}:{
   titulo:string;descricao:string;onConfirmar:()=>void;onCancelar:()=>void;confirmando:boolean;
 }) {
@@ -200,7 +196,512 @@ function ModalConfirmarExclusao({titulo,descricao,onConfirmar,onCancelar,confirm
   );
 }
 
-/* ─── Modal Novo Pedido ─────────────────────────────────────────────────── */
+/* ─── ModalConectarMarketplace ───────────────────────────────────────────── */
+function ModalConectarMarketplace({empresaId,marketplace,onClose,onSucesso}:{
+  empresaId:number; marketplace:MarketplaceKey;
+  onClose:()=>void; onSucesso:(c:MarketplaceConnection)=>void;
+}) {
+  const meta = MARKETPLACE_META[marketplace];
+  const [sellerId,setSellerId]   = useState("");
+  const [accessToken,setToken]   = useState("");
+  const [salvando,setSalvando]   = useState(false);
+
+  const conectar = async () => {
+    if(!sellerId.trim()||!accessToken.trim()){
+      toast.error("Preencha todos os campos."); return;
+    }
+    setSalvando(true);
+    try {
+      const conn = await fetchAuth<MarketplaceConnection>(
+        `/api/v1/marketplace/empresa/${empresaId}/conectar`,
+        { method:"POST", body:JSON.stringify({ marketplace, sellerId, accessToken, expiresInSeconds: marketplace==="MERCADO_LIVRE"?21600:null }) }
+      );
+      onSucesso(conn);
+      toast.success(`${meta.label} conectado com sucesso!`);
+      onClose();
+    } catch(e:any){ toast.error(e.message); }
+    finally{ setSalvando(false); }
+  };
+
+  return (
+   <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:14,padding:28,width:"100%",maxWidth:440}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 24 }}>
+              {meta.icon}
+            </span>
+            <div>
+              <h3 style={{fontSize:15,fontWeight:700,color:"var(--foreground)",margin:0}}>Conectar {meta.label}</h3>
+              <p style={{fontSize:12,color:"var(--foreground-muted)",margin:0}}>Cole as credenciais do painel de desenvolvedor</p>
+            </div>
+          </div>
+          <button onClick={onClose} style={{...btnG,padding:6,border:"none"}}><X size={16}/></button>
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div>
+            <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>
+              {marketplace==="SHOPEE"?"Shop ID":"Seller ID"}
+            </label>
+            <input style={inp} value={sellerId} onChange={e=>setSellerId(e.target.value)}
+              placeholder={marketplace==="SHOPEE"?"Ex: 123456789":"Ex: 987654321"}/>
+          </div>
+          <div>
+            <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Access Token</label>
+            <input style={inp} value={accessToken} onChange={e=>setToken(e.target.value)}
+              placeholder="Cole o token de acesso aqui..." type="password"/>
+          </div>
+
+          <div style={{padding:"10px 12px",background:"var(--surface-overlay)",borderRadius:8,fontSize:12,color:"var(--foreground-muted)",lineHeight:1.6}}>
+            {marketplace==="SHOPEE"
+              ? <>Acesse <a href="https://open.shopee.com" target="_blank" rel="noopener noreferrer" style={{color:"var(--primary)", fontWeight:600, textDecoration:"none"}}>open.shopee.com</a> → Meu App → credenciais para obter o Shop ID e Access Token.</>
+              : <>Acesse <a href="https://developers.mercadolivre.com.br" target="_blank" rel="noopener noreferrer" style={{color:"var(--primary)", fontWeight:600, textDecoration:"none"}}>developers.mercadolivre.com.br</a> → Meu App → OAuth para obter o Seller ID e token.</>
+            }
+          </div>
+
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <button onClick={onClose} style={{...btnG,flex:1,justifyContent:"center"}}>Cancelar</button>
+            <button onClick={conectar} disabled={salvando||!sellerId||!accessToken}
+              style={{...btnP,flex:2,justifyContent:"center",opacity:salvando||!sellerId||!accessToken?0.6:1}}>
+              {salvando?<><RefreshCw size={13} style={{animation:"spin 1s linear infinite"}}/> Conectando...</>
+                :<><Link2 size={14}/> Conectar {meta.label}</>}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── ModalVincularProduto ───────────────────────────────────────────────── */
+function ModalVincularProduto({empresaId,marketplace,onClose,onSucesso}:{
+  empresaId:number; marketplace:MarketplaceKey;
+  onClose:()=>void; onSucesso:(l:MarketplaceProductLink)=>void;
+}) {
+  const meta = MARKETPLACE_META[marketplace];
+  const [produtos,setProdutos]   = useState<Produto[]>([]);
+  const [busca,setBusca]         = useState("");
+  const [produtoId,setProdutoId] = useState<number|null>(null);
+  const [anuncioId,setAnuncioId] = useState("");
+  const [anuncioTitulo,setTitulo]= useState("");
+  const [salvando,setSalvando]   = useState(false);
+
+  useEffect(()=>{
+    fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`)
+      .then(setProdutos).catch(()=>toast.error("Erro ao carregar produtos"));
+  },[empresaId]);
+
+  const filtrados = useMemo(()=>
+    produtos.filter(p=>p.nome.toLowerCase().includes(busca.toLowerCase())),[produtos,busca]);
+
+  const vincular = async() => {
+    if(!produtoId||!anuncioId.trim()){toast.error("Selecione um produto e informe o ID do anúncio.");return;}
+    setSalvando(true);
+    try{
+      const link = await fetchAuth<MarketplaceProductLink>(
+        `/api/v1/marketplace/empresa/${empresaId}/vinculos`,
+        {method:"POST",body:JSON.stringify({produtoId,marketplace,anuncioId,anuncioTitulo:anuncioTitulo||null})}
+      );
+      onSucesso(link);
+      toast.success("Produto vinculado com sucesso!");
+      onClose();
+    }catch(e:any){toast.error(e.message);}
+    finally{setSalvando(false);}
+  };
+
+  const produtoSelecionado = produtos.find(p=>p.id===produtoId);
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:14,width:"100%",maxWidth:520,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 20px",borderBottom:"1px solid var(--border)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{ display:"flex", alignItems:"center", width: 24 }}>{meta.icon}</span>
+            <h3 style={{fontSize:15,fontWeight:700,color:"var(--foreground)",margin:0}}>Vincular produto — {meta.label}</h3>
+          </div>
+          <button onClick={onClose} style={{...btnG,padding:6,border:"none"}}><X size={16}/></button>
+        </div>
+
+        <div style={{flex:1,overflowY:"auto",padding:"16px 20px",display:"flex",flexDirection:"column",gap:14}}>
+          <div>
+            <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:6}}>1. Produto no GestPro</label>
+            <div style={{position:"relative",marginBottom:6}}>
+              <Search size={12} style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",color:"var(--foreground-subtle)"}}/>
+              <input style={{...inp,paddingLeft:28}} placeholder="Buscar produto..." value={busca} onChange={e=>setBusca(e.target.value)}/>
+            </div>
+            <div style={{maxHeight:180,overflowY:"auto",border:"1px solid var(--border)",borderRadius:8,background:"var(--surface-overlay)"}}>
+              {filtrados.length===0
+                ?<div style={{padding:16,textAlign:"center",fontSize:12,color:"var(--foreground-muted)"}}>Nenhum produto encontrado</div>
+                :filtrados.map(p=>(
+                  <div key={p.id} onClick={()=>setProdutoId(p.id)}
+                    style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 12px",cursor:"pointer",borderBottom:"1px solid var(--border-subtle)",background:produtoId===p.id?"var(--primary-muted)":"transparent"}}
+                    onMouseEnter={e=>produtoId!==p.id&&((e.currentTarget as HTMLDivElement).style.background="var(--surface-elevated)")}
+                    onMouseLeave={e=>produtoId!==p.id&&((e.currentTarget as HTMLDivElement).style.background="transparent")}>
+                    <div>
+                      <p style={{fontSize:13,fontWeight:500,color:produtoId===p.id?"var(--primary)":"var(--foreground)",margin:0}}>{p.nome}</p>
+                      <p style={{fontSize:11,color:"var(--foreground-muted)",margin:"1px 0 0"}}>Estoque: {p.quantidadeEstoque}</p>
+                    </div>
+                    {produtoId===p.id&&<Check size={14} color="var(--primary)"/>}
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          <div>
+            <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:6}}>2. ID do anúncio no {meta.label}</label>
+            <input style={{...inp,marginBottom:8}} value={anuncioId} onChange={e=>setAnuncioId(e.target.value)}
+              placeholder={marketplace==="SHOPEE"?"Ex: 123456789":"Ex: MLB1234567890"}/>
+            <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Nome do anúncio (opcional)</label>
+            <input style={inp} value={anuncioTitulo} onChange={e=>setTitulo(e.target.value)}
+              placeholder="Ex: Tomada Macho Margirius 2P+T"/>
+          </div>
+
+          {produtoSelecionado&&anuncioId&&(
+            <div style={{padding:"10px 12px",background:"var(--surface-overlay)",borderRadius:8,fontSize:12,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <span style={{color:"var(--foreground-muted)"}}>{produtoSelecionado.nome}</span>
+              <Link2 size={12} color="var(--primary)"/>
+              <span style={{color:"var(--foreground-muted)", display: "flex", alignItems: "center", gap: 6}}>
+                {React.cloneElement(meta.icon as React.ReactElement, { width: 14, height: 14 })} {anuncioId}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div style={{padding:"12px 20px",borderTop:"1px solid var(--border)",display:"flex",gap:8}}>
+          <button onClick={onClose} style={{...btnG,flex:1,justifyContent:"center"}}>Cancelar</button>
+          <button onClick={vincular} disabled={salvando||!produtoId||!anuncioId}
+            style={{...btnP,flex:2,justifyContent:"center",opacity:salvando||!produtoId||!anuncioId?0.6:1}}>
+            {salvando?"Salvando...":<><Link2 size={14}/> Criar vínculo</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SecaoPremiumLock ───────────────────────────────────────────────────── */
+function SecaoPremiumLock() {
+  return (
+    <div className="animate-fade-in" style={{display:"flex",flexDirection:"column",gap:0,borderRadius:14,overflow:"hidden",border:"1px solid var(--border)"}}>
+
+      {/* ── Hero banner ── */}
+      <div style={{
+        position:"relative",padding:"44px 32px 36px",
+        background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",
+        overflow:"hidden",textAlign:"center",
+      }}>
+        {/* Glow blobs */}
+        <div style={{position:"absolute",top:-40,left:-40,width:180,height:180,borderRadius:"50%",background:"rgba(255,111,0,0.18)",filter:"blur(48px)",pointerEvents:"none"}}/>
+        <div style={{position:"absolute",bottom:-40,right:-40,width:180,height:180,borderRadius:"50%",background:"rgba(234,179,8,0.15)",filter:"blur(48px)",pointerEvents:"none"}}/>
+        <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:320,height:320,borderRadius:"50%",background:"rgba(59,130,246,0.07)",filter:"blur(60px)",pointerEvents:"none"}}/>
+
+        {/* Logos dos marketplaces */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16,marginBottom:24,position:"relative",zIndex:1}}>
+          
+          {/* ML logo */}
+          <div style={{
+            width:64,height:64,borderRadius:14,overflow:"hidden",
+            background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",
+            boxShadow:"0 8px 24px rgba(0,0,0,0.4)",
+            border:"2px solid rgba(255,255,255,0.15)",
+          }}>
+            <img
+              src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/mercadolivre.svg"
+              alt="Mercado Livre"
+              style={{width:40,height:40}}
+            />
+          </div>
+
+          {/* Conector animado */}
+          <div style={{display:"flex",alignItems:"center",gap:4,position:"relative"}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:"rgba(255,255,255,0.3)"}}/>
+            <div style={{width:24,height:2,background:"linear-gradient(90deg,rgba(255,255,255,0.15),rgba(255,255,255,0.5),rgba(255,255,255,0.15))",borderRadius:2}}/>
+            <div style={{width:24,height:24,borderRadius:"50%",background:"linear-gradient(135deg,#FACC15,#F59E0B)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,boxShadow:"0 0 16px rgba(250,204,21,0.5)", color: "#000"}}>
+              <Zap size={14}/>
+            </div>
+            <div style={{width:24,height:2,background:"linear-gradient(90deg,rgba(255,255,255,0.15),rgba(255,255,255,0.5),rgba(255,255,255,0.15))",borderRadius:2}}/>
+            <div style={{width:8,height:8,borderRadius:"50%",background:"rgba(255,255,255,0.3)"}}/>
+          </div>
+
+          {/* Shopee logo */}
+          <div style={{
+            width:64,height:64,borderRadius:14,overflow:"hidden",
+            background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",
+            boxShadow:"0 8px 24px rgba(0,0,0,0.4)",
+            border:"2px solid rgba(255,255,255,0.15)",
+          }}>
+            <img
+              src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/shopee.svg"
+              alt="Shopee"
+              style={{width:40,height:40}}
+            />
+          </div>
+        </div>
+
+        {/* Badge premium */}
+        <div style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 12px",borderRadius:99,background:"rgba(250,204,21,0.15)",border:"1px solid rgba(250,204,21,0.35)",marginBottom:12,position:"relative",zIndex:1}}>
+          <span style={{fontSize:11,color:"#FACC15",fontWeight:700,letterSpacing:".04em"}}>★ RECURSO PREMIUM</span>
+        </div>
+
+        <h2 style={{fontSize:22,fontWeight:800,color:"#fff",margin:"0 0 10px",lineHeight:1.2,position:"relative",zIndex:1}}>
+          Venda em todo lugar,<br/>
+          <span style={{background:"linear-gradient(90deg,#FACC15,#F97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>gerencie em um só lugar</span>
+        </h2>
+        <p style={{fontSize:13,color:"rgba(255,255,255,0.6)",margin:0,lineHeight:1.6,maxWidth:400,marginLeft:"auto",marginRight:"auto",position:"relative",zIndex:1}}>
+          Conecte Shopee e Mercado Livre ao GestPro e esqueça o trabalho manual. Cada venda entra automaticamente no sistema.
+        </p>
+      </div>
+
+      {/* ── Cards de benefícios ── */}
+      <div style={{padding:"24px 24px 0",background:"var(--surface-elevated)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {[
+            {icon:<Package size={22} color="var(--primary)"/>, title:"Estoque automático",desc:"Cada venda debita o estoque sem você tocar em nada"},
+            {icon:<TrendingUp size={22} color="#3b82f6"/>, title:"Lucro em tempo real",desc:"Faturamento e margens calculados na hora da venda"},
+            {icon:<Zap size={22} color="#eab308"/>, title:"Zero digitação",desc:"Pedidos entram com todos os dados preenchidos"},
+            {icon:<Link2 size={22} color="#8b5cf6"/>, title:"Multi-canal",desc:"Shopee, Mercado Livre e vendas manuais no mesmo painel"},
+          ].map((b,i)=>(
+            <div key={i} style={{padding:"14px 14px",background:"var(--surface-overlay)",borderRadius:10,border:"1px solid var(--border-subtle)"}}>
+              <div style={{marginBottom:10}}>{b.icon}</div>
+              <p style={{fontSize:12,fontWeight:700,color:"var(--foreground)",margin:"0 0 3px"}}>{b.title}</p>
+              <p style={{fontSize:11,color:"var(--foreground-muted)",margin:0,lineHeight:1.5}}>{b.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Como funciona (mini steps) ── */}
+      <div style={{padding:"20px 24px 0",background:"var(--surface-elevated)"}}>
+        <p style={{fontSize:10,fontWeight:700,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".08em",margin:"0 0 12px"}}>Como funciona</p>
+        <div style={{display:"flex",gap:0,position:"relative"}}>
+          <div style={{position:"absolute",top:16,left:16,right:16,height:2,background:"linear-gradient(90deg,var(--primary),rgba(16,185,129,0.2))",zIndex:0}}/>
+          {[
+            {n:"1",label:"Conecta sua conta"},
+            {n:"2",label:"Vincula os produtos"},
+            {n:"3",label:"Vende nos marketplaces"},
+            {n:"4",label:"GestPro faz o resto"},
+          ].map((s,i)=>(
+            <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:6,position:"relative",zIndex:1}}>
+              <div style={{width:32,height:32,borderRadius:"50%",background:i===3?"var(--primary)":"var(--surface-elevated)",border:`2px solid ${i===3?"var(--primary)":"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:i===3?"#000":"var(--foreground-muted)"}}>
+                {i===3?<Check size={16} strokeWidth={3}/>:s.n}
+              </div>
+              <p style={{fontSize:10,color:"var(--foreground-muted)",textAlign:"center",margin:0,lineHeight:1.4,maxWidth:60}}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── CTA ── */}
+      <div style={{padding:"24px",background:"var(--surface-elevated)",display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+        <Link href="/dashboard/planos" style={{
+          display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,
+          width:"100%",maxWidth:320,padding:"13px 0",
+          background:"linear-gradient(135deg,#FACC15,#F97316)",
+          border:"none",borderRadius:10,
+          color:"#7C2D00",fontSize:14,fontWeight:800,
+          cursor:"pointer",textDecoration:"none",
+          boxShadow:"0 6px 20px rgba(249,115,22,0.4)",
+          transition:"transform .15s, box-shadow .15s",
+        }}
+          onMouseEnter={e=>{(e.currentTarget as HTMLAnchorElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLAnchorElement).style.boxShadow="0 8px 24px rgba(249,115,22,0.5)";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLAnchorElement).style.transform="translateY(0)";(e.currentTarget as HTMLAnchorElement).style.boxShadow="0 6px 20px rgba(249,115,22,0.4)";}}
+        >
+          <Star size={16} style={{fill: "#7C2D00"}}/> Assinar Premium agora
+        </Link>
+        <p style={{fontSize:11,color:"var(--foreground-subtle)",margin:0,textAlign:"center"}}>
+          Shopee e Mercado Livre incluídos em todos os planos Premium
+        </p>
+      </div>
+
+    </div>
+  );
+}
+
+/* ─── SecaoIntegracoes ───────────────────────────────────────────────────── */
+function SecaoIntegracoes({empresaId}:{empresaId:number}) {
+  const [conexoes,setConexoes]         = useState<MarketplaceConnection[]>([]);
+  const [vinculos,setVinculos]         = useState<MarketplaceProductLink[]>([]);
+  const [loading,setLoading]           = useState(true);
+  const [modalConectar,setModalConectar]   = useState<MarketplaceKey|null>(null);
+  const [modalVincular,setModalVincular]   = useState<MarketplaceKey|null>(null);
+  const [desconectando,setDesconectando]   = useState<MarketplaceKey|null>(null);
+  const [confirmDesconectar,setConfirmDesc]= useState<MarketplaceKey|null>(null);
+  const [removendoVinculo,setRemovendo]    = useState<number|null>(null);
+
+  const carregarConexoes = useCallback(async()=>{
+    setLoading(true);
+    try{
+      const conns = await fetchAuth<MarketplaceConnection[]>(`/api/v1/marketplace/empresa/${empresaId}/conexoes`);
+      setConexoes(conns);
+      const allLinks: MarketplaceProductLink[] = [];
+      for(const conn of conns){
+        try{
+          const links = await fetchAuth<MarketplaceProductLink[]>(
+            `/api/v1/marketplace/empresa/${empresaId}/vinculos?marketplace=${conn.marketplace}`
+          );
+          allLinks.push(...links);
+        }catch{}
+      }
+      setVinculos(allLinks);
+    }catch(e:any){toast.error("Erro ao carregar integrações");}
+    finally{setLoading(false);}
+  },[empresaId]);
+
+  useEffect(()=>{carregarConexoes();},[carregarConexoes]);
+
+  const desconectar = async(mk:MarketplaceKey) => {
+    setDesconectando(mk);
+    try{
+      await fetchAuth(`/api/v1/marketplace/empresa/${empresaId}/desconectar?marketplace=${mk}`,{method:"DELETE"});
+      setConexoes(prev=>prev.filter(c=>c.marketplace!==mk));
+      setVinculos(prev=>prev.filter(v=>v.marketplace!==mk));
+      toast.success(`${MARKETPLACE_META[mk].label} desconectado.`);
+    }catch(e:any){toast.error(e.message);}
+    finally{setDesconectando(null);setConfirmDesc(null);}
+  };
+
+  const removerVinculo = async(id:number) => {
+    setRemovendo(id);
+    try{
+      await fetchAuth(`/api/v1/marketplace/empresa/${empresaId}/vinculos/${id}`,{method:"DELETE"});
+      setVinculos(prev=>prev.filter(v=>v.id!==id));
+      toast.success("Vínculo removido.");
+    }catch(e:any){toast.error(e.message);}
+    finally{setRemovendo(null);}
+  };
+
+  const MARKETPLACES: MarketplaceKey[] = ["MERCADO_LIVRE","SHOPEE"];
+
+  return (
+    <>
+      <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden"}}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <Zap size={15} color="var(--primary)"/>
+            <span style={{fontSize:14,fontWeight:700,color:"var(--foreground)"}}>Integrações</span>
+            <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:"rgba(234,179,8,0.15)",color:"#854F0B",fontWeight:600,border:"1px solid rgba(234,179,8,0.3)"}}>
+              ★ Premium
+            </span>
+          </div>
+          <span style={{fontSize:12,color:"var(--foreground-muted)"}}>Pedidos chegam automaticamente quando você vende nos marketplaces</span>
+        </div>
+
+        {loading
+          ?<div style={{padding:24,textAlign:"center",fontSize:13,color:"var(--foreground-muted)"}}>Carregando integrações...</div>
+          :<div style={{padding:16,display:"flex",flexDirection:"column",gap:12}}>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {MARKETPLACES.map(mk=>{
+                const meta  = MARKETPLACE_META[mk];
+                const conn  = conexoes.find(c=>c.marketplace===mk);
+                const ativo = !!conn?.active;
+                const links = vinculos.filter(v=>v.marketplace===mk);
+
+                return (
+                  <div key={mk} style={{border:`1px solid ${ativo?meta.border:"var(--border)"}`,borderRadius:10,padding:14,background:ativo?meta.bg:"var(--surface-overlay)",transition:"all .2s"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{ display:"flex", alignItems:"center", width: 24 }}>{meta.icon}</span>
+                        <div>
+                          <p style={{fontSize:13,fontWeight:700,color:ativo?meta.color:"var(--foreground)",margin:0}}>{meta.label}</p>
+                          <p style={{fontSize:11,margin:0,display:"flex",alignItems:"center",gap:4,color:ativo?meta.color:"var(--foreground-muted)"}}>
+                            <span style={{width:6,height:6,borderRadius:"50%",background:ativo?"#1D9E75":"var(--foreground-subtle)",display:"inline-block"}}/>
+                            {ativo?"Conectado":"Não conectado"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {ativo?(
+                      <>
+                        <div style={{fontSize:11,color:meta.color,marginBottom:10,padding:"4px 8px",background:"rgba(255,255,255,0.4)",borderRadius:6}}>
+                          {links.length} produto{links.length!==1?"s":""} vinculado{links.length!==1?"s":""}
+                        </div>
+                        <div style={{display:"flex",gap:6}}>
+                          <button onClick={()=>setModalVincular(mk)}
+                            style={{...btnG,flex:1,justifyContent:"center",fontSize:11,padding:"6px 8px",color:meta.color,borderColor:meta.border}}>
+                            <Link2 size={11}/> Vincular
+                          </button>
+                          <button onClick={()=>setConfirmDesc(mk)}
+                            style={{...btnG,padding:"6px 9px",fontSize:11,color:"var(--foreground-subtle)",borderColor:"var(--border)"}}>
+                            <Link2Off size={11}/>
+                          </button>
+                        </div>
+                      </>
+                    ):(
+                      <button onClick={()=>setModalConectar(mk)}
+                        style={{width:"100%",padding:"8px 0",background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:7,fontSize:12,color:"var(--foreground-muted)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        <Plus size={12}/> Conectar
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {vinculos.length>0&&(
+              <div>
+                <p style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",margin:"4px 0 8px"}}>Vínculos ativos</p>
+                <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                  {vinculos.map(v=>{
+                    const meta=MARKETPLACE_META[v.marketplace];
+                    return (
+                      <div key={v.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"var(--surface-overlay)",borderRadius:8,border:"1px solid var(--border-subtle)"}}>
+                        <span style={{ display:"flex", alignItems:"center", width: 16 }}>{React.cloneElement(meta.icon as React.ReactElement, { width: 14, height: 14 })}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <p style={{fontSize:12,fontWeight:500,color:"var(--foreground)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.nomeProduto}</p>
+                          <p style={{fontSize:11,color:"var(--foreground-muted)",margin:"1px 0 0"}}>
+                            <Link2 size={9} style={{display:"inline",marginRight:3}}/>
+                            {v.anuncioTitulo||v.anuncioId}
+                          </p>
+                        </div>
+                        <button onClick={()=>removerVinculo(v.id)} disabled={removendoVinculo===v.id}
+                          style={{background:"none",border:"none",cursor:"pointer",color:"var(--foreground-subtle)",padding:4,opacity:removendoVinculo===v.id?0.4:1}}>
+                          <X size={12}/>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        }
+      </div>
+
+      {modalConectar&&(
+        <ModalConectarMarketplace
+          empresaId={empresaId}
+          marketplace={modalConectar}
+          onClose={()=>setModalConectar(null)}
+          onSucesso={conn=>{setConexoes(prev=>[...prev.filter(c=>c.marketplace!==conn.marketplace),conn]);}}
+        />
+      )}
+      {modalVincular&&(
+        <ModalVincularProduto
+          empresaId={empresaId}
+          marketplace={modalVincular}
+          onClose={()=>setModalVincular(null)}
+          onSucesso={link=>{setVinculos(prev=>[...prev,link]);}}
+        />
+      )}
+      {confirmDesconectar&&(
+        <ModalConfirmarExclusao
+          titulo={`Desconectar ${MARKETPLACE_META[confirmDesconectar].label}?`}
+          descricao="Os vínculos de produtos serão mantidos, mas novos pedidos deixarão de ser importados automaticamente."
+          onConfirmar={()=>desconectar(confirmDesconectar)}
+          onCancelar={()=>setConfirmDesc(null)}
+          confirmando={desconectando===confirmDesconectar}
+        />
+      )}
+    </>
+  );
+}
+
+/* ─── ModalNovoPedido ────────────────────────────────────────────────────── */
 function ModalNovoPedido({empresaId,onClose,onSucesso}:{
   empresaId:number;onClose:()=>void;onSucesso:(p:Pedido)=>void;
 }) {
@@ -271,8 +772,6 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:50,padding:16}}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:14,width:"100%",maxWidth:900,maxHeight:"95vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
-
-        {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",borderBottom:"1px solid var(--border)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <ShoppingBag size={16} color="var(--primary)"/>
@@ -282,7 +781,6 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
         </div>
 
         <div style={{display:"grid",gridTemplateColumns:"1fr 360px",flex:1,minHeight:0,overflow:"hidden"}}>
-          {/* Lista de produtos */}
           <div style={{display:"flex",flexDirection:"column",borderRight:"1px solid var(--border)",overflow:"hidden"}}>
             <div style={{padding:"10px 16px",borderBottom:"1px solid var(--border)"}}>
               <div style={{position:"relative"}}>
@@ -317,13 +815,9 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
             </div>
           </div>
 
-          {/* Painel direito */}
           <div style={{display:"flex",flexDirection:"column",overflow:"hidden"}}>
-            {/* Carrinho */}
             <div style={{flex:1,overflowY:"auto",padding:"10px 13px"}}>
-              <p style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>
-                Carrinho ({carrinho.length})
-              </p>
+              <p style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>Carrinho ({carrinho.length})</p>
               {carrinho.length===0
                 ?<div style={{textAlign:"center",color:"var(--foreground-subtle)",fontSize:12,padding:"16px 0"}}>Clique nos produtos →</div>
                 :carrinho.map(item=>(
@@ -344,41 +838,31 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
                 ))}
             </div>
 
-            {/* Formulário */}
             <div style={{padding:"10px 13px",borderTop:"1px solid var(--border)",display:"flex",flexDirection:"column",gap:9,overflowY:"auto"}}>
-              {/* Resumo */}
               <div style={{background:"var(--surface-overlay)",borderRadius:8,padding:"8px 11px",display:"flex",flexDirection:"column",gap:4}}>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--foreground-muted)"}}><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
                 {descontoN>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--destructive)"}}><span>Desconto{tipoDesconto==="PORCENTAGEM"?` (${descontoRaw}%)`:""}</span><span>− {fmt(descontoN)}</span></div>}
                 {freteN>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--foreground-muted)"}}><span>Frete</span><span>+ {fmt(freteN)}</span></div>}
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:15,fontWeight:700,color:"var(--primary)",paddingTop:4,borderTop:"1px solid var(--border)"}}><span>Total</span><span>{fmt(total)}</span></div>
               </div>
-
-              {/* Canal */}
               <div>
                 <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:5}}>Canal de Venda</label>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
                   {CANAIS.map(c=>(
                     <button key={c.value} onClick={()=>setCanal(c.value as CanalVenda)} style={{padding:"6px 8px",fontSize:11,display:"flex",alignItems:"center",gap:5,background:canal===c.value?"var(--primary-muted)":"var(--surface-overlay)",border:`1px solid ${canal===c.value?"var(--primary)":"var(--border)"}`,borderRadius:7,cursor:"pointer",color:canal===c.value?"var(--primary)":"var(--foreground-muted)",fontWeight:canal===c.value?600:400}}>
-                      {c.emoji} {c.label}
+                      {c.icon} {c.label} 
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* Pagamento */}
               <div>
                 <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:5}}>Pagamento</label>
                 <SeletorForma value={forma} onChange={setForma}/>
               </div>
-
-              {/* Conta destino */}
               <div>
                 <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Conta Destino</label>
                 <input style={inp} value={contaDestino} onChange={e=>setContaDestino(e.target.value)} placeholder="Ex: Mercado Pago, Nubank..."/>
               </div>
-
-              {/* Desconto R$ / % */}
               <div>
                 <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Desconto</label>
                 <div style={{display:"flex",gap:6}}>
@@ -396,8 +880,6 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
                     placeholder={tipoDesconto==="PORCENTAGEM"?"0 – 100":"0,00"}/>
                 </div>
               </div>
-
-              {/* Frete + obs */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                 <div>
                   <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Frete R$</label>
@@ -408,13 +890,10 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
                   <input style={inp} value={observacao} onChange={e=>setObservacao(e.target.value)} placeholder="Opcional..."/>
                 </div>
               </div>
-
-              {/* Endereço */}
               <div>
                 <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Endereço de Entrega</label>
                 <input style={inp} value={endereco} onChange={e=>setEndereco(e.target.value)} placeholder="Rua, número, bairro, cidade..."/>
               </div>
-
               <button onClick={registrar} disabled={salvando||!carrinho.length}
                 style={{...btnP,justifyContent:"center",padding:"11px 0",opacity:salvando||!carrinho.length?0.6:1}}>
                 {salvando?"Registrando...":<><ShoppingBag size={14}/> Registrar Pedido · {fmt(total)}</>}
@@ -427,7 +906,7 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
   );
 }
 
-/* ─── Detalhe do Pedido ─────────────────────────────────────────────────── */
+/* ─── DetalhePedido ──────────────────────────────────────────────────────── */
 function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
   pedido:Pedido; onClose:()=>void;
   onAtualizado:(p:Pedido)=>void; onRemovido:(id:number)=>void;
@@ -443,8 +922,8 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
   const podeCancelar = pedido.status!=="CANCELADO"&&pedido.status!=="ENTREGUE";
   const pctDesconto  = pedido.valorTotal>0&&pedido.desconto>0
     ? ((pedido.desconto/pedido.valorTotal)*100).toFixed(1) : null;
+  const isAutomatico = pedido.observacao?.startsWith("Pedido automático");
 
-  /* Altera status direto pelo dropdown — atualiza lista local sem reload */
   const mudarStatus=async(novoStatus:StatusPedido)=>{
     if(novoStatus===pedido.status) return;
     setSalvando(true);
@@ -496,16 +975,17 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
         onClick={e=>e.target===e.currentTarget&&onClose()}>
         <div className="animate-fade-in" style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:14,padding:24,width:"100%",maxWidth:460,maxHeight:"92vh",overflowY:"auto",display:"flex",flexDirection:"column",gap:14}}>
 
-          {/* Header */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
             <div>
-              <h2 style={{fontSize:16,fontWeight:700,color:"var(--foreground)",margin:"0 0 4px"}}>Pedido #{pedido.id}</h2>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                <h2 style={{fontSize:16,fontWeight:700,color:"var(--foreground)",margin:0}}>Pedido #{pedido.id}</h2>
+                {isAutomatico&&<AutoBadge/>}
+              </div>
               <p style={{fontSize:11,color:"var(--foreground-muted)",margin:0}}>{fmtData(pedido.dataPedido)}</p>
             </div>
             <button onClick={onClose} style={{...btnG,padding:5,border:"none"}}><X size={16}/></button>
           </div>
 
-          {/* ── Seletor de status ────────────────────────────────────── */}
           <div style={{display:"flex",alignItems:"center",gap:10,padding:"11px 13px",background:"var(--surface-overlay)",borderRadius:10,flexWrap:"wrap"}}>
             <span style={{fontSize:12,color:"var(--foreground-muted)",fontWeight:500,flexShrink:0}}>Status do pedido:</span>
             {pedido.status==="CANCELADO"
@@ -514,7 +994,6 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
             }
           </div>
 
-          {/* Info badges */}
           <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
             <CanalBadge canal={pedido.canalVenda}/>
             <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,fontWeight:500,background:"var(--surface-overlay)",color:"var(--foreground-muted)",border:"1px solid var(--border)"}}>
@@ -527,7 +1006,6 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
             )}
           </div>
 
-          {/* Produtos */}
           <div style={{background:"var(--surface-overlay)",borderRadius:10,padding:"12px 14px"}}>
             <p style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",margin:"0 0 10px"}}>Produtos</p>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -543,13 +1021,11 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
             </div>
           </div>
 
-          {/* Totais */}
           <div style={{background:"var(--surface-overlay)",borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:6}}>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--foreground-muted)"}}><span>Subtotal</span><span>{fmt(pedido.valorTotal)}</span></div>
             {pedido.desconto>0&&(
               <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--destructive)"}}>
-                <span style={{display:"flex",alignItems:"center",gap:5}}>
-                  <Tag size={11}/>Desconto
+                <span style={{display:"flex",alignItems:"center",gap:5}}><Tag size={11}/>Desconto
                   {pctDesconto&&<span style={{fontSize:10,background:"rgba(239,68,68,0.1)",padding:"1px 6px",borderRadius:99,fontWeight:600}}>{pctDesconto}%</span>}
                 </span>
                 <span>− {fmt(pedido.desconto)}</span>
@@ -566,7 +1042,6 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
             </div>
           </div>
 
-          {/* Endereço */}
           {pedido.enderecoEntrega&&(
             <div style={{display:"flex",gap:8,padding:"10px 12px",background:"var(--surface-overlay)",borderRadius:9,fontSize:12,color:"var(--foreground-muted)"}}>
               <MapPin size={14} style={{flexShrink:0,marginTop:1}} color="#3b82f6"/>
@@ -574,7 +1049,6 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
             </div>
           )}
 
-          {/* Observação */}
           <div>
             {editandoObs
               ?<div style={{display:"flex",gap:6}}>
@@ -592,14 +1066,12 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
               </div>}
           </div>
 
-          {/* Motivo cancelamento */}
           {pedido.motivoCancelamento&&(
             <div style={{padding:"10px 12px",background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:9,fontSize:12,color:"var(--destructive)"}}>
               <strong>Motivo:</strong> {pedido.motivoCancelamento}
             </div>
           )}
 
-          {/* Cancelar pedido */}
           {podeCancelar&&!cancelando&&!editandoObs&&(
             <button onClick={()=>setCancelando(true)} style={{...btnDanger,justifyContent:"center"}}>
               <Ban size={13}/> Cancelar pedido
@@ -620,7 +1092,6 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
             </div>
           )}
 
-          {/* Remover do histórico */}
           <div style={{borderTop:"1px solid var(--border)",paddingTop:12,marginTop:4}}>
             <button onClick={()=>setConfirmandoRemocao(true)} style={{...btnDanger,width:"100%",justifyContent:"center",fontSize:12}}>
               <Trash2 size={13}/> Remover do histórico
@@ -644,15 +1115,23 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
 
 /* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Pedidos() {
-  const {empresaAtiva}=useEmpresa();
-  const [pedidos,setPedidos]   =useState<Pedido[]>([]);
-  const [loading,setLoading]   =useState(false);
-  const [modalNovo,setModalNovo]=useState(false);
-  const [detalhe,setDetalhe]   =useState<Pedido|null>(null);
-  const [filtroStatus,setFiltroStatus]=useState<string>("TODOS");
-  const [busca,setBusca]       =useState("");
-  const [confirmandoLimpar,setConfirmandoLimpar]=useState(false);
-  const [limpando,setLimpando] =useState(false);
+  const {empresaAtiva}               = useEmpresa();
+  const [usuario,setUsuario]         = useState<Usuario|null>(null);
+  const isPremium                    = usuario?.tipoPlano === "PREMIUM";
+
+  useEffect(()=>{
+    getUsuario().then(setUsuario).catch(()=>{});
+  },[]);
+
+  const [pedidos,setPedidos]             = useState<Pedido[]>([]);
+  const [loading,setLoading]             = useState(false);
+  const [modalNovo,setModalNovo]         = useState(false);
+  const [detalhe,setDetalhe]             = useState<Pedido|null>(null);
+  const [filtroStatus,setFiltroStatus]   = useState<string>("TODOS");
+  const [busca,setBusca]                 = useState("");
+  const [confirmandoLimpar,setConfirmandoLimpar] = useState(false);
+  const [limpando,setLimpando]           = useState(false);
+  const [abaAtiva,setAbaAtiva]           = useState<"pedidos"|"integracoes">("pedidos");
 
   const carregar=useCallback(async()=>{
     if(!empresaAtiva) return;
@@ -664,7 +1143,6 @@ export default function Pedidos() {
 
   useEffect(()=>{carregar();},[carregar]);
 
-  /* Todas as operações atualizam o state local — zero reload ─────────────── */
   const adicionarPedido=useCallback((p:Pedido)=>{
     setPedidos(prev=>[p,...prev]);
     toast.success(`Pedido #${p.id} registrado!`);
@@ -704,6 +1182,7 @@ export default function Pedidos() {
   const ativos     = pedidos.filter(p=>p.status!=="CANCELADO");
   const totalBruto = ativos.reduce((s,p)=>s+p.valorFinal,0);
   const pendentes  = pedidos.filter(p=>p.status==="PENDENTE").length;
+  const automaticos= pedidos.filter(p=>p.observacao?.startsWith("Pedido automático")).length;
 
   if(!empresaAtiva) return(
     <div style={{padding:48,textAlign:"center",color:"var(--foreground-muted)",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
@@ -724,14 +1203,16 @@ export default function Pedidos() {
           </p>
         </div>
         <div style={{display:"flex",gap:8}}>
-          {pedidos.length>0&&(
+          {abaAtiva==="pedidos"&&pedidos.length>0&&(
             <button onClick={()=>setConfirmandoLimpar(true)} style={btnDanger}>
               <Trash2 size={14}/> Limpar histórico
             </button>
           )}
-          <button style={btnP} onClick={()=>setModalNovo(true)}>
-            <Plus size={15}/> Novo Pedido
-          </button>
+          {abaAtiva==="pedidos"&&(
+            <button style={btnP} onClick={()=>setModalNovo(true)}>
+              <Plus size={15}/> Novo Pedido
+            </button>
+          )}
         </div>
       </div>
 
@@ -741,86 +1222,121 @@ export default function Pedidos() {
           {label:"Total Faturado", value:fmt(totalBruto), destaque:true},
           {label:"Total Pedidos",  value:String(ativos.length)},
           {label:"Pendentes",      value:String(pendentes), warn:pendentes>0},
-          {label:"Cancelados",     value:String(pedidos.filter(p=>p.status==="CANCELADO").length)},
-        ].map((k,i)=>(
+          ...(isPremium&&automaticos>0
+            ?[{label:"Via Marketplace", value:String(automaticos), info:true}]
+            :[{label:"Cancelados", value:String(pedidos.filter(p=>p.status==="CANCELADO").length)}]
+          ),
+        ].map((k:any,i)=>(
           <div key={i} style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px"}}>
             <p style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 4px"}}>{k.label}</p>
-            <p style={{fontSize:18,fontWeight:700,margin:0,color:k.destaque?"var(--primary)":k.warn?"#f59e0b":"var(--foreground)"}}>{k.value}</p>
+            <p style={{fontSize:18,fontWeight:700,margin:0,color:k.destaque?"var(--primary)":k.warn?"#f59e0b":k.info?"#3b82f6":"var(--foreground)"}}>{k.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Filtros + busca */}
-      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-        {["TODOS",...Object.keys(STATUS_META)].map(s=>(
-          <button key={s} onClick={()=>setFiltroStatus(s)} style={{
-            padding:"5px 12px",borderRadius:99,fontSize:12,fontWeight:500,cursor:"pointer",
-            background:filtroStatus===s?"var(--primary-muted)":"transparent",
-            border:`1px solid ${filtroStatus===s?"var(--primary)":"var(--border)"}`,
-            color:filtroStatus===s?"var(--primary)":"var(--foreground-muted)",
-          }}>
-            {s==="TODOS"?"Todos":STATUS_META[s as StatusPedido].label}
-          </button>
-        ))}
-        <div style={{position:"relative",marginLeft:"auto"}}>
-          <Search size={11} style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:"var(--foreground-subtle)"}}/>
-          <input style={{...inp,paddingLeft:26,padding:"6px 9px 6px 26px",fontSize:12,maxWidth:220}}
-            placeholder="Buscar pedido..." value={busca} onChange={e=>setBusca(e.target.value)}/>
-        </div>
+      {/* Abas — Pedidos | Integrações (só premium) */}
+      <div style={{display:"flex",gap:0,borderBottom:"1px solid var(--border)"}}>
+        <button onClick={()=>setAbaAtiva("pedidos")} style={{
+          padding:"8px 16px",fontSize:13,cursor:"pointer",background:"none",border:"none",
+          color:abaAtiva==="pedidos"?"var(--foreground)":"var(--foreground-muted)",
+          fontWeight:abaAtiva==="pedidos"?600:400,
+          borderBottom:abaAtiva==="pedidos"?"2px solid var(--primary)":"2px solid transparent",
+          marginBottom:-1,
+        }}>
+          Pedidos
+        </button>
+        <button onClick={()=>setAbaAtiva("integracoes")} style={{
+          padding:"8px 16px",fontSize:13,cursor:"pointer",background:"none",border:"none",
+          color:abaAtiva==="integracoes"?"var(--foreground)":"var(--foreground-muted)",
+          fontWeight:abaAtiva==="integracoes"?600:400,
+          borderBottom:abaAtiva==="integracoes"?"2px solid var(--primary)":"2px solid transparent",
+          marginBottom:-1,
+          display:"flex",alignItems:"center",gap:6,
+        }}>
+          <Zap size={13}/> Integrações
+          {!isPremium&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:99,background:"rgba(234,179,8,0.15)",color:"#854F0B",fontWeight:600,marginLeft:2}}>Premium</span>}
+        </button>
       </div>
 
-      {/* Lista */}
-      {loading
-        ?<div style={{textAlign:"center",color:"var(--foreground-muted)",fontSize:13,padding:32}}>Carregando...</div>
-        :pedidosFiltrados.length===0
-          ?<div style={{padding:48,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:10,color:"var(--foreground-subtle)"}}>
-            <Package size={40}/>
-            <p style={{fontSize:14}}>{pedidos.length===0?"Nenhum pedido registrado.":"Sem resultados para este filtro."}</p>
-          </div>
-          :<div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {pedidosFiltrados.map(p=>(
-              <div key={p.id} onClick={()=>setDetalhe(p)}
-                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:10,cursor:"pointer",transition:"border-color .1s"}}
-                onMouseEnter={e=>((e.currentTarget as HTMLDivElement).style.borderColor="var(--primary)")}
-                onMouseLeave={e=>((e.currentTarget as HTMLDivElement).style.borderColor="var(--border)")}>
-                <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <span style={{fontSize:12,fontWeight:600,color:"var(--foreground-muted)",minWidth:32}}>#{p.id}</span>
-                  <div>
-                    <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
-                      <StatusBadge status={p.status}/>
-                      <CanalBadge canal={p.canalVenda}/>
-                      {p.contaDestino&&<span style={{fontSize:11,color:"var(--foreground-muted)"}}>💳 {p.contaDestino}</span>}
-                    </div>
-                    <p style={{fontSize:11,color:"var(--foreground-subtle)",margin:"3px 0 0"}}>
-                      {fmtData(p.dataPedido)} · {p.itens?.length??0} item(s){p.nomeCliente?` · ${p.nomeCliente}`:""}
-                    </p>
-                  </div>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:14,fontWeight:700,color:p.status==="CANCELADO"?"var(--foreground-subtle)":"var(--primary)",textDecoration:p.status==="CANCELADO"?"line-through":"none"}}>
-                    {fmt(p.valorFinal)}
-                  </span>
-                  <ChevronRight size={14} color="var(--foreground-subtle)"/>
-                </div>
-              </div>
+      {/* Aba: Integrações */}
+      {abaAtiva==="integracoes"&&(
+        isPremium
+          ?<SecaoIntegracoes empresaId={empresaAtiva.id}/>
+          :<SecaoPremiumLock/>
+      )}
+
+      {/* Aba: Pedidos */}
+      {abaAtiva==="pedidos"&&(
+        <>
+          {/* Filtros + busca */}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+            {["TODOS",...Object.keys(STATUS_META)].map(s=>(
+              <button key={s} onClick={()=>setFiltroStatus(s)} style={{
+                padding:"5px 12px",borderRadius:99,fontSize:12,fontWeight:500,cursor:"pointer",
+                background:filtroStatus===s?"var(--primary-muted)":"transparent",
+                border:`1px solid ${filtroStatus===s?"var(--primary)":"var(--border)"}`,
+                color:filtroStatus===s?"var(--primary)":"var(--foreground-muted)",
+              }}>
+                {s==="TODOS"?"Todos":STATUS_META[s as StatusPedido].label}
+              </button>
             ))}
-          </div>}
+            <div style={{position:"relative",marginLeft:"auto"}}>
+              <Search size={11} style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:"var(--foreground-subtle)"}}/>
+              <input style={{...inp,paddingLeft:26,padding:"6px 9px 6px 26px",fontSize:12,maxWidth:220}}
+                placeholder="Buscar pedido..." value={busca} onChange={e=>setBusca(e.target.value)}/>
+            </div>
+          </div>
 
-      {/* Modais */}
+          {/* Lista */}
+          {loading
+            ?<div style={{textAlign:"center",color:"var(--foreground-muted)",fontSize:13,padding:32}}>Carregando...</div>
+            :pedidosFiltrados.length===0
+              ?<div style={{padding:48,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:10,color:"var(--foreground-subtle)"}}>
+                <Package size={40}/>
+                <p style={{fontSize:14}}>{pedidos.length===0?"Nenhum pedido registrado.":"Sem resultados para este filtro."}</p>
+              </div>
+              :<div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {pedidosFiltrados.map(p=>{
+                  const isAuto = p.observacao?.startsWith("Pedido automático");
+                  return (
+                    <div key={p.id} onClick={()=>setDetalhe(p)}
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:10,cursor:"pointer",transition:"border-color .1s"}}
+                      onMouseEnter={e=>((e.currentTarget as HTMLDivElement).style.borderColor="var(--primary)")}
+                      onMouseLeave={e=>((e.currentTarget as HTMLDivElement).style.borderColor="var(--border)")}>
+                      <div style={{display:"flex",alignItems:"center",gap:12}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"var(--foreground-muted)",minWidth:32}}>#{p.id}</span>
+                        <div>
+                          <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
+                            <StatusBadge status={p.status}/>
+                            <CanalBadge canal={p.canalVenda}/>
+                            {isAuto&&<AutoBadge/>}
+                            {p.contaDestino&&<span style={{fontSize:11,color:"var(--foreground-muted)"}}>💳 {p.contaDestino}</span>}
+                          </div>
+                          <p style={{fontSize:11,color:"var(--foreground-subtle)",margin:"3px 0 0"}}>
+                            {fmtData(p.dataPedido)} · {p.itens?.length??0} item(s){p.nomeCliente?` · ${p.nomeCliente}`:""}
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:14,fontWeight:700,color:p.status==="CANCELADO"?"var(--foreground-subtle)":"var(--primary)",textDecoration:p.status==="CANCELADO"?"line-through":"none"}}>
+                          {fmt(p.valorFinal)}
+                        </span>
+                        <ChevronRight size={14} color="var(--foreground-subtle)"/>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+          }
+        </>
+      )}
+
+      {/* Modais globais */}
       {modalNovo&&(
-        <ModalNovoPedido
-          empresaId={empresaAtiva.id}
-          onClose={()=>setModalNovo(false)}
-          onSucesso={adicionarPedido}
-        />
+        <ModalNovoPedido empresaId={empresaAtiva.id} onClose={()=>setModalNovo(false)} onSucesso={adicionarPedido}/>
       )}
       {detalhe&&(
-        <DetalhePedido
-          pedido={detalhe}
-          onClose={()=>setDetalhe(null)}
-          onAtualizado={atualizarPedido}
-          onRemovido={removerPedido}
-        />
+        <DetalhePedido pedido={detalhe} onClose={()=>setDetalhe(null)} onAtualizado={atualizarPedido} onRemovido={removerPedido}/>
       )}
       {confirmandoLimpar&&(
         <ModalConfirmarExclusao

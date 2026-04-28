@@ -58,7 +58,16 @@ const inp:React.CSSProperties={width:"100%",padding:"8px 11px",background:"var(-
 const btnP:React.CSSProperties={display:"flex",alignItems:"center",gap:6,padding:"9px 16px",background:"var(--primary)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"};
 const btnDanger:React.CSSProperties={display:"flex",alignItems:"center",gap:6,padding:"7px 11px",background:"transparent",border:"1px solid rgba(239,68,68,0.35)",borderRadius:8,color:"var(--destructive)",fontSize:12,cursor:"pointer"};
 function StatusBadge({status}:{status:string}) { /* ... */ return <span />; }
-function CanalBadge({canal}:{canal:string}) { /* ... */ return <span />; }
+function CanalBadge({canal}:{canal:string}) {
+  // AQUI: mudei de emoji para icon
+  const m = CANAIS.find(c => c.value === canal) ?? { label: canal, icon: <Package size={12} /> };
+  
+  return (
+    <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,fontWeight:500,background:"var(--surface-overlay)",color:"var(--foreground-muted)",border:"1px solid var(--border)", display: "inline-flex", alignItems: "center", gap: 4}}>
+      {m.icon} {m.label}
+    </span>
+  );
+} 
 function SeletorStatus({statusAtual,onChange,salvando}:any) { /* ... */ return <div />; }
 function ModalConfirmarExclusao(props:any) { /* ... */ return <div />; }
 

@@ -26,13 +26,13 @@ const API_BASE = getApiBase();
 // 2. DESIGN TOKENS
 // =====================================================================
 const theme = {
-  bgBase: "#0e0b0b",
+  bgBase: "#080808",
   bgCard: "#181a20",
   bgInput: "#0f1115",
   border: "#272a30",
   textMain: "#f8fafc",
   textMuted: "#94a3b8",
-  primary: "#10b981",     
+  primary: "#969696",     
   primaryHover: "#059669",
   primaryAlpha: "rgba(16, 185, 129, 0.1)",
   danger: "#ef4444",
