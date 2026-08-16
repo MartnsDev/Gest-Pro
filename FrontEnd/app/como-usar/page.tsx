@@ -25,14 +25,12 @@ const sections: Section[] = [
     id: "dashboard",
     icon: "dashboard",
     title: "Dashboard",
-    description: "Visão geral completa do seu negócio em um único painel. Acompanhe métricas importantes em tempo real.",
+    description: "Use o painel inicial para entender rapidamente como está o seu negócio e acessar as tarefas mais frequentes.",
     features: [
-      { title: "Vendas do dia, semana e mês", description: "Veja o total de vendas separado por período, com comparativos automáticos." },
-      { title: "Lucro em tempo real", description: "Acompanhe seu lucro bruto e líquido atualizado a cada venda registrada." },
-      { title: "Estoque atual", description: "Quantidade de produtos em estoque e alertas de produtos zerados." },
-      { title: "Ações rápidas", description: "Botões de atalho para as funções mais usadas: nova venda, novo produto, ver caixa." },
-      { title: "Gráficos de vendas", description: "Visualize suas vendas diárias da semana em um gráfico de barras interativo." },
-      { title: "Formas de pagamento", description: "Gráfico de pizza mostrando a distribuição entre PIX, dinheiro, cartão de débito e crédito." },
+      { title: "Confira os indicadores", description: "Consulte receita, vendas, desempenho e outras informações resumidas da empresa selecionada." },
+      { title: "Observe os gráficos", description: "Use os gráficos para identificar a evolução das vendas e a distribuição dos resultados." },
+      { title: "Acompanhe o estoque", description: "Verifique alertas e produtos que precisam de atenção antes que faltem na loja." },
+      { title: "Use as ações rápidas", description: "Inicie uma venda, cadastre um produto ou abra o caixa diretamente pelo painel." },
     ],
   },
   {
@@ -44,9 +42,9 @@ const sections: Section[] = [
       { title: "Cadastro completo", description: "Adicione nome, descrição, preço de custo, preço de venda e quantidade em estoque." },
       { title: "Categorias", description: "Organize seus produtos em categorias personalizadas para facilitar a busca." },
       { title: "Código de barras", description: "Cadastre o código de barras do produto para agilizar as vendas no PDV." },
-      { title: "Fotos do produto", description: "Adicione imagens para identificar facilmente cada item." },
       { title: "Controle de margem", description: "O sistema calcula automaticamente sua margem de lucro por produto." },
       { title: "Busca rápida", description: "Encontre qualquer produto pelo nome, código ou categoria." },
+      { title: "Alerta de estoque mínimo", description: "Defina um limite para identificar os produtos que precisam de reposição." },
     ],
   },
   {
@@ -72,9 +70,8 @@ const sections: Section[] = [
       { title: "Cadastro de clientes", description: "Nome, telefone, e-mail, endereço e observações personalizadas." },
       { title: "Histórico de compras", description: "Veja todas as compras que cada cliente já fez na sua loja." },
       { title: "Total gasto", description: "Acompanhe quanto cada cliente já gastou no seu estabelecimento." },
-      { title: "Aniversário", description: "Cadastre a data de aniversário para realizar ações de marketing." },
       { title: "Busca rápida", description: "Encontre clientes pelo nome ou telefone durante a venda." },
-      { title: "Clientes ativos", description: "Veja quantos clientes compraram nos últimos 30 dias." },
+      { title: "Dados organizados", description: "Mantenha documentos e informações de contato disponíveis para consultas futuras." },
     ],
   },
   {
@@ -97,26 +94,24 @@ const sections: Section[] = [
     title: "Relatórios",
     description: "Analise seu negócio com relatórios detalhados e tome decisões baseadas em dados.",
     features: [
-      { title: "Relatório de vendas", description: "Vendas por período com filtros por data, vendedor e forma de pagamento." },
-      { title: "Produtos mais vendidos", description: "Ranking dos produtos que mais vendem na sua loja." },
-      { title: "Relatório de estoque", description: "Lista de produtos em estoque, zerados e com estoque baixo." },
-      { title: "Relatório de lucro", description: "Analise sua margem de lucro por período e por produto." },
-      { title: "Exportação de dados", description: "Exporte seus relatórios em PDF ou Excel para análise externa." },
-      { title: "Comparativos", description: "Compare períodos diferentes para identificar tendências de mercado." },
+      { title: "Selecione o período", description: "Escolha hoje, esta semana, este mês, um intervalo personalizado ou um caixa específico." },
+      { title: "Gere o relatório", description: "Confira receita, lucro estimado, ticket médio, descontos e valores das vendas." },
+      { title: "Analise os gráficos", description: "Visualize vendas por dia e a participação de cada forma de pagamento." },
+      { title: "Exporte quando precisar", description: "Salve os dados em CSV, HTML ou PDF e gere a nota fiscal pela própria tela." },
     ],
   },
   {
     id: "empresas",
     icon: "building",
-    title: "Multi-empresas",
+    title: "Várias empresas",
     description: "Gerencie múltiplas lojas ou filiais em uma única conta (planos Pro e Premium).",
     features: [
       { title: "Cadastro de empresas", description: "Adicione várias empresas com CNPJs e endereços diferentes." },
       { title: "Troca rápida", description: "Alterne entre empresas com um clique no menu superior." },
       { title: "Dados separados", description: "Cada empresa tem seus próprios produtos, clientes e vendas." },
-      { title: "Relatórios por empresa", description: "Gere relatórios individuais ou consolidados de todas as empresas." },
-      { title: "Usuários por empresa", description: "Defina quais usuários têm acesso a cada filial." },
-      { title: "Visão geral", description: "Dashboard unificado com métricas de todas as suas empresas." },
+      { title: "Relatórios por empresa", description: "Acesse os resultados de cada empresa selecionando a operação desejada." },
+      { title: "Caixas independentes", description: "Mantenha a movimentação de cada empresa separada e fácil de conferir." },
+      { title: "Contexto sempre visível", description: "Confira no topo da tela qual empresa está ativa antes de realizar uma ação." },
     ],
   },
   {
@@ -128,9 +123,9 @@ const sections: Section[] = [
       { title: "Dados da empresa", description: "Configure nome, logo, endereço e informações de contato." },
       { title: "Categorias de produtos", description: "Crie e edite categorias para organizar seu catálogo." },
       { title: "Formas de pagamento", description: "Habilite ou desabilite formas de pagamento aceitas na loja." },
-      { title: "Usuários e permissões", description: "Adicione funcionários com níveis de acesso diferentes." },
-      { title: "Notificações", description: "Configure alertas automáticos de estoque baixo e metas de vendas." },
-      { title: "Integrações", description: "Conecte com outros sistemas e ferramentas (plano Premium)." },
+      { title: "Preferências da operação", description: "Revise as opções disponíveis e deixe o sistema adequado à rotina da loja." },
+      { title: "Plano da conta", description: "Consulte os detalhes do plano e os limites disponíveis para a sua operação." },
+      { title: "Dados atualizados", description: "Mantenha as informações da empresa corretas para relatórios e documentos." },
     ],
   },
 ];
@@ -205,7 +200,7 @@ const Logo = () => (
       style={{ width: 32, height: 32, objectFit: "contain" }} 
     />
     <span style={{ fontFamily: "var(--font-syne), 'Syne', 'Inter', sans-serif", fontWeight: 800, fontSize: 18, color: "#f1f5f9", letterSpacing: "-0.02em" }}>
-      Gest<span style={{ color: "#10b981" }}>Pro</span>
+      Gest<span style={{ color: "#78d6a3" }}>Pro</span>
     </span>
   </Link>
 );
@@ -219,14 +214,14 @@ export default function ComoUsarPage() {
   const currentSection = sections.find(s => s.id === activeSection) || sections[0];
 
   return (
-    <main style={{ background: "#050608", minHeight: "100vh", color: "#f1f5f9" }}>
+    <div style={{ background: "#050608", minHeight: "100vh", color: "#f1f5f9" }}>
       {/* Styles */}
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        ::selection { background: rgba(16,185,129,0.28); color: #e2fef4; }
+        ::selection { background: rgba(120,214,163,0.25); color: #effff6; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: #050608; }
-        ::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.35); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb { background: rgba(120,214,163,0.35); border-radius: 2px; }
         
         .nav-item {
           display: flex; align-items: center; gap: 12px;
@@ -244,10 +239,9 @@ export default function ComoUsarPage() {
           color: rgba(241,245,249,0.9);
         }
         .nav-item.active {
-          background: rgba(16,185,129,0.12);
-          color: #10b981;
-          border-left: 3px solid #10b981;
-          box-shadow: inset 20px 0 40px -20px rgba(16,185,129,0.1);
+          background: rgba(120,214,163,0.11);
+          color: #78d6a3;
+          border-left: 3px solid #78d6a3;
         }
         
         .feature-card {
@@ -259,28 +253,29 @@ export default function ComoUsarPage() {
         }
         .feature-card:hover {
           background: rgba(255,255,255,0.04);
-          border-color: rgba(16,185,129,0.3);
+          border-color: rgba(120,214,163,0.3);
           transform: translateY(-4px);
-          box-shadow: 0 10px 30px -10px rgba(16,185,129,0.1);
+          box-shadow: 0 10px 30px -10px rgba(120,214,163,0.1);
         }
         
         .cta-btn {
           display: inline-flex;
-          background: linear-gradient(135deg, #10b981, #059669);
-          color: #fff; padding: 14px 32px; border-radius: 12px;
+          background: #78d6a3;
+          color: #0a1710; padding: 14px 32px; border-radius: 12px;
           font-family: var(--font-manrope), 'Manrope', 'Inter', sans-serif;
           font-size: 15px; font-weight: 700; text-decoration: none;
           transition: all 0.2s ease;
-          box-shadow: 0 4px 14px rgba(16,185,129,0.25);
+          box-shadow: 0 4px 14px rgba(120,214,163,0.18);
         }
         .cta-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(16,185,129,0.4);
+          background: #95e3b7;
+          box-shadow: 0 6px 20px rgba(120,214,163,0.28);
         }
 
         @media(max-width:900px) {
           .sidebar { display: none !important; }
-          .main-content { margin-left: 0 !important; padding: 30px 20px !important; }
+          .main-content { margin-left: 0 !important; padding: 88px 20px 40px !important; }
           .mobile-nav { display: flex !important; }
         }
         @media(min-width:901px) {
@@ -328,7 +323,7 @@ export default function ComoUsarPage() {
               fontFamily: "var(--font-dm-mono), 'DM Mono', monospace",
               fontSize: 11, letterSpacing: ".12em", textTransform: "uppercase",
               color: "rgba(241,245,249,0.35)", marginBottom: 16, padding: "0 18px", fontWeight: 700
-            }}>Funcionalidades</h2>
+            }}>Guia de uso</h2>
             <nav style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {sections.map(s => (
                 <button
@@ -359,9 +354,9 @@ export default function ComoUsarPage() {
               onClick={() => setActiveSection(s.id)}
               style={{
                 padding: "8px 16px", borderRadius: 99, whiteSpace: "nowrap",
-                background: activeSection === s.id ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.04)",
-                border: activeSection === s.id ? "1px solid rgba(16,185,129,0.3)" : "1px solid rgba(255,255,255,0.06)",
-                color: activeSection === s.id ? "#10b981" : "rgba(241,245,249,0.6)",
+                background: activeSection === s.id ? "rgba(120,214,163,0.13)" : "rgba(255,255,255,0.04)",
+                border: activeSection === s.id ? "1px solid rgba(120,214,163,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                color: activeSection === s.id ? "#78d6a3" : "rgba(241,245,249,0.6)",
                 fontFamily: "var(--font-manrope), 'Manrope', 'Inter', sans-serif",
                 fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
               }}
@@ -374,16 +369,36 @@ export default function ComoUsarPage() {
         {/* Main Content */}
         <main className="main-content" style={{ flex: 1, marginLeft: 280, padding: "56px 64px" }}>
           <div style={{ maxWidth: 900 }}>
+            <div style={{ marginBottom: 48, paddingBottom: 40, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <span style={{
+                display: "inline-flex", padding: "7px 12px", borderRadius: 99,
+                border: "1px solid rgba(120,214,163,0.22)", background: "rgba(120,214,163,0.07)",
+                color: "#78d6a3", fontSize: 11, fontWeight: 700, letterSpacing: ".14em",
+                textTransform: "uppercase", marginBottom: 18,
+              }}>
+                Central de ajuda
+              </span>
+              <h1 style={{
+                fontFamily: "var(--font-syne), 'Syne', 'Inter', sans-serif", fontWeight: 800,
+                fontSize: "clamp(34px, 5vw, 52px)", lineHeight: 1.05, letterSpacing: "-.04em",
+                color: "#f1f5f9", marginBottom: 16,
+              }}>
+                Aprenda a usar o GestPro na prática.
+              </h1>
+              <p style={{ color: "rgba(241,245,249,.6)", fontSize: 17, lineHeight: 1.7, maxWidth: 700 }}>
+                Escolha uma área no menu e siga as orientações para configurar sua empresa,
+                registrar operações e acompanhar os resultados com segurança.
+              </p>
+            </div>
             
             {/* Section Header */}
             <div style={{ marginBottom: 56 }}>
               <div style={{
                 width: 64, height: 64, borderRadius: 16,
-                background: "rgba(16,185,129,0.1)",
-                border: "1px solid rgba(16,185,129,0.2)",
+                background: "rgba(120,214,163,0.1)",
+                border: "1px solid rgba(120,214,163,0.2)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#10b981", marginBottom: 24,
-                boxShadow: "0 8px 32px rgba(16,185,129,0.15)"
+                color: "#78d6a3", marginBottom: 24,
               }}>
                 <Icon name={currentSection.icon} size={28} />
               </div>
@@ -414,9 +429,9 @@ export default function ComoUsarPage() {
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
                     <div style={{
                       minWidth: 32, height: 32, borderRadius: 10,
-                      background: "rgba(16,185,129,0.12)",
+                      background: "rgba(120,214,163,0.12)",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      color: "#10b981",
+                      color: "#78d6a3",
                     }}>
                       <Icon name="check" size={18} />
                     </div>
@@ -477,17 +492,17 @@ export default function ComoUsarPage() {
                   }}
                   style={{
                     display: "flex", alignItems: "center", gap: 10,
-                    background: "rgba(16,185,129,0.1)",
-                    border: "1px solid rgba(16,185,129,0.25)",
+                    background: "rgba(120,214,163,0.1)",
+                    border: "1px solid rgba(120,214,163,0.25)",
                     padding: "14px 24px", borderRadius: 12,
-                    color: "#10b981",
+                    color: "#78d6a3",
                     fontFamily: "var(--font-manrope), 'Manrope', 'Inter', sans-serif",
                     fontSize: 14, fontWeight: 600, cursor: "pointer",
                     marginLeft: "auto",
                     transition: "all 0.2s",
                   }}
-                  onMouseOver={(e) => { e.currentTarget.style.background = "rgba(16,185,129,0.15)"; e.currentTarget.style.borderColor = "rgba(16,185,129,0.4)"; }}
-                  onMouseOut={(e) => { e.currentTarget.style.background = "rgba(16,185,129,0.1)"; e.currentTarget.style.borderColor = "rgba(16,185,129,0.25)"; }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = "rgba(120,214,163,0.15)"; e.currentTarget.style.borderColor = "rgba(120,214,163,0.4)"; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = "rgba(120,214,163,0.1)"; e.currentTarget.style.borderColor = "rgba(120,214,163,0.25)"; }}
                 >
                   {sections[sections.findIndex(s => s.id === activeSection) + 1].title}
                   <Icon name="arrow" size={16} />
@@ -498,8 +513,8 @@ export default function ComoUsarPage() {
             {/* CTA */}
             <div style={{
               marginTop: 64,
-              background: "linear-gradient(145deg, rgba(16,185,129,0.08), rgba(5,150,105,0.02))",
-              border: "1px solid rgba(16,185,129,0.2)",
+              background: "#0c100e",
+              border: "1px solid rgba(120,214,163,0.2)",
               borderRadius: 24, padding: "48px 40px",
               textAlign: "center",
             }}>
@@ -522,6 +537,6 @@ export default function ComoUsarPage() {
           </div>
         </main>
       </div>
-    </main>
+    </div>
   );
 }

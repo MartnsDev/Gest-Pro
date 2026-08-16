@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
@@ -29,8 +28,14 @@ import java.util.List;
  *
  * Fluxo:
  *  1. Shopee envia POST com header Authorization contendo HMAC-SHA256
- *  2. Validamos o HMAC com o partner_key configurado
- *  3. Se o code == 4 (ORDER_STATUS_UPDATE), buscamos detalhes e criamos o pedido
+ *     calculado sobre (url_do_push + corpo_bruto) usando o partner_key.
+ *  2. Validamos reconstruindo essa mesma string.
+ *  3. Se o code == 4 (ORDER_STATUS_UPDATE), buscamos detalhes e criamos o pedido.
+ *
+ * CORREÇÃO: a versão anterior calculava o HMAC apenas sobre o rawBody,
+ * o que nunca bate com o que a Shopee envia. A Shopee assina
+ * "url|corpo" -- na prática, concatenados sem separador, mas usando a URL
+ * completa do endpoint cadastrada no painel de Live Push da Shopee.
  */
 @Service
 @RequiredArgsConstructor
@@ -44,16 +49,17 @@ public class WebhookShopeeService {
     @Value("${gestpro.marketplace.shopee.partner-id:0}")
     private String shopeePartnerId;
 
-    private final WebhookProcessorService processor;
-    private final ShopeeApiClient shopeeApiClient; // declarado abaixo
-
     /**
-     * Ponto de entrada chamado pelo WebhookController.
-     *
-     * @param rawBody  corpo bruto da requisição (bytes originais para validar HMAC)
-     * @param authorization  header Authorization enviado pela Shopee
-     * @param payload  corpo já deserializado como JsonNode
+     * URL PÚBLICA completa e exata cadastrada no painel "Live Push" da Shopee,
+     * ex: https://api.gestpro.site/api/v1/webhooks/shopee
+     * Precisa ser IDÊNTICA à cadastrada lá (a Shopee usa ela no cálculo do HMAC).
      */
+    @Value("${gestpro.marketplace.shopee.webhook-url}")
+    private String webhookUrl;
+
+    private final WebhookProcessorService processor;
+    private final ShopeeApiClient shopeeApiClient;
+
     public void processar(byte[] rawBody, String authorization, JsonNode payload) {
         validarAssinatura(rawBody, authorization);
 
@@ -65,10 +71,9 @@ public class WebhookShopeeService {
             return;
         }
 
-        String shopId   = payload.path("shop_id").asText();
-        String orderId  = payload.path("data").path("ordersn").asText();
+        String shopId  = payload.path("shop_id").asText();
+        String orderId = payload.path("data").path("ordersn").asText();
 
-        // Busca detalhes completos via API da Shopee
         JsonNode detalhes = shopeeApiClient.buscarDetalhePedido(shopId, orderId);
 
         WebhookOrderDTO order = converterParaOrderDTO(shopId, orderId, detalhes);
@@ -79,9 +84,10 @@ public class WebhookShopeeService {
 
     private void validarAssinatura(byte[] rawBody, String authorization) {
         try {
-            // Shopee assina: partner_id + url_path + timestamp + access_token + shop_id
-            // O header Authorization contém o HMAC-SHA256 em hex
-            String expectedHmac = calcularHmac(rawBody, shopeePartnerKey);
+            String bodyString = new String(rawBody, StandardCharsets.UTF_8);
+            String baseString = webhookUrl + bodyString;
+            String expectedHmac = calcularHmac(baseString.getBytes(StandardCharsets.UTF_8), shopeePartnerKey);
+
             if (!expectedHmac.equalsIgnoreCase(authorization)) {
                 log.warn("Assinatura Shopee inválida. Recebida: {}", authorization);
                 throw new ApiException("Assinatura inválida.", HttpStatus.UNAUTHORIZED, "/webhook/shopee");
@@ -108,7 +114,6 @@ public class WebhookShopeeService {
 
         if (itemList.isArray()) {
             for (JsonNode item : itemList) {
-                // Na Shopee, o ID do anúncio é o item_id
                 String anuncioId = item.path("item_id").asText();
                 int qty = item.path("model_quantity_purchased").asInt(1);
                 itens.add(WebhookOrderDTO.ItemDTO.builder()
@@ -118,8 +123,6 @@ public class WebhookShopeeService {
             }
         }
 
-        // Shopee sempre usa cartão de crédito ou saldo — mapeamos como OUTRO genericamente
-        // O operador pode ajustar manualmente se necessário
         FormaDePagamento forma = mapearFormaPagamento(
                 detalhe.path("payment_method").asText(""));
 

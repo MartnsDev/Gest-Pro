@@ -3,6 +3,7 @@ package br.com.gestpro.marketplace.controller;
 import br.com.gestpro.marketplace.webhook.WebhookMercadoLivreService;
 import br.com.gestpro.marketplace.webhook.WebhookShopeeService;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,13 +12,13 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Endpoints de recebimento de webhooks dos marketplaces.
-
-  IMPORTANTE: estas rotas devem ser liberadas no SecurityFilterChain
-  (sem autenticação JWT), pois são chamadas diretamente pelos marketplaces.
-  A autenticidade é garantida pela validação do HMAC em cada service.
-
-  POST /api/v1/webhooks/shopee          eventos da Shopee
-  POST /api/v1/webhooks/mercadolivre    notificações do Mercado Livre
+ *
+ * IMPORTANTE: estas rotas devem ser liberadas no SecurityFilterChain
+ * (sem autenticação JWT), pois são chamadas diretamente pelos marketplaces.
+ * A autenticidade é garantida pela validação do HMAC em cada service.
+ *
+ *  POST /api/v1/webhooks/shopee          eventos da Shopee
+ *  POST /api/v1/webhooks/mercadolivre    notificações do Mercado Livre
  */
 @RestController
 @RequestMapping("/api/v1/webhooks")
@@ -28,21 +29,29 @@ public class WebhookController {
 
     private final WebhookShopeeService shopeeService;
     private final WebhookMercadoLivreService mlService;
+    private final ObjectMapper objectMapper;
 
     /**
-      Shopee exige resposta 200 em < 5 segundos.
-      A validação e processamento são síncronos aqui mas podem ser movidos
-      para uma fila (ex: RabbitMQ) se o volume crescer.
+     * CORREÇÃO: só existe UM @RequestBody agora (rawBody).
+     * O JsonNode é montado a partir do rawBody manualmente, porque o corpo
+     * da requisição HTTP só pode ser lido uma vez — ter dois parâmetros
+     * @RequestBody fazia o segundo falhar silenciosamente (por isso nenhum
+     * pedido da Shopee estava sendo criado).
+     *
+     * Shopee exige resposta 200 em < 5 segundos.
      */
     @PostMapping("/shopee")
     public ResponseEntity<Void> shopee(
             @RequestBody(required = false) byte[] rawBody,
-            @RequestHeader(value = "Authorization", defaultValue = "") String authorization,
-            @org.springframework.web.bind.annotation.RequestBody(required = false)
-            JsonNode payload) {
+            @RequestHeader(value = "Authorization", defaultValue = "") String authorization) {
 
         log.info("Webhook Shopee recebido");
         try {
+            if (rawBody == null || rawBody.length == 0) {
+                log.warn("Webhook Shopee recebido com corpo vazio");
+                return ResponseEntity.ok().build();
+            }
+            JsonNode payload = objectMapper.readTree(rawBody);
             shopeeService.processar(rawBody, authorization, payload);
         } catch (Exception e) {
             // Logamos o erro mas retornamos 200 para evitar que a Shopee
@@ -53,8 +62,8 @@ public class WebhookController {
     }
 
     /**
-      Mercado Livre reenvia o evento se não receber 200 em 2s.
-      Mesmo padrão: responde 200 imediatamente, loga falhas.
+     * Mercado Livre reenvia o evento se não receber 200 em 2s.
+     * Mesmo padrão: responde 200 imediatamente, loga falhas.
      */
     @PostMapping("/mercadolivre")
     public ResponseEntity<Void> mercadoLivre(

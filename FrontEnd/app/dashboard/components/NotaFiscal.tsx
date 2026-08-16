@@ -26,15 +26,15 @@ const API_BASE = getApiBase();
 // 2. DESIGN TOKENS
 // =====================================================================
 const theme = {
-  bgBase: "#080808",
-  bgCard: "#181a20",
-  bgInput: "#0f1115",
-  border: "#272a30",
-  textMain: "#f8fafc",
-  textMuted: "#94a3b8",
-  primary: "#969696",     
-  primaryHover: "#059669",
-  primaryAlpha: "rgba(16, 185, 129, 0.1)",
+  bgBase: "transparent",
+  bgCard: "var(--surface-elevated)",
+  bgInput: "var(--surface-overlay)",
+  border: "var(--border)",
+  textMain: "var(--foreground)",
+  textMuted: "var(--foreground-muted)",
+  primary: "var(--primary)",
+  primaryHover: "var(--primary-hover)",
+  primaryAlpha: "var(--primary-muted)",
   danger: "#ef4444",
   dangerAlpha: "rgba(239, 68, 68, 0.1)",
   warning: "#f59e0b",
@@ -387,14 +387,14 @@ export default function NotaFiscalPage() {
   // =====================================================================
   return (
     <ClientOnly>
-      <div style={{ padding: "28px 28px 48px", display: "flex", flexDirection: "column", gap: 26, maxWidth: 1200, margin: "0 auto", background: theme.bgBase, color: theme.textMain, fontFamily: "system-ui, sans-serif" }}>
+      <div style={{ padding: "28px 28px 48px", display: "flex", flexDirection: "column", gap: 26, maxWidth: 1200, margin: "0 auto", background: theme.bgBase, color: theme.textMain }}>
         
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: theme.textMain, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
-              <Receipt color={theme.primary} size={26} /> Emissor Fiscal Inteligente
+              <Receipt color={theme.primary} size={24} /> Notas Fiscais
             </h1>
-            <p style={{ fontSize: 13, color: theme.textMuted, margin: 0 }}>Gestão de NF-e, NFC-e e NFS-e conectada à SEFAZ</p>
+            <p style={{ fontSize: 13, color: theme.textMuted, margin: 0 }}>Emissão e gestão de NF-e, NFC-e e NFS-e</p>
           </div>
           <button onClick={carregarNotas} style={{ ...btnStyle, background: theme.bgCard }}>
              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Atualizar Dados

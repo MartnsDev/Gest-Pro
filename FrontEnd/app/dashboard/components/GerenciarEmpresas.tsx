@@ -417,7 +417,7 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
   const isAviso = erro.includes("opcional"); 
 
   return (
-    <div style={{ padding: "32px 28px 64px", display: "flex", flexDirection: "column", gap: 28, maxWidth: 800, margin: "0 auto" }}>
+    <div style={{ padding: "28px 28px 48px", display: "flex", flexDirection: "column", gap: 26, maxWidth: 1200, margin: "0 auto", color: "var(--foreground)" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .animate-spin { animation: spin 1s linear infinite; }
@@ -453,8 +453,8 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
 
       {/* Banner Informativo (Aparece apenas no modo gerencial se não estiver criando) */}
       {!modoSelecao && !criando && (
-        <div style={{ background: "linear-gradient(to right, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.02))", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 16, padding: "20px 24px", display: "flex", gap: 16, alignItems: "flex-start" }}>
-          <div style={{ background: "var(--primary)", padding: 8, borderRadius: 10, display: "flex", color: "#000" }}>
+        <div style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 14, padding: "18px 20px", display: "flex", gap: 14, alignItems: "flex-start" }}>
+          <div style={{ background: "var(--primary-muted)", padding: 8, borderRadius: 10, display: "flex", color: "var(--primary)" }}>
             <Info size={20} />
           </div>
           <div>

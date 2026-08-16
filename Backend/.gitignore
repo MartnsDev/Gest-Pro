@@ -150,6 +150,6 @@ desktop.ini
 # ==============================================================================
 # Ignora o executável do Stripe CLI local
 stripe.exe
-
+marketplace.env
 
 

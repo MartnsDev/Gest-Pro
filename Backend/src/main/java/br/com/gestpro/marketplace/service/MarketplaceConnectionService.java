@@ -39,16 +39,21 @@ public class MarketplaceConnectionService {
     private final ProdutoRepository produtoRepository;
     private final WebClient.Builder webClientBuilder;
 
-    @Value("${shopee.partner.id}")
+    // CORREÇÃO: unificado para o mesmo namespace usado em ShopeeApiClient e
+    // WebhookShopeeService (gestpro.marketplace.shopee.*). Antes, esta classe
+    // usava "shopee.partner.id" / "shopee.partner.key" -- uma chave diferente
+    // das outras duas classes -- então bastava configurar uma variável para
+    // deixar a outra vazia silenciosamente.
+    @Value("${gestpro.marketplace.shopee.partner-id:0}")
     private String shopeePartnerId;
 
-    @Value("${shopee.partner.key}")
+    @Value("${gestpro.marketplace.shopee.partner-key:}")
     private String shopeePartnerKey;
 
-    @Value("${mercadolivre.client.id}")
+    @Value("${gestpro.marketplace.mercadolivre.client-id:}")
     private String mlClientId;
 
-    @Value("${mercadolivre.client.secret}")
+    @Value("${gestpro.marketplace.mercadolivre.client-secret:}")
     private String mlClientSecret;
 
     // ─── Conexões ────────────────────────────────────────────────────────────────
@@ -175,6 +180,12 @@ public class MarketplaceConnectionService {
     public void processarCallbackShopee(Long empresaId, String code, String shopId) {
         log.info("Processando callback Shopee: empresaId={} shopId={}", empresaId, shopId);
 
+        // CORREÇÃO: shopId vem de @RequestParam(required = false) no controller,
+        // então pode ser null -- Long.parseLong(null) explodia com NPE confuso.
+        if (shopId == null || shopId.isBlank()) {
+            throw new ApiException("shop_id ausente no retorno da Shopee.", HttpStatus.BAD_REQUEST, PATH);
+        }
+
         Map<String, Object> body = Map.of(
                 "code", code,
                 "shop_id", Long.parseLong(shopId),
@@ -192,10 +203,17 @@ public class MarketplaceConnectionService {
                 .bodyToMono(Map.class)
                 .block();
 
-        if (resposta == null || resposta.containsKey("error")) {
-            String erro = resposta != null ? String.valueOf(resposta.get("message")) : "resposta nula";
-            log.error("Shopee retornou erro no callback: {}", erro);
-            throw new ApiException("Falha ao obter token Shopee: " + erro, HttpStatus.BAD_GATEWAY, PATH);
+        // CORREÇÃO: a Shopee SEMPRE retorna o campo "error" -- vazio ("") em
+        // caso de sucesso. containsKey("error") era sempre true, então todo
+        // callback de sucesso era tratado como falha. Agora checamos se o
+        // valor de "error" é não-vazio.
+        String erro = resposta != null ? String.valueOf(resposta.get("error")) : null;
+        boolean falhou = resposta == null || (erro != null && !erro.isBlank() && !erro.equals("null"));
+
+        if (falhou) {
+            String mensagem = resposta != null ? String.valueOf(resposta.get("message")) : "resposta nula";
+            log.error("Shopee retornou erro no callback: {}", mensagem);
+            throw new ApiException("Falha ao obter token Shopee: " + mensagem, HttpStatus.BAD_GATEWAY, PATH);
         }
 
         String accessToken  = String.valueOf(resposta.get("access_token"));
