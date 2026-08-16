@@ -7,21 +7,17 @@ import {
   Menu,
   X,
   ArrowRight,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
   Boxes,
   ShoppingCart,
-  BarChart3,
   Building2,
   FileBarChart,
   Store,
   Wallet,
   Users,
-  RefreshCw,
   PlayCircle,
-  BadgeCheck,
   ReceiptText,
   ScanLine,
 } from "lucide-react";
@@ -30,21 +26,13 @@ const CONFIG = {
   brand: "GestPro",
   logoSrc: "/images/logo.png", // <- sua logo
   heroBackgroundSrc: "/images/landing/gestpro-hero-regional-market-v2.webp",
-  siteUrl: "www.gestpro.site",
+  heroMobileBackgroundSrc: "/images/landing/gestpro-hero-regional-market-mobile-v1.webp",
 };
 
 const navLinks = [
   { label: "Conheça", href: "#visao-geral" },
   { label: "Recursos", href: "#funcionalidades" },
-  { label: "Benefícios", href: "#beneficios" },
   { label: "Planos", href: "#planos" },
-];
-
-const highlights = [
-  "Saiba quanto entrou, quanto saiu e quanto o seu negócio realmente lucrou",
-  "Evite perdas com estoque baixo, produtos parados e reposições atrasadas",
-  "Venda com agilidade e mantenha cada movimentação registrada automaticamente",
-  "Acompanhe uma ou várias lojas em um só lugar, com informações sempre organizadas",
 ];
 
 const featureGroups = [
@@ -83,63 +71,36 @@ const featureGroups = [
 const plans = [
   {
     name: "Experimental",
-    eyebrow: "Conheça sem compromisso",
     period: "7 dias para testar",
     companies: "1 empresa",
     cashiers: "1 caixa",
-    description: "Explore a rotina do GestPro e descubra como ele pode organizar o seu negócio.",
     features: ["Frente de caixa", "Controle de produtos e estoque", "Resumo do negócio"],
     cta: "Testar gratuitamente",
   },
   {
     name: "Básico",
-    eyebrow: "Para começar organizado",
     period: "Acesso mensal",
     companies: "1 empresa",
     cashiers: "1 caixa",
-    description: "O essencial para centralizar a operação de uma pequena loja e abandonar as planilhas.",
     features: ["Todos os recursos essenciais", "Relatórios de vendas", "Clientes e fornecedores"],
     cta: "Escolher Básico",
   },
   {
     name: "Pro",
-    eyebrow: "Melhor custo-benefício",
     period: "Acesso mensal",
     companies: "Até 2 empresas",
     cashiers: "Até 3 caixas",
-    description: "Mais capacidade para quem já vende todos os dias e precisa acompanhar uma operação em crescimento.",
     features: ["Vendas, estoque e caixa", "Operação multiempresa", "Mais caixas por empresa", "Relatórios com exportação"],
     cta: "Quero o plano Pro",
     featured: true,
   },
   {
     name: "Premium",
-    eyebrow: "Para operações maiores",
     period: "Acesso mensal",
     companies: "Empresas ilimitadas",
     cashiers: "Caixas ilimitados",
-    description: "Liberdade para administrar redes, novas unidades e equipes sem limitar o crescimento.",
     features: ["Todos os recursos do GestPro", "Empresas sem limite", "Caixas sem limite", "Cadastro de novas unidades"],
     cta: "Escolher Premium",
-  },
-];
-
-const faqs = [
-  {
-    q: "Preciso entender de sistemas para usar o GestPro?",
-    a: "Não. O GestPro foi pensado para a rotina de pequenos negócios, com telas claras e processos diretos desde o primeiro acesso.",
-  },
-  {
-    q: "Ele funciona para mais de uma empresa?",
-    a: "Sim. Você pode gerenciar várias empresas em uma única conta, mantendo vendas, caixas, estoques e resultados organizados separadamente.",
-  },
-  {
-    q: "Consigo controlar a venda completa pelo GestPro?",
-    a: "Sim. Você registra produtos, pagamentos, descontos e troco, emite cupom e pode cancelar uma venda com a devolução automática dos itens ao estoque.",
-  },
-  {
-    q: "Posso acessar de qualquer lugar?",
-    a: "Sim. Como o GestPro funciona pela internet, você pode acompanhar o negócio pelo computador, tablet ou celular usando sua conta.",
   },
 ];
 
@@ -293,15 +254,25 @@ function Hero() {
   return (
     <section className="relative isolate min-h-[calc(100svh-64px)] overflow-hidden bg-[#080907] sm:min-h-[calc(100svh-80px)]">
       <Image
-        src={CONFIG.heroBackgroundSrc}
+        src={CONFIG.heroMobileBackgroundSrc}
         alt="Loja organizada com frente de caixa e estoque ao fundo"
         fill
         priority
         quality={92}
-        className="-z-20 object-cover object-[67%_center] sm:object-center"
-        sizes="100vw"
+        className="-z-20 object-cover object-[67%_center] sm:hidden"
+        sizes="(max-width: 639px) 100vw, 1px"
       />
-      <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(5,7,6,.97)_0%,rgba(5,7,6,.88)_48%,rgba(5,7,6,.42)_72%,rgba(5,7,6,.62)_100%)] sm:bg-black/30" aria-hidden="true" />
+      <Image
+        src={CONFIG.heroBackgroundSrc}
+        alt=""
+        fill
+        priority
+        quality={92}
+        className="-z-20 hidden object-cover object-center sm:block"
+        sizes="(min-width: 640px) 100vw, 1px"
+        aria-hidden="true"
+      />
+      <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(5,7,6,.72)_0%,rgba(5,7,6,.56)_48%,rgba(5,7,6,.16)_76%,rgba(5,7,6,.32)_100%)] sm:hidden" aria-hidden="true" />
 
       <div className="mx-auto flex min-h-[calc(100svh-64px)] w-full max-w-7xl items-start px-4 pb-16 pt-10 sm:min-h-[calc(100svh-80px)] sm:items-center sm:px-6 sm:py-16 md:py-20 lg:px-8">
         <div className="w-full max-w-[720px]">
@@ -338,45 +309,6 @@ function Hero() {
             </a>
           </div>
 
-          <div className="mt-6 grid max-w-xl grid-cols-2 gap-x-3 gap-y-2.5 text-[11px] text-zinc-200 sm:mt-8 sm:flex sm:max-w-2xl sm:flex-wrap sm:gap-x-6 sm:gap-y-3 sm:text-[13px]">
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 size={15} className="text-[#78d6a3]" />
-              PDV funcional
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 size={15} className="text-[#78d6a3]" />
-              Estoque automático
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 size={15} className="text-[#78d6a3]" />
-              Relatórios completos
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 size={15} className="text-[#78d6a3]" />
-              Acesso de qualquer lugar
-            </span>
-          </div>
-
-          <div className="mt-10 hidden grid-cols-2 gap-3 sm:grid sm:grid-cols-4">
-            {[
-              ["Venda ágil", "Frente de caixa"],
-              ["Menos perdas", "Estoque"],
-              ["Decisões melhores", "Relatórios"],
-              ["Dados reunidos", "Visão do negócio"],
-            ].map(([value, label]) => (
-              <div
-                key={value}
-                className="rounded-2xl border border-white/15 bg-black/45 px-4 py-4 backdrop-blur-md"
-              >
-                <div className="font-display text-[18px] font-extrabold tracking-tight text-white">
-                  {value}
-                </div>
-                <div className="mt-1 text-[12px] uppercase tracking-[0.18em] text-zinc-300">
-                  {label}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </section>
@@ -389,14 +321,14 @@ function OverviewSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-[.86fr_1.14fr]">
           <SectionTitle
-            tag="feito para o seu negócio"
+            tag="GestPro na rotina"
             title={
               <>
-                Seu negócio não precisa de mais trabalho.
-                <span className="block text-[#78d6a3]">Precisa de mais clareza.</span>
+                Venda e acompanhe sua loja
+                <span className="block text-[#78d6a3]">no mesmo lugar.</span>
               </>
             }
-            text="O GestPro reúne a operação da sua empresa em um único lugar para você vender, organizar e decidir com confiança. Menos tempo procurando informações, mais tempo cuidando do crescimento."
+            text="Registre vendas, controle o estoque e consulte os resultados sem alternar entre planilhas e sistemas diferentes."
           />
 
           <div className="group relative overflow-hidden rounded-[34px] border border-white/10 bg-[#0c0f0d] shadow-[0_30px_90px_rgba(0,0,0,.3)]">
@@ -409,25 +341,7 @@ function OverviewSection() {
                 sizes="(max-width: 1024px) 100vw, 55vw"
               />
             </div>
-            <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/15 bg-[#0b110e]/90 p-4 backdrop-blur-md sm:left-auto sm:max-w-xs">
-              <div className="text-[10px] font-bold uppercase tracking-[.16em] text-[#78d6a3]">A venda acontece aqui</div>
-              <p className="mt-1 text-sm leading-5 text-zinc-200">Do pagamento ao controle do caixa, cada venda fica registrada no GestPro.</p>
-            </div>
           </div>
-        </div>
-
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {highlights.map((item) => (
-            <div
-              key={item}
-              className="group rounded-3xl border border-white/8 bg-[#111512] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[#78d6a3]/25"
-            >
-              <div className="mb-4 inline-flex rounded-2xl bg-[#78d6a3]/10 p-3 text-[#78d6a3] transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110">
-                <BadgeCheck size={18} />
-              </div>
-              <p className="text-[16px] leading-7 text-zinc-300">{item}</p>
-            </div>
-          ))}
         </div>
       </div>
     </section>
@@ -512,57 +426,6 @@ function FeaturesSection() {
   );
 }
 
-function BenefitsSection() {
-  return (
-    <section id="beneficios" className="section-reveal border-t border-white/5 bg-[#0b0e0c] py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.02fr_.98fr]">
-          <div>
-            <SectionTitle
-              tag="resultado na prática"
-              title={<>Mais controle para você trabalhar com tranquilidade e crescer com segurança.</>}
-              text="Quando vendas, estoque, caixa e relatórios conversam entre si, você reduz erros, ganha tempo e passa a decidir com base no que realmente acontece no negócio."
-            />
-
-            <div className="mt-10 grid gap-4 sm:grid-cols-2">
-              {[
-                { icon: RefreshCw, title: "Menos retrabalho", text: "Venda, estoque e resultados atualizados juntos." },
-                { icon: BarChart3, title: "Decisões com dados", text: "Informações claras sem fórmulas ou planilhas." },
-                { icon: Wallet, title: "Caixa protegido", text: "Movimentações fáceis de acompanhar e conferir." },
-                { icon: Building2, title: "Controle entre lojas", text: "Acompanhe novas unidades na mesma conta." },
-              ].map((benefit) => (
-                <div key={benefit.title} className="group rounded-[24px] border border-white/8 bg-[#111512] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-[#78d6a3]/25">
-                  <div className="mb-4 inline-flex rounded-xl bg-[#78d6a3]/10 p-2.5 text-[#78d6a3] transition-transform duration-300 group-hover:scale-110">
-                    <benefit.icon size={18} />
-                  </div>
-                  <h3 className="font-display text-lg font-bold text-white">{benefit.title}</h3>
-                  <p className="mt-2 text-[13px] leading-6 text-zinc-400">{benefit.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="group relative overflow-hidden rounded-[34px] border border-white/10 bg-[#0c0f0d] shadow-[0_30px_90px_rgba(0,0,0,.3)]">
-            <div className="relative aspect-[4/3] overflow-hidden">
-              <Image
-                src="/images/landing/commerce-products.webp"
-                alt="Cliente escolhendo produtos frescos em um mercado"
-                fill
-                className="object-cover transition-transform duration-700 group-hover:scale-[1.035]"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-              />
-            </div>
-            <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/15 bg-[#0b110e]/90 p-4 backdrop-blur-md sm:right-auto sm:max-w-xs">
-              <div className="text-[10px] font-bold uppercase tracking-[.16em] text-[#78d6a3]">Produto disponível, venda garantida</div>
-              <p className="mt-1 text-sm leading-5 text-zinc-200">Controle melhor o estoque para o cliente encontrar o que procura.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function PlansSection() {
   return (
     <section id="planos" className="section-reveal border-t border-white/5 bg-[#080b09] py-24">
@@ -588,10 +451,7 @@ function PlansSection() {
                 <div className="absolute inset-x-0 top-0 h-1 bg-[#78d6a3]" aria-hidden="true" />
               )}
 
-              <div className="flex min-h-7 items-center justify-between gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#78d6a3]">
-                  {plan.eyebrow}
-                </span>
+              <div className="flex min-h-7 items-center justify-end">
                 {plan.featured && (
                   <span className="rounded-full bg-[#78d6a3] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.13em] text-[#0a1710]">
                     recomendado
@@ -599,14 +459,11 @@ function PlansSection() {
                 )}
               </div>
 
-              <h3 className="mt-5 font-display text-3xl font-extrabold tracking-tight text-white">
+              <h3 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-white">
                 {plan.name}
               </h3>
-              <p className="mt-3 min-h-[84px] text-[14px] leading-6 text-zinc-400">
-                {plan.description}
-              </p>
 
-              <div className="mt-6 rounded-2xl border border-white/7 bg-black/20 p-4">
+              <div className="mt-5 rounded-2xl border border-white/7 bg-black/20 p-4">
                 <div className="text-[12px] font-semibold text-zinc-300">{plan.period}</div>
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <div>
@@ -621,11 +478,8 @@ function PlansSection() {
               </div>
 
               <div className="mt-6 flex-1">
-                <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500">
-                  Incluído no plano
-                </div>
-                <ul className="mt-4 space-y-3">
-                  {plan.features.map((feature) => (
+                <ul className="space-y-3">
+                  {plan.features.slice(0, 3).map((feature) => (
                     <li key={feature} className="flex items-start gap-2.5 text-[13px] leading-5 text-zinc-300">
                       <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[#78d6a3]" />
                       {feature}
@@ -652,102 +506,6 @@ function PlansSection() {
         <p className="mt-7 text-center text-[13px] text-zinc-500">
           Todos os planos foram pensados para uma gestão simples, segura e acessível. Você pode evoluir quando precisar.
         </p>
-      </div>
-    </section>
-  );
-}
-
-function CTASection() {
-  return (
-    <section className="section-reveal border-t border-white/5 bg-[#0b0e0c] py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-[36px] border border-[#78d6a3]/20 bg-[#111512] px-6 py-10 shadow-[0_30px_90px_rgba(0,0,0,.25)] sm:px-10 sm:py-14 lg:px-14 lg:py-16">
-          <div className="relative grid gap-10 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div className="max-w-3xl">
-              <SectionTag>gestão com clareza</SectionTag>
-              <h2 className="mt-5 font-display text-4xl font-extrabold leading-[0.98] tracking-[-0.04em] text-white sm:text-5xl">
-                Troque a incerteza por controle.
-                <span className="block text-[#78d6a3]">Acompanhe a operação em um único sistema.</span>
-              </h2>
-              <p className="mt-5 text-[16px] leading-8 text-zinc-400 sm:text-[17px]">
-                Centralize sua operação, acompanhe os números com clareza e tenha mais confiança
-                para vender, organizar e crescer todos os dias.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <Link
-                href="/auth/cadastro"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#78d6a3] px-6 py-4 text-[15px] font-semibold text-[#0a1710] hover:bg-[#95e3b7]"
-              >
-                Começar agora
-                <ArrowRight size={16} />
-              </Link>
-
-              <a
-                href={`https://${CONFIG.siteUrl}`}
-                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-[15px] font-semibold text-white hover:bg-white/[0.08]"
-              >
-                Conhecer o GestPro
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FAQSection() {
-  const [open, setOpen] = useState(0);
-
-  return (
-    <section className="section-reveal border-t border-white/5 bg-[#080b09] py-24">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <SectionTitle
-          tag="dúvidas frequentes"
-          title={<>Respostas rápidas sobre o GestPro.</>}
-          text="Veja como funciona o acesso, o controle das vendas e a gestão de mais de uma empresa."
-        />
-
-        <div className="mt-14 space-y-4">
-          {faqs.map((item, index) => {
-            const active = open === index;
-            return (
-              <div
-                key={item.q}
-                className="overflow-hidden rounded-[24px] border border-white/8 bg-[#111512] transition-colors duration-300 hover:border-[#78d6a3]/20"
-              >
-                <button
-                  onClick={() => setOpen(active ? -1 : index)}
-                  className="flex w-full items-center justify-between gap-6 px-6 py-5 text-left"
-                >
-                  <span className="font-display text-2xl font-bold tracking-tight text-white">
-                    {item.q}
-                  </span>
-                  <ChevronDown
-                    size={20}
-                    className={`shrink-0 text-zinc-400 transition-transform ${
-                      active ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                <div
-                  className={`grid transition-all duration-300 ${
-                    active ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                  }`}
-                >
-                  <div className="overflow-hidden">
-                    <p className="px-6 pb-6 text-[15px] leading-8 text-zinc-400">
-                      {item.a}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </section>
   );
@@ -881,10 +639,7 @@ export default function GestProLandingPage() {
         <Hero />
         <OverviewSection />
         <FeaturesSection />
-        <BenefitsSection />
         <PlansSection />
-        <FAQSection />
-        <CTASection />
       </main>
       <Footer />
     </div>
