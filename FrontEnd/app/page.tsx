@@ -179,17 +179,17 @@ function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-[#060807]/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-[#060807]/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:h-20 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-3">
-            <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-white/10 bg-white/5">
+            <div className="relative h-9 w-9 overflow-hidden rounded-xl border border-white/10 bg-white/5 sm:h-10 sm:w-10">
               <Image src={CONFIG.logoSrc} alt="Logo GestPro" fill className="object-contain p-1.5" />
             </div>
             <div className="leading-tight">
               <div className="font-display text-[20px] font-extrabold tracking-tight text-white">
                 {CONFIG.brand}
               </div>
-              <div className="text-[11px] text-zinc-500">Controle real para negócios reais</div>
+              <div className="hidden text-[11px] text-zinc-500 min-[390px]:block">Controle real para negócios reais</div>
             </div>
           </Link>
 
@@ -291,38 +291,39 @@ function Navbar() {
 
 function Hero() {
   return (
-    <section className="relative isolate min-h-[calc(100svh-80px)] overflow-hidden bg-[#080907]">
+    <section className="relative isolate min-h-[calc(100svh-64px)] overflow-hidden bg-[#080907] sm:min-h-[calc(100svh-80px)]">
       <Image
         src={CONFIG.heroBackgroundSrc}
         alt="Loja organizada com frente de caixa e estoque ao fundo"
         fill
         priority
         quality={92}
-        className="-z-20 object-cover object-[62%_center] sm:object-center"
+        className="-z-20 object-cover object-[67%_center] sm:object-center"
         sizes="100vw"
       />
-      <div className="absolute inset-0 -z-10 bg-black/30" aria-hidden="true" />
+      <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(5,7,6,.97)_0%,rgba(5,7,6,.88)_48%,rgba(5,7,6,.42)_72%,rgba(5,7,6,.62)_100%)] sm:bg-black/30" aria-hidden="true" />
 
-      <div className="mx-auto flex min-h-[calc(100svh-80px)] w-full max-w-7xl items-center px-4 py-14 sm:px-6 md:py-20 lg:px-8">
-        <div className="max-w-[720px]">
-          <SectionTag>Sistema de gestão para pequenos negócios</SectionTag>
+      <div className="mx-auto flex min-h-[calc(100svh-64px)] w-full max-w-7xl items-start px-4 pb-16 pt-10 sm:min-h-[calc(100svh-80px)] sm:items-center sm:px-6 sm:py-16 md:py-20 lg:px-8">
+        <div className="w-full max-w-[720px]">
+          <div className="[&>span]:px-3 [&>span]:py-1.5 [&>span]:text-[9px] sm:[&>span]:px-4 sm:[&>span]:py-2 sm:[&>span]:text-[11px]">
+            <SectionTag>Gestão para pequenos negócios</SectionTag>
+          </div>
 
-          <h1 className="mt-6 font-display text-[42px] font-black leading-[0.92] tracking-[-0.05em] text-white drop-shadow-[0_3px_24px_rgba(0,0,0,.8)] sm:text-[58px] md:text-[72px] xl:text-[82px]">
+          <h1 className="mt-5 max-w-[560px] font-display text-[44px] font-black leading-[0.9] tracking-[-0.055em] text-white drop-shadow-[0_3px_24px_rgba(0,0,0,.8)] min-[390px]:text-[48px] sm:mt-6 sm:text-[58px] md:text-[72px] xl:text-[82px]">
             Controle real
             <span className="block text-zinc-200">sem ERP pesado</span>
             <span className="block text-[#78d6a3]">e sem planilha frágil</span>
           </h1>
 
-          <p className="mt-6 max-w-xl text-[17px] leading-8 text-zinc-200 drop-shadow-[0_2px_12px_rgba(0,0,0,.9)] sm:text-[18px]">
-            Caixa, estoque, vendas e relatórios em um único lugar. O GestPro foi criado para
-            pequenos negócios que precisam enxergar o que vendem, o que lucram e o que falta
-            fazer. Sem perder tempo procurando informações em lugares diferentes.
+          <p className="mt-5 max-w-xl text-[15px] leading-6 text-zinc-200 drop-shadow-[0_2px_12px_rgba(0,0,0,.9)] sm:mt-6 sm:text-[18px] sm:leading-8">
+            <span className="sm:hidden">Caixa, estoque, vendas e relatórios reunidos para você acompanhar a loja sem depender de planilhas.</span>
+            <span className="hidden sm:inline">Caixa, estoque, vendas e relatórios em um único lugar. O GestPro foi criado para pequenos negócios que precisam enxergar o que vendem, o que lucram e o que falta fazer. Sem perder tempo procurando informações em lugares diferentes.</span>
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 sm:mt-8 sm:flex sm:flex-row">
             <Link
               href="/auth/cadastro"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#78d6a3] px-6 py-4 text-[15px] font-semibold text-[#0a1710] transition-all hover:bg-[#95e3b7]"
+              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-[#78d6a3] px-5 py-3.5 text-[14px] font-bold text-[#0a1710] shadow-[0_12px_35px_rgba(120,214,163,.18)] transition-all hover:bg-[#95e3b7] sm:px-6 sm:py-4 sm:text-[15px]"
             >
               Testar o GestPro
               <ArrowRight size={17} />
@@ -330,14 +331,14 @@ function Hero() {
 
             <a
               href="#visao-geral"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-black/45 px-6 py-4 text-[15px] font-semibold text-white backdrop-blur-md transition-all hover:border-white/35 hover:bg-black/60"
+              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/20 bg-black/55 px-5 py-3.5 text-[14px] font-semibold text-white backdrop-blur-md transition-all hover:border-white/35 hover:bg-black/70 sm:px-6 sm:py-4 sm:text-[15px]"
             >
               <PlayCircle size={17} />
               Entender como funciona
             </a>
           </div>
 
-          <div className="mt-8 flex max-w-2xl flex-wrap gap-x-6 gap-y-3 text-[13px] text-zinc-200">
+          <div className="mt-6 grid max-w-xl grid-cols-2 gap-x-3 gap-y-2.5 text-[11px] text-zinc-200 sm:mt-8 sm:flex sm:max-w-2xl sm:flex-wrap sm:gap-x-6 sm:gap-y-3 sm:text-[13px]">
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 size={15} className="text-[#78d6a3]" />
               PDV funcional
@@ -356,7 +357,7 @@ function Hero() {
             </span>
           </div>
 
-          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mt-10 hidden grid-cols-2 gap-3 sm:grid sm:grid-cols-4">
             {[
               ["Venda ágil", "Frente de caixa"],
               ["Menos perdas", "Estoque"],
