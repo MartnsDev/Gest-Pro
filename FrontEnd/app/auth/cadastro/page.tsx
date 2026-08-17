@@ -103,7 +103,7 @@ const Logo = () => (
     }}
   >
     <img
-      src="/images/logo.png"
+      src="/images/logo-256.webp"
       alt="GestPro"
       style={{ width: 32, height: 32, objectFit: "contain" }}
     />

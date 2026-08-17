@@ -170,7 +170,7 @@ const Background = () => (
 ───────────────────────────────────────────── */
 const Logo = ({ size="default" }: { size?:"default"|"small" }) => (
   <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-    <img src="/images/logo.png" alt="GestPro"
+    <img src="/images/logo-256.webp" alt="GestPro"
       style={{ width:size==="small"?28:36, height:size==="small"?28:36, objectFit:"contain", borderRadius:8 }} />
     <span style={{ fontWeight:700, fontSize:size==="small"?16:20, color:"#f1f5f9", letterSpacing:"-0.02em" }}>
       GestPro

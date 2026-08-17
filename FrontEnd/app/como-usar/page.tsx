@@ -194,10 +194,10 @@ const Icon = ({ name, size = 24 }: { name: string; size?: number }) => {
 ───────────────────────────────────────────── */
 const Logo = () => (
   <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-    <img 
-      src="/images/logo.png" 
-      alt="GestPro" 
-      style={{ width: 32, height: 32, objectFit: "contain" }} 
+    <img
+      src="/images/logo-256.webp"
+      alt="GestPro"
+      style={{ width: 32, height: 32, objectFit: "contain" }}
     />
     <span style={{ fontFamily: "var(--font-syne), 'Syne', 'Inter', sans-serif", fontWeight: 800, fontSize: 18, color: "#f1f5f9", letterSpacing: "-0.02em" }}>
       Gest<span style={{ color: "#78d6a3" }}>Pro</span>

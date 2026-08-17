@@ -97,10 +97,10 @@ const GlobalStyles = () => (
 ───────────────────────────────────────────── */
 const Logo = () => (
   <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1 }}>
-    <img 
-      src="/images/logo.png" 
-      alt="GestPro" 
-      style={{ width: 32, height: 32, objectFit: "contain" }} 
+    <img
+      src="/images/logo-256.webp"
+      alt="GestPro"
+      style={{ width: 32, height: 32, objectFit: "contain" }}
     />
     <span style={{ fontFamily: "var(--font-syne), 'Syne', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: "-0.03em", color: "#f1f5f9" }}>
       Gest<span style={{ color: "#10b981" }}>Pro</span>
