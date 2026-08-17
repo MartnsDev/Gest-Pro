@@ -20,10 +20,10 @@ const areas = [
 ];
 
 const plans = [
-  { name: "Experimental", period: "7 dias", limits: "1 empresa e 1 caixa", features: ["Frente de caixa", "Estoque", "Resumo do negócio"] },
+  { name: "Experimental", period: "30 dias", limits: "1 empresa e 1 caixa", features: ["Frente de caixa", "Estoque", "Resumo do negócio"] },
   { name: "Básico", period: "Mensal", limits: "1 empresa e 1 caixa", features: ["Recursos essenciais", "Relatórios", "Clientes e fornecedores"] },
-  { name: "Pro", period: "Mensal", limits: "Até 2 empresas e 3 caixas", features: ["Operação multiempresa", "Mais caixas", "Exportação de relatórios"], featured: true },
-  { name: "Premium", period: "Mensal", limits: "Empresas e caixas ilimitados", features: ["Todos os recursos", "Unidades sem limite", "Estrutura para redes"] },
+  { name: "Pro", period: "Mensal", limits: "Até 5 empresas e 5 caixas", features: ["Operação multiempresa", "Mais caixas", "Exportação de relatórios"], featured: true },
+  { name: "Premium", period: "Mensal", limits: "Empresas e caixas ilimitados", features: ["Todos os recursos", "Unidades sem limite", "Integrações com Shopee e Mercado Livre"] },
 ];
 
 const faqs = [
@@ -96,7 +96,7 @@ function Resources() {
     <section id="recursos" className="bg-white py-24 sm:py-32"><div className="mx-auto max-w-6xl px-5 lg:px-0">
       <h2 className="max-w-md text-4xl font-light leading-tight text-[#343b37] sm:text-5xl">O essencial para a operação <span className="italic text-[#258c53]">não parar</span></h2>
       <div className="mt-14 grid items-center gap-12 lg:grid-cols-[.7fr_1.3fr]"><div className="space-y-1 border-y border-zinc-200 py-2">{areas.map((item, index) => <button key={item.label} type="button" onClick={() => setActive(index)} className={`flex w-full items-center justify-between border-b border-zinc-100 px-2 py-5 text-left text-[15px] last:border-0 ${active === index ? "font-semibold text-[#258c53]" : "text-[#4b5650]"}`}>{item.label}<span className="text-xl font-light">{active === index ? "−" : "+"}</span></button>)}</div>
-        <div className="bg-[#f3f6f4] p-6 sm:p-10"><div className="relative aspect-[16/10] overflow-hidden bg-[#17201b]"><Image src="/images/landing/gestpro-hero-regional-market-v2.webp" alt="Tela do GestPro em uma loja" fill className="object-cover object-[76%_center]" sizes="(max-width: 1024px) 100vw, 60vw" /></div><div className="mx-auto max-w-xl pt-8 text-center"><area.icon className="mx-auto text-[#258c53]" /><h3 className="mt-4 text-xl font-semibold text-[#2f3833]">{area.title}</h3><p className="mt-3 text-sm leading-6 text-[#6a7770]">{area.text}</p></div></div>
+        <div className="bg-[#f3f6f4] p-6 sm:p-10"><div className="relative aspect-[16/10] overflow-hidden bg-[#edf2ef]"><Image src="/images/landing/gestpro-resources-market-v1.webp" alt="Computador com o GestPro no caixa de um mercado regional" fill className="object-cover object-center" sizes="(max-width: 1024px) 100vw, 60vw" /></div><div className="mx-auto max-w-xl pt-8 text-center"><area.icon className="mx-auto text-[#258c53]" /><h3 className="mt-4 text-xl font-semibold text-[#2f3833]">{area.title}</h3><p className="mt-3 text-sm leading-6 text-[#6a7770]">{area.text}</p></div></div>
       </div>
     </div></section>
   );
