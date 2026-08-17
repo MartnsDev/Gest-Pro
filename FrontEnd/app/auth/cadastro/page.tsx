@@ -1,753 +1,121 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-// Importando as funções reais da sua lib
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowRight, Camera, Check, Eye, EyeOff } from "lucide-react";
 import { cadastrar, loginComGoogle } from "@/lib/api-v2";
 
-/* ─────────────────────────────────────────────
-    GLOBAL STYLES (Mantido original)
-───────────────────────────────────────────── */
-const GlobalStyles = () => (
-  <style>{`
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    ::selection { background: rgba(16,185,129,0.25); }
-    ::-webkit-scrollbar { width: 3px; }
-    ::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.3); }
-    
-    @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
-    @keyframes checkIn { from { transform:scale(0) rotate(-45deg); opacity:0; } to { transform:scale(1) rotate(0deg); opacity:1; } }
-    @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-    
-    .field-input { 
-      width:100%; 
-      padding:12px 16px; 
-      background:rgba(255,255,255,0.04); 
-      border:1px solid rgba(255,255,255,0.08); 
-      border-radius:10px; 
-      color:#f1f5f9; 
-      font-size:14px; 
-      font-family:var(--font-dm-mono), 'DM Mono', monospace; 
-      outline:none; 
-      transition:all .2s; 
-    }
-    .field-input:focus { 
-      border-color:rgba(16,185,129,0.5); 
-      background:rgba(16,185,129,0.03); 
-      box-shadow:0 0 0 3px rgba(16,185,129,0.08); 
-    }
-    .field-input::placeholder { color:rgba(241,245,249,0.25); }
-    
-    .btn-primary { 
-      width:100%; 
-      padding:14px; 
-      background:#10b981; 
-      border:none; 
-      border-radius:10px; 
-      color:#030305; 
-      font-size:14px; 
-      font-weight:700; 
-      font-family:var(--font-dm-mono), 'DM Mono', monospace; 
-      cursor:pointer; 
-      letter-spacing:.04em; 
-      transition:all .2s; 
-      display:flex; 
-      align-items:center; 
-      justify-content:center; 
-      gap:8px; 
-    }
-    .btn-primary:hover:not(:disabled) { 
-      background:#34d399; 
-      transform:translateY(-1px); 
-      box-shadow:0 8px 30px rgba(16,185,129,0.3); 
-    }
-    .btn-primary:disabled { opacity:.6; cursor:not-allowed; transform:none; }
-    
-    .btn-google { 
-      width:100%; 
-      padding:12px; 
-      background:rgba(255,255,255,0.04); 
-      border:1px solid rgba(255,255,255,0.1); 
-      border-radius:10px; 
-      color:rgba(241,245,249,0.7); 
-      font-size:13px; 
-      font-family:var(--font-dm-mono), 'DM Mono', monospace; 
-      cursor:pointer; 
-      transition:all .2s; 
-      display:flex; 
-      align-items:center; 
-      justify-content:center; 
-      gap:10px; 
-    }
-    .btn-google:hover { 
-      border-color:rgba(255,255,255,0.2); 
-      background:rgba(255,255,255,0.07); 
-      color:#f1f5f9; 
-      transform:translateY(-1px); 
-    }
-    
-    .link-style { color:rgba(16,185,129,0.8); text-decoration:none; transition:color .2s; }
-    .link-style:hover { color:#10b981; }
-  `}</style>
-);
-
-const Logo = () => (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      position: "relative",
-      zIndex: 1,
-    }}
-  >
-    <img
-      src="/images/logo-256.webp"
-      alt="GestPro"
-      style={{ width: 32, height: 32, objectFit: "contain" }}
-    />
-    <span
-      style={{
-        fontFamily: "var(--font-syne), 'Syne', sans-serif",
-        fontWeight: 800,
-        fontSize: 20,
-        letterSpacing: "-0.03em",
-        color: "#f1f5f9",
-      }}
-    >
-      Gest<span style={{ color: "#10b981" }}>Pro</span>
-    </span>
-  </div>
-);
-
-const GoogleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18">
-    <path
-      d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
-      fill="#4285F4"
-    />
-    <path
-      d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
-      fill="#34A853"
-    />
-    <path
-      d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
-      fill="#FBBC05"
-    />
-    <path
-      d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
-      fill="#EA4335"
-    />
-  </svg>
-);
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4" />
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853" />
+      <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335" />
+    </svg>
+  );
+}
 
 export default function CadastroPage() {
   const router = useRouter();
   const fotoRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({
-    nome: "",
-    email: "",
-    senha: "",
-    confirmar: "",
-  });
+  const [form, setForm] = useState({ nome: "", email: "", senha: "", confirmar: "" });
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
-  const [mounted, setMounted] = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const [step, setStep] = useState(1);
+  const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    setTimeout(() => setMounted(true), 80);
-  }, []);
-
-  const set = (k: string, v: string) => {
-    setForm((f) => ({ ...f, [k]: v }));
+  const set = (key: keyof typeof form, value: string) => {
+    setForm((current) => ({ ...current, [key]: value }));
     setErro("");
   };
 
-  const senhaForte =
-    form.senha.length >= 6 &&
-    /[A-Za-z]/.test(form.senha) &&
-    /\d/.test(form.senha);
-  const senhaMatch = form.senha === form.confirmar && form.confirmar.length > 0;
-
-  const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFoto = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
     setFoto(file);
     const reader = new FileReader();
-    reader.onload = (ev) => setFotoPreview(ev.target?.result as string);
+    reader.onload = () => setFotoPreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.nome.trim()) {
-      setErro("Nome é obrigatório");
-      return;
-    }
-    if (!form.email) {
-      setErro("E-mail é obrigatório");
-      return;
-    }
-    if (!senhaForte) {
-      setErro("Senha deve ter ao menos 6 caracteres com letras e números");
-      return;
-    }
-    if (form.confirmar && !senhaMatch) {
-      setErro("As senhas não conferem");
-      return;
-    }
-
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!form.nome.trim()) return setErro("Nome é obrigatório");
+    if (!form.email) return setErro("E-mail é obrigatório");
+    if (form.senha.length < 6 || !/[A-Za-z]/.test(form.senha) || !/\d/.test(form.senha)) return setErro("A senha precisa ter ao menos 6 caracteres, com letras e números");
+    if (form.senha !== form.confirmar) return setErro("As senhas não conferem");
     setLoading(true);
     setErro("");
     try {
-      // CHAMADA REAL DA API
       await cadastrar(form.nome, form.email, form.senha, foto || undefined);
-      setStep(2); // Muda para a tela de sucesso
-    } catch (err: any) {
-      setErro(err.message || "Erro ao cadastrar. Tente novamente.");
+      setSuccess(true);
+    } catch (error: unknown) {
+      setErro(error instanceof Error ? error.message : "Erro ao cadastrar. Tente novamente.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleRegister = () => {
-    loginComGoogle(); // Chama o redirecionamento real
-  };
-
-  const senhaScore = [
-    form.senha.length >= 6,
-    /[A-Z]/.test(form.senha),
-    /[0-9]/.test(form.senha),
-    form.senha.length >= 10,
-  ].filter(Boolean).length;
-
-  const senhaLabel = ["", "Fraca", "Razoável", "Boa", "Forte"][senhaScore];
-  const senhaCor = ["", "#ef4444", "#f59e0b", "#3b82f6", "#10b981"][senhaScore];
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#030305",
-        display: "flex",
-        fontFamily: "var(--font-dm-mono), 'DM Mono', monospace",
-        overflowX: "hidden",
-      }}
-    >
-      <GlobalStyles />
+    <main className="min-h-screen bg-white text-[#343b37] lg:grid lg:grid-cols-[1.05fr_.95fr]">
+      <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 xl:px-24">
+        <header className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3"><div className="relative h-9 w-9"><Image src="/images/logo-256.webp" alt="GestPro" fill sizes="36px" className="object-contain" /></div><span className="text-xl font-extrabold tracking-tight text-[#202723]">GestPro</span></Link>
+          <Link href="/" className="flex items-center gap-2 text-xs text-[#718078] hover:text-[#258c53]"><ArrowLeft size={15} /> Início</Link>
+        </header>
 
-      <div
-        className="cadastro-left-panel"
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "48px",
-          position: "relative",
-          overflow: "hidden",
-          borderRight: "1px solid rgba(16,185,129,0.08)",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "radial-gradient(rgba(16,185,129,0.12) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-            maskImage:
-              "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: "25%",
-            left: "25%",
-            width: 500,
-            height: 500,
-            background:
-              "radial-gradient(ellipse, rgba(16,185,129,0.08) 0%, transparent 70%)",
-            filter: "blur(60px)",
-            pointerEvents: "none",
-          }}
-        />
-
-        <div style={{ opacity: mounted ? 1 : 0, transition: "opacity .6s" }}>
-          <Logo />
-        </div>
-
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? "translateY(0)" : "translateY(24px)",
-            transition: "all .9s cubic-bezier(0.16,1,0.3,1) .2s",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              color: "rgba(16,185,129,0.6)",
-              letterSpacing: "0.2em",
-              marginBottom: 20,
-              fontFamily: "var(--font-dm-mono), 'DM Mono', monospace",
-            }}
-          >
-            COMECE GRÁTIS
-          </div>
-          <h2
-            style={{
-              fontFamily: "var(--font-syne), 'Syne', sans-serif",
-              fontWeight: 800,
-              fontSize: "clamp(28px, 3vw, 48px)",
-              letterSpacing: "-0.04em",
-              lineHeight: 1.1,
-              color: "#f1f5f9",
-              marginBottom: 40,
-            }}
-          >
-            30 dias para
-            <br />
-            <span
-              style={{
-                backgroundImage: "linear-gradient(135deg, #10b981, #34d399)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              experimentar tudo.
-            </span>
-          </h2>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {[
-              { icon: "◆", text: "Sem cartão de crédito" },
-              { icon: "◆", text: "PDV completo desde o dia 1" },
-              { icon: "◆", text: "Estoque, caixa e relatórios" },
-              { icon: "◆", text: "Login com Google ou e-mail" },
-              { icon: "◆", text: "Dados seguros com JWT + OAuth2" },
-            ].map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  opacity: mounted ? 1 : 0,
-                  transition: `all .6s cubic-bezier(0.16,1,0.3,1) ${0.35 + i * 0.08}s`,
-                  transform: mounted ? "translateX(0)" : "translateX(-16px)",
-                }}
-              >
-                <span style={{ fontSize: 8, color: "#10b981" }}>
-                  {item.icon}
-                </span>
-                <span
-                  style={{
-                    fontSize: 13,
-                    color: "rgba(241,245,249,0.55)",
-                    fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                  }}
-                >
-                  {item.text}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div
-          style={{
-            fontSize: 11,
-            color: "rgba(241,245,249,0.2)",
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
-          © 2025 GestPro · Matheus Martins
-        </div>
-      </div>
-
-      <div
-        className="cadastro-right-panel"
-        style={{
-          width: "clamp(320px, 45%, 560px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "48px 32px",
-          overflowY: "auto",
-        }}
-      >
-        <div
-          className="cadastro-form-card"
-          style={{
-            width: "100%",
-            maxWidth: 440,
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? "translateY(0)" : "translateY(32px)",
-            transition: "all .8s cubic-bezier(0.16,1,0.3,1) .15s",
-          }}
-        >
-          {step === 2 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "20px 0",
-                animation: "fadeUp .6s ease both",
-              }}
-            >
-              <div
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: "50%",
-                  background: "rgba(16,185,129,0.1)",
-                  border: "1px solid rgba(16,185,129,0.3)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 28px",
-                  animation: "checkIn .5s cubic-bezier(0.16,1,0.3,1) both",
-                }}
-              >
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M5 13l4 4L19 7"
-                    stroke="#10b981"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <h2
-                style={{
-                  fontFamily: "var(--font-syne), 'Syne', sans-serif",
-                  fontWeight: 800,
-                  fontSize: 26,
-                  letterSpacing: "-0.03em",
-                  color: "#f1f5f9",
-                  marginBottom: 12,
-                }}
-              >
-                Conta criada!
-              </h2>
-              <p
-                style={{
-                  fontSize: 14,
-                  color: "rgba(241,245,249,0.45)",
-                  lineHeight: 1.75,
-                  marginBottom: 32,
-                  fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                }}
-              >
-                Enviamos um e-mail de confirmação para{" "}
-                <span style={{ color: "#10b981" }}>{form.email}</span>.<br />
-                Confirme para acessar sua conta.
-              </p>
-              <button
-                onClick={() => router.push("/auth/login")}
-                className="btn-primary"
-              >
-                Ir para o login →
-              </button>
+        <div className="mx-auto flex w-full max-w-[460px] flex-1 flex-col justify-center py-10">
+          {success ? (
+            <div className="text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#258c53]/10 text-[#258c53]"><Check size={30} /></div>
+              <h1 className="mt-7 text-4xl font-light tracking-[-.04em]">Conta <span className="italic text-[#258c53]">criada</span></h1>
+              <p className="mt-4 text-sm leading-7 text-[#718078]">Enviamos a confirmação para <strong className="font-semibold text-[#343b37]">{form.email}</strong>. Confirme o e-mail para acessar sua conta.</p>
+              <button type="button" onClick={() => router.push("/auth/login")} className="mt-8 flex h-[52px] w-full items-center justify-center gap-3 rounded-full bg-[#258c53] text-sm font-bold text-white hover:bg-[#1d7544]">Ir para o login <ArrowRight size={17} /></button>
             </div>
           ) : (
             <>
-              <div style={{ marginBottom: 32 }}>
-                <h1
-                  className="cadastro-title"
-                  style={{
-                    fontFamily: "var(--font-syne), 'Syne', sans-serif",
-                    fontWeight: 800,
-                    fontSize: 28,
-                    letterSpacing: "-0.03em",
-                    color: "#f1f5f9",
-                    marginBottom: 8,
-                  }}
-                >
-                  Criar conta grátis
-                </h1>
-                <p
-                  style={{
-                    fontSize: 14,
-                    color: "rgba(241,245,249,0.4)",
-                    fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
-                  }}
-                >
-                  30 dias sem custo, sem cartão de crédito
-                </p>
-              </div>
+              <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#258c53]">30 dias para testar</p>
+              <h1 className="mt-4 text-4xl font-light tracking-[-.04em] sm:text-5xl">Crie sua <span className="italic text-[#258c53]">conta</span></h1>
+              <p className="mt-4 text-sm leading-6 text-[#718078]">Comece sem cartão de crédito e conheça todos os recursos essenciais.</p>
 
-              <button
-                className="btn-google"
-                onClick={handleGoogleRegister}
-                style={{ marginBottom: 24 }}
-              >
-                <GoogleIcon />
-                Cadastrar com Google
-              </button>
+              <button type="button" onClick={loginComGoogle} className="mt-7 flex h-[48px] w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white text-sm font-medium text-[#46514b] transition hover:border-[#258c53]/40 hover:bg-[#f7faf8]"><GoogleIcon /> Cadastrar com Google</button>
+              <div className="my-6 flex items-center gap-4"><span className="h-px flex-1 bg-zinc-200" /><span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">ou</span><span className="h-px flex-1 bg-zinc-200" /></div>
 
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  marginBottom: 24,
-                }}
-              >
-                <div
-                  style={{
-                    flex: 1,
-                    height: 1,
-                    background: "rgba(255,255,255,0.07)",
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: "rgba(241,245,249,0.25)",
-                    letterSpacing: "0.1em",
-                  }}
-                >
-                  OU
-                </span>
-                <div
-                  style={{
-                    flex: 1,
-                    height: 1,
-                    background: "rgba(255,255,255,0.07)",
-                  }}
-                />
-              </div>
-
-              <form
-                onSubmit={handleSubmit}
-                style={{ display: "flex", flexDirection: "column", gap: 14 }}
-              >
-                <div
-                  className="foto-upload"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 16,
-                    marginBottom: 4,
-                  }}
-                >
-                  <div
-                    onClick={() => fotoRef.current?.click()}
-                    style={{
-                      width: 60,
-                      height: 60,
-                      borderRadius: "50%",
-                      border: "2px dashed rgba(16,185,129,0.3)",
-                      background: fotoPreview
-                        ? "transparent"
-                        : "rgba(16,185,129,0.05)",
-                      cursor: "pointer",
-                      overflow: "hidden",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      transition: "all .2s",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {fotoPreview ? (
-                      <img
-                        src={fotoPreview}
-                        alt="foto"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      <svg
-                        width="22"
-                        height="22"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="rgba(16,185,129,0.4)"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <circle cx="12" cy="10" r="3" />
-                        <path d="M6.168 18.849A4 4 0 0 1 10 16h4a4 4 0 0 1 3.834 2.855" />
-                      </svg>
-                    )}
-                  </div>
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => fotoRef.current?.click()}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#10b981",
-                        fontSize: 13,
-                        cursor: "pointer",
-                        padding: 0,
-                      }}
-                    >
-                      {foto ? "Trocar foto" : "Adicionar foto"} (opcional)
-                    </button>
-                    <p
-                      style={{
-                        fontSize: 11,
-                        color: "rgba(241,245,249,0.25)",
-                        marginTop: 4,
-                      }}
-                    >
-                      JPG, PNG até 5MB
-                    </p>
-                  </div>
-                  <input
-                    ref={fotoRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFoto}
-                    style={{ display: "none" }}
-                  />
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <button type="button" onClick={() => fotoRef.current?.click()} className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dashed border-[#258c53]/50 bg-[#f3f7f4] text-[#258c53]">
+                    {fotoPreview ? <Image src={fotoPreview} alt="Foto selecionada" fill className="object-cover" unoptimized /> : <Camera size={20} />}
+                  </button>
+                  <button type="button" onClick={() => fotoRef.current?.click()} className="text-left text-xs text-[#718078]"><strong className="block font-semibold text-[#258c53]">{foto ? "Trocar foto" : "Adicionar foto"}</strong><span className="mt-1 block">Opcional, até 5 MB</span></button>
+                  <input ref={fotoRef} type="file" accept="image/*" onChange={handleFoto} className="hidden" />
                 </div>
 
-                <div>
-                  <label
-                    style={{
-                      fontSize: 12,
-                      color: "rgba(241,245,249,0.5)",
-                      display: "block",
-                      marginBottom: 7,
-                    }}
-                  >
-                    NOME COMPLETO
-                  </label>
-                  <input
-                    className="field-input"
-                    type="text"
-                    placeholder="Seu nome"
-                    value={form.nome}
-                    onChange={(e) => set("nome", e.target.value)}
-                    required
-                  />
+                <label className="block"><span className="mb-2 block text-xs font-semibold text-[#46514b]">Nome completo</span><input type="text" value={form.nome} onChange={(event) => set("nome", event.target.value)} autoComplete="name" placeholder="Seu nome" className="h-[50px] w-full rounded-xl border border-zinc-200 px-4 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /></label>
+                <label className="block"><span className="mb-2 block text-xs font-semibold text-[#46514b]">E-mail</span><input type="email" value={form.email} onChange={(event) => set("email", event.target.value)} autoComplete="email" placeholder="seu@email.com" className="h-[50px] w-full rounded-xl border border-zinc-200 px-4 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /></label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block"><span className="mb-2 block text-xs font-semibold text-[#46514b]">Senha</span><span className="relative block"><input type={showPass ? "text" : "password"} value={form.senha} onChange={(event) => set("senha", event.target.value)} autoComplete="new-password" placeholder="Letras e números" className="h-[50px] w-full rounded-xl border border-zinc-200 px-4 pr-11 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /><button type="button" onClick={() => setShowPass((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}>{showPass ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>
+                  <label className="block"><span className="mb-2 block text-xs font-semibold text-[#46514b]">Confirmar senha</span><input type={showPass ? "text" : "password"} value={form.confirmar} onChange={(event) => set("confirmar", event.target.value)} autoComplete="new-password" placeholder="Repita a senha" className="h-[50px] w-full rounded-xl border border-zinc-200 px-4 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /></label>
                 </div>
-
-                <div>
-                  <label
-                    style={{
-                      fontSize: 12,
-                      color: "rgba(241,245,249,0.5)",
-                      display: "block",
-                      marginBottom: 7,
-                    }}
-                  >
-                    E-MAIL
-                  </label>
-                  <input
-                    className="field-input"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={form.email}
-                    onChange={(e) => set("email", e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      fontSize: 12,
-                      color: "rgba(241,245,249,0.5)",
-                      display: "block",
-                      marginBottom: 7,
-                    }}
-                  >
-                    SENHA
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <input
-                      className="field-input"
-                      type={showPass ? "text" : "password"}
-                      placeholder="Mín. 6 chars"
-                      value={form.senha}
-                      onChange={(e) => set("senha", e.target.value)}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPass(!showPass)}
-                      style={{
-                        position: "absolute",
-                        right: 14,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        background: "none",
-                        border: "none",
-                        color: "rgba(241,245,249,0.3)",
-                      }}
-                    >
-                      {showPass ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                </div>
-
-                {erro && (
-                  <div
-                    style={{
-                      padding: "10px 14px",
-                      background: "rgba(239,68,68,0.08)",
-                      border: "1px solid rgba(239,68,68,0.2)",
-                      borderRadius: 8,
-                      fontSize: 13,
-                      color: "#f87171",
-                    }}
-                  >
-                    {erro}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={loading}
-                >
-                  {loading ? "Cadastrando..." : "Criar conta grátis →"}
-                </button>
+                {erro && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{erro}</p>}
+                <button type="submit" disabled={loading} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-full bg-[#258c53] text-sm font-bold text-white transition hover:bg-[#1d7544] disabled:cursor-not-allowed disabled:opacity-60">{loading ? "Criando conta..." : <>Criar conta <ArrowRight size={17} /></>}</button>
               </form>
-
-              <p
-                style={{
-                  fontSize: 13,
-                  color: "rgba(241,245,249,0.35)",
-                  textAlign: "center",
-                  marginTop: 24,
-                }}
-              >
-                Já tem conta?{" "}
-                <Link href="/auth/login" className="link-style">
-                  Entrar
-                </Link>
-              </p>
+              <p className="mt-6 text-center text-sm text-[#718078]">Já tem uma conta? <Link href="/auth/login" className="font-semibold text-[#258c53] hover:underline">Entrar</Link></p>
             </>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* Estilos responsivos (Mantidos originais) */}
-      <style>{`
-        @media (max-width: 900px) { .cadastro-left-panel { display: none !important; } .cadastro-right-panel { width: 100% !important; min-width: 100% !important; padding: 32px 20px !important; } }
-      `}</style>
-    </div>
+      <aside className="relative hidden overflow-hidden bg-[#303a35] p-16 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full border border-[#78d6a3]/15" /><div className="absolute -right-8 -top-8 h-48 w-48 rounded-full border border-[#78d6a3]/20" />
+        <p className="relative text-[11px] font-bold uppercase tracking-[.14em] text-[#78d6a3]">Comece sem custo</p>
+        <div className="relative max-w-lg"><h2 className="text-5xl font-light leading-[1.08]">30 dias para conhecer o <span className="italic text-[#78d6a3]">GestPro</span></h2><ul className="mt-9 space-y-5 text-sm text-zinc-300">{["Sem cartão de crédito", "Vendas, estoque e caixa", "Relatórios do negócio", "Acesso pelo computador ou celular"].map((item) => <li key={item} className="flex items-center gap-3"><Check size={16} className="text-[#78d6a3]" />{item}</li>)}</ul></div>
+        <p className="relative text-xs text-zinc-400">© 2026 GestPro</p>
+      </aside>
+    </main>
   );
 }
