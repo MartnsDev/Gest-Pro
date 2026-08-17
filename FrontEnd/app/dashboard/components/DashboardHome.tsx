@@ -22,6 +22,7 @@ import {
 // ─── IMPORTANDO GRÁFICOS ───
 import { BarChart }  from "./graphs/BarChart";
 import { PieChart }  from "./graphs/PieChart";
+import { AreaTrendChart } from "./graphs/AreaTrendChart";
 
 // ─── IMPORTANDO MODAIS (AÇÕES RÁPIDAS) ───
 import AbrirCaixa from "../acoesRapidas/AbrirCaixa";
@@ -44,12 +45,12 @@ function ClientOnly({ children }: { children: ReactNode }) {
 
 function ChartCard({ title, subtitle, children, fullWidth, accent }: { title: string; subtitle?: string; children: ReactNode; fullWidth?: boolean; accent?: string; }) {
   return (
-    <div style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 14, padding: "20px 22px", gridColumn: fullWidth ? "1 / -1" : undefined, position: "relative", overflow: "hidden" }}>
-      {accent && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${accent}88, ${accent}00)` }} />}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+    <div style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 17px", gridColumn: fullWidth ? "1 / -1" : undefined, position: "relative", overflow: "hidden", minWidth: 0 }}>
+      {accent && <div style={{ position: "absolute", top: 0, left: 16, width: 32, height: 2, background: accent }} />}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".08em", margin: 0 }}>{title}</p>
-          {subtitle && <p style={{ fontSize: 12, color: "var(--foreground-subtle)", margin: "2px 0 0" }}>{subtitle}</p>}
+          <p style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>{title}</p>
+          {subtitle && <p style={{ fontSize: 9, color: "var(--foreground-subtle)", margin: "3px 0 0" }}>{subtitle}</p>}
         </div>
       </div>
       {children}
@@ -141,16 +142,13 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
   const primeiroNome = usuario?.nome?.split(" ")[0] ?? "usuário";
   const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-  const statsCards = [
-    { title: "Vendas Hoje", value: loading ? "—" : fmt(visao?.vendasHoje), icon: <CreditCard size={16} />, accent: "primary" as const },
-    { title: "Vendas Semana", value: loading ? "—" : fmt(visao?.vendasSemanais), icon: <BarChart3 size={16} />, accent: "secondary" as const },
-    { title: "Vendas Mês", value: loading ? "—" : fmt(visao?.vendasMes), icon: <Calendar size={16} />, accent: "primary" as const },
-    { title: "Lucro Hoje", value: loading ? "—" : fmt(visao?.lucroDia), icon: <TrendingUp size={16} />, accent: "secondary" as const },
-    { title: "Lucro Mês", value: loading ? "—" : fmt(visao?.lucroMes), icon: <TrendingUp size={16} />, accent: "primary" as const },
-    { title: "Em Estoque", value: loading ? "—" : String(visao?.produtosComEstoque ?? 0), icon: <Package size={16} />, accent: "secondary" as const },
-    { title: "Zerados", value: loading ? "—" : String(visao?.produtosSemEstoque ?? 0), icon: <TrendingDown size={16} />, accent: "destructive" as const },
-    { title: "Clientes", value: loading ? "—" : String(visao?.clientesAtivos ?? 0), icon: <Users size={16} />, accent: "warning" as const },
-    { title: "Custo Estoque", value: loading ? "—" : fmt(visao?.custos), icon: <Receipt size={16} />, accent: "warning" as const },
+  const trendSeries = vendasDiarias.map(item => item.total);
+  const spark = trendSeries.length > 1 ? trendSeries : [3, 5, 4, 7, 6, 9, 8];
+  const primaryStats = [
+    { title: "Faturamento hoje", value: loading ? "—" : fmt(visao?.vendasHoje), icon: <DollarSign size={15} />, accent: "primary" as const, series: spark, hint: "Movimento do período" },
+    { title: "Lucro hoje", value: loading ? "—" : fmt(visao?.lucroDia), icon: <TrendingUp size={15} />, accent: "primary" as const, series: spark.map((v, i) => v * (1 + i * .04)), hint: "Resultado do dia" },
+    { title: "Ticket estimado", value: loading ? "—" : fmt((visao?.vendasHoje ?? 0) / Math.max(vendasMetodo.reduce((sum, item) => sum + item.total, 0), 1)), icon: <Receipt size={15} />, accent: "primary" as const, series: spark.map((v, i) => v * (.8 + i * .03)), hint: "Média das vendas" },
+    { title: "Lucro do mês", value: loading ? "—" : fmt(visao?.lucroMes), icon: <TrendingUp size={15} />, accent: "primary" as const, series: spark.map(v => v * .72), hint: "Resultado acumulado" },
   ];
 
   // ─── LÓGICA DE ALERTAS CONDICIONAIS ───
@@ -241,6 +239,8 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
       acao: () => nav("configuracoes"),
     },
   ];
+  const primaryActions = acoes.slice(0, 5);
+  const secondaryActions = acoes.slice(5);
 
   if (!empresaAtiva)
     return (
@@ -256,7 +256,14 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
   return (
     <ClientOnly>
       {/* ── RENDERIZAÇÃO DOS MODAIS EXTRAÍDOS ── */}
-      {modalAtivo === "caixa" && <AbrirCaixa onClose={() => setModalAtivo(null)} onConcluido={() => fetchDados(empresaAtiva.id)} />}
+      {modalAtivo === "caixa" && (
+        <AbrirCaixa
+          onConcluido={() => {
+            setModalAtivo(null);
+            void fetchDados(empresaAtiva.id);
+          }}
+        />
+      )}
       
       {modalAtivo === "venda" && caixaAtivo && <NovaVenda empresaId={empresaAtiva.id} caixaId={caixaAtivo.id} onClose={() => setModalAtivo(null)} onConcluido={() => fetchDados(empresaAtiva.id)} />}
       
@@ -266,124 +273,79 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
       
       {modalAtivo === "relatorio" && <ModalRelatorioRapido empresaId={empresaAtiva.id} onClose={() => setModalAtivo(null)} onIrRelatorios={() => nav("relatorios")} />}
 
-      <div style={{ padding: "28px 28px 48px", display: "flex", flexDirection: "column", gap: 26 }}>
-
-        {/* ── Saudação ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
+      <div className="dashboard-home" style={{ padding: "20px 22px 42px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="dashboard-heading" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: "var(--foreground)", marginBottom: 4, letterSpacing: "-0.02em" }}>
-              Olá, {primeiroNome}! 👋
-            </h1>
-            <p style={{ fontSize: 13, color: "var(--foreground-muted)", textTransform: "capitalize", margin: 0 }}>
-              {today} · <span style={{ color: "var(--primary)" }}>{empresaAtiva.nomeFantasia}</span>
-            </p>
+            <h1 style={{ fontSize: 22, fontWeight: 760, color: "var(--foreground)", margin: 0, letterSpacing: "-.035em" }}>Visão geral</h1>
+            <p style={{ fontSize: 10, color: "var(--foreground-subtle)", textTransform: "capitalize", margin: "4px 0 0" }}>{today} · Bem-vindo, {primeiroNome}</p>
           </div>
-          {caixaAtivo && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: 10, fontSize: 13, color: "#34d399", fontWeight: 500 }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#34d399", boxShadow: "0 0 8px rgba(52,211,153,0.8)" }} />
-              Caixa aberto · {fmt(caixaAtivo.totalVendas ?? 0)} em vendas
-            </div>
-          )}
-        </div>
-
-        {/* ── Stats ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(155px,1fr))", gap: 12 }}>
-          {statsCards.map((c, i) => <StatsCard key={i} {...c} loading={loading} />)}
-        </div>
-
-        {/* ── Alertas Controlados pelas Configurações ── */}
-        {todosAlertas.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {alertasOutros.map((msg, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, color: "#f59e0b", fontSize: 13, fontWeight: 500 }}>
-                <AlertCircle size={16} style={{ flexShrink: 0 }} />{msg}
-              </div>
-            ))}
-            {alertasProduto.length > 0 && (
-              <div style={{ border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, overflow: "hidden" }}>
-                <button onClick={() => setAlertasExpandido(v => !v)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "rgba(245,158,11,0.08)", border: "none", cursor: "pointer", color: "#f59e0b", fontSize: 13, fontWeight: 500, textAlign: "left" }}>
-                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1 }}>{alertasProduto.length} produto{alertasProduto.length > 1 ? "s" : ""} sem estoque</span>
-                  <ChevronRight size={15} style={{ flexShrink: 0, transition: "transform .2s", transform: alertasExpandido ? "rotate(90deg)" : "none" }} />
-                </button>
-                {alertasExpandido && (
-                  <div style={{ background: "var(--surface-elevated)", borderTop: "1px solid rgba(245,158,11,0.15)" }}>
-                    {alertasProduto.map((msg, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", fontSize: 12, color: "var(--foreground-muted)", borderBottom: i < alertasProduto.length - 1 ? "1px solid var(--border-subtle)" : "none" }}>
-                        <Package size={13} style={{ flexShrink: 0, color: "#f59e0b" }} />
-                        {msg.replace("Estoque esgotado: ", "")}
-                      </div>
-                    ))}
-                    <div style={{ padding: "8px 14px", borderTop: "1px solid var(--border-subtle)" }}>
-                      <button onClick={() => nav("produtos")} style={{ background: "none", border: "none", cursor: "pointer", color: "#f59e0b", fontSize: 12, fontWeight: 600, padding: 0, display: "flex", alignItems: "center", gap: 5 }}>
-                        <ChevronRight size={13} /> Ver todos os produtos
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Ações Rápidas ── */}
-        <div>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--foreground-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".08em" }}>
-            Ações Rápidas
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(155px,1fr))", gap: 10 }}>
-            {acoes.map((a, i) => (
-              <button key={i} onClick={a.acao} style={{
-                display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 11,
-                padding: "16px 15px", background: a.bg, border: `1px solid ${a.borda}`,
-                borderRadius: 12, cursor: "pointer", transition: "all .16s", textAlign: "left",
-              }}
-                onMouseEnter={e => {
-                  const b = e.currentTarget;
-                  b.style.borderColor = "var(--primary)"; b.style.transform = "translateY(-2px)";
-                  b.style.boxShadow = "0 6px 20px rgba(0,0,0,0.25)";
-                }}
-                onMouseLeave={e => {
-                  const b = e.currentTarget;
-                  b.style.borderColor = a.borda; b.style.transform = "translateY(0)";
-                  b.style.boxShadow = "none";
-                }}
-              >
-                <span style={{ color: a.cor }}>{a.icon}</span>
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: a.cor, margin: 0 }}>{a.label}</p>
-                  <p style={{ fontSize: 11, color: "var(--foreground-subtle)", margin: "3px 0 0" }}>{a.desc}</p>
-                </div>
-              </button>
-            ))}
+          <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
+            {primaryActions.slice(0, 3).map(action => <button key={action.label} onClick={action.acao} className="dashboard-top-action" style={{ border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface-elevated)", color: "var(--foreground-muted)", padding: "8px 10px", fontSize: 10, fontWeight: 650, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>{action.icon}{action.label}</button>)}
+            <button onClick={() => setModalAtivo("produto")} className="dashboard-top-action" style={{ border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface-elevated)", color: "var(--foreground-muted)", padding: "8px 10px", fontSize: 10, fontWeight: 650, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}><Package size={14} />Novo produto</button>
           </div>
         </div>
 
-        {/* ── Gráficos ── */}
-        <div>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--foreground-muted)", marginBottom: 14, textTransform: "uppercase", letterSpacing: ".08em" }}>
-            Análise Visual
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-            <ChartCard title="Vendas Diárias" subtitle="Seg → Dom desta semana" accent="#60a5fa">
-              {vendasDiarias.length > 0 ? (
-                <BarChart labels={vendasDiarias.map(d => d.dia)} data={vendasDiarias.map(d => d.total)} label="Receita Diária" color="blue" formatValue={v => fmt(v)} height={240} />
-              ) : <EmptyChart />}
-            </ChartCard>
+        {/* Indicadores principais da visão geral */}
+        <div className="dashboard-primary-stats" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 8 }}>
+          {primaryStats.map(card => <StatsCard key={card.title} {...card} loading={loading} />)}
+        </div>
 
-            <ChartCard title="Formas de Pagamento" subtitle="Distribuição por método" accent="#34d399">
-              {vendasMetodo.length > 0 ? (
-                <PieChart labels={vendasMetodo.map(m => m.metodo)} data={vendasMetodo.map(m => m.total)} formatValue={v => `${v} venda${v !== 1 ? "s" : ""}`} />
-              ) : <EmptyChart />}
-            </ChartCard>
-          </div>
-
-          <ChartCard title="Produtos Mais Vendidos" subtitle="Ranking por unidades vendidas" accent="#c084fc">
-            {vendasProduto.length > 0 ? (
-              <BarChart labels={vendasProduto.map(p => p.nome)} data={vendasProduto.map(p => p.quantidade)} label="Unidades Vendidas" color="purple" formatValue={v => `${v} un.`} height={240} />
-            ) : <EmptyChart />}
+        <div className="dashboard-main-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.75fr) minmax(265px,.75fr)", gap: 8 }}>
+          <ChartCard title="Faturamento por dia" subtitle="Movimentação dos últimos dias" accent="#22c55e">
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}><strong style={{ fontSize: 20, color: "#4ade80", letterSpacing: "-.03em" }}>{fmt(visao?.vendasSemanais)}</strong><span style={{ fontSize: 9, color: "var(--foreground-subtle)" }}>acumulado semanal</span></div>
+            {vendasDiarias.length > 0 ? <AreaTrendChart labels={vendasDiarias.map(item => item.dia)} data={vendasDiarias.map(item => item.total)} formatValue={fmt} height={225} /> : <EmptyChart />}
+          </ChartCard>
+          <ChartCard title="Vendas por canal" subtitle="Participação por pagamento" accent="#22c55e">
+            {vendasMetodo.length > 0 ? <PieChart labels={vendasMetodo.map(item => item.metodo)} data={vendasMetodo.map(item => item.total)} formatValue={value => `${value} venda${value !== 1 ? "s" : ""}`} /> : <EmptyChart />}
           </ChartCard>
         </div>
+
+        <div className="dashboard-bottom-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.15fr) minmax(240px,.85fr) minmax(240px,.85fr)", gap: 8 }}>
+          <ChartCard title="Top produtos vendidos" subtitle="Ranking por quantidade" accent="#22c55e">
+            {vendasProduto.length > 0 ? <BarChart labels={vendasProduto.slice(0, 6).map(item => item.nome)} data={vendasProduto.slice(0, 6).map(item => item.quantidade)} label="Unidades" color="green" formatValue={value => `${value} un.`} height={220} horizontal /> : <EmptyChart />}
+          </ChartCard>
+
+          <ChartCard title="Resumo da operação" subtitle={empresaAtiva.nomeFantasia} accent="#22c55e">
+            <div className="dashboard-metric-list">
+              {[
+                ["Vendas na semana", fmt(visao?.vendasSemanais), BarChart3, "#4ade80", "vendas"],
+                ["Produtos em estoque", visao?.produtosComEstoque ?? 0, Package, "#4ade80", "produtos"],
+                ["Produtos zerados", visao?.produtosSemEstoque ?? 0, TrendingDown, "#fb7185", "produtos"],
+                ["Clientes ativos", visao?.clientesAtivos ?? 0, Users, "#60a5fa", "clientes"],
+                ["Custo em estoque", fmt(visao?.custos), Receipt, "#fbbf24", "produtos"],
+              ].map(([label, value, Icon, color, section]) => {
+                const MetricIcon = Icon as typeof Package;
+                return <button key={String(label)} onClick={() => nav(String(section))} style={{ width: "100%", border: 0, borderBottom: "1px solid var(--border-subtle)", background: "transparent", padding: "12px 2px", display: "grid", gridTemplateColumns: "28px 1fr auto 14px", alignItems: "center", gap: 8, color: "inherit", cursor: "pointer", textAlign: "left" }}><span style={{ width: 27, height: 27, display: "grid", placeItems: "center", borderRadius: 7, background: `color-mix(in srgb, ${color} 10%, transparent)`, color: String(color) }}><MetricIcon size={14} /></span><span style={{ fontSize: 10, color: "var(--foreground-muted)" }}>{String(label)}</span><strong style={{ fontSize: 11, color: "var(--foreground)" }}>{String(value)}</strong><ChevronRight size={12} color="var(--foreground-subtle)" /></button>;
+              })}
+            </div>
+          </ChartCard>
+
+          <ChartCard title="Ações e alertas" subtitle="O que precisa de atenção" accent="#22c55e">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+              {[...primaryActions.slice(3), ...secondaryActions.slice(0, 2)].map(action => <button key={action.label} onClick={action.acao} style={{ minWidth: 0, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface-overlay)", color: "var(--foreground-muted)", padding: "9px 8px", display: "flex", alignItems: "center", gap: 6, fontSize: 9, fontWeight: 650, cursor: "pointer" }}><span style={{ color: "var(--primary)" }}>{action.icon}</span><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{action.label}</span></button>)}
+            </div>
+            {todosAlertas.length === 0 ? <div style={{ border: "1px solid rgba(34,197,94,.16)", borderRadius: 8, background: "rgba(34,197,94,.055)", padding: 12, display: "flex", gap: 8, alignItems: "center", color: "#4ade80", fontSize: 10 }}><span style={{ width: 7, height: 7, borderRadius: 99, background: "#22c55e" }} />Operação sem alertas</div> : <button onClick={() => setAlertasExpandido(value => !value)} style={{ width: "100%", border: "1px solid rgba(245,158,11,.2)", borderRadius: 8, background: "rgba(245,158,11,.07)", padding: 11, display: "flex", gap: 8, alignItems: "center", color: "#fbbf24", fontSize: 10, cursor: "pointer", textAlign: "left" }}><AlertCircle size={14} /><span style={{ flex: 1 }}>{todosAlertas.length} alerta{todosAlertas.length > 1 ? "s" : ""} pendente{todosAlertas.length > 1 ? "s" : ""}</span><ChevronRight size={12} style={{ transform: alertasExpandido ? "rotate(90deg)" : "none" }} /></button>}
+            {alertasExpandido && todosAlertas.slice(0, 4).map(alerta => <div key={alerta} style={{ padding: "7px 3px", borderBottom: "1px solid var(--border-subtle)", fontSize: 9, color: "var(--foreground-muted)" }}>{alerta.replace("Estoque esgotado: ", "")}</div>)}
+          </ChartCard>
+        </div>
+        <style>{`
+          .dashboard-home svg { flex-shrink: 0; }
+          @media (max-width: 1160px) {
+            .dashboard-primary-stats { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+            .dashboard-bottom-grid { grid-template-columns: 1fr 1fr !important; }
+            .dashboard-bottom-grid > :first-child { grid-column: 1 / -1; }
+          }
+          @media (max-width: 900px) {
+            .dashboard-main-grid, .dashboard-bottom-grid { grid-template-columns: 1fr !important; }
+            .dashboard-bottom-grid > :first-child { grid-column: auto; }
+          }
+          @media (max-width: 640px) {
+            .dashboard-home { padding: 16px 12px 92px !important; gap: 9px !important; }
+            .dashboard-heading { align-items: flex-start !important; }
+            .dashboard-primary-stats { grid-template-columns: 1fr 1fr !important; }
+            .dashboard-top-action { display: none !important; }
+          }
+        `}</style>
       </div>
     </ClientOnly>
   );

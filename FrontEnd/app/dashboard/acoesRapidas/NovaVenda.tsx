@@ -52,9 +52,10 @@ const fmtData = (s?: any) => {
   return isNaN(d.getTime()) ? "—" : d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
-function Overlay({ children }: { children: ReactNode }) {
+function Overlay({ children, onClose }: { children: ReactNode; onClose?: () => void }) {
   return (
     <div
+      onClick={(event) => event.target === event.currentTarget && onClose?.()}
       style={{
         position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)",
         display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16
@@ -77,7 +78,14 @@ const btnG: React.CSSProperties = {
 };
 
 /* ─── Gerador de Cupom Não Fiscal ─── */
-function gerarCupom(venda: Venda, nomeEmpresa: string) {
+function formatarDocumentoEmpresa(value?: string | null) {
+  const digits = value?.replace(/\D/g, "") ?? "";
+  if (digits.length === 14) return `CNPJ: ${digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}`;
+  if (digits.length === 11) return `CPF: ${digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4")}`;
+  return value ? `Documento: ${value}` : "";
+}
+
+function gerarCupom(venda: Venda, nomeEmpresa: string, documentoEmpresa?: string | null) {
   const misto = venda.formaPagamento2 && venda.valorPagamento2;
   const pagamento = misto
     ? `${esc(FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento)}: ${esc(fmt(venda.valorFinal - (venda.valorPagamento2 ?? 0)))} + ${esc(FORMA_LABEL[venda.formaPagamento2!] ?? venda.formaPagamento2)}: ${esc(fmt(venda.valorPagamento2))}`
@@ -107,7 +115,7 @@ function gerarCupom(venda: Venda, nomeEmpresa: string) {
   .print-btn { margin: 16px 0 0; padding: 10px 24px; background: #10b981; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
   </style></head><body>
   <div class="cupom">
-    <div class="center"><div class="empresa">${esc(nomeEmpresa)}</div><div class="doc">Cupom Não Fiscal</div></div>
+    <div class="center"><div class="empresa">${esc(nomeEmpresa)}</div>${documentoEmpresa ? `<div style="font-size:10px;color:#475569;margin-top:3px">${esc(formatarDocumentoEmpresa(documentoEmpresa))}</div>` : ""}<div class="doc">Cupom Não Fiscal</div></div>
     <div class="dash"></div>
     <div class="row"><span>Nº da Venda:</span><span><b>#${venda.id}</b></span></div>
     <div class="row"><span>Data/Hora:</span><span>${esc(fmtData(venda.dataVenda))}</span></div>
@@ -154,7 +162,7 @@ function SeletorForma({ value, onChange, label }: { value: FormaPagamento; onCha
 }
 
 /* ─── Tela de Sucesso e Impressão ─── */
-function TelaVendaSucesso({ venda, nomeEmpresa, onFechar }: { venda: Venda; nomeEmpresa: string; onFechar: () => void; }) {
+function TelaVendaSucesso({ venda, nomeEmpresa, documentoEmpresa, onFechar }: { venda: Venda; nomeEmpresa: string; documentoEmpresa?: string | null; onFechar: () => void; }) {
   const [passo, setPasso] = useState<"sucesso" | "nota">("sucesso");
   const misto = venda.formaPagamento2 && venda.valorPagamento2;
 
@@ -175,7 +183,7 @@ function TelaVendaSucesso({ venda, nomeEmpresa, onFechar }: { venda: Venda; nome
           <p style={{ fontSize: 13, color: "var(--foreground-muted)", marginBottom: 24 }}>Imprimir cupom não fiscal da venda <strong style={{ color: "var(--foreground)" }}>#{venda.id}</strong></p>
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={onFechar} style={{ flex: 1, padding: "11px 0", background: "transparent", border: "1px solid var(--border)", borderRadius: 10, color: "var(--foreground-muted)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Não</button>
-            <button onClick={() => { gerarCupom(venda, nomeEmpresa); onFechar(); }} style={{ flex: 2, padding: "11px 0", background: "#3b82f6", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <button onClick={() => { gerarCupom(venda, nomeEmpresa, documentoEmpresa); onFechar(); }} style={{ flex: 2, padding: "11px 0", background: "#3b82f6", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <Receipt size={16} /> Sim, imprimir
             </button>
           </div>
@@ -361,6 +369,7 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
       <TelaVendaSucesso 
         venda={vendaSucesso} 
         nomeEmpresa={empresaAtiva?.nomeFantasia || "Empresa"} 
+        documentoEmpresa={empresaAtiva?.cnpj || empresaAtiva?.cpf}
         onFechar={fecharTudo} 
       />
     );

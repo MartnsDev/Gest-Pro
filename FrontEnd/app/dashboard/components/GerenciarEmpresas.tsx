@@ -19,7 +19,8 @@ import {
   RotateCcw,
   AlertTriangle,
   Info,
-  Network
+  Network,
+  Search
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -52,7 +53,7 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
         null)
       : null) ?? "";
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
+    path.startsWith("http") ? path : `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
     {
       credentials: "include",
       headers: {
@@ -81,6 +82,18 @@ const inp: React.CSSProperties = {
   outline: "none",
   transition: "border-color 0.2s",
 };
+
+const getNotaFiscalApiBase = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  const cleanUrl = envUrl.replace(/\/api\/v1\/?$/, "").replace(/\/v1\/?$/, "").replace(/\/$/, "");
+  return `${cleanUrl}/api/nota-fiscal`;
+};
+
+const formatarCnpj = (valor: string) => valor.replace(/\D/g, "").slice(0, 14)
+  .replace(/^(\d{2})(\d)/, "$1.$2")
+  .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+  .replace(/\.(\d{3})(\d)/, ".$1/$2")
+  .replace(/(\/\d{4})(\d)/, "$1-$2");
 
 /* ─── Modal de arquivamento por senha (Soft Delete) ──────────────────────── */
 function ModalExclusao({
@@ -290,6 +303,7 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ nomeFantasia: "", cnpj: "" });
   const [salvandoId, setSalvandoId] = useState<number | null>(null);
+  const [buscandoCnpj, setBuscandoCnpj] = useState<"novo" | number | null>(null);
   
   // Controle de Modais
   const [empresaParaExcluir, setEmpresaParaExcluir] = useState<Empresa | null>(null);
@@ -331,6 +345,29 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
     setEditandoId(emp.id);
     setEditForm({ nomeFantasia: emp.nomeFantasia, cnpj: emp.cnpj ?? "" });
     setErro("");
+  };
+
+  const consultarCnpj = async (tipo: "novo" | number) => {
+    const valor = tipo === "novo" ? form.cnpj : editForm.cnpj;
+    const limpo = valor.replace(/\D/g, "");
+    if (limpo.length !== 14) {
+      setErro("Digite um CNPJ válido com 14 números.");
+      return;
+    }
+    setBuscandoCnpj(tipo);
+    setErro("");
+    try {
+      const response = await fetchAuth<any>(`${getNotaFiscalApiBase()}/cnpj/${limpo}`);
+      const data = response?.dados ?? response?.data ?? response;
+      const nome = data.fantasia || data.nomeFantasia || data.nome || data.razao_social || data.razaoSocial || "";
+      if (tipo === "novo") setForm(current => ({ ...current, cnpj: formatarCnpj(limpo), nomeFantasia: nome || current.nomeFantasia }));
+      else setEditForm(current => ({ ...current, cnpj: formatarCnpj(limpo), nomeFantasia: nome || current.nomeFantasia }));
+      toast.success("Dados do CNPJ encontrados.");
+    } catch (e: any) {
+      setErro(e.message || "Não foi possível consultar esse CNPJ.");
+    } finally {
+      setBuscandoCnpj(null);
+    }
   };
 
   const salvarEdicao = async (id: number) => {
@@ -417,12 +454,13 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
   const isAviso = erro.includes("opcional"); 
 
   return (
-    <div style={{ padding: "28px 28px 48px", display: "flex", flexDirection: "column", gap: 26, maxWidth: 1200, margin: "0 auto", color: "var(--foreground)" }}>
+    <div className="empresas-page" style={{ padding: "20px 22px 48px", display: "flex", flexDirection: "column", gap: 14, width: "100%", color: "var(--foreground)" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @media(max-width:700px){.empresas-page{padding:16px 12px 90px!important}.empresa-form-grid,.empresa-edit-grid{grid-template-columns:1fr!important}.empresa-row{align-items:flex-start!important;gap:14px}.empresa-row-actions{width:100%;justify-content:flex-start!important}}
       `}</style>
       
       {/* Modais de Exclusão */}
@@ -436,12 +474,12 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: "var(--foreground)", margin: 0, display: "flex", alignItems: "center", gap: 10 }}>
-            <Network size={26} color="var(--primary)" />
-            {modoSelecao ? "Selecionar Empresa" : "Multi-Empresas"}
+          <h1 style={{ fontSize: 22, fontWeight: 760, color: "var(--foreground)", margin: 0, display: "flex", alignItems: "center", gap: 9, letterSpacing: "-.03em" }}>
+            <Network size={21} color="var(--primary)" />
+            {modoSelecao ? "Selecionar empresa" : "Empresas"}
           </h1>
           <p style={{ fontSize: 14, color: "var(--foreground-muted)", marginTop: 6 }}>
-            {modoSelecao ? "Escolha a empresa para operar no momento" : "Gerencie todas as suas lojas, franquias e filiais em um só lugar"}
+            {modoSelecao ? "Escolha a empresa para operar no momento" : "Cadastre e organize os negócios vinculados à sua conta"}
           </p>
         </div>
         {!modoSelecao && (
@@ -453,15 +491,13 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
 
       {/* Banner Informativo (Aparece apenas no modo gerencial se não estiver criando) */}
       {!modoSelecao && !criando && (
-        <div style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 14, padding: "18px 20px", display: "flex", gap: 14, alignItems: "flex-start" }}>
+        <div style={{ background: "rgba(34,197,94,.045)", border: "1px solid rgba(34,197,94,.14)", borderRadius: 10, padding: "11px 13px", display: "flex", gap: 10, alignItems: "center", maxWidth: 820 }}>
           <div style={{ background: "var(--primary-muted)", padding: 8, borderRadius: 10, display: "flex", color: "var(--primary)" }}>
             <Info size={20} />
           </div>
           <div>
-            <h3 style={{ margin: "0 0 6px 0", fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Como funciona o modo Multi-Empresas?</h3>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--foreground-muted)", lineHeight: 1.5 }}>
-              Cada empresa adicionada funciona de forma <strong>independente</strong>. Ao selecionar uma loja, você visualizará apenas os produtos, vendas e relatórios pertencentes a ela, garantindo organização total dos seus negócios.
-            </p>
+            <h3 style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: "var(--foreground)" }}>Dados separados por empresa</h3>
+            <p style={{ margin: 0, fontSize: 10, color: "var(--foreground-muted)", lineHeight: 1.45 }}>Produtos, vendas e relatórios permanecem organizados de forma independente.</p>
           </div>
         </div>
       )}
@@ -502,14 +538,18 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
             <p style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Cadastrar Nova Loja</p>
           </div>
           
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="empresa-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: 8 }}>Nome Fantasia *</label>
               <input value={form.nomeFantasia} onChange={(e) => setForm((f) => ({ ...f, nomeFantasia: e.target.value }))} placeholder="Ex: Filial Centro, Loja Shopping..." style={{...inp, padding: "12px 16px", fontSize: 15}} autoFocus />
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: 8 }}>CNPJ <span style={{ fontWeight: 400, opacity: 0.7 }}>(opcional)</span></label>
-              <input value={form.cnpj} onChange={(e) => setForm((f) => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0001-00" style={{...inp, padding: "12px 16px", fontSize: 15}} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={form.cnpj} onChange={(e) => setForm((f) => ({ ...f, cnpj: formatarCnpj(e.target.value) }))} placeholder="00.000.000/0001-00" maxLength={18} style={{...inp, padding: "12px 16px", fontSize: 15}} />
+                <button type="button" onClick={() => consultarCnpj("novo")} disabled={buscandoCnpj === "novo"} title="Consultar dados do CNPJ" style={{ minWidth: 46, display: "grid", placeItems: "center", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--primary)", cursor: "pointer" }}>{buscandoCnpj === "novo" ? <Loader2 size={17} className="animate-spin" /> : <Search size={17} />}</button>
+              </div>
+              <p style={{ fontSize: 10, color: "var(--foreground-subtle)", margin: "6px 0 0" }}>Usado na identificação da empresa e nos documentos fiscais.</p>
             </div>
           </div>
           
@@ -555,14 +595,14 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
               >
                 {editando ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
+                    <div className="empresa-edit-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
                       <div>
                         <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: 6 }}>Nome Fantasia *</label>
                         <input value={editForm.nomeFantasia} onChange={(e) => setEditForm((f) => ({ ...f, nomeFantasia: e.target.value }))} autoFocus style={{...inp, padding: "10px 14px"}} />
                       </div>
                       <div>
                         <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: 6 }}>CNPJ</label>
-                        <input value={editForm.cnpj} onChange={(e) => setEditForm((f) => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0001-00" style={{...inp, padding: "10px 14px"}} />
+                        <div style={{ display: "flex", gap: 7 }}><input value={editForm.cnpj} onChange={(e) => setEditForm((f) => ({ ...f, cnpj: formatarCnpj(e.target.value) }))} placeholder="00.000.000/0001-00" maxLength={18} style={{...inp, padding: "10px 14px"}} /><button type="button" onClick={() => consultarCnpj(emp.id)} disabled={buscandoCnpj === emp.id} title="Consultar dados do CNPJ" style={{ minWidth: 42, display: "grid", placeItems: "center", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--primary)", cursor: "pointer" }}>{buscandoCnpj === emp.id ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}</button></div>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
@@ -575,7 +615,7 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: modoSelecao ? "pointer" : "default" }} onClick={() => modoSelecao && abaAtiva === "ativas" && onEmpresaSelecionada?.(emp)}>
+                  <div className="empresa-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: modoSelecao ? "pointer" : "default", flexWrap: "wrap" }} onClick={() => modoSelecao && abaAtiva === "ativas" && onEmpresaSelecionada?.(emp)}>
                     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                       <div style={{ width: 48, height: 48, borderRadius: 12, background: abaAtiva === "ativas" ? "rgba(16, 185, 129, 0.1)" : "rgba(245,158,11,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         {abaAtiva === "ativas" ? <Store size={22} color="var(--primary)" /> : <Archive size={22} color="#f59e0b" />}
@@ -598,7 +638,7 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
                       </div>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div className="empresa-row-actions" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       
                       {/* Botões para Empresas ATIVAS */}
                       {!modoSelecao && abaAtiva === "ativas" && (

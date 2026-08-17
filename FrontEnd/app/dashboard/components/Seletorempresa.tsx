@@ -6,6 +6,8 @@ import { Store, ChevronDown, CheckCircle, Plus } from "lucide-react";
 interface Empresa {
   id: number;
   nomeFantasia: string;
+  cnpj?: string | null;
+  razaoSocial?: string | null;
   planoNome?: string;
   ativo?: boolean; // Importante: deve estar presente para o filtro
 }

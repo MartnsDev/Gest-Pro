@@ -53,6 +53,10 @@ type TipoNota = "NFE" | "NFCE" | "NFSE";
 
 const fmt = (v?: number | null) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 const fmtDate = (s?: string) => s ? new Date(s).toLocaleString("pt-BR") : "—";
+const fmtCnpj = (value?: string | null) => {
+  const digits = value?.replace(/\D/g, "") ?? "";
+  return digits.length === 14 ? digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : value || "CNPJ não cadastrado";
+};
 
 function ClientOnly({ children }: { children: ReactNode }) {
   const [ok, setOk] = useState(false);
@@ -395,6 +399,7 @@ export default function NotaFiscalPage() {
               <Receipt color={theme.primary} size={24} /> Notas Fiscais
             </h1>
             <p style={{ fontSize: 13, color: theme.textMuted, margin: 0 }}>Emissão e gestão de NF-e, NFC-e e NFS-e</p>
+            <p style={{ fontSize: 11, color: theme.textMuted, margin: "5px 0 0" }}><strong style={{ color: theme.textMain }}>{empresaAtiva?.razaoSocial || empresaAtiva?.nomeFantasia}</strong> · {fmtCnpj(empresaAtiva?.cnpj)}</p>
           </div>
           <button onClick={carregarNotas} style={{ ...btnStyle, background: theme.bgCard }}>
              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Atualizar Dados

@@ -221,7 +221,14 @@ const btnG: React.CSSProperties = {
 };
 
 /* ─── Gerador de Cupom Não Fiscal ───────────────────────────────────────── */
-function gerarCupom(venda: Venda, nomeEmpresa: string) {
+function formatarDocumentoEmpresa(value?: string | null) {
+  const digits = value?.replace(/\D/g, "") ?? "";
+  if (digits.length === 14) return `CNPJ: ${digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}`;
+  if (digits.length === 11) return `CPF: ${digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4")}`;
+  return value ? `Documento: ${value}` : "";
+}
+
+function gerarCupom(venda: Venda, nomeEmpresa: string, documentoEmpresa?: string | null) {
   const misto = venda.formaPagamento2 && venda.valorPagamento2;
   const pagamento = misto
     ? `${esc(FORMA_LABEL[venda.formaPagamento] ?? venda.formaPagamento)}: ${esc(fmt(venda.valorFinal - (venda.valorPagamento2 ?? 0)))} + ${esc(FORMA_LABEL[venda.formaPagamento2!] ?? venda.formaPagamento2)}: ${esc(fmt(venda.valorPagamento2))}`
@@ -263,6 +270,7 @@ function gerarCupom(venda: Venda, nomeEmpresa: string) {
 <div class="cupom">
   <div class="center">
     <div class="empresa">${esc(nomeEmpresa)}</div>
+    ${documentoEmpresa ? `<div style="font-size:10px;color:#475569;margin-top:3px">${esc(formatarDocumentoEmpresa(documentoEmpresa))}</div>` : ""}
     <div class="doc">Cupom Não Fiscal</div>
   </div>
   <div class="dash"></div>
@@ -319,10 +327,12 @@ function gerarCupom(venda: Venda, nomeEmpresa: string) {
 function TelaVendaSucesso({
   venda,
   nomeEmpresa,
+  documentoEmpresa,
   onFechar,
 }: {
   venda: Venda;
   nomeEmpresa: string;
+  documentoEmpresa?: string | null;
   onFechar: () => void;
 }) {
   const [passo, setPasso] = useState<"sucesso" | "nota">("sucesso");
@@ -415,7 +425,7 @@ function TelaVendaSucesso({
             </button>
             <button
               onClick={() => {
-                gerarCupom(venda, nomeEmpresa);
+                gerarCupom(venda, nomeEmpresa, documentoEmpresa);
                 onFechar();
               }}
               style={{
@@ -1658,11 +1668,13 @@ function ModalNovaVenda({
 function DetalheVenda({
   venda,
   nomeEmpresa,
+  documentoEmpresa,
   onClose,
   onAtualizado,
 }: {
   venda: Venda;
   nomeEmpresa: string;
+  documentoEmpresa?: string | null;
   onClose: () => void;
   onAtualizado: (v: Venda) => void;
 }) {
@@ -2090,7 +2102,7 @@ function DetalheVenda({
           ) : (
             <div style={{ display: "flex", gap: 8 }}>
               <button
-                onClick={() => gerarCupom(venda, nomeEmpresa)}
+                onClick={() => gerarCupom(venda, nomeEmpresa, documentoEmpresa)}
                 style={{
                   flex: 1,
                   ...btnG,
@@ -2118,7 +2130,7 @@ function DetalheVenda({
         {/* Cupom mesmo para venda cancelada */}
         {venda.cancelada && (
           <button
-            onClick={() => gerarCupom(venda, nomeEmpresa)}
+            onClick={() => gerarCupom(venda, nomeEmpresa, documentoEmpresa)}
             style={{
               ...btnG,
               width: "100%",
@@ -2141,11 +2153,13 @@ function CaixaCard({
   caixa,
   empresaId,
   nomeEmpresa,
+  documentoEmpresa,
   onNovaVenda,
 }: {
   caixa: CaixaInfo;
   empresaId: number;
   nomeEmpresa: string;
+  documentoEmpresa?: string | null;
   onNovaVenda?: () => void;
 }) {
   const [vendas, setVendas] = useState<Venda[]>([]);
@@ -2649,6 +2663,7 @@ function CaixaCard({
         <DetalheVenda
           venda={detalhe}
           nomeEmpresa={nomeEmpresa}
+          documentoEmpresa={documentoEmpresa}
           onClose={() => setDetalhe(null)}
           onAtualizado={handleAtualizado}
         />
@@ -2796,6 +2811,7 @@ export default function Vendas() {
               caixa={c}
               empresaId={empresaAtiva.id}
               nomeEmpresa={empresaAtiva.nomeFantasia}
+              documentoEmpresa={empresaAtiva.cnpj || empresaAtiva.cpf}
               onNovaVenda={
                 caixaAtivo?.id === c.id ? () => setModalNova(true) : undefined
               }
@@ -2819,6 +2835,7 @@ export default function Vendas() {
         <TelaVendaSucesso
           venda={vendaSucesso}
           nomeEmpresa={empresaAtiva.nomeFantasia}
+          documentoEmpresa={empresaAtiva.cnpj || empresaAtiva.cpf}
           onFechar={() => setVendaSucesso(null)}
         />
       )}

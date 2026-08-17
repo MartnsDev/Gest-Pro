@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Building2, CheckCircle2, Clock, Crown, Star, Rocket,
   FlaskConical, ArrowRight, AlertCircle, Loader2,
-  ShieldCheck, Zap, Quote, Check
+  Zap, Check
 } from "lucide-react";
 import { useEmpresa } from "../context/Empresacontext";
 import { getToken } from "@/lib/auth-v2";
@@ -75,7 +75,7 @@ const PLANOS = [
     id: "PREMIUM", nome: "Premium", descricao: "Poder absoluto para franquias e redes.",
     preco: "R$ 99,90", duracao: "por mês", icon: Crown,
     corBase: "var(--primary)", corBg: "var(--primary-muted)",
-    features: ["Empresas ilimitadas", "Caixas ilimitados", "Histórico ilimitado", "Relatórios avançados", "API para integrações", "Backup automático", "Suporte dedicado 24h"],
+    features: ["Empresas ilimitadas", "Caixas ilimitados", "Histórico ilimitado", "Relatórios avançados", "Shopee e Mercado Livre", "Backup automático", "Suporte dedicado 24h"],
     destaque: false, pagavel: true, cta: "Assinar Premium"
   }
 ] as const;
@@ -153,18 +153,18 @@ function PlanosInner() {
   // RENDER (Estilos Nativos Blindados)
   // =====================================================================
   return (
-    <div style={{ padding: "28px 28px 48px", maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32, color: "var(--foreground)" }}>
+    <div className="planos-page" style={{ padding: "20px 22px 48px", width: "100%", display: "flex", flexDirection: "column", gap: 14, color: "var(--foreground)" }}>
       
       {/* 1. HERO SECTION */}
       <section style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--primary-muted)", color: "var(--primary)", padding: "5px 11px", borderRadius: 99, fontSize: 11, fontWeight: 700, marginBottom: 14, border: "1px solid rgba(16, 185, 129, 0.2)", textTransform: "uppercase", letterSpacing: ".08em" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "var(--primary)", fontSize: 10, fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".08em" }}>
           <Zap size={13} /> Planos GestPro
         </div>
-        <h1 style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, color: "var(--foreground)", margin: "0 0 6px" }}>
-          Escolha o plano ideal
+        <h1 style={{ fontSize: 22, fontWeight: 760, lineHeight: 1.2, color: "var(--foreground)", margin: "0 0 4px", letterSpacing: "-.03em" }}>
+          Planos
         </h1>
         <p style={{ fontSize: 13, color: "var(--foreground-muted)", lineHeight: 1.5, margin: 0 }}>
-          Compare os recursos e encontre a opção adequada para o momento do seu negócio.
+          Escolha os limites adequados para o momento do seu negócio.
         </p>
 
         {erro && (
@@ -181,24 +181,24 @@ function PlanosInner() {
 
       {/* 2. PLANO ATUAL BANNER */}
       {!loading && plano && planoAtual && (
-        <section style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 14, padding: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ width: 60, height: 60, borderRadius: 16, background: planoAtual.corBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <planoAtual.icon size={30} color={planoAtual.corBase} />
+        <section style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 11, padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: planoAtual.corBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <planoAtual.icon size={20} color={planoAtual.corBase} />
             </div>
             <div>
-              <p style={{ fontSize: 13, color: "#94a3b8", margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Seu plano atual</p>
+              <p style={{ fontSize: 9, color: "var(--foreground-subtle)", margin: "0 0 2px", fontWeight: 650, textTransform: "uppercase", letterSpacing: ".07em" }}>Plano atual</p>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: "#fff" }}>{planoAtual.nome}</h2>
-                <span style={{ fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 99, background: estaAtivo ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", color: estaAtivo ? "#10b981" : "#ef4444", border: `1px solid ${estaAtivo ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}` }}>
+                <h2 style={{ fontSize: 16, fontWeight: 750, margin: 0, color: "var(--foreground)" }}>{planoAtual.nome}</h2>
+                <span style={{ fontSize: 8, fontWeight: 750, padding: "3px 7px", borderRadius: 99, background: estaAtivo ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)", color: estaAtivo ? "#10b981" : "#ef4444" }}>
                   {plano.statusAcesso === "ATIVO" ? "ATIVO" : "BLOQUEADO"}
                 </span>
               </div>
             </div>
           </div>
 
-          <div style={{ flex: 1, minWidth: 250, maxWidth: 400 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 13, fontWeight: 600 }}>
+          <div style={{ flex: 1, minWidth: 220, maxWidth: 360 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 10, fontWeight: 600 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6, color: "#94a3b8" }}><Clock size={14} /> Ciclo de Faturamento</span>
               <span style={{ color: pct < 20 ? "#ef4444" : "#f8fafc" }}>{plano.diasRestantes} dias restantes</span>
             </div>
@@ -207,8 +207,8 @@ function PlanosInner() {
             </div>
           </div>
           
-          <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, fontWeight: 600, color: "#94a3b8", background: "#0f1115", border: "1px solid #272a30", padding: "12px 20px", borderRadius: 14 }}>
-            <Building2 size={18} color={planoAtual.corBase} />
+          <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", background: "var(--surface-overlay)", border: "1px solid var(--border)", padding: "8px 11px", borderRadius: 8 }}>
+            <Building2 size={14} color={planoAtual.corBase} />
             <span>Lojas ativas: <strong style={{ color: "#fff" }}>{plano.empresasCriadas}</strong> / {plano.limiteEmpresas >= 99 ? "Ilimitado" : plano.limiteEmpresas}</span>
           </div>
         </section>
@@ -217,7 +217,7 @@ function PlanosInner() {
       {/* 3. GRID DE PLANOS */}
       <section className="pricing-grid-container">
         <style>{`
-          .pricing-grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; align-items: stretch; }
+          .pricing-grid-container { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; align-items: stretch; }
           @media (max-width: 1024px) { .pricing-grid-container { grid-template-columns: repeat(2, 1fr); } }
           @media (max-width: 640px) { .pricing-grid-container { grid-template-columns: 1fr; } }
         `}</style>
@@ -232,11 +232,11 @@ function PlanosInner() {
           let cardStyle: React.CSSProperties = {
             background: "var(--surface-elevated)",
             border: `1px solid ${isAtual || isHovered ? p.corBase : "var(--border)"}`,
-            borderRadius: 16, padding: "26px 22px", position: "relative",
+            borderRadius: 11, padding: "16px 15px", position: "relative",
             display: "flex", flexDirection: "column",
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            transform: isHovered && !isAtual ? "translateY(-8px)" : "translateY(0)",
-            boxShadow: isHovered && !isAtual ? `0 20px 40px ${p.corBg}` : "none",
+            transform: isHovered && !isAtual ? "translateY(-3px)" : "translateY(0)",
+            boxShadow: isHovered && !isAtual ? `0 12px 24px ${p.corBg}` : "none",
           };
 
           if (p.destaque) {
@@ -244,8 +244,8 @@ function PlanosInner() {
               ...cardStyle,
               border: `2px solid ${p.corBase}`,
               background: "var(--surface-elevated)",
-              transform: isHovered ? "translateY(-8px)" : "translateY(0)",
-              boxShadow: isHovered ? `0 25px 50px ${p.corBg}` : `0 10px 30px ${p.corBg}`,
+              transform: isHovered ? "translateY(-3px)" : "translateY(0)",
+              boxShadow: `0 8px 22px ${p.corBg}`,
               zIndex: 10
             };
           }
@@ -258,19 +258,19 @@ function PlanosInner() {
               onMouseLeave={() => setHoverCard(null)}
             >
               {p.destaque && (
-                <div style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)", background: p.corBase, color: "#fff", padding: "6px 16px", borderRadius: 99, fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", boxShadow: `0 4px 12px ${p.corBg}`, whiteSpace: "nowrap" }}>
-                  MELHOR CUSTO-BENEFÍCIO
+                <div style={{ position: "absolute", top: -9, right: 10, background: p.corBase, color: "#fff", padding: "3px 8px", borderRadius: 99, fontSize: 8, fontWeight: 800, whiteSpace: "nowrap" }}>
+                  RECOMENDADO
                 </div>
               )}
               
-              <div style={{ width: 52, height: 52, borderRadius: 14, background: p.corBg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-                <p.icon size={26} color={p.corBase} />
+              <div style={{ width: 34, height: 34, borderRadius: 9, background: p.corBg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 11 }}>
+                <p.icon size={18} color={p.corBase} />
               </div>
               
-              <h3 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 8px", color: "#fff" }}>{p.nome}</h3>
-              <p style={{ fontSize: 14, color: "#94a3b8", margin: 0, minHeight: 42, lineHeight: 1.5 }}>{p.descricao}</p>
+              <h3 style={{ fontSize: 16, fontWeight: 750, margin: "0 0 4px", color: "var(--foreground)" }}>{p.nome}</h3>
+              <p style={{ fontSize: 10, color: "var(--foreground-muted)", margin: 0, minHeight: 30, lineHeight: 1.4 }}>{p.descricao}</p>
               
-              <div style={{ fontSize: 38, fontWeight: 800, color: p.corBase, margin: "24px 0 8px", display: "flex", alignItems: "flex-end", gap: 4 }}>
+              <div style={{ fontSize: 25, fontWeight: 780, color: p.corBase, margin: "14px 0 3px", display: "flex", alignItems: "flex-end", gap: 3 }}>
                 {p.preco}
                 {p.preco !== "Grátis" && <span style={{ fontSize: 14, fontWeight: 600, color: "#94a3b8", paddingBottom: 8 }}>/mês</span>}
               </div>
@@ -279,7 +279,7 @@ function PlanosInner() {
                 disabled={isAtual || isLoading || !p.pagavel}
                 onClick={() => { if (!isAtual && !isLoading && p.pagavel) handleAssinar(p.id); }}
                 style={{
-                  width: "100%", padding: 16, marginTop: 16, marginBottom: 32, borderRadius: 12, fontSize: 14, fontWeight: 800,
+                  width: "100%", padding: 10, marginTop: 10, marginBottom: 16, borderRadius: 8, fontSize: 10, fontWeight: 750,
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: isAtual || !p.pagavel || isLoading ? "default" : "pointer",
                   transition: "all 0.2s",
                   background: isAtual ? "#272a30" : p.destaque ? p.corBase : "transparent",
@@ -295,11 +295,11 @@ function PlanosInner() {
               </button>
 
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 16px 0" }}>O que está incluído</p>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 14 }}>
-                  {p.features.map((f, i) => (
-                    <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 14, color: "#cbd5e1", lineHeight: 1.4 }}>
-                      <CheckCircle2 size={18} color={p.corBase} style={{ flexShrink: 0, marginTop: 1 }} />
+                <p style={{ fontSize: 9, fontWeight: 700, color: "var(--foreground)", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 9px" }}>Inclui</p>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 7 }}>
+                  {p.features.slice(0, 5).map((f, i) => (
+                    <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 10, color: "var(--foreground-muted)", lineHeight: 1.35 }}>
+                      <CheckCircle2 size={12} color={p.corBase} style={{ flexShrink: 0, marginTop: 1 }} />
                       <span>{f}</span>
                     </li>
                   ))}
@@ -310,45 +310,19 @@ function PlanosInner() {
         })}
       </section>
 
-      {/* 4. PROVA SOCIAL */}
-      <section style={{ marginTop: 20 }}>
-        <div style={{ marginBottom: 20 }}>
-          <h3 style={{ fontSize: 20, fontWeight: 800, color: "var(--foreground)", margin: "0 0 5px" }}>Quem usa o GestPro</h3>
-          <p style={{ color: "var(--foreground-muted)", fontSize: 13, margin: 0 }}>Experiências de negócios que organizaram sua operação.</p>
-        </div>
-        <div className="trust-grid">
-          <style>{`
-            .trust-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-            @media (max-width: 768px) { .trust-grid { grid-template-columns: 1fr; } }
-          `}</style>
-          
-          {[
-            { cor: "var(--primary)", texto: "Depois que começamos a usar o plano Pro, nossa emissão de notas e gestão de estoque ficou totalmente automatizada. Economizamos horas toda semana.", autor: "Carlos M., Distribuidora" },
-            { cor: "var(--primary)", texto: "A visão multi-lojas do Premium salvou a nossa franquia. Consigo ver o faturamento de todas as 4 unidades em tempo real na mesma tela.", autor: "Amanda T., Rede de Varejo" },
-            { cor: "var(--primary)", texto: "Interface limpa, rápida e direto ao ponto. O controle de caixa me deu clareza sobre o dinheiro que estava parado no estoque.", autor: "Roberto F., Loja de Eletrônicos" }
-          ].map((dep, i) => (
-            <div key={i} style={{ background: "var(--surface-elevated)", padding: 24, borderRadius: 14, border: "1px solid var(--border)" }}>
-              <Quote size={28} color={dep.cor} style={{ marginBottom: 16, opacity: 0.8 }} />
-              <p style={{ fontSize: 15, fontStyle: "italic", color: "#cbd5e1", marginBottom: 24, lineHeight: 1.6 }}>"{dep.texto}"</p>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: 0 }}>— {dep.autor}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 5. TABELA DE COMPARAÇÃO */}
-      <section style={{ marginTop: 20 }}>
-        <div style={{ marginBottom: 20 }}>
-          <h3 style={{ fontSize: 20, fontWeight: 800, color: "var(--foreground)", margin: "0 0 5px" }}>Comparativo detalhado</h3>
-          <p style={{ color: "var(--foreground-muted)", fontSize: 13, margin: 0 }}>Compare os limites e recursos de cada assinatura.</p>
+      {/* 4. COMPARAÇÃO ESSENCIAL */}
+      <section style={{ marginTop: 4 }}>
+        <div style={{ marginBottom: 10 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", margin: "0 0 3px" }}>Comparação rápida</h3>
+          <p style={{ color: "var(--foreground-muted)", fontSize: 10, margin: 0 }}>Os principais limites de cada assinatura.</p>
         </div>
         <div style={{ overflowX: "auto", background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 14, padding: "8px 0" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700, textAlign: "left" }}>
             <thead>
               <tr>
-                <th style={{ padding: "24px", color: "var(--foreground-muted)", fontWeight: 700, borderBottom: "1px solid var(--border)" }}>Recurso e Funcionalidade</th>
+                <th style={{ padding: "13px 16px", color: "var(--foreground-muted)", fontSize: 10, fontWeight: 700, borderBottom: "1px solid var(--border)" }}>Recurso</th>
                 {PLANOS.map((p) => (
-                  <th key={p.id} style={{ padding: "24px", textAlign: "center", color: p.id === plano?.tipoPlano ? p.corBase : "#f8fafc", fontWeight: 800, borderBottom: "1px solid #272a30" }}>
+                  <th key={p.id} style={{ padding: "13px 12px", textAlign: "center", color: p.id === plano?.tipoPlano ? p.corBase : "var(--foreground)", fontSize: 10, fontWeight: 750, borderBottom: "1px solid var(--border)" }}>
                     {p.nome}
                     {p.id === plano?.tipoPlano && <div style={{ fontSize: 10, color: p.corBase, marginTop: 4, letterSpacing: "1px" }}>ATUAL</div>}
                   </th>
@@ -361,17 +335,13 @@ function PlanosInner() {
                 { label: "Frentes de Caixa (PDV)", values: ["1", "1", "5", "Ilimitado"] },
                 { label: "Limite de Produtos", values: ["300", "500", "Ilimitado", "Ilimitado"] },
                 { label: "Histórico de Dados", values: ["2 Meses", "6 Meses", "1 Ano", "Vitalício"] },
-                { label: "Emissão de Nota Fiscal", values: [true, true, true, true] },
-                { label: "Controle de Dívidas (Fiado)", values: [false, true, true, true] },
-                { label: "Exportação Avançada (PDF/CSV)", values: [false, false, true, true] },
-                { label: "Backup Automático Nuvem", values: [false, false, true, true] },
-                { label: "API de Integração", values: [false, false, false, true] },
-                { label: "Nível de Suporte", values: ["—", "E-mail (48h)", "Prioritário (12h)", "Dedicado (24/7)"] },
+                { label: "Nota Fiscal", values: [true, true, true, true] },
+                { label: "Integrações", values: [false, false, false, "Shopee e Mercado Livre"] },
               ].map((row, i) => (
-                <tr key={i} style={{ borderBottom: i === 9 ? "none" : "1px solid var(--border)" }}>
-                  <td style={{ padding: "20px 24px", color: "#cbd5e1", fontWeight: 500 }}>{row.label}</td>
+                <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                  <td style={{ padding: "11px 16px", color: "var(--foreground-muted)", fontSize: 10, fontWeight: 500 }}>{row.label}</td>
                   {row.values.map((v, j) => (
-                    <td key={j} style={{ padding: "20px 24px", textAlign: "center" }}>
+                    <td key={j} style={{ padding: "11px 12px", textAlign: "center", fontSize: 10 }}>
                       {typeof v === "boolean" ? (
                         v ? <Check size={20} color="#10b981" style={{ margin: "0 auto" }} /> : <span style={{ color: "#475569" }}>—</span>
                       ) : (
@@ -386,22 +356,10 @@ function PlanosInner() {
         </div>
       </section>
 
-      {/* 6. TRUST BADGE FOOTER */}
-      <section style={{ display: "flex", justifyContent: "center", marginTop: 40 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, background: "var(--surface-elevated)", border: "1px solid var(--border)", padding: "20px 24px", borderRadius: 14, maxWidth: 650 }}>
-          <ShieldCheck size={36} color="var(--primary)" style={{ flexShrink: 0 }} />
-          <div>
-            <h4 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 5px", color: "var(--foreground)" }}>Pagamento seguro e sem fidelidade</h4>
-            <p style={{ fontSize: 13, color: "var(--foreground-muted)", margin: 0, lineHeight: 1.5 }}>
-              Transações processadas com segurança militar. Você tem liberdade total para alterar seu plano ou cancelar sua assinatura a qualquer momento com um único clique.
-            </p>
-          </div>
-        </div>
-      </section>
-
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .animate-spin { animation: spin 1s linear infinite; }
+        @media(max-width:640px){.planos-page{padding:16px 12px 90px!important}}
       `}} />
     </div>
   );

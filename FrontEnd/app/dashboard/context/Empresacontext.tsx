@@ -25,7 +25,16 @@ export interface CaixaInfo {
 export interface EmpresaAtiva {
   id: number;
   nomeFantasia: string;
+  cnpj?: string | null;
+  cpf?: string | null;
+  razaoSocial?: string | null;
+  planoNome?: string | null;
+  limiteCaixas?: number | null;
+  ativo?: boolean;
 }
+
+// Compatibilidade com componentes de caixa que utilizam o nome anterior.
+export type Empresa = EmpresaAtiva;
 
 /* ─── Interface do contexto — COMPLETA e sincronizada ───────────────────── */
 interface EmpresaContextType {

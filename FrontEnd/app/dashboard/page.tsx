@@ -363,13 +363,21 @@ function DashboardInner({
       case "produto-rapido":
         return (
           <PaginaAcaoRapida onVoltar={() => setSecao("dashboard")}>
-            <NovoProduto onConcluido={() => setSecao("dashboard")} />
+            <NovoProduto
+              empresaId={empresaAtiva?.id ?? 0}
+              onClose={() => setSecao("dashboard")}
+              onConcluido={() => setSecao("dashboard")}
+            />
           </PaginaAcaoRapida>
         );
       case "cliente-rapido":
         return (
           <PaginaAcaoRapida onVoltar={() => setSecao("dashboard")}>
-            <NovoCliente onConcluido={() => setSecao("dashboard")} />
+            <NovoCliente
+              empresaId={empresaAtiva?.id ?? 0}
+              onClose={() => setSecao("dashboard")}
+              onConcluido={() => setSecao("dashboard")}
+            />
           </PaginaAcaoRapida>
         );
       case "caixa-rapido":
@@ -427,7 +435,7 @@ function DashboardInner({
       <header className={styles.dashboardHeader}>
         <div className={styles.headerBrand}>
           <div className={styles.headerLogo}>
-            <img src="/favicon.png" alt="GestPro" width={40} height={40} />
+            <img src="/images/logo-256.webp" alt="GestPro" width={36} height={36} />
           </div>
           <span className={styles.headerTitle}>GestPro</span>
           <div
