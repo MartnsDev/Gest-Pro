@@ -123,5 +123,5 @@ function Footer() {
 }
 
 export default function Home() {
-  return <div className="min-h-screen bg-white font-sans"><Header /><main><Hero /><About /><ValueSection /><Resources /><Plans /><FAQ /></main><Footer /></div>;
+  return <div className="min-h-screen bg-white font-sans"><Header /><main><Hero /><About /><ValueSection /><Resources /><Plans /><FAQ /></main><Footer /><nav aria-label="Links jurídicos" className="flex flex-wrap justify-center gap-x-6 gap-y-3 border-t border-zinc-200 bg-white px-5 py-6 text-xs text-[#718078]"><Link href="/termos">Termos de Uso</Link><Link href="/privacidade">Política de Privacidade</Link><Link href="/cookies">Política de Cookies</Link><Link href="/cancelamento-reembolsos">Cancelamento e Reembolsos</Link><Link href="/seguranca">Segurança</Link><Link href="/contato">Contato</Link></nav></div>;
 }

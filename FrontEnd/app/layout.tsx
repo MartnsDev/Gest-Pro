@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Suspense } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
+import { CookieConsent } from "@/components/cookie-consent";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -37,8 +38,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem={false} themes={["dark", "light"]}>
+        <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false} themes={["dark", "light"]}>
           <Suspense fallback={null}>{children}</Suspense>
+          <CookieConsent />
         </ThemeProvider>
       </body>
     </html>

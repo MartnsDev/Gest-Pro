@@ -7,6 +7,9 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { login, loginComGoogle } from "@/lib/api-v2";
 
+const AFTER_LOGIN_KEY = "gevyro-request-cookie-consent-after-login";
+const LEGAL_AFTER_LOGIN_KEY = "gevyro-require-legal-ack-after-login";
+
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -25,6 +28,12 @@ export default function LoginPage() {
   const [erro, setErro] = useState("");
   const [showPass, setShowPass] = useState(false);
 
+  const handleGoogle = () => {
+    sessionStorage.setItem(AFTER_LOGIN_KEY, "true");
+    sessionStorage.setItem(LEGAL_AFTER_LOGIN_KEY, "true");
+    loginComGoogle();
+  };
+
   const set = (key: "email" | "senha", value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
     setErro("");
@@ -38,6 +47,11 @@ export default function LoginPage() {
     try {
       const usuario = await login(form.email.trim().toLowerCase(), form.senha);
       router.push(usuario.statusAcesso === "INATIVO" ? "/pagamento" : "/dashboard");
+      if (sessionStorage.getItem(AFTER_LOGIN_KEY) === "true") {
+        sessionStorage.removeItem(AFTER_LOGIN_KEY);
+        localStorage.removeItem("gevyro-cookie-preferences");
+        window.setTimeout(() => window.dispatchEvent(new Event("gevyro:open-cookie-preferences")), 250);
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Credenciais inválidas ou erro no servidor";
       setErro(message === "PLANO_INATIVO" ? "Não foi possível iniciar uma nova sessão. Tente novamente." : message);
@@ -61,10 +75,9 @@ export default function LoginPage() {
           <h1 className="mt-4 text-4xl font-light tracking-[-.04em] text-[#343b37] sm:text-5xl">Bem-vindo <span className="italic text-[#258c53]">de volta</span></h1>
           <p className="mt-4 text-sm leading-6 text-[#718078]">Entre para acompanhar vendas, estoque, caixa e relatórios.</p>
 
-          <button type="button" onClick={loginComGoogle} className="mt-9 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white text-sm font-medium text-[#46514b] transition hover:border-[#258c53]/40 hover:bg-[#f7faf8]">
+          <button type="button" onClick={handleGoogle} className="mt-9 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white text-sm font-medium text-[#46514b] transition hover:border-[#258c53]/40 hover:bg-[#f7faf8]">
             <GoogleIcon /> Continuar com Google
           </button>
-
           <div className="my-7 flex items-center gap-4"><span className="h-px flex-1 bg-zinc-200" /><span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">ou</span><span className="h-px flex-1 bg-zinc-200" /></div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

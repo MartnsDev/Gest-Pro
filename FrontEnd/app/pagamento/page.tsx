@@ -88,11 +88,12 @@ function PagamentoInner() {
             {processando ? <><Loader2 size={17} className="animate-spin" /> Abrindo checkout...</> : verificandoSessao ? <><Loader2 size={17} className="animate-spin" /> Verificando sessão...</> : <><CreditCard size={17} /> Assinar agora <ArrowRight size={16} /></>}
           </button>
           <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-zinc-400"><ShieldCheck size={14} className="text-[#78d6a3]" /> Pagamento protegido pela Stripe</div>
-          <p className="mt-3 text-center text-[10px] leading-4 text-zinc-500">Ao continuar, você concorda com os <Link href="/termos" className="underline hover:text-zinc-300">Termos de Uso</Link> e a <Link href="/privacidade" className="underline hover:text-zinc-300">Política de Privacidade</Link>.</p>
+          <p className="mt-3 text-center text-[10px] leading-4 text-zinc-400">Assinatura mensal recorrente de R$ {plano.preco}. A primeira cobrança ocorre ao concluir o checkout da Stripe. A renovação continua até o cancelamento, conforme as condições exibidas antes da confirmação.</p>
+          <p className="mt-3 text-center text-[10px] leading-4 text-zinc-500">Ao continuar, você concorda com os <Link href="/termos" className="underline hover:text-zinc-300">Termos de Uso</Link>, a <Link href="/privacidade" className="underline hover:text-zinc-300">Política de Privacidade</Link> e as <Link href="/cancelamento-reembolsos" className="underline hover:text-zinc-300">condições de cancelamento</Link>.</p>
         </aside>
       </div>
       <footer className="border-t border-zinc-200 bg-white px-5 py-6 text-center text-[11px] leading-5 text-[#8a958f]">
-        © 2026 Gevyro · CNPJ 68.259.534/0001-70 · Gestão em evolução.
+        © 2026 Gevyro · CNPJ 68.259.534/0001-70 · <Link href="/termos" className="underline">Termos</Link> · <Link href="/privacidade" className="underline">Privacidade</Link> · <Link href="/cancelamento-reembolsos" className="underline">Cancelamento</Link>
       </footer>
     </main>
   );

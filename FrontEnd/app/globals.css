@@ -82,6 +82,15 @@
   --sidebar-ring:               var(--primary);
 }
 
+.legal-content h2 { margin-top: 2rem; font-size: 1.2rem; font-weight: 700; color: #303a35; }
+.legal-content h2:first-child { margin-top: 0; }
+.legal-content p, .legal-content li { color: #59665f; line-height: 1.8; font-size: .95rem; }
+.legal-content p { margin-top: .75rem; }
+.legal-content ul { margin-top: .75rem; padding-left: 1.25rem; list-style: disc; }
+.legal-content li + li { margin-top: .4rem; }
+.legal-content a { color: #258c53; font-weight: 600; text-decoration: underline; }
+.legal-content strong { color: #46514b; }
+
 [data-theme="light"] {
   color-scheme: light;
 

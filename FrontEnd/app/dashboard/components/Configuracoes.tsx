@@ -890,12 +890,23 @@ export default function Configuracoes({
           <Secao titulo="Perguntas Frequentes" sub="Soluções rápidas para as dúvidas mais comuns" icon={<HelpCircle size={18} />}>
             {[
               { p: "Como faço upgrade de plano?", r: "Entre em contato via e-mail ou WhatsApp solicitando a mudança. A ativação é feita no mesmo dia." },
-              { p: "Posso cancelar meu plano a qualquer momento?", r: "Sim. O Gevyro não possui fidelidade. Seu acesso ficará ativo até o fim do ciclo pago." },
+              { p: "Como consulto as condições de cancelamento?", r: "Acesse a página Cancelamento e Reembolsos. As condições finais também devem ser conferidas no portal de cobrança antes da confirmação." },
               { p: "Como exporto meus relatórios para enviar ao contador?", r: "Acesse a aba 'Relatórios' e clique no botão de exportar (CSV ou PDF). Você também pode exportar os XMLs direto na aba de Notas Fiscais." },
-              { p: "Meus dados e os dos meus clientes estão seguros?", r: "Sim. O sistema utiliza criptografia de ponta a ponta e todos os dados ficam salvos em servidores na nuvem com rotinas de backup diário." },
+              { p: "Como a Gevyro protege os dados?", r: "Adotamos controles de autenticação, autorização e segurança compatíveis com a arquitetura. Consulte a página Segurança; nenhum sistema deve prometer proteção absoluta." },
             ].map((item, i) => (
               <FaqItem key={i} pergunta={item.p} resposta={item.r} />
             ))}
+          </Secao>
+
+          <Secao titulo="Privacidade e Dados" sub="Consulte informações e exerça seus direitos previstos na LGPD" icon={<Shield size={18} />}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--foreground-muted)", margin: 0 }}>Você pode solicitar confirmação, acesso, correção, informações, portabilidade quando regulamentada e eliminação quando aplicável. Para proteger sua conta, poderemos confirmar sua identidade. A exclusão não é automática enquanto dependências e retenções legais não forem analisadas.</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                <button onClick={() => window.open('/privacidade', '_blank')} style={{ background: "var(--primary-muted)", color: "var(--primary)", border: "none", padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Ver Política de Privacidade</button>
+                <a href={`mailto:gestprosuporte@gmail.com?subject=${encodeURIComponent("Solicitação LGPD — Gevyro")}`} style={{ background: "var(--primary)", color: "#fff", padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Enviar solicitação</a>
+                <button onClick={() => window.dispatchEvent(new Event('gevyro:open-cookie-preferences'))} style={{ background: "transparent", color: "var(--foreground)", border: "1px solid var(--border)", padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Preferências de cookies</button>
+              </div>
+            </div>
           </Secao>
 
           {/* Seção Termos e Privacidade */}
