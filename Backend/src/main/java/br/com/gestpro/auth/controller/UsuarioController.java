@@ -1,57 +1,56 @@
 package br.com.gestpro.auth.controller;
 
-
 import br.com.gestpro.auth.dto.googleAuthDTO.UsuarioResponse;
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
-import br.com.gestpro.auth.service.AuthenticationService;
+import br.com.gestpro.auth.service.AuthCookieService;
 import br.com.gestpro.infra.exception.ApiException;
-import br.com.gestpro.infra.jwt.JwtService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-//@RequestMapping("/api")
 public class UsuarioController {
 
-    private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
-    private final AuthenticationService authenticationService;
+    private final AuthCookieService authCookieService;
 
-    public UsuarioController(JwtService jwtService,
-                             UsuarioRepository usuarioRepository,
-                             AuthenticationService authenticationService) {
-        this.jwtService = jwtService;
+    public UsuarioController(
+            UsuarioRepository usuarioRepository,
+            AuthCookieService authCookieService
+    ) {
         this.usuarioRepository = usuarioRepository;
-        this.authenticationService = authenticationService;
+        this.authCookieService = authCookieService;
     }
 
     @GetMapping("/api/usuario")
-    public ResponseEntity<UsuarioResponse> getUsuario(Authentication authentication) {
-        Usuario u = usuarioRepository.findByEmail(authentication.getName())
+    public ResponseEntity<UsuarioResponse> getUsuario(
+            Authentication authentication
+    ) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ApiException(
+                    "Não autenticado.",
+                    HttpStatus.UNAUTHORIZED,
+                    "/api/usuario"
+            );
+        }
+
+        Usuario usuario = usuarioRepository
+                .findByEmail(authentication.getName())
                 .orElseThrow(() -> new ApiException(
                         "Usuário não encontrado.",
                         HttpStatus.NOT_FOUND,
-                        "/api/usuario"));
-        return ResponseEntity.ok(UsuarioResponse.from(u));
+                        "/api/usuario"
+                ));
+
+        return ResponseEntity.ok(UsuarioResponse.from(usuario));
     }
 
-    // Logout
     @PostMapping("/auth/logout")
-    public ResponseEntity<String> logout(HttpServletResponse response) {
-        Cookie cookie = new Cookie("jwt_token", null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
-        return ResponseEntity.ok("Logout realizado com sucesso.");
+    public ResponseEntity<Void> logout(HttpServletResponse response) {
+        authCookieService.remover(response);
+        return ResponseEntity.noContent().build();
     }
-
 }

@@ -7,6 +7,7 @@ import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.plano.stripe.PlanoTipo;
 import br.com.gestpro.plano.stripe.model.Assinatura;
 import br.com.gestpro.plano.stripe.repository.AssinaturaRepository;
+import br.com.gestpro.plano.stripe.service.StripePriceProperties;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Subscription;
 import lombok.RequiredArgsConstructor;
@@ -17,159 +18,552 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class AtualizarPlanoOperation {
 
-    private final UsuarioRepository    usuarioRepository;
+    private static final String STATUS_ATIVO = "ATIVO";
+    private static final String STATUS_INADIMPLENTE = "INADIMPLENTE";
+    private static final String STATUS_CANCELADO = "CANCELADO";
+    private static final String STATUS_PENDENTE = "PENDENTE";
+
+    private final UsuarioRepository usuarioRepository;
     private final AssinaturaRepository assinaturaRepository;
+    private final StripePriceProperties stripePrices;
 
+    /**
+     * Ativa a assinatura depois de checkout.session.completed.
+     *
+     * O plano, status e vencimento são sempre consultados novamente na Stripe.
+     * Nenhum desses dados é aceito diretamente do frontend ou do webhook.
+     */
     @Transactional
-    public void ativarPlano(String email, String subscriptionId, String customerId) {
-        log.info("Ativando plano para: {} | subscription: {}", email, subscriptionId);
+    public void ativarPlano(
+            String email,
+            String subscriptionId,
+            String customerId
+    ) {
+        validarSubscriptionId(subscriptionId);
 
-        Subscription subscription = buscarSubscriptionStripe(subscriptionId);
+        Subscription subscription =
+                buscarSubscriptionStripe(subscriptionId);
 
-        // Valida se a assinatura está realmente ativa na Stripe antes de ativar
         String stripeStatus = subscription.getStatus();
-        if (!"active".equals(stripeStatus) && !"trialing".equals(stripeStatus)) {
-            log.warn("Ignorando ativarPlano: status da Stripe é '{}' para subscription {}",
-                    stripeStatus, subscriptionId);
-            return;
+
+        if (!isAtivaNaStripe(stripeStatus)) {
+            throw new IllegalStateException(
+                    "Assinatura ainda não está ativa na Stripe."
+            );
         }
 
-        LocalDate vencimento = extrairVencimento(subscription);
-        PlanoTipo planoTipo  = extrairPlanoTipo(subscription);
-        TipoPlano tipoPlano  = TipoPlano.fromPlanoTipo(planoTipo);
+        Usuario usuario = usuarioRepository
+                .findByEmail(normalizarEmail(email))
+                .orElseThrow(() -> new IllegalStateException(
+                        "Usuário do checkout não encontrado."
+                ));
 
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado: " + email));
+        validarProprietarioDaSubscription(subscription, usuario);
 
+        /*
+         * Primeiro procura pelo subscriptionId. Isso torna o processamento
+         * idempotente quando a Stripe reenviar o mesmo evento.
+         */
         Assinatura assinatura = assinaturaRepository
-                .findByUsuarioEmail(email)
-                .orElse(new Assinatura());
+                .findByStripeSubscriptionId(subscriptionId)
+                .orElseGet(() -> assinaturaRepository
+                        .findByUsuarioEmail(usuario.getEmail())
+                        .orElseGet(Assinatura::new));
+
+        validarAssinaturaExistente(
+                assinatura,
+                usuario,
+                subscriptionId
+        );
 
         assinatura.setUsuario(usuario);
         assinatura.setStripeSubscriptionId(subscriptionId);
-        assinatura.setStripeCustomerId(customerId);
-        assinatura.setPlano(planoTipo);
-        assinatura.setDataVencimento(vencimento);
-        assinatura.setStatus("ATIVO");
-        assinatura.setUltimaAtualizacao(LocalDateTime.now());
-        assinaturaRepository.save(assinatura);
+        assinatura.setStripeCustomerId(
+                customerId != null
+                        ? customerId
+                        : subscription.getCustomer()
+        );
 
-        usuario.setTipoPlano(tipoPlano);
-        usuario.setStatusAcesso(StatusAcesso.ATIVO);
-        usuarioRepository.save(usuario);
+        aplicarDadosDaStripe(
+                assinatura,
+                usuario,
+                subscription
+        );
 
-        log.info("Plano {} ativado com sucesso para: {} | vence em: {}", planoTipo, email, vencimento);
+        log.info(
+                "Assinatura ativada: usuarioId={} subscriptionId={} plano={}",
+                usuario.getId(),
+                subscriptionId,
+                assinatura.getPlano()
+        );
     }
 
+    /**
+     * Sincroniza plano, vencimento e status.
+     *
+     * Deve ser usado para:
+     * - invoice.payment_succeeded
+     * - customer.subscription.updated
+     * - upgrade/downgrade
+     * - renovação mensal
+     *
+     * Diferentemente da versão anterior, uma alteração de plano é aplicada
+     * mesmo quando current_period_end não mudou.
+     */
+    @Transactional
+    public void sincronizarPlano(String subscriptionId) {
+        validarSubscriptionId(subscriptionId);
+
+        Subscription subscription =
+                buscarSubscriptionStripe(subscriptionId);
+
+        Assinatura assinatura =
+                localizarOuCriarAssinatura(subscription);
+
+        Usuario usuario = assinatura.getUsuario();
+
+        aplicarDadosDaStripe(
+                assinatura,
+                usuario,
+                subscription
+        );
+
+        log.info(
+                "Assinatura sincronizada: usuarioId={} subscriptionId={} status={} plano={}",
+                usuario.getId(),
+                subscriptionId,
+                assinatura.getStatus(),
+                assinatura.getPlano()
+        );
+    }
+
+    /**
+     * Compatibilidade com chamadas antigas.
+     */
     @Transactional
     public void renovarPlano(String subscriptionId) {
-        log.info("Renovando plano para subscription: {}", subscriptionId);
+        sincronizarPlano(subscriptionId);
+    }
 
-        Subscription subscription = buscarSubscriptionStripe(subscriptionId);
-
-        // Só renova se a Stripe confirma que está ativa
-        String stripeStatus = subscription.getStatus();
-        if (!"active".equals(stripeStatus) && !"trialing".equals(stripeStatus)) {
-            log.warn("Ignorando renovarPlano: status da Stripe é '{}' para subscription {}",
-                    stripeStatus, subscriptionId);
-            return;
-        }
-
-        LocalDate novoVencimento = extrairVencimento(subscription);
-        PlanoTipo planoTipo      = extrairPlanoTipo(subscription);
-        TipoPlano tipoPlano      = TipoPlano.fromPlanoTipo(planoTipo);
+    /**
+     * Chamado em customer.subscription.deleted.
+     *
+     * Não muda o usuário para EXPERIMENTAL porque isso apagaria a informação
+     * sobre o último plano contratado. Apenas bloqueia o acesso.
+     */
+    @Transactional
+    public void cancelarPlano(String subscriptionId) {
+        validarSubscriptionId(subscriptionId);
 
         Assinatura assinatura = assinaturaRepository
                 .findByStripeSubscriptionId(subscriptionId)
-                .orElseThrow(() -> new RuntimeException("Assinatura não encontrada: " + subscriptionId));
+                .orElseThrow(() -> new IllegalStateException(
+                        "Assinatura cancelada não encontrada."
+                ));
 
-        // Idempotência: ignora se o novo vencimento não avançou (webhook duplicado ou fora de ordem)
-        if (assinatura.getDataVencimento() != null
-                && !novoVencimento.isAfter(assinatura.getDataVencimento())) {
-            log.info("Ignorando renovarPlano: vencimento {} não avança o atual {} para subscription {}",
-                    novoVencimento, assinatura.getDataVencimento(), subscriptionId);
+        Usuario usuario = assinatura.getUsuario();
+
+        assinatura.setStatus(STATUS_CANCELADO);
+        assinatura.setUltimaAtualizacao(LocalDateTime.now());
+
+        usuario.setStatusAcesso(StatusAcesso.INATIVO);
+
+        assinaturaRepository.save(assinatura);
+        usuarioRepository.save(usuario);
+
+        log.info(
+                "Assinatura cancelada: usuarioId={} subscriptionId={}",
+                usuario.getId(),
+                subscriptionId
+        );
+    }
+
+    /**
+     * Chamado em invoice.payment_failed.
+     */
+    @Transactional
+    public void marcarInadimplente(String subscriptionId) {
+        validarSubscriptionId(subscriptionId);
+
+        /*
+         * Consulta a Stripe para permitir reconstruir a associação caso os
+         * eventos invoice.payment_failed e checkout.session.completed cheguem
+         * fora de ordem.
+         */
+        Subscription subscription =
+                buscarSubscriptionStripe(subscriptionId);
+
+        Assinatura assinatura =
+                localizarOuCriarAssinatura(subscription);
+
+        Usuario usuario = assinatura.getUsuario();
+
+        assinatura.setPlano(extrairPlanoTipo(subscription));
+        assinatura.setDataVencimento(
+                extrairVencimento(subscription)
+        );
+        assinatura.setStripeCustomerId(
+                subscription.getCustomer()
+        );
+        assinatura.setStatus(STATUS_INADIMPLENTE);
+        assinatura.setUltimaAtualizacao(
+                LocalDateTime.now()
+        );
+
+        usuario.setTipoPlano(
+                TipoPlano.fromPlanoTipo(
+                        assinatura.getPlano()
+                )
+        );
+        usuario.setStatusAcesso(StatusAcesso.INATIVO);
+
+        assinaturaRepository.save(assinatura);
+        usuarioRepository.save(usuario);
+
+        log.warn(
+                "Assinatura inadimplente: usuarioId={} subscriptionId={}",
+                usuario.getId(),
+                subscriptionId
+        );
+    }
+
+    /**
+     * Atualiza a assinatura local conforme o estado atual da Stripe.
+     */
+    private void aplicarDadosDaStripe(
+            Assinatura assinatura,
+            Usuario usuario,
+            Subscription subscription
+    ) {
+        PlanoTipo planoTipo =
+                extrairPlanoTipo(subscription);
+
+        LocalDate vencimento =
+                extrairVencimento(subscription);
+
+        String stripeStatus =
+                subscription.getStatus();
+
+        assinatura.setUsuario(usuario);
+        assinatura.setStripeSubscriptionId(
+                subscription.getId()
+        );
+        assinatura.setStripeCustomerId(
+                subscription.getCustomer()
+        );
+        assinatura.setPlano(planoTipo);
+        assinatura.setDataVencimento(vencimento);
+        assinatura.setUltimaAtualizacao(
+                LocalDateTime.now()
+        );
+
+        usuario.setTipoPlano(
+                TipoPlano.fromPlanoTipo(planoTipo)
+        );
+
+        switch (stripeStatus) {
+            case "active", "trialing" -> {
+                assinatura.setStatus(STATUS_ATIVO);
+                usuario.setStatusAcesso(StatusAcesso.ATIVO);
+            }
+
+            case "past_due", "unpaid" -> {
+                assinatura.setStatus(STATUS_INADIMPLENTE);
+                usuario.setStatusAcesso(StatusAcesso.INATIVO);
+            }
+
+            case "canceled", "incomplete_expired" -> {
+                assinatura.setStatus(STATUS_CANCELADO);
+                usuario.setStatusAcesso(StatusAcesso.INATIVO);
+            }
+
+            case "incomplete", "paused" -> {
+                assinatura.setStatus(STATUS_PENDENTE);
+                usuario.setStatusAcesso(StatusAcesso.INATIVO);
+            }
+
+            default -> {
+                log.warn(
+                        "Status Stripe não reconhecido: {} subscriptionId={}",
+                        stripeStatus,
+                        subscription.getId()
+                );
+
+                assinatura.setStatus(
+                        stripeStatus == null
+                                ? STATUS_PENDENTE
+                                : stripeStatus.toUpperCase()
+                );
+
+                usuario.setStatusAcesso(StatusAcesso.INATIVO);
+            }
+        }
+
+        assinaturaRepository.save(assinatura);
+        usuarioRepository.save(usuario);
+    }
+
+    /**
+     * Localiza uma assinatura pelo subscriptionId.
+     *
+     * Se os webhooks chegarem fora de ordem, tenta reconstruir a associação
+     * usando usuarioId salvo nos metadados da Subscription.
+     */
+    private Assinatura localizarOuCriarAssinatura(
+            Subscription subscription
+    ) {
+        return assinaturaRepository
+                .findByStripeSubscriptionId(
+                        subscription.getId()
+                )
+                .orElseGet(() -> {
+                    Usuario usuario =
+                            buscarUsuarioPelosMetadados(subscription);
+
+                    Assinatura assinatura =
+                            assinaturaRepository
+                                    .findByUsuarioEmail(
+                                            usuario.getEmail()
+                                    )
+                                    .orElseGet(Assinatura::new);
+
+                    validarAssinaturaExistente(
+                            assinatura,
+                            usuario,
+                            subscription.getId()
+                    );
+
+                    assinatura.setUsuario(usuario);
+                    assinatura.setStripeSubscriptionId(
+                            subscription.getId()
+                    );
+                    assinatura.setStripeCustomerId(
+                            subscription.getCustomer()
+                    );
+
+                    return assinatura;
+                });
+    }
+
+    /**
+     * Recupera usuarioId inserido em SubscriptionData.metadata no checkout.
+     */
+    private Usuario buscarUsuarioPelosMetadados(
+            Subscription subscription
+    ) {
+        Map<String, String> metadata =
+                subscription.getMetadata();
+
+        String usuarioId = metadata == null
+                ? null
+                : metadata.get("usuarioId");
+
+        if (usuarioId == null || usuarioId.isBlank()) {
+            throw new IllegalStateException(
+                    "Subscription sem usuarioId nos metadados."
+            );
+        }
+
+        final long id;
+
+        try {
+            id = Long.parseLong(usuarioId);
+        } catch (NumberFormatException exception) {
+            throw new IllegalStateException(
+                    "usuarioId inválido nos metadados.",
+                    exception
+            );
+        }
+
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Usuário da subscription não encontrado."
+                ));
+    }
+
+    /**
+     * Confirma que os metadados da Stripe correspondem ao usuário esperado.
+     */
+    private void validarProprietarioDaSubscription(
+            Subscription subscription,
+            Usuario usuario
+    ) {
+        Map<String, String> metadata =
+                subscription.getMetadata();
+
+        if (metadata == null) {
             return;
         }
 
-        assinatura.setPlano(planoTipo);
-        assinatura.setDataVencimento(novoVencimento);
-        assinatura.setStatus("ATIVO");
-        assinatura.setUltimaAtualizacao(LocalDateTime.now());
-        assinaturaRepository.save(assinatura);
+        String usuarioId =
+                metadata.get("usuarioId");
 
-        Usuario usuario = assinatura.getUsuario();
-        usuario.setTipoPlano(tipoPlano);
-        usuario.setStatusAcesso(StatusAcesso.ATIVO);
-        usuarioRepository.save(usuario);
-
-        log.info("Plano renovado com sucesso: {} | vence em: {}", subscriptionId, novoVencimento);
-    }
-
-    @Transactional
-    public void cancelarPlano(String subscriptionId) {
-        log.info("Cancelando plano para subscription: {}", subscriptionId);
-
-        assinaturaRepository
-                .findByStripeSubscriptionId(subscriptionId)
-                .ifPresentOrElse(assinatura -> {
-                    assinatura.setStatus("CANCELADO");
-                    assinatura.setUltimaAtualizacao(LocalDateTime.now());
-                    assinaturaRepository.save(assinatura);
-
-                    Usuario usuario = assinatura.getUsuario();
-                    usuario.setTipoPlano(TipoPlano.EXPERIMENTAL);
-                    usuario.setStatusAcesso(StatusAcesso.INATIVO);
-                    usuarioRepository.save(usuario);
-
-                    log.info("Plano cancelado para: {}", usuario.getEmail());
-                }, () -> log.warn("Subscription não encontrada para cancelamento: {}", subscriptionId));
-    }
-
-    @Transactional
-    public void marcarInadimplente(String subscriptionId) {
-        log.warn("Marcando inadimplência para subscription: {}", subscriptionId);
-
-        assinaturaRepository
-                .findByStripeSubscriptionId(subscriptionId)
-                .ifPresentOrElse(assinatura -> {
-                    assinatura.setStatus("INADIMPLENTE");
-                    assinatura.setUltimaAtualizacao(LocalDateTime.now());
-                    assinaturaRepository.save(assinatura);
-
-                    Usuario usuario = assinatura.getUsuario();
-                    // Não rebaixa TipoPlano aqui — o usuário pode regularizar o pagamento.
-                    // O acesso é apenas bloqueado até a Stripe confirmar pagamento ou cancelar.
-                    usuario.setStatusAcesso(StatusAcesso.INATIVO);
-                    usuarioRepository.save(usuario);
-
-                    log.warn("Acesso bloqueado por inadimplência: {}", usuario.getEmail());
-                }, () -> log.warn("Subscription não encontrada para inadimplência: {}", subscriptionId));
-    }
-
-    private Subscription buscarSubscriptionStripe(String subscriptionId) {
-        try {
-            return Subscription.retrieve(subscriptionId);
-        } catch (StripeException e) {
-            log.error("Erro ao consultar Stripe para subscription {}: {}", subscriptionId, e.getMessage());
-            throw new RuntimeException("Falha ao obter dados da Stripe: " + e.getMessage(), e);
+        if (usuarioId != null
+                && !usuarioId.equals(
+                String.valueOf(usuario.getId())
+        )) {
+            throw new IllegalStateException(
+                    "Subscription pertence a outro usuário."
+            );
         }
     }
 
-    private LocalDate extrairVencimento(Subscription subscription) {
-        return Instant.ofEpochSecond(subscription.getCurrentPeriodEnd())
-                .atZone(ZoneId.systemDefault())
+    /**
+     * Evita substituir uma assinatura ativa por outra assinatura.
+     */
+    private void validarAssinaturaExistente(
+            Assinatura assinatura,
+            Usuario usuario,
+            String novoSubscriptionId
+    ) {
+        if (assinatura.getUsuario() != null
+                && !Objects.equals(
+                assinatura.getUsuario().getId(),
+                usuario.getId()
+        )) {
+            throw new IllegalStateException(
+                    "Assinatura pertence a outro usuário."
+            );
+        }
+
+        String atual =
+                assinatura.getStripeSubscriptionId();
+
+        if (atual != null
+                && !atual.equals(novoSubscriptionId)
+                && STATUS_ATIVO.equals(
+                assinatura.getStatus()
+        )) {
+            throw new IllegalStateException(
+                    "Usuário já possui outra assinatura ativa."
+            );
+        }
+
+        assinaturaRepository
+                .findByStripeSubscriptionId(
+                        novoSubscriptionId
+                )
+                .filter(outra -> outra.getUsuario() != null)
+                .filter(outra -> !Objects.equals(
+                        outra.getUsuario().getId(),
+                        usuario.getId()
+                ))
+                .ifPresent(outra -> {
+                    throw new IllegalStateException(
+                            "Subscription já associada a outro usuário."
+                    );
+                });
+    }
+
+    private Subscription buscarSubscriptionStripe(
+            String subscriptionId
+    ) {
+        try {
+            return Subscription.retrieve(
+                    subscriptionId
+            );
+        } catch (StripeException exception) {
+            log.error(
+                    "Falha ao consultar subscriptionId={}",
+                    subscriptionId,
+                    exception
+            );
+
+            /*
+             * Não inclua a mensagem interna da Stripe na resposta pública.
+             * O webhook receberá erro 500 e tentará novamente.
+             */
+            throw new IllegalStateException(
+                    "Falha temporária ao consultar a Stripe.",
+                    exception
+            );
+        }
+    }
+
+    private LocalDate extrairVencimento(
+            Subscription subscription
+    ) {
+        Long currentPeriodEnd =
+                subscription.getCurrentPeriodEnd();
+
+        if (currentPeriodEnd == null
+                || currentPeriodEnd <= 0) {
+            throw new IllegalStateException(
+                    "Subscription sem current_period_end."
+            );
+        }
+
+        return Instant.ofEpochSecond(currentPeriodEnd)
+                .atZone(ZoneOffset.UTC)
                 .toLocalDate();
     }
 
-    private PlanoTipo extrairPlanoTipo(Subscription subscription) {
-        String priceId = subscription.getItems().getData().get(0).getPrice().getId();
-        return PlanoTipo.fromPriceId(priceId);
+    private PlanoTipo extrairPlanoTipo(
+            Subscription subscription
+    ) {
+        if (subscription.getItems() == null
+                || subscription.getItems()
+                .getData() == null
+                || subscription.getItems()
+                .getData()
+                .isEmpty()
+                || subscription.getItems()
+                .getData()
+                .get(0)
+                .getPrice() == null
+                || subscription.getItems()
+                .getData()
+                .get(0)
+                .getPrice()
+                .getId() == null) {
+            throw new IllegalStateException(
+                    "Subscription sem Price ID."
+            );
+        }
+
+        String priceId = subscription
+                .getItems()
+                .getData()
+                .get(0)
+                .getPrice()
+                .getId();
+
+        return stripePrices.fromPriceId(priceId);
+    }
+
+    private void validarSubscriptionId(
+            String subscriptionId
+    ) {
+        if (subscriptionId == null
+                || subscriptionId.isBlank()
+                || !subscriptionId.startsWith("sub_")) {
+            throw new IllegalArgumentException(
+                    "Subscription ID inválido."
+            );
+        }
+    }
+
+    private String normalizarEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException(
+                    "E-mail não informado."
+            );
+        }
+
+        return email.trim().toLowerCase();
+    }
+
+    private boolean isAtivaNaStripe(String status) {
+        return "active".equals(status)
+                || "trialing".equals(status);
     }
 }

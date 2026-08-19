@@ -3,8 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ─── Dark Mode Premium: GestPro ─────────────────────────────────────────── */
-:root {
+/* ─── Dark Mode Premium: Gevyro ─────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
   /* Surfaces */
   --background:         #09090b;
   --surface:            #111113;
@@ -80,6 +82,63 @@
   --sidebar-ring:               var(--primary);
 }
 
+[data-theme="light"] {
+  color-scheme: light;
+
+  --background:         #f4f7f5;
+  --surface:            #ffffff;
+  --surface-elevated:   #f8faf9;
+  --surface-overlay:    #edf3ef;
+
+  --border:             #dbe4de;
+  --border-subtle:      #e8eeea;
+
+  --primary:            #078a5b;
+  --primary-hover:      #06734d;
+  --primary-muted:      rgba(7,138,91,0.11);
+  --secondary:          #2563eb;
+  --secondary-hover:    #1d4ed8;
+  --secondary-muted:    rgba(37,99,235,0.1);
+
+  --foreground:         #17231d;
+  --foreground-muted:   #5e6d65;
+  --foreground-subtle:  #8a9991;
+
+  --destructive:        #dc2626;
+  --destructive-muted:  rgba(220,38,38,0.1);
+  --warning:            #d97706;
+  --warning-muted:      rgba(217,119,6,0.11);
+  --success:            #078a5b;
+  --success-muted:      rgba(7,138,91,0.11);
+
+  --sidebar:            #ffffff;
+  --sidebar-border:     #dbe4de;
+  --sidebar-foreground: #17231d;
+  --sidebar-muted:      #5e6d65;
+  --sidebar-active-bg:  rgba(7,138,91,0.1);
+  --sidebar-active-fg:  #078a5b;
+  --sidebar-hover-bg:   rgba(23,35,29,0.045);
+
+  --card:                       var(--surface-elevated);
+  --card-foreground:            var(--foreground);
+  --popover:                    #ffffff;
+  --popover-foreground:         var(--foreground);
+  --primary-foreground:         #ffffff;
+  --secondary-foreground:       var(--foreground);
+  --muted:                      var(--surface-overlay);
+  --muted-foreground:           var(--foreground-muted);
+  --accent:                     var(--surface-overlay);
+  --accent-foreground:          var(--foreground);
+  --destructive-foreground:     var(--destructive);
+  --input:                      #ffffff;
+  --ring:                       var(--primary);
+  --sidebar-primary:            var(--primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent:             var(--surface-overlay);
+  --sidebar-accent-foreground:  var(--foreground);
+  --sidebar-ring:               var(--primary);
+}
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -136,6 +195,7 @@
   body {
     @apply bg-background text-foreground font-sans;
     min-height: 100dvh;
+    transition: background-color 180ms ease, color 180ms ease;
   }
 }
 

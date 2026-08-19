@@ -6,13 +6,13 @@ import styles from "../styles/landing.module.css";
 const Logo = () => (
   <Link href="/" className={styles.logo}>
     <img
-      src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo%20-%20compressada-YDiRGUkZcdkmtY26Oki6uUJnX46iVL.png"
-      alt="GestPro"
+      src="/gevyro-fav.png"
+      alt="Gevyro"
       className={styles.logoImage}
       style={{ width: 36, height: 36 }}
     />
     <span className={styles.logoText} style={{ fontSize: 20 }}>
-      Gest<span className={styles.logoAccent}>Pro</span>
+      Gevyro
     </span>
   </Link>
 );
@@ -154,7 +154,7 @@ export default function PrivacidadePage() {
                 >
                   <p style={{ marginBottom: 16 }}>
                     A sua privacidade e importante para nos. Esta Politica de
-                    Privacidade explica como o GestPro coleta, usa, divulga e
+                    Privacidade explica como o Gevyro coleta, usa, divulga e
                     protege suas informacoes pessoais quando voce utiliza nossa
                     plataforma de gestao comercial.
                   </p>
@@ -1077,7 +1077,8 @@ export default function PrivacidadePage() {
         <div className={styles.footerContainer}>
           <Logo />
           <p className={styles.footerCopyright}>
-            {new Date().getFullYear()} GestPro - Todos os direitos reservados
+            © {new Date().getFullYear()} Gevyro — Todos os direitos reservados
+            <br />CNPJ 68.259.534/0001-70
           </p>
           <div className={styles.footerLinks}>
             <Link href="/termos" className={styles.footerLink}>

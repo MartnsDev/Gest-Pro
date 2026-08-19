@@ -20,15 +20,15 @@ public class MailTrapEmail {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom("GestPro <no-reply@gestpro.com>");
+            helper.setFrom("Gevyro <no-reply@gestpro.com>");
             helper.setTo(emailDestino);
-            helper.setSubject("Confirme seu e-mail - GestPro");
+            helper.setSubject("Confirme seu e-mail - Gevyro");
 
             String html = """
                 <div style="font-family: Arial, sans-serif; background-color:#f4f6f8; padding:20px;">
                     <div style="max-width:600px; margin:auto; background:white; border-radius:10px; padding:30px; box-shadow:0 2px 10px rgba(0,0,0,0.1);">
                         
-                        <h2 style="color:#333;">🚀 Bem-vindo ao GestPro!</h2>
+                        <h2 style="color:#333;">🚀 Bem-vindo ao Gevyro!</h2>
                         
                         <p style="color:#555; font-size:16px;">
                             Obrigado por se cadastrar. Para ativar sua conta, clique no botão abaixo:
@@ -64,7 +64,7 @@ public class MailTrapEmail {
                         </p>
 
                         <p style="color:#999; font-size:12px;">
-                            © 2026 GestPro
+                            © 2026 Gevyro
                         </p>
                     </div>
                 </div>

@@ -41,11 +41,6 @@ public class LoginGoogleOperation {
                         u.setTokenConfirmacao(null);
                     }
 
-                    // Marca como login Google se veio de cadastro manual
-                    if (!u.isLoginGoogle()) {
-                        u.setLoginGoogle(true);
-                    }
-
                     // Verifica expiração do plano — atualiza status sem bloquear o login
                         verificarPlano.validarAcesso(u);
 

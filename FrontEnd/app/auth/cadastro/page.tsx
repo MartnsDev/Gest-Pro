@@ -65,7 +65,7 @@ export default function CadastroPage() {
     <main className="min-h-screen bg-white text-[#343b37] lg:grid lg:grid-cols-[1.05fr_.95fr]">
       <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 xl:px-24">
         <header className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3"><div className="relative h-9 w-9"><Image src="/images/logo-256.webp" alt="GestPro" fill sizes="36px" className="object-contain" /></div><span className="text-xl font-extrabold tracking-tight text-[#202723]">GestPro</span></Link>
+          <Link href="/" className="flex items-center"><Image src="/images/gevyro-logo.png" alt="Gevyro" width={200} height={72} priority className="h-auto w-[200px] object-contain" /></Link>
           <Link href="/" className="flex items-center gap-2 text-xs text-[#718078] hover:text-[#258c53]"><ArrowLeft size={15} /> Início</Link>
         </header>
 
@@ -113,8 +113,8 @@ export default function CadastroPage() {
       <aside className="relative hidden overflow-hidden bg-[#303a35] p-16 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full border border-[#78d6a3]/15" /><div className="absolute -right-8 -top-8 h-48 w-48 rounded-full border border-[#78d6a3]/20" />
         <p className="relative text-[11px] font-bold uppercase tracking-[.14em] text-[#78d6a3]">Comece sem custo</p>
-        <div className="relative max-w-lg"><h2 className="text-5xl font-light leading-[1.08]">30 dias para conhecer o <span className="italic text-[#78d6a3]">GestPro</span></h2><ul className="mt-9 space-y-5 text-sm text-zinc-300">{["Sem cartão de crédito", "Vendas, estoque e caixa", "Relatórios do negócio", "Acesso pelo computador ou celular"].map((item) => <li key={item} className="flex items-center gap-3"><Check size={16} className="text-[#78d6a3]" />{item}</li>)}</ul></div>
-        <p className="relative text-xs text-zinc-400">© 2026 GestPro</p>
+        <div className="relative max-w-lg"><h2 className="text-5xl font-light leading-[1.08]">30 dias para conhecer o <span className="italic text-[#78d6a3]">Gevyro</span></h2><ul className="mt-9 space-y-5 text-sm text-zinc-300">{["Sem cartão de crédito", "Vendas, estoque e caixa", "Relatórios do negócio", "Acesso pelo computador ou celular"].map((item) => <li key={item} className="flex items-center gap-3"><Check size={16} className="text-[#78d6a3]" />{item}</li>)}</ul></div>
+        <p className="relative text-xs leading-5 text-zinc-400">© 2026 Gevyro<br />CNPJ 68.259.534/0001-70</p>
       </aside>
     </main>
   );

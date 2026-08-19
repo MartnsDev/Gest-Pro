@@ -93,12 +93,8 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
   // Busca de Preferências de Alerta do Usuário
   const fetchPreferencias = async () => {
     try {
-      let token = null;
-      if (typeof window !== "undefined") {
-        token = sessionStorage.getItem("jwt_token") || localStorage.getItem("token") || localStorage.getItem("access_token");
-      }
       const res = await fetch(`${API}/api/v1/configuracoes/notificacoes`, {
-        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+        credentials: "include",
       });
       if (res.ok) {
         const data = await res.json();

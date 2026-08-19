@@ -8,7 +8,7 @@ import {
   Zap, Check
 } from "lucide-react";
 import { useEmpresa } from "../context/Empresacontext";
-import { getToken } from "@/lib/auth-v2";
+import { criarCheckout, type PlanoPagoId } from "@/lib/billing";
 
 // =====================================================================
 // 1. CONFIGURAÇÕES E API
@@ -23,27 +23,12 @@ const API_BASE = getApiBase();
 const API_GLOBAL = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
 
 async function fetchAuth<T>(path: string): Promise<T> {
-  const token = await resolveToken();
   const res = await fetch(`${API_GLOBAL}${path}`, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error(`Erro ${res.status}`);
   return res.json();
-}
-
-async function resolveToken() {
-  try {
-    const t = await getToken();
-    if (t) return t;
-  } catch (e) {}
-  if (typeof window !== "undefined") {
-    return sessionStorage.getItem("jwt_token") || localStorage.getItem("token") || localStorage.getItem("access_token");
-  }
-  return null;
 }
 
 // =====================================================================
@@ -59,21 +44,21 @@ const PLANOS = [
   },
   {
     id: "BASICO", nome: "Básico", descricao: "A fundação sólida para pequenos negócios.",
-    preco: "R$ 29,90", duracao: "por mês", icon: Star,
+    preco: "R$ 77,79", duracao: "por mês", icon: Star,
     corBase: "var(--primary)", corBg: "var(--primary-muted)",
     features: ["1 empresa gerenciada", "1 frente de caixa (PDV)", "Até 500 produtos", "Relatórios completos", "Histórico de 6 meses", "Controle de dívidas", "Suporte via e-mail"],
     destaque: false, pagavel: true, cta: "Assinar Básico"
   },
   {
     id: "PRO", nome: "Pro", descricao: "Ferramentas avançadas para quem quer crescer.",
-    preco: "R$ 49,90", duracao: "por mês", icon: Rocket,
+    preco: "R$ 127,79", duracao: "por mês", icon: Rocket,
     corBase: "var(--primary)", corBg: "var(--primary-muted)",
     features: ["Até 5 empresas", "Até 5 frentes de caixa", "Produtos ilimitados", "Histórico de 1 ano", "Exportação PDF/CSV", "Backup automático", "Suporte prioritário"],
     destaque: true, pagavel: true, cta: "Escolher o Pro"
   },
   {
     id: "PREMIUM", nome: "Premium", descricao: "Poder absoluto para franquias e redes.",
-    preco: "R$ 99,90", duracao: "por mês", icon: Crown,
+    preco: "R$ 277,79", duracao: "por mês", icon: Crown,
     corBase: "var(--primary)", corBg: "var(--primary-muted)",
     features: ["Empresas ilimitadas", "Caixas ilimitados", "Histórico ilimitado", "Relatórios avançados", "Shopee e Mercado Livre", "Backup automático", "Suporte dedicado 24h"],
     destaque: false, pagavel: true, cta: "Assinar Premium"
@@ -110,12 +95,13 @@ function PlanosInner() {
 
   useEffect(() => {
     const carregarDados = async () => {
-      const token = await resolveToken();
-      const headers: HeadersInit = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+      const headers: HeadersInit = { "Content-Type": "application/json" };
 
       fetch(`${API_GLOBAL}/api/usuario`, { credentials: "include", headers })
         .then((r) => (r.ok ? r.json() : Promise.reject()))
-        .then((data) => setEmailUsuario(data.email ?? null)).catch(() => {});
+        .then((data) => {
+          setEmailUsuario(data.email ?? null);
+        }).catch(() => {});
 
       fetchAuth<any>("/api/v1/dashboard/vendas/plano-usuario")
         .then(setPlano).catch(() => {}).finally(() => setLoading(false));
@@ -128,16 +114,8 @@ function PlanosInner() {
     setErro(null); setLoadingPlano(planoId);
 
     try {
-      const token = await resolveToken();
-      const res = await fetch(`${API_GLOBAL}/api/payments/create-checkout-session`, {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ plano: planoId, customerEmail: emailUsuario }),
-      });
-
-      if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data?.error ?? "Erro ao iniciar o checkout."); }
-      const { url } = await res.json();
-      globalThis.window.location.href = url;
+      const url = await criarCheckout(planoId as PlanoPagoId);
+      globalThis.window.location.assign(url);
     } catch (e: unknown) {
       setErro(e instanceof Error ? e.message : "Não foi possível iniciar o checkout.");
       setLoadingPlano(null);
@@ -158,7 +136,7 @@ function PlanosInner() {
       {/* 1. HERO SECTION */}
       <section style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "var(--primary)", fontSize: 10, fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".08em" }}>
-          <Zap size={13} /> Planos GestPro
+          <Zap size={13} /> Planos Gevyro
         </div>
         <h1 style={{ fontSize: 22, fontWeight: 760, lineHeight: 1.2, color: "var(--foreground)", margin: "0 0 4px", letterSpacing: "-.03em" }}>
           Planos

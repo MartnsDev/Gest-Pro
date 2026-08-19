@@ -5,6 +5,7 @@ import { LogOut, Bell } from "lucide-react";
 import { logout } from "@/lib/api-v2";
 import { removeToken } from "@/lib/auth-v2";
 import type { Usuario } from "@/lib/api-v2";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface HeaderProps {
   usuario: Usuario;
@@ -94,7 +95,7 @@ export function Header({ usuario, section }: HeaderProps) {
       {/* Breadcrumb / Título */}
       <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
         <span style={{ fontSize: 11, color: "var(--foreground-subtle)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 500 }}>
-          GestPro
+          Gevyro
         </span>
         <span style={{ fontSize: 15, fontWeight: 600, color: "var(--foreground)", lineHeight: 1.2 }}>
           {SECTION_LABELS[section] ?? "Dashboard"}
@@ -103,6 +104,7 @@ export function Header({ usuario, section }: HeaderProps) {
 
       {/* Right side */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <ThemeToggle />
         {/* Notifications (visual) */}
         <button
           style={{

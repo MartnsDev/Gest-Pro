@@ -267,7 +267,7 @@ function ModalConectarMarketplace({empresaId,marketplace,onClose}:{
               <li>Você será redirecionado para a página oficial da <strong>{meta.label}</strong>.</li>
               <li>Faça login na sua conta de lojista.</li>
               <li>Clique em <strong>"Autorizar"</strong> quando solicitado.</li>
-              <li>Você voltará automaticamente ao GestPro com a conta conectada.</li>
+              <li>Você voltará automaticamente ao Gevyro com a conta conectada.</li>
             </ol>
           </div>
 
@@ -336,7 +336,7 @@ function ModalVincularProduto({empresaId,marketplace,onClose,onSucesso}:{
 
         <div style={{flex:1,overflowY:"auto",padding:"16px 20px",display:"flex",flexDirection:"column",gap:14}}>
           <div>
-            <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:6}}>1. Produto no GestPro</label>
+            <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:6}}>1. Produto no Gevyro</label>
             <div style={{position:"relative",marginBottom:6}}>
               <Search size={12} style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",color:"var(--foreground-subtle)"}}/>
               <input style={{...inp,paddingLeft:28}} placeholder="Buscar produto..." value={busca} onChange={e=>setBusca(e.target.value)}/>
@@ -424,7 +424,7 @@ function SecaoPremiumLock() {
           <span style={{background:"linear-gradient(90deg,#FACC15,#F97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>gerencie em um só lugar</span>
         </h2>
         <p style={{fontSize:13,color:"rgba(255,255,255,0.6)",margin:0,lineHeight:1.6,maxWidth:400,marginLeft:"auto",marginRight:"auto",position:"relative",zIndex:1}}>
-          Conecte Shopee e Mercado Livre ao GestPro e esqueça o trabalho manual.
+          Conecte Shopee e Mercado Livre ao Gevyro e esqueça o trabalho manual.
         </p>
       </div>
       <div style={{padding:"24px 24px 0",background:"var(--surface-elevated)"}}>

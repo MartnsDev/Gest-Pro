@@ -1,4 +1,6 @@
-# GestPro
+# Gevyro
+
+**Gestão em evolução.**
 
 Sistema completo de gestão para mercados e lojas que desenvolvi utilizando Next.js 14+ no frontend e Spring Boot 3 no backend.
 
@@ -6,7 +8,7 @@ Sistema completo de gestão para mercados e lojas que desenvolvi utilizando Next
 
 ## 📋 Sobre o Projeto
 
-Desenvolvi o GestPro como uma solução completa para gestão comercial, implementando funcionalidades essenciais como controle de produtos, estoque, vendas, clientes e relatórios, tudo através de uma interface moderna e intuitiva.
+Desenvolvi a Gevyro como uma solução completa para gestão comercial, implementando funcionalidades essenciais como controle de produtos, estoque, vendas, clientes e relatórios, tudo através de uma interface moderna e intuitiva.
 
 ### O que implementei
 

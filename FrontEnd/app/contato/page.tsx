@@ -170,10 +170,10 @@ const Background = () => (
 ───────────────────────────────────────────── */
 const Logo = ({ size="default" }: { size?:"default"|"small" }) => (
   <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-    <img src="/images/logo-256.webp" alt="GestPro"
+    <img src="/gevyro-fav.png" alt="Gevyro"
       style={{ width:size==="small"?28:36, height:size==="small"?28:36, objectFit:"contain", borderRadius:8 }} />
     <span style={{ fontWeight:700, fontSize:size==="small"?16:20, color:"#f1f5f9", letterSpacing:"-0.02em" }}>
-      GestPro
+      Gevyro
     </span>
   </div>
 );
@@ -661,9 +661,9 @@ const FAQS = [
     a:"Você pode cancelar a qualquer momento pelo painel em Configurações → Assinatura → Cancelar. O acesso continua até o fim do período já pago, sem cobranças adicionais." },
   { q:"Meus dados ficam seguros na plataforma?",
     a:"Sim. Utilizamos criptografia TLS em trânsito e AES-256 em repouso. Backups são realizados diariamente e armazenados em múltiplas regiões geográficas." },
-  { q:"Posso usar o GestPro em mais de um dispositivo?",
-    a:"Sim, o GestPro é 100% web e funciona em qualquer navegador. Suas informações são sincronizadas em tempo real entre computador, tablet e celular." },
-  { q:"Como migrar dados de outro sistema para o GestPro?",
+  { q:"Posso usar o Gevyro em mais de um dispositivo?",
+    a:"Sim, o Gevyro é 100% web e funciona em qualquer navegador. Suas informações são sincronizadas em tempo real entre computador, tablet e celular." },
+  { q:"Como migrar dados de outro sistema para o Gevyro?",
     a:"Aceitamos importação via planilha CSV para produtos e clientes. Nossa equipe de suporte auxilia gratuitamente no processo de migração." },
   { q:"O plano Experimental é realmente grátis?",
     a:"Sim. São 30 dias com acesso completo a todos os recursos, sem necessidade de cartão de crédito. Ao final, você escolhe qual plano continuar ou cancela sem custo." },
@@ -750,8 +750,9 @@ const Footer = () => {
         display:"flex", alignItems:"center", justifyContent:"space-between",
         flexWrap:"wrap" as const, gap:20 }}>
         <Logo size="small" />
-        <span style={{ fontSize:12, color:"rgba(148,163,184,.4)" }}>
-          © {new Date().getFullYear()} GestPro · Todos os direitos reservados
+        <span style={{ fontSize:12, lineHeight:1.7, color:"rgba(148,163,184,.55)" }}>
+          © {new Date().getFullYear()} Gevyro · Todos os direitos reservados<br />
+          CNPJ 68.259.534/0001-70
         </span>
         <div style={{ display:"flex", gap:24 }}>
           {links.map(l => (

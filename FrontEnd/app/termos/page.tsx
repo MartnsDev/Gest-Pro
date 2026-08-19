@@ -6,13 +6,13 @@ import styles from "../styles/landing.module.css";
 const Logo = () => (
   <Link href="/" className={styles.logo}>
     <img
-      src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo%20-%20compressada-YDiRGUkZcdkmtY26Oki6uUJnX46iVL.png"
-      alt="GestPro"
+      src="/gevyro-fav.png"
+      alt="Gevyro"
       className={styles.logoImage}
       style={{ width: 36, height: 36 }}
     />
     <span className={styles.logoText} style={{ fontSize: 20 }}>
-      Gest<span className={styles.logoAccent}>Pro</span>
+      Gevyro
     </span>
   </Link>
 );
@@ -170,13 +170,13 @@ export default function TermosPage() {
                   }}
                 >
                   <p style={{ marginBottom: 16 }}>
-                    Ao acessar e utilizar o GestPro, voce concorda com estes
+                    Ao acessar e utilizar o Gevyro, voce concorda com estes
                     Termos de Uso e com nossa Politica de Privacidade. Se voce
                     nao concordar com qualquer parte destes termos, nao devera
                     utilizar nossos servicos.
                   </p>
                   <p>
-                    O GestPro reserva-se o direito de modificar estes termos a
+                    O Gevyro reserva-se o direito de modificar estes termos a
                     qualquer momento. As alteracoes entrarao em vigor
                     imediatamente apos sua publicacao na plataforma. O uso
                     continuado dos servicos apos tais modificacoes constitui sua
@@ -226,7 +226,7 @@ export default function TermosPage() {
                   }}
                 >
                   <p style={{ marginBottom: 16 }}>
-                    O GestPro e uma plataforma de gestao comercial que oferece:
+                    O Gevyro e uma plataforma de gestao comercial que oferece:
                   </p>
                   <ul
                     style={{
@@ -313,7 +313,7 @@ export default function TermosPage() {
                   }}
                 >
                   <p style={{ marginBottom: 16 }}>
-                    Para utilizar o GestPro, voce deve:
+                    Para utilizar o Gevyro, voce deve:
                   </p>
                   <ul
                     style={{
@@ -399,7 +399,7 @@ export default function TermosPage() {
                   }}
                 >
                   <p style={{ marginBottom: 16 }}>
-                    O GestPro oferece diferentes planos de assinatura. Ao
+                    O Gevyro oferece diferentes planos de assinatura. Ao
                     escolher um plano pago, voce concorda que:
                   </p>
                   <ul
@@ -487,7 +487,7 @@ export default function TermosPage() {
                   }}
                 >
                   <p style={{ marginBottom: 16 }}>
-                    Voce concorda em nao utilizar o GestPro para:
+                    Voce concorda em nao utilizar o Gevyro para:
                   </p>
                   <ul
                     style={{
@@ -574,16 +574,16 @@ export default function TermosPage() {
                   }}
                 >
                   <p style={{ marginBottom: 16 }}>
-                    Todo o conteudo do GestPro, incluindo mas nao limitado a
+                    Todo o conteudo do Gevyro, incluindo mas nao limitado a
                     textos, graficos, logotipos, icones, imagens, clips de
                     audio, downloads digitais e compilacoes de dados, e
-                    propriedade do GestPro ou de seus fornecedores de conteudo e
+                    propriedade do Gevyro ou de seus fornecedores de conteudo e
                     e protegido pelas leis brasileiras e internacionais de
                     direitos autorais.
                   </p>
                   <p>
                     Os dados inseridos por voce na plataforma permanecem de sua
-                    propriedade. O GestPro nao utiliza seus dados comerciais
+                    propriedade. O Gevyro nao utiliza seus dados comerciais
                     para qualquer finalidade alem da prestacao do servico
                     contratado.
                   </p>
@@ -631,10 +631,10 @@ export default function TermosPage() {
                   }}
                 >
                   <p style={{ marginBottom: 16 }}>
-                    O GestPro e fornecido &quot;como esta&quot; e &quot;conforme
+                    O Gevyro e fornecido &quot;como esta&quot; e &quot;conforme
                     disponivel&quot;. Nao garantimos que o servico sera
                     ininterrupto, seguro ou livre de erros. Em nenhum caso o
-                    GestPro sera responsavel por:
+                    Gevyro sera responsavel por:
                   </p>
                   <ul
                     style={{
@@ -721,7 +721,7 @@ export default function TermosPage() {
                   }}
                 >
                   <p style={{ marginBottom: 16 }}>
-                    O GestPro pode suspender ou encerrar seu acesso ao servico,
+                    O Gevyro pode suspender ou encerrar seu acesso ao servico,
                     sem aviso previo, se voce violar estes Termos de Uso ou por
                     qualquer outra razao a nosso exclusivo criterio. Voce pode
                     cancelar sua conta a qualquer momento atraves das
@@ -835,7 +835,8 @@ export default function TermosPage() {
         <div className={styles.footerContainer}>
           <Logo />
           <p className={styles.footerCopyright}>
-            {new Date().getFullYear()} GestPro - Todos os direitos reservados
+            © {new Date().getFullYear()} Gevyro — Todos os direitos reservados
+            <br />CNPJ 68.259.534/0001-70
           </p>
           <div className={styles.footerLinks}>
             <Link

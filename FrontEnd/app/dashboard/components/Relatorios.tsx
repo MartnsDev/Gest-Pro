@@ -45,16 +45,10 @@ const esc = (s:unknown) =>
   String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
                .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 
-const getToken = () => {
-  if(typeof window==="undefined") return "";
-  return sessionStorage.getItem("jwt_token")
-    ?? document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? "";
-};
-
 async function fetchAuth<T>(path:string, opts?:RequestInit):Promise<T> {
   const res=await fetch(
     `${process.env.NEXT_PUBLIC_API_URL??"https://gestpro-backend-production.up.railway.app"}${path}`,
-    {credentials:"include",headers:{"Content-Type":"application/json",Authorization:`Bearer ${getToken()}`}, ...opts},
+    {credentials:"include",headers:{"Content-Type":"application/json"}, ...opts},
   );
   if(!res.ok){const e=await res.json().catch(()=>null);throw new Error(e?.mensagem??`Erro ${res.status}`);}
   return res.json();
@@ -158,7 +152,7 @@ tr:hover td{background:#18181b}
 .footer{margin-top:40px;padding-top:16px;border-top:1px solid #27272a;font-size:12px;color:#52525b;text-align:center}
 </style></head><body>
 <div class="header">
-  <div><div class="logo">GestPro</div><div class="sub">${esc(rel.nomeEmpresa)}</div></div>
+  <div><div class="logo">Gevyro</div><div class="sub">${esc(rel.nomeEmpresa)}</div></div>
   <div class="periodo"><strong style="color:#f4f4f5;font-size:18px">${esc(rel.titulo)}</strong><br>Período: ${esc(rel.periodo)}<br>Gerado em: ${esc(rel.geradoEm)}</div>
 </div>
 <div class="grid">
@@ -178,7 +172,7 @@ ${rel.receitaPdv!=null?`<div class="section"><h2>Origem das Vendas</h2><div clas
 <div class="section"><h2>Formas de Pagamento</h2>${pagBarras}</div>
 <div class="section"><h2>Top Produtos</h2><table><thead><tr><th>#</th><th>Produto</th><th>Qtd</th><th>Receita</th><th>Lucro</th></tr></thead><tbody>${prodRows}</tbody></table></div>
 <div class="section"><h2>Transações (${rel.vendas.length})</h2><table><thead><tr><th>#</th><th>Origem</th><th>Data</th><th>Pagamento</th><th>Itens</th><th>Desconto</th><th>Total</th><th>Cliente</th></tr></thead><tbody>${vendaRows}</tbody></table></div>
-<div class="footer">Relatório gerado automaticamente pelo GestPro • ${esc(rel.geradoEm)}</div>
+<div class="footer">Relatório gerado automaticamente pelo Gevyro • ${esc(rel.geradoEm)}</div>
 </body></html>`;
 
   const blob=new Blob([html],{type:"text/html;charset=utf-8"});
@@ -233,7 +227,7 @@ td{padding:6px 8px;border-bottom:1px solid #f1f5f9;color:#334155;font-size:11px}
 </style></head><body>
 <button class="print-btn no-print" onclick="window.print()">🖨️ Salvar como PDF</button>
 <div class="header">
-  <div><div class="logo">GestPro</div><div class="sub">${esc(rel.nomeEmpresa)}</div></div>
+  <div><div class="logo">Gevyro</div><div class="sub">${esc(rel.nomeEmpresa)}</div></div>
   <div class="periodo"><div class="titulo">${esc(rel.titulo)}</div>Período: ${esc(rel.periodo)}<br>Gerado em: ${esc(rel.geradoEm)}</div>
 </div>
 <div class="grid">
@@ -251,7 +245,7 @@ td{padding:6px 8px;border-bottom:1px solid #f1f5f9;color:#334155;font-size:11px}
 <table><thead><tr><th>#</th><th>Produto</th><th>Qtd</th><th>Receita</th><th>Lucro Est.</th></tr></thead><tbody>${prodRows}</tbody></table></div>
 <div class="section"><h2>Transações (${rel.vendas.length})</h2>
 <table><thead><tr><th>#</th><th>Origem</th><th>Data</th><th>Pagamento</th><th>Itens</th><th>Desc.</th><th>Total</th><th>Cliente</th></tr></thead><tbody>${vendaRows}</tbody></table></div>
-<div class="footer">GestPro • ${esc(rel.nomeEmpresa)} • ${esc(rel.geradoEm)}</div>
+<div class="footer">Gevyro • ${esc(rel.nomeEmpresa)} • ${esc(rel.geradoEm)}</div>
 </body></html>`;
 
   janela.document.write(html);janela.document.close();

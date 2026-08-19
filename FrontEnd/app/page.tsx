@@ -11,6 +11,7 @@ const benefits = [
   { icon: Wallet, title: "Caixa sob controle", text: "Acompanhe abertura, movimentações e fechamento sem controles paralelos." },
   { icon: BarChart3, title: "Números mais claros", text: "Consulte receita, lucro, ticket médio e formas de pagamento." },
   { icon: Building2, title: "Uma ou várias lojas", text: "Separe empresas, caixas e estoques usando uma única conta." },
+  { icon: ReceiptText, title: "Tudo em um só lugar", text: "Centralize vendas, produtos, clientes e fornecedores sem controles separados." },
 ];
 
 const areas = [
@@ -27,10 +28,10 @@ const plans = [
 ];
 
 const faqs = [
-  { q: "Preciso entender de sistemas para usar o GestPro?", a: "Não. As telas foram organizadas para a rotina de pequenos negócios e podem ser usadas desde o primeiro acesso." },
+  { q: "Preciso entender de sistemas para usar o Gevyro?", a: "Não. As telas foram organizadas para a rotina de pequenos negócios e podem ser usadas desde o primeiro acesso." },
   { q: "Posso gerenciar mais de uma empresa?", a: "Sim. Os planos compatíveis permitem separar empresas, caixas, estoques e resultados na mesma conta." },
   { q: "O estoque muda quando uma venda é registrada?", a: "Sim. Os itens vendidos são descontados automaticamente e voltam ao estoque quando uma venda é cancelada." },
-  { q: "Consigo acessar pelo celular?", a: "Sim. O GestPro funciona pela internet e pode ser acessado pelo computador, tablet ou celular." },
+  { q: "Consigo acessar pelo celular?", a: "Sim. O Gevyro funciona pela internet e pode ser acessado pelo computador, tablet ou celular." },
 ];
 
 function Header() {
@@ -39,8 +40,7 @@ function Header() {
     <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-[74px] max-w-6xl items-center justify-between px-5 lg:px-0">
         <Link href="/" className="flex items-center gap-3">
-          <div className="relative h-9 w-9"><Image src="/images/logo-256.webp" alt="GestPro" fill className="object-contain" sizes="36px" /></div>
-          <span className="text-xl font-extrabold tracking-tight text-[#202723]">GestPro</span>
+          <Image src="/images/gevyro-logo.png" alt="Gevyro" width={200} height={72} priority className="h-auto w-[200px] object-contain" />
         </Link>
         <nav className="hidden items-center gap-8 text-[13px] text-[#27302b] md:flex">
           <a href="#sobre" className="hover:text-[#238a52]">Sobre</a><a href="#recursos" className="hover:text-[#238a52]">Recursos</a><a href="#planos" className="hover:text-[#238a52]">Planos</a><a href="#faq" className="hover:text-[#238a52]">FAQ</a><Link href="/auth/login" className="hover:text-[#238a52]">Entrar</Link>
@@ -60,11 +60,11 @@ function Hero() {
         <div className="max-w-xl">
           <p className="mb-5 text-[11px] font-bold uppercase tracking-[.14em] text-[#258c53]">Gestão para pequenos negócios</p>
           <h1 className="text-[46px] font-light leading-[1.08] tracking-[-.04em] text-[#343b37] sm:text-[60px]">Controle sua loja sem depender de<span className="block font-normal italic text-[#258c53]">planilhas e processos manuais</span></h1>
-          <p className="mt-7 max-w-lg text-[16px] leading-7 text-[#3e4842]">O GestPro reúne vendas, caixa, estoque e relatórios para você acompanhar a operação em um único lugar.</p>
+          <p className="mt-7 max-w-lg text-[16px] leading-7 text-[#3e4842]">O Gevyro reúne vendas, caixa, estoque e relatórios para você acompanhar a operação em um único lugar.</p>
           <p className="mt-4 max-w-lg text-[13px] italic leading-6 text-[#718078]">Feito para mercados, lojas e comércios que precisam trabalhar com mais organização.</p>
           <Link href="/auth/cadastro" className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#258c53] px-7 py-4 text-[12px] font-bold uppercase tracking-[.1em] text-white hover:bg-[#1d7544]">Testar gratuitamente <ArrowRight size={16} /></Link>
         </div>
-        <div className="relative mx-auto w-full max-w-[620px] overflow-hidden rounded-md bg-[#eef4f0]"><div className="relative aspect-[4/3]"><Image src="/images/landing/gestpro-sales-checkout.avif" alt="GestPro sendo usado no caixa de uma loja" fill priority className="object-cover" sizes="(max-width: 1024px) 100vw, 55vw" /></div></div>
+        <div className="relative mx-auto w-full max-w-[620px] overflow-hidden rounded-md bg-[#eef4f0]"><div className="relative aspect-[4/3]"><Image src="/images/landing/gestpro-sales-checkout.avif" alt="Gevyro sendo usado no caixa de uma loja" fill priority className="object-cover" sizes="(max-width: 1024px) 100vw, 55vw" /></div></div>
       </div>
     </section>
   );
@@ -74,8 +74,8 @@ function About() {
   const points = ["Vendas e pagamentos registrados", "Estoque atualizado automaticamente", "Informações centralizadas", "Resultados por período", "Controle de várias empresas"];
   return (
     <section id="sobre" className="bg-white py-24 sm:py-32"><div className="mx-auto max-w-6xl px-5 lg:px-0">
-      <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#258c53]">Um sistema para sua rotina</p><h2 className="mt-4 max-w-xl text-4xl font-light leading-tight text-[#343b37] sm:text-5xl">Por que usar o <span className="italic text-[#258c53]">GestPro?</span></h2>
-      <div className="mt-16 grid gap-14 lg:grid-cols-2"><div className="max-w-lg space-y-6 text-[16px] leading-8 text-[#46514b]"><p>Controles separados dificultam a conferência do caixa, escondem perdas de estoque e atrasam decisões.</p><p>O GestPro organiza a operação para que cada venda gere informação útil para o negócio.</p></div><ul className="space-y-5">{points.map((point) => <li key={point} className="flex items-center gap-4 text-[15px] text-[#46514b]"><Check size={18} className="text-[#258c53]" />{point}</li>)}</ul></div>
+      <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#258c53]">Um sistema para sua rotina</p><h2 className="mt-4 max-w-xl text-4xl font-light leading-tight text-[#343b37] sm:text-5xl">Por que usar o <span className="italic text-[#258c53]">Gevyro?</span></h2>
+      <div className="mt-16 grid gap-14 lg:grid-cols-2"><div className="max-w-lg space-y-6 text-[16px] leading-8 text-[#46514b]"><p>Controles separados dificultam a conferência do caixa, escondem perdas de estoque e atrasam decisões.</p><p>O Gevyro organiza a operação para que cada venda gere informação útil para o negócio.</p></div><ul className="space-y-5">{points.map((point) => <li key={point} className="flex items-center gap-4 text-[15px] text-[#46514b]"><Check size={18} className="text-[#258c53]" />{point}</li>)}</ul></div>
       <p className="mt-16 max-w-2xl border-t border-zinc-200 pt-8 text-[16px] leading-7 text-[#343b37]">Menos tempo conferindo controles. Mais clareza para cuidar da loja.</p>
     </div></section>
   );
@@ -84,7 +84,7 @@ function About() {
 function ValueSection() {
   return (
     <section className="bg-[#303a35] py-24 text-white sm:py-32"><div className="mx-auto max-w-6xl px-5 lg:px-0">
-      <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#78d6a3]">Resultado na rotina</p><h2 className="mt-4 max-w-2xl text-4xl font-light leading-tight sm:text-5xl">Como o GestPro ajuda <span className="italic text-[#78d6a3]">seu negócio</span></h2>
+      <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#78d6a3]">Resultado na rotina</p><h2 className="mt-4 max-w-2xl text-4xl font-light leading-tight sm:text-5xl">Como o Gevyro ajuda <span className="italic text-[#78d6a3]">seu negócio</span></h2>
       <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{benefits.map((item) => <article key={item.title} className="min-h-48 rounded-2xl border border-white/15 p-7"><item.icon size={25} strokeWidth={1.6} className="text-[#78d6a3]" /><h3 className="mt-6 text-[16px] font-semibold">{item.title}</h3><p className="mt-3 text-[13px] leading-6 text-zinc-300">{item.text}</p></article>)}</div>
     </div></section>
   );
@@ -96,7 +96,7 @@ function Resources() {
     <section id="recursos" className="bg-white py-24 sm:py-32"><div className="mx-auto max-w-6xl px-5 lg:px-0">
       <h2 className="max-w-md text-4xl font-light leading-tight text-[#343b37] sm:text-5xl">O essencial para a operação <span className="italic text-[#258c53]">não parar</span></h2>
       <div className="mt-14 grid items-center gap-12 lg:grid-cols-[.7fr_1.3fr]"><div className="space-y-1 border-y border-zinc-200 py-2">{areas.map((item, index) => <button key={item.label} type="button" onClick={() => setActive(index)} className={`flex w-full items-center justify-between border-b border-zinc-100 px-2 py-5 text-left text-[15px] last:border-0 ${active === index ? "font-semibold text-[#258c53]" : "text-[#4b5650]"}`}>{item.label}<span className="text-xl font-light">{active === index ? "−" : "+"}</span></button>)}</div>
-        <div className="bg-[#f3f6f4] p-6 sm:p-10"><div className="relative aspect-[16/10] overflow-hidden bg-[#edf2ef]"><Image src="/images/landing/gestpro-resources-market-v1.avif" alt="Computador com o GestPro no caixa de um mercado regional" fill className="object-cover object-center" sizes="(max-width: 1024px) 100vw, 60vw" /></div><div className="mx-auto max-w-xl pt-8 text-center"><area.icon className="mx-auto text-[#258c53]" /><h3 className="mt-4 text-xl font-semibold text-[#2f3833]">{area.title}</h3><p className="mt-3 text-sm leading-6 text-[#6a7770]">{area.text}</p></div></div>
+        <div className="bg-[#f3f6f4] p-6 sm:p-10"><div className="relative aspect-[16/10] overflow-hidden bg-[#edf2ef]"><Image src="/images/landing/gestpro-resources-market-v1.avif" alt="Computador com o Gevyro no caixa de um mercado regional" fill className="object-cover object-center" sizes="(max-width: 1024px) 100vw, 60vw" /></div><div className="mx-auto max-w-xl pt-8 text-center"><area.icon className="mx-auto text-[#258c53]" /><h3 className="mt-4 text-xl font-semibold text-[#2f3833]">{area.title}</h3><p className="mt-3 text-sm leading-6 text-[#6a7770]">{area.text}</p></div></div>
       </div>
     </div></section>
   );
@@ -119,7 +119,7 @@ function FAQ() {
 }
 
 function Footer() {
-  return <><section className="bg-[#303a35] py-20 text-white"><div className="mx-auto flex max-w-6xl flex-col justify-between gap-8 px-5 md:flex-row md:items-center lg:px-0"><div><h2 className="text-4xl font-light">Comece a organizar <span className="italic text-[#78d6a3]">sua loja</span></h2><p className="mt-4 text-sm text-zinc-300">Teste o GestPro e conheça a rotina do sistema.</p></div><Link href="/auth/cadastro" className="inline-flex items-center justify-center gap-3 rounded-full bg-[#78d6a3] px-7 py-4 text-[11px] font-bold uppercase tracking-wider text-[#173323]">Criar minha conta <ArrowRight size={16} /></Link></div></section><footer className="bg-white py-14 text-[#3f4944]"><div className="mx-auto grid max-w-6xl gap-10 px-5 sm:grid-cols-3 lg:px-0"><div><div className="flex items-center gap-3"><div className="relative h-9 w-9"><Image src="/images/logo-256.webp" alt="GestPro" fill className="object-contain" sizes="36px" /></div><span className="text-xl font-extrabold">GestPro</span></div><p className="mt-4 text-sm text-[#718078]">Controle real para negócios reais.</p></div><div><h3 className="font-semibold">Ajuda</h3><div className="mt-4 flex flex-col gap-3 text-sm text-[#718078]"><Link href="/como-usar">Como usar</Link><Link href="/contato">Contato</Link><Link href="/auth/login">Entrar</Link></div></div><div><h3 className="font-semibold">Legal</h3><div className="mt-4 flex flex-col gap-3 text-sm text-[#718078]"><Link href="/termos">Termos de uso</Link><Link href="/privacidade">Privacidade</Link></div></div></div><div className="mx-auto mt-12 max-w-6xl border-t border-zinc-200 px-5 pt-6 text-center text-xs text-[#8a958f] lg:px-0">© 2026 GestPro. Todos os direitos reservados.</div></footer></>;
+  return <><section className="bg-[#303a35] py-20 text-white"><div className="mx-auto flex max-w-6xl flex-col justify-between gap-8 px-5 md:flex-row md:items-center lg:px-0"><div><h2 className="text-4xl font-light">Comece a organizar <span className="italic text-[#78d6a3]">sua loja</span></h2><p className="mt-4 text-sm text-zinc-300">Teste o Gevyro e conheça a rotina do sistema.</p></div><Link href="/auth/cadastro" className="inline-flex items-center justify-center gap-3 rounded-full bg-[#78d6a3] px-7 py-4 text-[11px] font-bold uppercase tracking-wider text-[#173323]">Criar minha conta <ArrowRight size={16} /></Link></div></section><footer className="bg-white py-14 text-[#3f4944]"><div className="mx-auto grid max-w-6xl gap-10 px-5 sm:grid-cols-3 lg:px-0"><div><Image src="/images/gevyro-logo.png" alt="Gevyro" width={200} height={72} className="h-auto w-[200px] object-contain" /><p className="mt-4 text-sm text-[#718078]">Gestão em evolução.</p><p className="mt-3 text-xs text-[#8a958f]">CNPJ 68.259.534/0001-70</p></div><div><h3 className="font-semibold">Atendimento</h3><div className="mt-4 flex flex-col gap-3 text-sm text-[#718078]"><Link href="/como-usar">Como usar</Link><Link href="/contato">Fale conosco</Link><Link href="/auth/login">Área do cliente</Link></div></div><div><h3 className="font-semibold">Transparência</h3><div className="mt-4 flex flex-col gap-3 text-sm text-[#718078]"><Link href="/termos">Termos de uso</Link><Link href="/privacidade">Política de privacidade</Link><Link href="/contato">Suporte</Link></div></div></div><div className="mx-auto mt-12 flex max-w-6xl flex-col items-center justify-between gap-3 border-t border-zinc-200 px-5 pt-6 text-xs text-[#8a958f] sm:flex-row lg:px-0"><span>© 2026 Gevyro. Todos os direitos reservados.</span><span>Plataforma de gestão desenvolvida no Brasil.</span></div></footer></>;
 }
 
 export default function Home() {

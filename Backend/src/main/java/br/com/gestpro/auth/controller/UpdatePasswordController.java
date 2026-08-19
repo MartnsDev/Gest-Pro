@@ -1,8 +1,12 @@
 package br.com.gestpro.auth.controller;
 
+import br.com.gestpro.auth.dto.updatePassword.ForgotPasswordRequest;
+import br.com.gestpro.auth.dto.updatePassword.ResetPasswordRequest;
 import br.com.gestpro.auth.service.UpdatePasswordService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.Map;
 
 @RestController
@@ -11,26 +15,38 @@ public class UpdatePasswordController {
 
     private final UpdatePasswordService updatePasswordService;
 
-    public UpdatePasswordController(UpdatePasswordService updatePasswordService) {
+    public UpdatePasswordController(
+            UpdatePasswordService updatePasswordService
+    ) {
         this.updatePasswordService = updatePasswordService;
     }
 
-    //enviar código
     @PostMapping("/esqueceu-senha")
-    public ResponseEntity<?> enviarCodigo(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-        updatePasswordService.sendVerificationCode(email);
-        return ResponseEntity.ok(Map.of("sucesso", true, "mensagem", "Código enviado!"));
+    public ResponseEntity<Map<String, Object>> enviarCodigo(
+            @Valid @RequestBody ForgotPasswordRequest request
+    ) {
+        updatePasswordService.sendVerificationCode(request.email());
+
+        return ResponseEntity.ok(Map.of(
+                "sucesso", true,
+                "mensagem",
+                "Se o e-mail estiver cadastrado, enviaremos um código."
+        ));
     }
 
-    //redefinir senha
     @PostMapping("/redefinir-senha")
-    public ResponseEntity<?> redefinirSenha(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-        String codigo = body.get("codigo");
-        String novaSenha = body.get("novaSenha");
+    public ResponseEntity<Map<String, Object>> redefinirSenha(
+            @Valid @RequestBody ResetPasswordRequest request
+    ) {
+        updatePasswordService.resetPassword(
+                request.email(),
+                request.codigo(),
+                request.novaSenha()
+        );
 
-        updatePasswordService.resetPassword(email, codigo, novaSenha);
-        return ResponseEntity.ok(Map.of("sucesso", true, "mensagem", "Senha atualizada!"));
+        return ResponseEntity.ok(Map.of(
+                "sucesso", true,
+                "mensagem", "Senha atualizada."
+        ));
     }
 }

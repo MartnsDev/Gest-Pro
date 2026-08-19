@@ -3,14 +3,29 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Suspense } from "react";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "GestPro - Gestão Profissional",
-  description: "Sua loja organizada, suas vendas garantidas",
+  title: {
+    default: "Gevyro",
+    template: "%s | Gevyro",
+  },
+  description: "Gestão em evolução para vendas, estoque, caixa e resultados do seu negócio.",
+  applicationName: "Gevyro",
+  keywords: ["Gevyro", "gestão", "vendas", "estoque", "caixa", "pequenos negócios"],
+  openGraph: {
+    title: "GEVYRO — Gestão em evolução.",
+    description: "Tecnologia, simplicidade e organização para a evolução do seu negócio.",
+    siteName: "Gevyro",
+    locale: "pt_BR",
+    type: "website",
+  },
   generator: "MartinsDev",
   icons: {
-    icon: "/favicon.png",
+    icon: "/gevyro-fav.png",
+    shortcut: "/gevyro-fav.png",
+    apple: "/gevyro-fav.png",
   },
 };
 
@@ -20,9 +35,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="PT-BR">
+    <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={null}>{children}</Suspense>
+        <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem={false} themes={["dark", "light"]}>
+          <Suspense fallback={null}>{children}</Suspense>
+        </ThemeProvider>
       </body>
     </html>
   );

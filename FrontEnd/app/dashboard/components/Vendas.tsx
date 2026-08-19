@@ -303,7 +303,7 @@ function gerarCupom(venda: Venda, nomeEmpresa: string, documentoEmpresa?: string
   <div class="footer">
     Obrigado pela preferência!<br>
     Este documento não tem valor fiscal.<br>
-    Emitido via GestPro
+    Emitido via Gevyro
   </div>
 </div>
 

@@ -195,12 +195,12 @@ const Icon = ({ name, size = 24 }: { name: string; size?: number }) => {
 const Logo = () => (
   <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
     <img
-      src="/images/logo-256.webp"
-      alt="GestPro"
+      src="/gevyro-fav.png"
+      alt="Gevyro"
       style={{ width: 32, height: 32, objectFit: "contain" }}
     />
-    <span style={{ fontFamily: "var(--font-syne), 'Syne', 'Inter', sans-serif", fontWeight: 800, fontSize: 18, color: "#f1f5f9", letterSpacing: "-0.02em" }}>
-      Gest<span style={{ color: "#78d6a3" }}>Pro</span>
+    <span style={{ fontFamily: "var(--font-syne), 'Syne', 'Inter', sans-serif", fontWeight: 800, fontSize: 18, color: "#f1f5f9", letterSpacing: "-0.035em" }}>
+      Gevyro
     </span>
   </Link>
 );
@@ -383,7 +383,7 @@ export default function ComoUsarPage() {
                 fontSize: "clamp(34px, 5vw, 52px)", lineHeight: 1.05, letterSpacing: "-.04em",
                 color: "#f1f5f9", marginBottom: 16,
               }}>
-                Aprenda a usar o GestPro na prática.
+                Aprenda a usar o Gevyro na prática.
               </h1>
               <p style={{ color: "rgba(241,245,249,.6)", fontSize: 17, lineHeight: 1.7, maxWidth: 700 }}>
                 Escolha uma área no menu e siga as orientações para configurar sua empresa,

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
-import { salvarTokenCookie, lerTokenCookie } from "@/lib/api-v2";
 import { checkAuth } from "@/lib/auth-v2";
 import type { Usuario } from "@/lib/api-v2";
 
@@ -21,29 +20,23 @@ export default function DashboardLayout({
 
   useEffect(() => {
     async function inicializar() {
-      // 1. Captura token do redirect Google OAuth (?token=xyz)
+      // Nunca aceite credenciais pela URL. Remove parâmetros legados antes de
+      // validar a sessão HttpOnly criada pelo backend.
       const params = new URLSearchParams(globalThis.window.location.search);
-      const tokenUrl = params.get("token");
+      if (params.has("token")) globalThis.window.history.replaceState({}, "", globalThis.window.location.pathname);
 
-      if (tokenUrl) {
-        // Remove da URL imediatamente para reduzir exposição em histórico/referrer.
-        globalThis.window.history.replaceState(
-          {},
-          "",
-          globalThis.window.location.pathname,
-        );
-        salvarTokenCookie(tokenUrl);
+      // Valida a sessão diretamente no backend; cookies HttpOnly não podem e
+      // não devem ser inspecionados pelo frontend.
+      let user: Usuario | null = null;
+      try {
+        user = await checkAuth();
+      } catch (error) {
+        if (error instanceof Error && error.message === "PLANO_INATIVO") {
+          router.replace(`/pagamento${globalThis.window.location.search}`);
+          return;
+        }
+        throw error;
       }
-
-      // 2. Se não há token nenhum, vai para login
-      const tokenSalvo = lerTokenCookie();
-      if (!tokenSalvo && !tokenUrl) {
-        router.replace("/auth/login");
-        return;
-      }
-
-      // 3. Valida com o backend
-      const user = await checkAuth();
       if (!user) {
         router.replace("/auth/login");
         return;
@@ -51,7 +44,7 @@ export default function DashboardLayout({
 
       // 4. Plano inativo → pagamento
       if (user.statusAcesso === "INATIVO") {
-        router.replace("/pagamento");
+        router.replace(`/pagamento${globalThis.window.location.search}`);
         return;
       }
 
@@ -67,7 +60,7 @@ export default function DashboardLayout({
       <div
         style={{
           minHeight: "100vh",
-          background: "#030305",
+          background: "var(--background)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -100,7 +93,7 @@ export default function DashboardLayout({
         <span
           style={{
             fontSize: 13,
-            color: "rgba(241,245,249,0.3)",
+            color: "var(--foreground-muted)",
             fontFamily: "'DM Mono', monospace",
           }}
         >

@@ -21,10 +21,8 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   getUsuario,
-  lerTokenCookie,
   logout,
   removerTokenCookie,
-  salvarTokenCookie,
   type Usuario,
 } from "@/lib/api-v2";
 import styles from "@/app/styles/dashboard.module.css";
@@ -54,6 +52,7 @@ import PaginaAcaoRapida from "./acoesRapidas/PaginaAcaoRapida";
 import MobileNav from "./components/MobileNav";
 import Pedidos from "./components/Pedidos";
 import NotasFiscais from "./components/NotaFiscal";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 type Secao =
@@ -78,16 +77,9 @@ const BASE =
 
 /* ─── fetchAuth ──────────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string): Promise<T> {
-  const token =
-    typeof window !== "undefined"
-      ? (sessionStorage.getItem("jwt_token") ?? lerTokenCookie() ?? "")
-      : "";
   const res = await fetch(`${BASE}${path}`, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error(`HTTP_${res.status}`);
   return res.json();
@@ -133,7 +125,7 @@ async function resolverEstadoInicial(
       }
     } catch (err) {
       console.warn(
-        `[GestPro] erro ao buscar caixa empresaId=${empresa.id}:`,
+        `[Gevyro] erro ao buscar caixa empresaId=${empresa.id}:`,
         err,
       );
     }
@@ -435,9 +427,9 @@ function DashboardInner({
       <header className={styles.dashboardHeader}>
         <div className={styles.headerBrand}>
           <div className={styles.headerLogo}>
-            <img src="/images/logo-256.webp" alt="GestPro" width={36} height={36} />
+            <img src="/gevyro-fav.png" alt="Gevyro" width={36} height={36} />
           </div>
-          <span className={styles.headerTitle}>GestPro</span>
+          <span className={styles.headerTitle}>Gevyro</span>
           <div
             style={{
               marginLeft: 16,
@@ -454,7 +446,7 @@ function DashboardInner({
                 letterSpacing: ".06em",
               }}
             >
-              GESTPRO
+              GEVYRO
             </p>
             <p
               style={{
@@ -470,6 +462,7 @@ function DashboardInner({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 12 }}>
+          <ThemeToggle compact={isMobile} />
           {/* SeletorEmpresa: oculto no mobile apenas se não houver caixa (simplifica header) */}
           <SeletorEmpresa
             empresaAtiva={empresaAtiva}
@@ -487,7 +480,7 @@ function DashboardInner({
                 }
               } catch (err) {
                 console.warn(
-                  "[GestPro] falha ao buscar caixa ao trocar empresa:",
+                  "[Gevyro] falha ao buscar caixa ao trocar empresa:",
                   err,
                 );
                 setCaixaAtivo(null);
@@ -637,18 +630,7 @@ function DashboardLoader() {
     let desmontado = false;
 
     async function inicializar() {
-      const tokenDaUrl = searchParams.get("token");
-      if (tokenDaUrl) {
-        globalThis.history.replaceState({}, "", "/dashboard");
-        salvarTokenCookie(tokenDaUrl);
-        sessionStorage.setItem("jwt_token", tokenDaUrl);
-      }
-
-      const token = lerTokenCookie() || sessionStorage.getItem("jwt_token");
-      if (!token) {
-        globalThis.location.href = "/auth/login";
-        return;
-      }
+      if (searchParams.has("token")) globalThis.history.replaceState({}, "", "/dashboard");
 
       let data: Usuario;
       try {
@@ -656,7 +638,6 @@ function DashboardLoader() {
         if (!resultado) throw new Error("sem usuário");
         data = resultado;
       } catch {
-        sessionStorage.clear();
         removerTokenCookie();
         globalThis.location.href = "/auth/login";
         return;
@@ -685,7 +666,7 @@ function DashboardLoader() {
           caixaResolvido = caixa;
         }
       } catch (err) {
-        console.warn("[GestPro] falha ao buscar empresas:", err);
+        console.warn("[Gevyro] falha ao buscar empresas:", err);
       }
 
       if (desmontado) return;
@@ -713,7 +694,7 @@ function DashboardLoader() {
         }}
       >
         <p style={{ color: "var(--foreground-muted, #888)", fontSize: 14 }}>
-          Carregando GestPro...
+          Carregando Gevyro...
         </p>
       </div>
     );

@@ -1,10 +1,17 @@
 package br.com.gestpro.plano.stripe.controller;
 
+import br.com.gestpro.auth.model.Usuario;
+import br.com.gestpro.auth.repository.UsuarioRepository;
+import br.com.gestpro.infra.exception.ApiException;
 import br.com.gestpro.plano.service.AtualizarPlanoOperation;
-import br.com.gestpro.plano.stripe.dto.CheckoutRequest;
 import br.com.gestpro.plano.stripe.PlanoTipo;
+import br.com.gestpro.plano.stripe.dto.CheckoutRequest;
+import br.com.gestpro.plano.stripe.model.Assinatura;
+import br.com.gestpro.plano.stripe.model.StripeWebhookEvent;
 import br.com.gestpro.plano.stripe.repository.AssinaturaRepository;
+import br.com.gestpro.plano.stripe.repository.StripeWebhookEventRepository;
 import br.com.gestpro.plano.stripe.service.PaymentService;
+import br.com.gestpro.plano.stripe.service.StripePriceProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.SignatureVerificationException;
@@ -12,15 +19,18 @@ import com.stripe.model.Event;
 import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
+import com.stripe.param.checkout.SessionRetrieveParams;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -28,291 +38,432 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
-@Configuration
 public class CheckoutController {
 
-    private final PaymentService          paymentService;
-    private final AtualizarPlanoOperation atualizarPlano;
-    private final AssinaturaRepository    assinaturaRepository;
+    private static final ObjectMapper MAPPER =
+            new ObjectMapper();
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private final PaymentService paymentService;
+    private final AtualizarPlanoOperation atualizarPlano;
+    private final AssinaturaRepository assinaturaRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final StripePriceProperties prices;
+    private final StripeWebhookEventRepository eventRepository;
 
     @Value("${stripe.webhook.secret}")
     private String endpointSecret;
 
-    @Value("${STRIPE_API_KEY}")
-    private String stripeApiKey;
-
-
     @PostMapping("/create-checkout-session")
     public ResponseEntity<Map<String, String>> createCheckout(
-            @Valid @RequestBody CheckoutRequest request) {
-        try {
-            String checkoutUrl = paymentService.createCheckoutSession(
-                    request.plano(),
-                    request.customerEmail()
-            );
-            return ResponseEntity.ok(Map.of("url", checkoutUrl));
+            @Valid @RequestBody CheckoutRequest request,
+            Authentication authentication
+    ) {
+        Usuario usuario = obterUsuario(authentication);
 
-        } catch (Exception e) {
-            log.error("Erro ao criar sessão de checkout: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Não foi possível iniciar o checkout. Tente novamente."));
+        Assinatura assinaturaAtual =
+                assinaturaRepository
+                        .findByUsuarioEmail(usuario.getEmail())
+                        .orElse(null);
+
+        try {
+            String checkoutUrl =
+                    paymentService.criarCheckout(
+                            usuario,
+                            request.plano(),
+                            assinaturaAtual
+                    );
+
+            return ResponseEntity.ok(
+                    Map.of("url", checkoutUrl)
+            );
+        } catch (
+                PaymentService.AssinaturaJaAtivaException exception
+        ) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of(
+                            "error",
+                            "Você já possui uma assinatura ativa. "
+                                    + "Use o portal para alterar o plano."
+                    ));
+        } catch (Exception exception) {
+            log.error(
+                    "Erro ao criar checkout: usuarioId={} plano={}",
+                    usuario.getId(),
+                    request.plano(),
+                    exception
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error",
+                            "Não foi possível iniciar o checkout."
+                    ));
+        }
+    }
+
+    @PostMapping("/portal")
+    public ResponseEntity<Map<String, String>> portal(
+            Authentication authentication
+    ) {
+        Usuario usuario = obterUsuario(authentication);
+
+        Assinatura assinatura =
+                assinaturaRepository
+                        .findByUsuarioEmail(usuario.getEmail())
+                        .orElseThrow(() -> new ApiException(
+                                "Assinatura não encontrada.",
+                                HttpStatus.NOT_FOUND,
+                                "/api/payments/portal"
+                        ));
+
+        try {
+            return ResponseEntity.ok(Map.of(
+                    "url",
+                    paymentService.criarPortal(assinatura)
+            ));
+        } catch (Exception exception) {
+            log.error(
+                    "Erro ao abrir portal: usuarioId={}",
+                    usuario.getId(),
+                    exception
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error",
+                            "Não foi possível abrir o portal."
+                    ));
         }
     }
 
     @GetMapping("/session-info")
-    public ResponseEntity<Map<String, String>> getSessionInfo(@RequestParam String sessionId) {
+    public ResponseEntity<Map<String, String>> sessionInfo(
+            @RequestParam String sessionId,
+            Authentication authentication
+    ) {
+        Usuario usuario = obterUsuario(authentication);
+
+        if (sessionId == null
+                || !sessionId.startsWith("cs_")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "error",
+                            "Sessão inválida."
+                    ));
+        }
+
         try {
             Session session = Session.retrieve(
                     sessionId,
-                    com.stripe.param.checkout.SessionRetrieveParams.builder()
+                    SessionRetrieveParams.builder()
                             .addExpand("line_items")
                             .build(),
                     null
             );
 
-            String priceId    = session.getLineItems().getData().get(0).getPrice().getId();
-            PlanoTipo plano   = PlanoTipo.fromPriceId(priceId);
-
-            return ResponseEntity.ok(Map.of(
-                    "priceId", priceId,
-                    "plano",   plano.name()
-            ));
-
-        } catch (Exception e) {
-            log.error("Erro ao buscar session-info para sessionId={}: {}", sessionId, e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "Sessão inválida ou expirada"));
-        }
-    }
-
-    // ─── Webhook da Stripe ────────────────────────────────────────────────────
-
-    /**
-     * Endpoint chamado automaticamente pela Stripe após cada evento relevante.
-     *
-     * <p>Eventos tratados:
-     * <ul>
-     *   <li>checkout.session.completed    → ativa o plano (primeiro pagamento)</li>
-     *   <li>invoice.payment_succeeded     → renova o vencimento (subscription_cycle / subscription_update)</li>
-     *   <li>invoice.payment_failed        → marca inadimplente e bloqueia acesso</li>
-     *   <li>customer.subscription.updated → renova plano APENAS se ainda ativo na Stripe</li>
-     *   <li>customer.subscription.deleted → cancela o plano definitivamente</li>
-     * </ul>
-     *
-     * <p>Sempre retorna 200 — a Stripe reenvia por até 3 dias se receber != 2xx.
-     * Erros de negócio são logados mas não propagados para fora deste método.
-     */
-    @PostMapping("/webhook")
-    public ResponseEntity<String> handleWebhook(
-            @RequestBody String payload,
-            @RequestHeader("Stripe-Signature") String sigHeader) {
-
-        // 1. Valida assinatura HMAC — rejeita com 400 se inválida
-        Event event;
-        try {
-            event = Webhook.constructEvent(payload, sigHeader, endpointSecret);
-        } catch (SignatureVerificationException e) {
-            log.warn("Webhook rejeitado: assinatura HMAC inválida.");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Assinatura inválida");
-        } catch (Exception e) {
-            log.error("Webhook rejeitado: erro ao parsear payload — {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Payload inválido");
-        }
-
-        log.info("Webhook recebido: type={} | id={}", event.getType(), event.getId());
-
-        // 2. Processa — nunca lança exceção para fora (Stripe reentregaria indefinidamente)
-        try {
-            String rawJson = event.getDataObjectDeserializer().getRawJson();
-            JsonNode obj   = MAPPER.readTree(rawJson);
-
-            switch (event.getType()) {
-
-                case "checkout.session.completed" -> handleCheckoutCompleted(event);
-
-                case "invoice.payment_succeeded"  -> handleInvoicePaymentSucceeded(obj);
-
-                case "invoice.payment_failed"     -> {
-                    String subscription = textoOuNull(obj, "subscription");
-                    log.warn("invoice.payment_failed | subscription={}", subscription);
-                    if (subscription != null) {
-                        atualizarPlano.marcarInadimplente(subscription);
-                    }
-                }
-
-                case "customer.subscription.updated" -> handleSubscriptionUpdated(obj);
-
-                case "customer.subscription.deleted" -> {
-                    String subscriptionId = textoOuNull(obj, "id");
-                    log.info("customer.subscription.deleted | subscription={}", subscriptionId);
-                    if (subscriptionId != null) {
-                        atualizarPlano.cancelarPlano(subscriptionId);
-                    }
-                }
-
-                default -> log.debug("Evento ignorado: {}", event.getType());
-            }
-
-        } catch (Exception e) {
-            log.error("Erro ao processar webhook type={} id={}: {}",
-                    event.getType(), event.getId(), e.getMessage(), e);
-        }
-
-        // Sempre 200 para a Stripe não reenviar indefinidamente
-        return ResponseEntity.ok("");
-    }
-
-    // ─── Handlers privados por tipo de evento ─────────────────────────────────
-
-    /**
-     * checkout.session.completed — primeiro pagamento confirmado.
-     *
-     * Recupera o e-mail do cliente:
-     * 1. Pelo campo customerEmail da sessão (cliente novo)
-     * 2. Pela assinatura existente no banco via customerId (cliente recorrente sem email no evento)
-     * 3. Lança RuntimeException se nenhuma das opções resolver (será logado, não reentregue)
-     */
-    private void handleCheckoutCompleted(Event event) {
-        Session session = desserializar(event, Session.class);
-
-        String email = session.getCustomerEmail();
-
-        if (email == null || email.isBlank()) {
-            // Cliente já existia na Stripe — tenta recuperar pelo customerId
-            String customerId = session.getCustomer();
-            email = assinaturaRepository
-                    .findByStripeCustomerId(customerId)
-                    .map(a -> a.getUsuario().getEmail())
-                    .orElse(null);
-
-            if (email == null) {
-                // Último recurso: busca a assinatura pelo subscriptionId
-                // (pode ter sido criada por outro fluxo)
-                email = assinaturaRepository
-                        .findByStripeSubscriptionId(session.getSubscription())
-                        .map(a -> a.getUsuario().getEmail())
-                        .orElseThrow(() -> new RuntimeException(
-                                "Não foi possível identificar o e-mail do cliente. " +
-                                        "customerId=" + customerId +
-                                        " | subscriptionId=" + session.getSubscription()
+            /*
+             * Impede consultar sessão de outro usuário.
+             */
+            if (!String.valueOf(usuario.getId())
+                    .equals(session.getClientReferenceId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of(
+                                "error",
+                                "Sessão não pertence ao usuário."
                         ));
             }
-        }
 
-        atualizarPlano.ativarPlano(email, session.getSubscription(), session.getCustomer());
+            if (session.getLineItems() == null
+                    || session.getLineItems().getData().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of(
+                                "error",
+                                "Sessão sem itens."
+                        ));
+            }
+
+            String priceId = session.getLineItems()
+                    .getData()
+                    .get(0)
+                    .getPrice()
+                    .getId();
+
+            PlanoTipo plano = prices.fromPriceId(priceId);
+
+            String status = session.getStatus();
+            String paymentStatus = session.getPaymentStatus();
+
+            if (!"complete".equals(status)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of(
+                                "error",
+                                "Checkout ainda não concluído."
+                        ));
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "plano", plano.name(),
+                    "status", status,
+                    "paymentStatus",
+                    paymentStatus == null
+                            ? "unknown"
+                            : paymentStatus
+            ));
+        } catch (Exception exception) {
+            log.warn(
+                    "Falha ao consultar sessão: usuarioId={} sessionId={}",
+                    usuario.getId(),
+                    sessionId,
+                    exception
+            );
+
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "error",
+                            "Sessão inválida ou expirada."
+                    ));
+        }
     }
 
-    /**
-     * invoice.payment_succeeded — pagamento de fatura confirmado.
-     *
-     * Só aciona renovação para:
-     * - subscription_cycle  → cobrança mensal automática
-     * - subscription_update → upgrade ou downgrade de plano
-     *
-     * subscription_create é ignorado aqui pois já é tratado em checkout.session.completed.
-     */
-    private void handleInvoicePaymentSucceeded(JsonNode obj) {
-        String reason       = textoOuNull(obj, "billing_reason");
-        String subscription = textoOuNull(obj, "subscription");
+    @PostMapping("/webhook")
+    public ResponseEntity<String> webhook(
+            @RequestBody String payload,
+            @RequestHeader("Stripe-Signature") String signature
+    ) {
+        final Event event;
 
-        log.info("invoice.payment_succeeded | billing_reason={} | subscription={}", reason, subscription);
-
-        if (subscription == null) {
-            log.warn("invoice.payment_succeeded sem subscriptionId — ignorado");
-            return;
+        try {
+            event = Webhook.constructEvent(
+                    payload,
+                    signature,
+                    endpointSecret
+            );
+        } catch (SignatureVerificationException exception) {
+            log.warn("Webhook Stripe com assinatura inválida.");
+            return ResponseEntity.badRequest()
+                    .body("Assinatura inválida.");
+        } catch (Exception exception) {
+            log.warn("Payload Stripe inválido.", exception);
+            return ResponseEntity.badRequest()
+                    .body("Payload inválido.");
         }
 
-        if ("subscription_cycle".equals(reason) || "subscription_update".equals(reason)) {
-            atualizarPlano.renovarPlano(subscription);
-        } else {
-            log.debug("invoice.payment_succeeded ignorado para billing_reason={}", reason);
+        /*
+         * Evento duplicado: já foi processado com sucesso.
+         */
+        if (eventRepository.existsByStripeEventId(event.getId())) {
+            return ResponseEntity.ok("");
+        }
+
+        try {
+            processarEvento(event);
+            registrarEvento(event);
+
+            return ResponseEntity.ok("");
+        } catch (Exception exception) {
+            /*
+             * Retorne 500 para a Stripe reenviar.
+             * Nunca registre como processado antes da conclusão.
+             */
+            log.error(
+                    "Falha no webhook Stripe: eventId={} type={}",
+                    event.getId(),
+                    event.getType(),
+                    exception
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Falha temporária.");
         }
     }
 
-    /**
-     * customer.subscription.updated — plano atualizado (upgrade, downgrade, cancelamento agendado).
-     *
-     * ATENÇÃO: este evento também dispara quando cancel_at_period_end = true.
-     * Nesse caso NÃO renovamos — o plano será cancelado em customer.subscription.deleted.
-     *
-     * Só renova se:
-     * 1. cancel_at_period_end = false (não está agendado para cancelar)
-     * 2. status = "active" ou "trialing" na Stripe
-     */
-    private void handleSubscriptionUpdated(JsonNode obj) {
-        String subscriptionId    = textoOuNull(obj, "id");
-        String status            = textoOuNull(obj, "status");
-        JsonNode cancelAtEnd     = obj.get("cancel_at_period_end");
+    private void processarEvento(Event event)
+            throws Exception {
 
-        log.info("customer.subscription.updated | subscription={} | status={} | cancel_at_period_end={}",
-                subscriptionId, status, cancelAtEnd);
+        JsonNode objeto = MAPPER.readTree(
+                event.getDataObjectDeserializer().getRawJson()
+        );
+
+        switch (event.getType()) {
+            case "checkout.session.completed" ->
+                    checkoutConcluido(event);
+
+            case "invoice.payment_succeeded" ->
+                    pagamentoConfirmado(objeto);
+
+            case "invoice.payment_failed" -> {
+                String subscriptionId =
+                        textoOuNull(objeto, "subscription");
+
+                if (subscriptionId != null) {
+                    atualizarPlano.marcarInadimplente(
+                            subscriptionId
+                    );
+                }
+            }
+
+            case "customer.subscription.updated" ->
+                    assinaturaAtualizada(objeto);
+
+            case "customer.subscription.deleted" -> {
+                String subscriptionId =
+                        textoOuNull(objeto, "id");
+
+                if (subscriptionId != null) {
+                    atualizarPlano.cancelarPlano(
+                            subscriptionId
+                    );
+                }
+            }
+
+            default -> log.debug(
+                    "Evento Stripe ignorado: {}",
+                    event.getType()
+            );
+        }
+    }
+
+    private void checkoutConcluido(Event event) {
+        Session session =
+                desserializar(event, Session.class);
+
+        String usuarioId = session.getMetadata()
+                .get("usuarioId");
+
+        if (usuarioId == null || usuarioId.isBlank()) {
+            usuarioId = session.getClientReferenceId();
+        }
+
+        if (usuarioId == null || usuarioId.isBlank()) {
+            throw new IllegalStateException(
+                    "Checkout sem usuarioId."
+            );
+        }
+
+        Usuario usuario = usuarioRepository
+                .findById(Long.valueOf(usuarioId))
+                .orElseThrow(() -> new IllegalStateException(
+                        "Usuário do checkout não encontrado."
+                ));
+
+        if (session.getSubscription() == null
+                || session.getCustomer() == null) {
+            throw new IllegalStateException(
+                    "Checkout sem subscription/customer."
+            );
+        }
+
+        atualizarPlano.ativarPlano(
+                usuario.getEmail(),
+                session.getSubscription(),
+                session.getCustomer()
+        );
+    }
+
+    private void pagamentoConfirmado(JsonNode objeto) {
+        String motivo =
+                textoOuNull(objeto, "billing_reason");
+
+        String subscriptionId =
+                textoOuNull(objeto, "subscription");
 
         if (subscriptionId == null) {
-            log.warn("customer.subscription.updated sem id — ignorado");
             return;
         }
 
-        boolean cancelAgendado = cancelAtEnd != null && cancelAtEnd.asBoolean(false);
-
-        if (cancelAgendado) {
-            log.info("Assinatura {} agendada para cancelamento — renovação ignorada.", subscriptionId);
-            return;
+        if ("subscription_cycle".equals(motivo)
+                || "subscription_update".equals(motivo)) {
+            atualizarPlano.sincronizarPlano(
+                    subscriptionId
+            );
         }
-
-        if (!"active".equals(status) && !"trialing".equals(status)) {
-            log.info("customer.subscription.updated ignorado: status={} para subscription={}",
-                    status, subscriptionId);
-            return;
-        }
-
-        // AtualizarPlanoOperation.renovarPlano() tem idempotência interna:
-        // ignora se o vencimento da Stripe não avançou o já salvo no banco.
-        atualizarPlano.renovarPlano(subscriptionId);
     }
 
-    // ─── Helpers privados ─────────────────────────────────────────────────────
+    private void assinaturaAtualizada(JsonNode objeto) {
+        String subscriptionId =
+                textoOuNull(objeto, "id");
 
-    /** Lê um campo de texto do JsonNode; retorna null se ausente ou nulo. */
-    private String textoOuNull(JsonNode node, String campo) {
+        String status =
+                textoOuNull(objeto, "status");
+
+        if (subscriptionId == null) {
+            return;
+        }
+
+        if ("active".equals(status)
+                || "trialing".equals(status)
+                || "past_due".equals(status)) {
+            atualizarPlano.sincronizarPlano(
+                    subscriptionId
+            );
+        }
+    }
+
+    @Transactional
+    protected void registrarEvento(Event event) {
+        StripeWebhookEvent processado =
+                new StripeWebhookEvent();
+
+        processado.setStripeEventId(event.getId());
+        processado.setTipo(event.getType());
+        processado.setProcessadoEm(
+                LocalDateTime.now()
+        );
+
+        eventRepository.saveAndFlush(processado);
+    }
+
+    private Usuario obterUsuario(
+            Authentication authentication
+    ) {
+        if (authentication == null
+                || !authentication.isAuthenticated()) {
+            throw new ApiException(
+                    "Não autenticado.",
+                    HttpStatus.UNAUTHORIZED,
+                    "/api/payments"
+            );
+        }
+
+        return usuarioRepository
+                .findByEmail(authentication.getName())
+                .orElseThrow(() -> new ApiException(
+                        "Usuário não encontrado.",
+                        HttpStatus.NOT_FOUND,
+                        "/api/payments"
+                ));
+    }
+
+    private String textoOuNull(
+            JsonNode node,
+            String campo
+    ) {
         JsonNode valor = node.get(campo);
-        return (valor != null && !valor.isNull()) ? valor.asText() : null;
+
+        return valor != null && !valor.isNull()
+                ? valor.asText()
+                : null;
     }
 
-    /**
-     * Deserializa o objeto do evento via deserializador padrão da Stripe.
-     * Lança RuntimeException se o objeto estiver ausente ou for de tipo inesperado.
-     */
     @SuppressWarnings("unchecked")
-    private <T extends StripeObject> T desserializar(Event event, Class<T> clazz) {
-        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+    private <T extends StripeObject> T desserializar(
+            Event event,
+            Class<T> tipo
+    ) {
+        Optional<StripeObject> objeto =
+                event.getDataObjectDeserializer().getObject();
 
-        if (objectOpt.isEmpty()) {
-            throw new RuntimeException(
-                    "Objeto ausente no evento " + event.getType() +
-                            " — verifique se a versão da API no webhook bate com a do SDK."
+        if (objeto.isEmpty()
+                || !tipo.isInstance(objeto.get())) {
+            throw new IllegalStateException(
+                    "Objeto Stripe incompatível para "
+                            + event.getType()
             );
         }
 
-        StripeObject stripeObj = objectOpt.get();
-
-        if (!clazz.isInstance(stripeObj)) {
-            throw new RuntimeException(
-                    "Tipo inesperado no evento " + event.getType() +
-                            " | esperado: " + clazz.getSimpleName() +
-                            " | recebido: " + stripeObj.getClass().getSimpleName()
-            );
-        }
-
-        return (T) stripeObj;
-    }
-
-
-    @jakarta.annotation.PostConstruct
-    public void setupStripe() {
-        // Isso define a chave globalmente para o SDK do Stripe usar
-        com.stripe.Stripe.apiKey = stripeApiKey;
-        log.info("Stripe SDK inicializado com a chave: {}...", stripeApiKey.substring(0, 7));
+        return (T) objeto.get();
     }
 }

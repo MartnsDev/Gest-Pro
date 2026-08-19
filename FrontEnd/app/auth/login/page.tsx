@@ -36,12 +36,11 @@ export default function LoginPage() {
     setLoading(true);
     setErro("");
     try {
-      await login(form.email, form.senha);
-      router.push("/dashboard");
+      const usuario = await login(form.email.trim().toLowerCase(), form.senha);
+      router.push(usuario.statusAcesso === "INATIVO" ? "/pagamento" : "/dashboard");
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Credenciais inválidas ou erro no servidor";
-      if (message === "PLANO_INATIVO") router.push("/pagamento");
-      else setErro(message);
+      setErro(message === "PLANO_INATIVO" ? "Não foi possível iniciar uma nova sessão. Tente novamente." : message);
     } finally {
       setLoading(false);
     }
@@ -52,8 +51,7 @@ export default function LoginPage() {
       <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 xl:px-24">
         <header className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="relative h-9 w-9"><Image src="/images/logo-256.webp" alt="GestPro" fill sizes="36px" className="object-contain" /></div>
-            <span className="text-xl font-extrabold tracking-tight text-[#202723]">GestPro</span>
+            <Image src="/images/gevyro-logo.png" alt="Gevyro" width={200} height={72} priority className="h-auto w-[200px] object-contain" />
           </Link>
           <Link href="/" className="flex items-center gap-2 text-xs text-[#718078] hover:text-[#258c53]"><ArrowLeft size={15} /> Início</Link>
         </header>
@@ -85,9 +83,9 @@ export default function LoginPage() {
 
       <aside className="relative hidden overflow-hidden bg-[#303a35] p-16 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full border border-[#78d6a3]/15" /><div className="absolute -right-8 -top-8 h-48 w-48 rounded-full border border-[#78d6a3]/20" />
-        <p className="relative text-[11px] font-bold uppercase tracking-[.14em] text-[#78d6a3]">Controle real para negócios reais</p>
+        <p className="relative text-[11px] font-bold uppercase tracking-[.14em] text-[#78d6a3]">Gestão em evolução.</p>
         <div className="relative max-w-lg"><h2 className="text-5xl font-light leading-[1.08]">Sua operação continua <span className="italic text-[#78d6a3]">organizada</span></h2><p className="mt-6 max-w-md text-sm leading-7 text-zinc-300">Acesse seus dados e retome o trabalho exatamente de onde parou.</p></div>
-        <p className="relative text-xs text-zinc-400">© 2026 GestPro</p>
+        <p className="relative text-xs leading-5 text-zinc-400">© 2026 Gevyro<br />CNPJ 68.259.534/0001-70</p>
       </aside>
     </main>
   );

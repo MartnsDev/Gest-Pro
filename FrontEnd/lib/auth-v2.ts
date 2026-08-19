@@ -3,7 +3,6 @@
 
 import {
   getUsuario,
-  salvarTokenCookie,
   removerTokenCookie,
   getToken,
   type Usuario,
@@ -12,9 +11,8 @@ import {
 // ─── Token helpers ────────────────────────────────────────────────────────────
 
 export function saveToken(token: string) {
-  if (typeof window === "undefined" || !token) return;
-  salvarTokenCookie(token);
-  sessionStorage.setItem("jwt_token", token);
+  // Compatibilidade de assinatura: tokens nunca são persistidos pelo cliente.
+  void token;
 }
 
 export function removeToken() {
@@ -56,5 +54,8 @@ export async function logout(): Promise<void> {
     // ignora erro de rede
   } finally {
     removeToken();
+    sessionStorage.removeItem("checkout_email");
+    localStorage.removeItem("token");
+    localStorage.removeItem("access_token");
   }
 }

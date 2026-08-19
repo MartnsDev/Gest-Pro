@@ -134,7 +134,7 @@ function gerarCupom(venda: Venda, nomeEmpresa: string, documentoEmpresa?: string
     ${venda.valorRecebido && venda.valorRecebido > 0 ? `<div class="row"><span>Recebido:</span><span>${esc(fmt(venda.valorRecebido))}</span></div>` : ""}
     ${venda.troco && venda.troco > 0 ? `<div class="row green"><span>Troco:</span><span><b>${esc(fmt(venda.troco))}</b></span></div>` : ""}
     ${venda.observacao ? `<div class="dash"></div><div class="row"><span>Obs:</span><span>${esc(venda.observacao)}</span></div>` : ""}
-    <div class="dash"></div><div class="footer">Obrigado pela preferência!<br>Este documento não tem valor fiscal.<br>Emitido via GestPro</div>
+    <div class="dash"></div><div class="footer">Obrigado pela preferência!<br>Este documento não tem valor fiscal.<br>Emitido via Gevyro</div>
   </div>
   <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
   <script>window.onload = () => setTimeout(() => { window.focus(); window.print(); }, 400);</script>

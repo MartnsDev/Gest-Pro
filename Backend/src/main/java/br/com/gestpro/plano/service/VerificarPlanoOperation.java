@@ -74,7 +74,7 @@ public class VerificarPlanoOperation {
             bloquearUsuario(usuario);
             throw new ApiException(
                     "Sua assinatura está " + formatarStatus(assinatura.getStatus()) +
-                            ". Regularize seu pagamento para reativar o acesso ao GestPro.",
+                            ". Regularize seu pagamento para reativar o acesso ao Gevyro.",
                     HttpStatus.FORBIDDEN,
                     "/dashboard/planos"
             );
@@ -87,7 +87,7 @@ public class VerificarPlanoOperation {
             assinaturaRepository.save(assinatura);
             throw new ApiException(
                     "Sua assinatura venceu em " + assinatura.getDataVencimento() +
-                            ". Regularize seu pagamento para reativar o acesso ao GestPro.",
+                            ". Regularize seu pagamento para reativar o acesso ao Gevyro.",
                     HttpStatus.FORBIDDEN,
                     "/dashboard/planos"
             );

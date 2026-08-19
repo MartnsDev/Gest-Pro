@@ -4,110 +4,146 @@ import br.com.gestpro.auth.EmailService;
 import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.infra.exception.ApiException;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.util.Locale;
 
 @Service
 public class UpdatePasswordService {
 
+    private static final Duration VALIDADE = Duration.ofMinutes(10);
+    private static final int MAX_TENTATIVAS = 5;
+
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final StringRedisTemplate redis;
+    private final SecureRandom secureRandom = new SecureRandom();
 
-    // Mapa para guardar códigos temporariamente (email -> código + expiração)
-    private final Map<String, VerificationCode> codigoMap = new HashMap<>();
-
-    public UpdatePasswordService(UsuarioRepository usuarioRepository,
-                                 PasswordEncoder passwordEncoder,
-                                 EmailService emailService) {
+    public UpdatePasswordService(
+            UsuarioRepository usuarioRepository,
+            PasswordEncoder passwordEncoder,
+            EmailService emailService,
+            StringRedisTemplate redis
+    ) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.redis = redis;
     }
 
-    // 1. Enviar código de verificação
-    public void sendVerificationCode(String email) {
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ApiException("Email não encontrado", HttpStatus.NOT_FOUND, "/update-password"));
+    public void sendVerificationCode(String rawEmail) {
+        String email = normalizar(rawEmail);
 
-        // Gera código aleatório de 6 dígitos
+        Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
+
+        /*
+         * Não revele se o usuário existe.
+         */
+        if (usuario == null) {
+            passwordEncoder.encode(gerarCodigo());
+            return;
+        }
+
         String codigo = gerarCodigo();
+        String hash = passwordEncoder.encode(codigo);
 
-        // Cria expiração de 10 minutos
-        LocalDateTime expiracao = LocalDateTime.now().plusMinutes(10);
+        redis.opsForValue().set(
+                codigoKey(email),
+                hash,
+                VALIDADE
+        );
 
-        // Salva no mapa temporário
-        codigoMap.put(email, new VerificationCode(codigo, expiracao));
+        redis.delete(tentativasKey(email));
 
-        // Salva no usuário (opcional, caso queira persistir no DB)
-        usuario.setCodigoRecuperacao(codigo);
-        usuarioRepository.save(usuario);
-
-        // Envia email
-        emailService.enviarEmail(email, usuario.getNome(), "Código de recuperação", "Seu código é: " + codigo);
-
-        System.out.println("Código enviado para " + email + ": " + codigo);
+        emailService.enviarEmail(
+                email,
+                usuario.getNome(),
+                "Código de recuperação",
+                "Seu código de recuperação é: " + codigo
+                        + "\n\nEle expira em 10 minutos."
+        );
     }
 
-    // 2. Redefinir senha
-    public void resetPassword(String email, String codigo, String novaSenha) {
+    @Transactional
+    public void resetPassword(
+            String rawEmail,
+            String codigo,
+            String novaSenha
+    ) {
+        String email = normalizar(rawEmail);
+
         Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/update-password"));
+                .orElseThrow(this::codigoInvalido);
 
-        VerificationCode verificationCode = codigoMap.get(email);
+        String hash = redis.opsForValue().get(codigoKey(email));
 
-        if (verificationCode == null) {
-            throw new ApiException("Código de verificação inválido ou expirado", HttpStatus.BAD_REQUEST, "/update-password");
+        if (hash == null) {
+            throw codigoInvalido();
         }
 
-        if (!verificationCode.getCodigo().equals(codigo)) {
-            throw new ApiException("Código de verificação inválido", HttpStatus.BAD_REQUEST, "/update-password");
+        Long tentativas = redis.opsForValue()
+                .increment(tentativasKey(email));
+
+        if (tentativas != null && tentativas == 1) {
+            redis.expire(tentativasKey(email), VALIDADE);
         }
 
-        if (verificationCode.getExpiracao().isBefore(LocalDateTime.now())) {
-            codigoMap.remove(email);
-            throw new ApiException("Código de verificação expirado", HttpStatus.BAD_REQUEST, "/update-password");
+        if (tentativas != null && tentativas > MAX_TENTATIVAS) {
+            redis.delete(codigoKey(email));
+            redis.delete(tentativasKey(email));
+            throw codigoInvalido();
         }
 
-        // Atualiza senha
+        if (!passwordEncoder.matches(codigo, hash)) {
+            throw codigoInvalido();
+        }
+
         usuario.setSenha(passwordEncoder.encode(novaSenha));
+
+        /*
+         * Depois de provar controle do e-mail, a conta pode usar login manual.
+         * O login Google continuará funcionando normalmente.
+         */
+        usuario.setLoginGoogle(false);
+        usuario.setCodigoRecuperacao(null);
+
         usuarioRepository.save(usuario);
 
-        // Remove código usado
-        codigoMap.remove(email);
-
-        System.out.println("Senha atualizada para " + email);
+        redis.delete(codigoKey(email));
+        redis.delete(tentativasKey(email));
     }
 
-    // Gera código aleatório de 6 dígitos
     private String gerarCodigo() {
-        Random random = new Random();
-        int numero = 100000 + random.nextInt(900000); // 100000 a 999999
-        return String.valueOf(numero);
+        return String.format(
+                "%06d",
+                secureRandom.nextInt(1_000_000)
+        );
     }
 
-    // Classe interna para armazenar código + expiração
-    private static class VerificationCode {
-        private final String codigo;
-        private final LocalDateTime expiracao;
+    private String normalizar(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
 
-        public VerificationCode(String codigo, LocalDateTime expiracao) {
-            this.codigo = codigo;
-            this.expiracao = expiracao;
-        }
+    private String codigoKey(String email) {
+        return "auth:reset:code:" + email;
+    }
 
-        public String getCodigo() {
-            return codigo;
-        }
+    private String tentativasKey(String email) {
+        return "auth:reset:attempts:" + email;
+    }
 
-        public LocalDateTime getExpiracao() {
-            return expiracao;
-        }
+    private ApiException codigoInvalido() {
+        return new ApiException(
+                "Código inválido ou expirado.",
+                HttpStatus.BAD_REQUEST,
+                "/api/auth/redefinir-senha"
+        );
     }
 }

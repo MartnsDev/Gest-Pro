@@ -1,4 +1,4 @@
-// ===================== TIPOS DO SISTEMA GESTPRO =====================
+// ===================== TIPOS DO SISTEMA GEVYRO =====================
 
 // ─── Usuário e Autenticação ─────────────────────────────────────────
 export interface Usuario {

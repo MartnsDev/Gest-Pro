@@ -19,7 +19,6 @@ export interface Usuario {
 }
 
 export interface LoginResponse {
-  token?: string;
   nome: string;
   email: string;
   tipoPlano: string;
@@ -34,84 +33,47 @@ interface ErrorResponse {
   mensagem?: string;
 }
 
-// ===================== Cookie helpers =====================
-
-/**
- * Salva o JWT como cookie no domínio do próprio frontend.
- * Usado após login manual (backend retorna token no body)
- * e após Google OAuth (backend redireciona com ?token= na URL).
- */
-export function salvarTokenCookie(token: string) {
-  if (typeof document === "undefined") return;
-
-  const maxAge = 7 * 24 * 60 * 60; // 7 dias
-  const isProducao = globalThis.window.location.hostname !== "localhost";
-  
-  // No Railway, precisamos de SameSite=None e Secure para o cookie ser aceito
-  // entre o redirecionamento do backend e o domínio do frontend.
-  const cookieString = isProducao
-    ? `jwt_token=${token}; path=/; max-age=${maxAge}; SameSite=None; Secure`
-    : `jwt_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;
-  document.cookie = cookieString;
-
-  // Token de sessão apenas durante a aba aberta (reduz exposição persistente)
-  sessionStorage.setItem("jwt_token", token);
-}
-
-/**
- * Remove o cookie JWT do frontend.
- */
+// O JWT é mantido exclusivamente pelo backend em cookie HttpOnly. Estes
+// aliases permanecem temporariamente para componentes legados compilarem sem
+// voltar a expor a credencial ao JavaScript.
+export function salvarTokenCookie(_token: string) {}
 export function removerTokenCookie() {
-  if (typeof document === "undefined") return;
-  document.cookie = "jwt_token=; path=/; max-age=0; SameSite=Lax";
+  if (typeof window === "undefined") return;
   sessionStorage.removeItem("jwt_token");
+  localStorage.removeItem("token");
+  localStorage.removeItem("access_token");
 }
+export function lerTokenCookie(): null { return null; }
+export function getToken(): null { return null; }
+export function hasToken(): boolean { return false; }
 
-/**
- * Lê o token JWT do cookie do frontend.
- */
-export function lerTokenCookie(): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
-}
+let csrfToken: string | null = null;
 
-// ===================== Token helpers =====================
-
-/**
- * Verifica se há um token disponível (localStorage ou cookie)
- */
-export function hasToken(): boolean {
-  if (typeof globalThis.window === "undefined") return false;
-  const sessionToken = sessionStorage.getItem("jwt_token");
-  const cookieToken = lerTokenCookie();
-  return !!(sessionToken || cookieToken);
-}
-
-/**
- * Obtém o token JWT de qualquer fonte disponível
- */
-export function getToken(): string | null {
-  if (typeof globalThis.window === "undefined") return null;
-  return sessionStorage.getItem("jwt_token") || lerTokenCookie();
+export async function obterCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  const response = await fetch(`${API_BASE_URL}/auth/csrf`, { credentials: "include", cache: "no-store" });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.token) throw new Error("Não foi possível iniciar uma sessão segura.");
+  const token = String(data.token);
+  csrfToken = token;
+  return token;
 }
 
 // ===================== Fetch autenticado =====================
 
 /**
- * Fetch com token JWT no header Authorization.
+ * Fetch autenticado por cookie HttpOnly, com proteção CSRF em mutações.
  * Retorna Response - use para quando precisar verificar status manualmente.
  */
 export async function fetchAuth(path: string, options: RequestInit = {}): Promise<Response> {
-  const token = getToken();
-
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string> ?? {}),
   };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token.trim()}`;
+  const method = (options.method ?? "GET").toUpperCase();
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+    headers["X-CSRF-TOKEN"] = await obterCsrfToken();
   }
 
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
@@ -144,31 +106,26 @@ export async function fetchAuthJson<T>(path: string, options: RequestInit = {}):
 // ===================== Funções de Auth =====================
 
 /**
- * Login com email e senha.
- * O backend retorna o token no body — salvamos como cookie no frontend.
+ * Login com e-mail e senha. A credencial permanece apenas no cookie HttpOnly.
  */
 export async function login(email: string, senha: string): Promise<Usuario> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": await obterCsrfToken() },
     body: JSON.stringify({ email, senha }),
     credentials: "include",
   });
-
-  if (response.status === 403) throw new Error("PLANO_INATIVO");
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(data?.erro || data?.mensagem || "Falha no login.");
   }
 
-  // Salva token no cookie do frontend
-  if (data?.token) {
-    salvarTokenCookie(data.token);
-  }
+  // O Spring rotaciona/invalida o CSRF token ao autenticar.
+  csrfToken = null;
 
   return {
-    id:             data.id,
+    id:             data.id ?? 0,
     nome:           data.nome,
     email:          data.email,
     foto:           data.foto || undefined,
@@ -196,6 +153,7 @@ export async function cadastrar(
 
   const response = await fetch(`${API_BASE_URL}/auth/cadastro`, {
     method: "POST",
+    headers: { "X-CSRF-TOKEN": await obterCsrfToken() },
     body: formData,
     credentials: "include",
   });
@@ -213,27 +171,25 @@ export async function logout(): Promise<void> {
   // 1. Chama o backend primeiro (enquanto ainda tem o token)
   await fetch(`${API_BASE_URL}/auth/logout`, {
     method: "POST",
+    headers: { "X-CSRF-TOKEN": await obterCsrfToken() },
     credentials: "include",
   }).catch(() => {});
 
   // 2. Limpa tudo localmente
   removerTokenCookie();
-  localStorage.clear();
-  sessionStorage.clear();
+  localStorage.removeItem("token");
+  localStorage.removeItem("access_token");
+  csrfToken = null;
 }
 
 /**
  * Obtém dados do usuário autenticado.
- * Envia o JWT via header Authorization (cross-domain) e credentials (same-domain).
+ * O navegador envia somente o cookie HttpOnly definido pelo backend.
  */
 export async function getUsuario(): Promise<Usuario> {
   const response = await fetchAuth("/api/usuario");
 
   if (response.status === 401 || response.status === 403) {
-    // Plano inativo — redireciona para pagamento
-    if (response.status === 403 && typeof globalThis.window !== "undefined") {
-      globalThis.window.location.href = "/pagamento";  
-    }
     throw new Error(response.status === 403 ? "PLANO_INATIVO" : "NAO_AUTENTICADO");
   }
 

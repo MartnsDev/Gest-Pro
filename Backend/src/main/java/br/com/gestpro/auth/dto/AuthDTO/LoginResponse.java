@@ -3,11 +3,11 @@ package br.com.gestpro.auth.dto.AuthDTO;
 import br.com.gestpro.plano.TipoPlano;
 
 public record LoginResponse(
-        String token,
+        Long id,
         String nome,
         String email,
         TipoPlano tipoPlano,
-        String foto
-        // StatusAcesso statusAcesso
-) {
-}
+        String foto,
+        String statusAcesso,
+        String expiracaoPlano
+) {}

@@ -83,10 +83,9 @@ export default function NovoProduto({ empresaId, onClose, onConcluido }: Props) 
   useEffect(() => {
     const carregarCategorias = async () => {
       try {
-        const token = sessionStorage.getItem("jwt_token") ?? document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? "";
         const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
         const res = await fetch(`${base}/api/v1/produtos?empresaId=${empresaId}`, {
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+          credentials: "include",
         });
         if (res.ok) {
           const prods = await res.json();
@@ -115,14 +114,13 @@ export default function NovoProduto({ empresaId, onClose, onConcluido }: Props) 
     
     setSaving(true);
     try {
-      const token = sessionStorage.getItem("jwt_token") ?? document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? "";
       const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
       
       const res = await fetch(`${base}/api/v1/produtos`, {
         method: "POST",
+        credentials: "include",
         headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           empresaId,

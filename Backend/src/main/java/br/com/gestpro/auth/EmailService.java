@@ -2,15 +2,12 @@ package br.com.gestpro.auth;
 
 import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-
-import static com.stripe.Stripe.apiKey;
 
 @Service
 public class EmailService {
@@ -25,7 +22,7 @@ public class EmailService {
             <head>
               <meta charset="UTF-8"/>
               <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-              <title>GestPro</title>
+              <title>Gevyro</title>
               <!--[if mso]><noscript><xml><o:OfficeDocumentSettings>
               <o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings>
               </xml></noscript><![endif]-->
@@ -51,7 +48,11 @@ public class EmailService {
                                          border-radius:14px;padding:10px 22px;">
                                 <span style="font-size:22px;font-weight:800;color:#ffffff;
                                              letter-spacing:1.5px;font-family:'Segoe UI',sans-serif;">
-                                  gest<span style="color:#a5f3fc;">pro</span>
+                                  GEVYRO
+                                </span>
+                                <span style="display:block;margin-top:4px;font-size:10px;
+                                             font-weight:600;color:#d1fae5;letter-spacing:0.8px;">
+                                  Gestão em evolução.
                                 </span>
                               </td>
                             </tr>
@@ -78,7 +79,7 @@ public class EmailService {
                                style="color:#6c63ff;text-decoration:none;">suporte@gestpro.site</a>
                           </p>
                           <p style="margin:0;font-size:11px;color:#333350;">
-                            © 2026 GestPro · Este e-mail é automático, não responda diretamente.
+                            © 2026 Gevyro · Este e-mail é automático, não responda diretamente.
                           </p>
                         </td>
                       </tr>
@@ -105,13 +106,12 @@ public class EmailService {
     }
 
     //  EMAIL GENÉRICO
-    @Async
     public void enviarEmail(String to, String nomeUsuario, String subject, String body) {
         String nome = (nomeUsuario != null && !nomeUsuario.isBlank()) ? nomeUsuario : "usuário";
 
         String corpo = hero(
                 "linear-gradient(135deg,#6c63ff 0%%,#3b82f6 100%%)",
-                "📩", "Você tem uma mensagem", "GestPro · Comunicado"
+                "📩", "Você tem uma mensagem", "Gevyro · Comunicado"
         ) + """
             <div style="padding:32px;color:#c8c8e0;">
               <p style="margin:0 0 16px;font-size:16px;color:#e0e0f0;">
@@ -131,11 +131,11 @@ public class EmailService {
     }
 
     //  CONFIRMAÇÃO DE CONTA
-    @Async
+    @org.springframework.scheduling.annotation.Async
     public void enviarConfirmacao(String emailDestino, String linkConfirmacao) {
         String corpo = hero(
                 "linear-gradient(135deg,#10b981 0%%,#059669 100%%)",
-                "🚀", "Bem-vindo ao GestPro!", "Você está a um clique de começar"
+                "🚀", "Bem-vindo ao Gevyro!", "Você está a um clique de começar"
         ) + """
             <div style="padding:36px 32px;">
               <p style="margin:0 0 12px;font-size:16px;color:#e0e0f0;line-height:1.6;">
@@ -179,12 +179,12 @@ public class EmailService {
             </div>
         """.formatted(linkConfirmacao, linkConfirmacao);
 
-        enviarHtml(emailDestino, "Confirme seu e-mail · GestPro",
-                templateBase("Ative sua conta GestPro — clique para confirmar seu e-mail.", corpo));
+        enviarHtml(emailDestino, "Confirme seu e-mail · Gevyro",
+                templateBase("Ative sua conta Gevyro — clique para confirmar seu e-mail.", corpo));
     }
 
     //  CÓDIGO DE VERIFICAÇÃO — exibição grande + botão copiar via JS
-    @Async
+    @org.springframework.scheduling.annotation.Async
     public void enviarCodigoConfirmacao(String emailDestino, String nomeUsuario, String codigo) {
         String nome = (nomeUsuario != null && !nomeUsuario.isBlank()) ? nomeUsuario : "usuário";
 
@@ -211,7 +211,7 @@ public class EmailService {
                 Olá, <strong style="color:#ffffff;">%s</strong>!
               </p>
               <p style="margin:0 0 28px;font-size:14px;color:#7070a0;line-height:1.6;">
-                Seu código de verificação GestPro está abaixo.
+                Seu código de verificação Gevyro está abaixo.
                 Digite-o na tela para continuar.
               </p>
 
@@ -270,8 +270,8 @@ public class EmailService {
             </div>
         """.formatted(nome, digitos.toString(), codigo);
 
-        enviarHtml(emailDestino, "Seu código de verificação · GestPro",
-                templateBase("Seu código GestPro: " + codigo + " — expira em 10 minutos.", corpo));
+        enviarHtml(emailDestino, "Seu código de verificação · Gevyro",
+                templateBase("Seu código Gevyro: " + codigo + " — expira em 10 minutos.", corpo));
     }
 
     //  ENVIO CENTRAL via Resend API
@@ -279,13 +279,10 @@ public class EmailService {
         if (resendApiKey == null || resendApiKey.isBlank()) {
             throw new RuntimeException("RESEND_API_KEY não configurada no ambiente");
         }
-        if (apiKey == null || apiKey.isEmpty()) {
-            return;
-        }
         try {
             String json = """
                 {
-                    "from": "GestPro <suporte@gestpro.site>",
+                    "from": "Gevyro <suporte@gestpro.site>",
                     "to": ["%s"],
                     "subject": "%s",
                     "html": %s
@@ -303,7 +300,11 @@ public class EmailService {
                     .send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200 || response.statusCode() == 201) {
-                System.out.println("✅ E-mail enviado para " + to + " | Status: " + response.statusCode());
+                System.out.println(
+                        "✅ E-mail aceito pelo Resend para " + to
+                                + " | Status: " + response.statusCode()
+                                + " | Resposta: " + response.body()
+                );
             } else {
                 throw new RuntimeException("Resend recusou: " + response.statusCode() + " - " + response.body());
             }

@@ -23,7 +23,7 @@
     <artifactId>gestpro-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>gestpro-backend</name>
-    <description>Backend do GestPro — Sistema de gestão de lojas com estoque, vendas e produtos</description>
+	<description>Backend da Gevyro — Gestão em evolução para lojas, estoque, vendas e produtos</description>
 
     <!-- ══════════════════════════════════════════
          PROPRIEDADES GLOBAIS

@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,39 +40,32 @@ public class CadastroManualOperation {
     }
 
     @Transactional
-    public Usuario execute(String nome, String email, String senha,
-                           MultipartFile foto, String baseUrl, String path) throws IOException {
+    public Usuario execute(
+            String nome,
+            String email,
+            String senha,
+            MultipartFile foto,
+            String baseUrl,
+            String path
+    ) throws IOException {
+
+        email = email.trim().toLowerCase(Locale.ROOT);
 
         Optional<Usuario> existenteOpt = usuarioRepository.findByEmail(email);
 
         if (existenteOpt.isPresent()) {
             Usuario existente = existenteOpt.get();
 
-            //  Conta criada via Google -> converter para manual
-            if (existente.isLoginGoogle()) {
-                atualizarUsuarioGoogleExistente(existente, nome, senha, foto);
-                usuarioRepository.save(existente);
-                enviarEmailConfirmacao(existente, baseUrl);
-                return existente;
-            }
-
-            //  Já existe mas não confirmou → reenviar email
-            if (!existente.isEmailConfirmado()) {
+            if (!existente.isEmailConfirmado() && !existente.isLoginGoogle()) {
                 renovarTokenConfirmacao(existente);
                 usuarioRepository.save(existente);
                 enviarEmailConfirmacao(existente, baseUrl);
-                return existente;
             }
 
-            //  Já existe e está ativo
-            throw new ApiException(
-                    "E-mail já cadastrado.",
-                    HttpStatus.BAD_REQUEST,
-                    path
-            );
+            // Retorno propositalmente indistinguível para o controller.
+            return existente;
         }
 
-        //  Novo cadastro
         Usuario usuario = criarNovoUsuario(nome, email, senha, foto);
         usuarioRepository.save(usuario);
         enviarEmailConfirmacao(usuario, baseUrl);

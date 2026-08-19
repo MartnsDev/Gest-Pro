@@ -80,11 +80,10 @@ export function Sidebar({
           overflow: "hidden",
         }}
       >
-        <img src="/favicon.png" alt="GestPro" width={28} height={28} style={{ flexShrink: 0 }} />
+        <img src="/gevyro-fav.png" alt="Gevyro" width={28} height={28} style={{ flexShrink: 0 }} />
         {!collapsed && (
-          <span style={{ fontWeight: 700, fontSize: 16, color: "var(--foreground)", whiteSpace: "nowrap" }}>
-            <span style={{ color: "var(--foreground)" }}>Gest</span>
-            <span style={{ color: "var(--primary)" }}>Pro</span>
+          <span style={{ fontWeight: 750, fontSize: 16, color: "var(--foreground)", letterSpacing: "-0.035em", whiteSpace: "nowrap" }}>
+            Gevyro
           </span>
         )}
       </div>

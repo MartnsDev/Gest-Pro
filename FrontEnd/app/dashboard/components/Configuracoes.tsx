@@ -32,6 +32,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Perfil {
@@ -439,8 +440,8 @@ function FormularioSuporte({ nomeUsuario, emailUsuario }: { nomeUsuario: string;
       toast.error("Preencha o assunto e a mensagem");
       return;
     }
-    const assuntoFull = `[GestPro - ${categoria}] ${assunto}`;
-    const corpo = [`Nome: ${nomeUsuario}`, `E-mail: ${emailUsuario}`, `Categoria: ${categoria}`, ``, `Mensagem:`, mensagem, ``, `---`, `Enviado via GestPro`].join("\n");
+    const assuntoFull = `[Gevyro - ${categoria}] ${assunto}`;
+    const corpo = [`Nome: ${nomeUsuario}`, `E-mail: ${emailUsuario}`, `Categoria: ${categoria}`, ``, `Mensagem:`, mensagem, ``, `---`, `Enviado via Gevyro`].join("\n");
     globalThis.window.location.href = `mailto:gestprosuporte@gmail.com?subject=${encodeURIComponent(assuntoFull)}&body=${encodeURIComponent(corpo)}`;
     setEnviado(true);
     setTimeout(() => setEnviado(false), 4000);
@@ -783,6 +784,16 @@ export default function Configuracoes({
       {/* ── NOTIFICAÇÕES ───────────────────────────────────────────────── */}
       {abaAtiva === "notificacoes" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Secao titulo="Aparência" sub="Escolha como o Gevyro aparece neste dispositivo" icon={<Eye size={18} />}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "4px 0" }}>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)", margin: 0 }}>Tema da interface</p>
+                <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "3px 0 0" }}>Alterne entre o modo Dia e o modo Noite. Sua escolha fica salva automaticamente.</p>
+              </div>
+              <ThemeToggle />
+            </div>
+          </Secao>
+
           <Secao titulo="Alertas no Dashboard Home" sub="Controle quais avisos aparecem na tela inicial" icon={<LayoutDashboard size={18} />}>
             <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
               {[
@@ -834,7 +845,7 @@ export default function Configuracoes({
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           
           {/* Seção Como Usar */}
-          <Secao titulo="Como Usar o GestPro" sub="Primeiros passos e atalhos rápidos" icon={<BookOpen size={18} />}>
+          <Secao titulo="Como Usar o Gevyro" sub="Primeiros passos e atalhos rápidos" icon={<BookOpen size={18} />}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
               {[
                 { title: "Cadastrar Produtos", desc: "Acesse a aba 'Produtos' no menu lateral e adicione seu inventário com códigos de barra para facilitar a venda." },
@@ -857,7 +868,7 @@ export default function Configuracoes({
           <Secao titulo="Central de Ajuda" sub="Fale diretamente com nossa equipe técnica" icon={<HeadphonesIcon size={18} />}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 20 }}>
               {[
-                { chave: "whatsapp", label: "WhatsApp", valor: "(11) 93264-9629", cor: "#25d366", href: `https://wa.me/5511932649629?text=${encodeURIComponent("Olá! Preciso de suporte no GestPro.")}`, sub: "Atendimento Rápido", icon: <MessageCircle size={20} color="#25d366" /> },
+                { chave: "whatsapp", label: "WhatsApp", valor: "(11) 93264-9629", cor: "#25d366", href: `https://wa.me/5511932649629?text=${encodeURIComponent("Olá! Preciso de suporte no Gevyro.")}`, sub: "Atendimento Rápido", icon: <MessageCircle size={20} color="#25d366" /> },
                 { chave: "email", label: "E-mail", valor: "gestprosuporte@gmail.com", cor: "#3b82f6", href: "mailto:gestprosuporte@gmail.com", sub: "Dúvidas e Financeiro", icon: <Mail size={20} color="#3b82f6" /> },
               ].map((canal) => (
                 <a key={canal.chave} href={canal.href} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 12, textDecoration: "none", transition: "transform .2s, border-color .2s" }} onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = canal.cor; }} onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = "var(--border)"; }}>
@@ -879,7 +890,7 @@ export default function Configuracoes({
           <Secao titulo="Perguntas Frequentes" sub="Soluções rápidas para as dúvidas mais comuns" icon={<HelpCircle size={18} />}>
             {[
               { p: "Como faço upgrade de plano?", r: "Entre em contato via e-mail ou WhatsApp solicitando a mudança. A ativação é feita no mesmo dia." },
-              { p: "Posso cancelar meu plano a qualquer momento?", r: "Sim. O GestPro não possui fidelidade. Seu acesso ficará ativo até o fim do ciclo pago." },
+              { p: "Posso cancelar meu plano a qualquer momento?", r: "Sim. O Gevyro não possui fidelidade. Seu acesso ficará ativo até o fim do ciclo pago." },
               { p: "Como exporto meus relatórios para enviar ao contador?", r: "Acesse a aba 'Relatórios' e clique no botão de exportar (CSV ou PDF). Você também pode exportar os XMLs direto na aba de Notas Fiscais." },
               { p: "Meus dados e os dos meus clientes estão seguros?", r: "Sim. O sistema utiliza criptografia de ponta a ponta e todos os dados ficam salvos em servidores na nuvem com rotinas de backup diário." },
             ].map((item, i) => (
@@ -893,7 +904,7 @@ export default function Configuracoes({
               <div style={{ padding: "16px", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <p style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>Termos de Uso e Serviço</p>
-                  <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "4px 0 0" }}>Regras de utilização do software GestPro.</p>
+                  <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "4px 0 0" }}>Regras de utilização do software Gevyro.</p>
                 </div>
                 <button 
                   onClick={() => window.open('/termos', '_blank')} 
@@ -919,7 +930,7 @@ export default function Configuracoes({
                <div style={{ padding: "16px", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <p style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>Como Usar</p>
-                  <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "4px 0 0" }}>Como usar o GestPro.</p>
+                  <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "4px 0 0" }}>Como usar o Gevyro.</p>
                 </div>
                 <button 
                   onClick={() => window.open('/como-usar', '_blank')}
@@ -933,7 +944,7 @@ export default function Configuracoes({
           </Secao>
 
           <div style={{ textAlign: "center", padding: "12px 0" }}>
-            <p style={{ fontSize: 12, color: "var(--foreground-subtle)", margin: 0 }}>GestPro SaaS v1.0.0 · Feito com ❤️ no Brasil</p>
+            <p style={{ fontSize: 12, color: "var(--foreground-subtle)", margin: 0 }}>Gevyro SaaS v1.0.0 · CNPJ 68.259.534/0001-70 · Desenvolvido no Brasil</p>
           </div>
         </div>
       )}

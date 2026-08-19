@@ -37,7 +37,7 @@ export function AuthLayout({
               <div className={styles.authIllustrationImage}>
                 <Image
                   src="/img-login-new.png"
-                  alt="Ilustração GestPro"
+                  alt="Ilustração Gevyro"
                   width={600}
                   height={600}
                   className="object-contain w-full h-auto"
@@ -53,11 +53,11 @@ export function AuthLayout({
               {/* Logo */}
               <div className={styles.authLogo}>
                 <Image
-                  src="/logo-gestpro.png"
-                  alt="GestPro"
-                  width={10}
-                  height={54}
-                  className="object-contain w-40 md:w-48 lg:w-52 h-auto"
+                  src="/images/gevyro-logo.png"
+                  alt="Gevyro"
+                  width={2083}
+                  height={755}
+                  className="h-auto w-[200px] object-contain"
                 />
               </div>
 

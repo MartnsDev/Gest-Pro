@@ -3,7 +3,6 @@ package br.com.gestpro.auth.controller;
 import br.com.gestpro.auth.dto.AuthDTO.CadastroRequestDTO;
 import br.com.gestpro.auth.dto.AuthDTO.LoginResponse;
 import br.com.gestpro.auth.dto.AuthDTO.LoginUsuarioDTO;
-import br.com.gestpro.auth.model.Usuario;
 import br.com.gestpro.auth.service.AuthenticationService;
 import br.com.gestpro.infra.exception.ApiException;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,90 +10,90 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
 
     private final AuthenticationService authService;
-
-    private final String URL_FRONTEND, baseUrl;
+    private final String frontendUrl;
+    private final String baseUrl;
 
     public AuthController(
             AuthenticationService authService,
-            @Value("${app.frontend.url}") String urlFrontend,
+            @Value("${app.frontend.url}") String frontendUrl,
             @Value("${app.base-url}") String baseUrl
     ) {
         this.authService = authService;
-        this.URL_FRONTEND = urlFrontend;
+        this.frontendUrl = frontendUrl;
         this.baseUrl = baseUrl;
     }
 
-
-    // Cadastro manual
-    @PostMapping(value = "/cadastro", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> cadastrarUsuario(@Valid @ModelAttribute CadastroRequestDTO request,
-                                              BindingResult bindingResult) throws IOException {
-
-        if (bindingResult.hasErrors()) {
-            Map<String, String> erros = bindingResult.getFieldErrors()
-                    .stream()
-                    .collect(Collectors.toMap(
-                            fe -> fe.getField(),
-                            fe -> fe.getDefaultMessage()
-                    ));
-            return ResponseEntity.badRequest().body(erros);
-        }
-
-        Usuario retornoUsuario = authService.cadastrarManual(
+    @PostMapping(
+            value = "/cadastro",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<Map<String, Object>> cadastrarUsuario(
+            @Valid @ModelAttribute CadastroRequestDTO request
+    ) throws IOException {
+        authService.cadastrarManual(
                 request.getNome(),
-                request.getEmail(),
+                request.getEmail().trim().toLowerCase(),
                 request.getSenha(),
                 request.getFoto(),
                 baseUrl,
                 "/auth/cadastro"
         );
 
+
         return ResponseEntity.ok(Map.of(
-                "mensagem", "Cadastro realizado! Verifique seu e-mail para confirmar a conta.",
-                "usuarioId", retornoUsuario.getId(),
-                "nome", retornoUsuario.getNome()
+                "sucesso", true,
+                "mensagem",
+                "Se o endereço puder ser cadastrado, enviaremos uma confirmação por e-mail."
         ));
     }
 
-
-    // Confirmar e-mail
     @GetMapping("/confirmar")
-    public void confirmarEmail(@RequestParam String token, HttpServletResponse response) throws IOException {
+    public void confirmarEmail(
+            @RequestParam String token,
+            HttpServletResponse response
+    ) throws IOException {
+        String destino;
+
         try {
             boolean confirmado = authService.confirmarEmail(token);
-            String status = confirmado ? "sucesso" : "erro";
-            response.sendRedirect(URL_FRONTEND + "/confirmar-email?status=" + status);
-        } catch (ApiException e) {
-            response.sendRedirect(URL_FRONTEND + "/confirmar-email?status=erro&motivo=usuario-confirmado-ou-token-expirado");
+            destino = frontendUrl + "/confirmar-email?status="
+                    + (confirmado ? "sucesso" : "erro");
+        } catch (ApiException exception) {
+            destino = frontendUrl
+                    + "/confirmar-email?status=erro&motivo="
+                    + URLEncoder.encode(
+                    "token-invalido-ou-expirado",
+                    StandardCharsets.UTF_8
+            );
         }
+
+        response.sendRedirect(destino);
     }
 
-    //Login Manual
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> loginUsuario(
-            @RequestBody LoginUsuarioDTO loginRequest,
-            HttpServletResponse response) {
-
-        LoginResponse loginResponse = authService.loginManual(
-                loginRequest.email(),
-                loginRequest.senha(),
-                "/auth/login",
-                response
+            @Valid @RequestBody LoginUsuarioDTO request,
+            HttpServletResponse response
+    ) {
+        return ResponseEntity.ok(
+                authService.loginManual(
+                        request.email(),
+                        request.senha(),
+                        "/auth/login",
+                        response
+                )
         );
-
-        return ResponseEntity.ok(loginResponse);
     }
 }
-
