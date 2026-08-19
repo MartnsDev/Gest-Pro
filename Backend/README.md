@@ -1,386 +1,435 @@
+<div align="center">
+
+<img src="Img/gestpro-img.jpg" alt="Gevyro" width="90" />
+
 # Gevyro
 
-**Gestão em evolução.**
+### Gestão em evolução.
 
-Sistema completo de gestão para mercados e lojas que desenvolvi utilizando Next.js 14+ no frontend e Spring Boot 3 no backend.
+Plataforma de gestão empresarial para centralizar vendas, estoque, caixa, clientes e informações importantes da operação em um único ambiente.
 
-[![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red.svg)](LICENSE)
+<br />
 
-## 📋 Sobre o Projeto
+[![Java](https://img.shields.io/badge/Java-17%2B-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Next.js](https://img.shields.io/badge/Next.js-14%2B-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5%2B-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8%2B-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red?style=flat-square)](LICENSE)
 
-Desenvolvi a Gevyro como uma solução completa para gestão comercial, implementando funcionalidades essenciais como controle de produtos, estoque, vendas, clientes e relatórios, tudo através de uma interface moderna e intuitiva.
+<br />
 
-### O que implementei
+[Visão geral](#visão-geral) · [Produto](#produto) · [Interface](#interface) · [Arquitetura](#arquitetura) · [Tecnologias](#tecnologias) · [Desenvolvimento](#desenvolvimento-local) · [API](#api) · [Segurança](#segurança)
 
-- **Sistema de autenticação completo**: Criei login com email/senha e integração com OAuth2 do Google
-- **Gestão de usuários**: Implementei cadastro, recuperação de senha e confirmação por email
-- **Controle de acesso**: Desenvolvi sistema de planos (EXPERIMENTAL/ASSINANTE) e gerenciamento de status de usuário
-- **Dashboard interativo**: Construí uma visão geral com atalhos rápidos para as principais funcionalidades
-- **Módulo comercial**: Desenvolvi a gestão completa de produtos, estoque, vendas e clientes
-- **Sistema de relatórios**: Implementei análises e indicadores de performance
+</div>
 
+## Visão geral
 
-## 🚀 Tecnologias que Utilizei
+A Gevyro é uma plataforma de gestão empresarial desenvolvida para tornar mais simples o acompanhamento da operação de um negócio.
 
-### Frontend
-Construí a interface do usuário utilizando:
-- **Next.js 14+** com App Router
-- **TypeScript** para tipagem estática
-- **Tailwind CSS** para estilização responsiva
-- **shadcn/ui** como biblioteca de componentes
-- **Lucide Icons** para ícones
+O sistema concentra informações que normalmente ficam distribuídas entre planilhas, anotações e ferramentas diferentes. Vendas, produtos, estoque, movimentações de caixa, clientes e indicadores passam a fazer parte de um mesmo fluxo.
+
+A proposta da Gevyro é permitir que os dados gerados durante a operação sejam utilizados para acompanhar o negócio e apoiar decisões.
+
+O projeto possui frontend desenvolvido com Next.js e TypeScript e uma API construída com Java e Spring Boot. A aplicação utiliza MySQL para persistência dos dados e possui autenticação com Spring Security, JWT e OAuth2.
+
+## Produto
+
+A operação da Gevyro é organizada em torno da empresa do usuário.
+
+Cada empresa possui seus próprios produtos, clientes, caixas, vendas e informações operacionais. Essa separação permite utilizar uma mesma conta para administrar empresas diferentes sem misturar seus dados.
+
+### Vendas e PDV
+
+O módulo de vendas funciona como frente de caixa da aplicação.
+
+É possível localizar produtos, adicionar itens à venda, informar descontos, selecionar formas de pagamento e concluir a operação pelo próprio sistema.
+
+O PDV suporta pagamento utilizando até duas formas na mesma venda. Quando necessário, o sistema calcula o troco automaticamente.
+
+As vendas concluídas passam a integrar o histórico da empresa e alimentam os indicadores utilizados pelo dashboard e pelos relatórios.
+
+Também existe suporte ao cancelamento de vendas, com restituição dos itens ao estoque conforme as regras implementadas pela aplicação.
+
+### Caixa
+
+A Gevyro possui controle de abertura e fechamento de caixa.
+
+As vendas ficam relacionadas ao caixa responsável pela operação, permitindo consultar movimentações e obter um resumo do período.
+
+Empresas que possuam acesso a múltiplos caixas podem manter essas operações separadas.
+
+### Produtos e estoque
+
+Produtos podem ser cadastrados com informações como nome, categoria, unidade, código de barras, preço de custo, preço de venda e quantidade disponível.
+
+Durante o cadastro, a aplicação consegue apresentar informações como lucro unitário e margem com base nos valores informados.
+
+Quando uma venda é registrada, o estoque correspondente é atualizado.
+
+O sistema também utiliza estoque mínimo para identificar produtos que precisam de atenção.
+
+### Clientes e fornecedores
+
+A Gevyro mantém um cadastro centralizado de contatos comerciais.
+
+Clientes e fornecedores podem ser diferenciados dentro do sistema e possuir informações específicas de acordo com seu tipo.
+
+Clientes também podem ser associados às vendas realizadas.
+
+### Dashboard
+
+O dashboard transforma os registros da operação em uma visão resumida da empresa.
+
+Informações de vendas, produtos, estoque e outros indicadores ficam disponíveis em uma interface visual para facilitar o acompanhamento da operação.
+
+### Relatórios
+
+A área de relatórios permite analisar diferentes períodos da operação.
+
+Entre as informações disponíveis estão receita, lucro estimado, ticket médio, vendas, cancelamentos, produtos vendidos e formas de pagamento.
+
+Os dados podem ser apresentados por meio de indicadores e gráficos.
+
+A aplicação também possui recursos de exportação em formatos como CSV e HTML, além da possibilidade de geração de PDF utilizando os recursos de impressão do navegador.
+
+### Múltiplas empresas
+
+Uma conta pode possuir mais de uma empresa conforme as regras do plano contratado.
+
+Os registros operacionais são associados à empresa correspondente.
+
+A empresa ativa pode ser selecionada pela interface para que o usuário alterne entre diferentes operações sem precisar utilizar contas separadas.
+
+### Conta e configurações
+
+A área de configurações concentra informações relacionadas à conta, perfil e acesso.
+
+Entre os recursos implementados estão atualização de informações do perfil, foto, alteração de senha mediante código enviado por email, informações sobre o plano e preferências disponíveis na aplicação.
+
+## Interface
+
+<table>
+<tr>
+<td align="center" width="50%">
+<img src="Img/lading-gp-dark.png" alt="Página inicial da Gevyro" />
+<br />
+<sub><b>Apresentação e acesso à plataforma</b></sub>
+</td>
+<td align="center" width="50%">
+<img src="Img/dashboard-gp-dark.png" alt="Dashboard da Gevyro" />
+<br />
+<sub><b>Visão geral da operação</b></sub>
+</td>
+</tr>
+<tr>
+<td align="center" width="50%">
+<img src="Img/vendas-gp-dark.png" alt="PDV da Gevyro" />
+<br />
+<sub><b>Vendas e frente de caixa</b></sub>
+</td>
+<td align="center" width="50%">
+<img src="Img/relatorios-gp-dark.png" alt="Relatórios da Gevyro" />
+<br />
+<sub><b>Indicadores e relatórios</b></sub>
+</td>
+</tr>
+</table>
+
+## Arquitetura
+
+A aplicação é dividida entre frontend e backend.
+
+O frontend é responsável pela experiência do usuário, navegação, dashboard, PDV, visualização de dados e comunicação com a API.
+
+O backend concentra autenticação, autorização, regras de negócio, persistência e acesso aos dados.
+
+```text
+Gevyro
+
+FrontEnd
+    Next.js
+    TypeScript
+    App Router
+
+    Interface pública
+    Autenticação
+    Dashboard
+    Empresas
+    Caixa
+    Produtos
+    Vendas
+    Clientes
+    Relatórios
+    Configurações
+
+Backend
+    Java
+    Spring Boot
+    Spring Security
+    Spring Data JPA
+
+    Autenticação
+    Usuários
+    Empresas
+    Caixa
+    Produtos
+    Vendas
+    Clientes
+    Analytics
+    Configurações
+    Infraestrutura
+
+Database
+    MySQL
+```
+
+### Organização dos dados
+
+```text
+Usuário
+    Empresa
+        Caixa
+            Venda
+                Item da venda
+                    Produto
+
+        Produto
+        Cliente
+```
+
+Essa organização permite manter vendas, caixas, produtos e clientes relacionados à empresa responsável pela operação.
+
+## Autenticação
+
+A autenticação da aplicação é processada pelo backend com Spring Security.
+
+O acesso pode ocorrer pelas formas habilitadas na aplicação, incluindo autenticação convencional e OAuth2 com Google.
+
+Após uma autenticação válida, o backend emite o JWT utilizado pela sessão.
+
+```text
+Usuário realiza o login
+
+Backend valida as credenciais
+
+Spring Security processa a autenticação
+
+JWT é emitido
+
+Cookie HttpOnly mantém a sessão
+
+Frontend envia as requisições com credenciais
+
+Backend valida a sessão antes de acessar recursos protegidos
+```
+
+## Tecnologias
 
 ### Backend
-Desenvolvi a API e regras de negócio com:
-- **Java 17+**
-- **Spring Boot 3.x**
-- **Spring Security** implementando autenticação JWT
-- **OAuth2** para integração com login do Google
-- **MySQL 8+** como banco de dados
-- **Redis** para sistema de caching
-- **Maven** para gerenciamento de dependências
-- **Swagger** para documentação automática da API
 
-## 📂 Como Organizei o Projeto
+| Tecnologia | Utilização |
+| :--- | :--- |
+| Java 17 | Linguagem principal do backend |
+| Spring Boot 3 | Estrutura da API |
+| Spring Security 6 | Autenticação e autorização |
+| Spring Data JPA | Persistência e repositórios |
+| Hibernate | Mapeamento objeto relacional |
+| MySQL 8 | Banco de dados relacional |
+| JJWT | Implementação dos tokens JWT |
+| OAuth2 | Autenticação com Google |
+| Jakarta Validation | Validação das entradas da API |
+| JavaMailSender | Comunicação por email |
+| Maven | Dependências e build |
 
-```
-GestPro/
-├── frontend/          # Interface do usuário (Next.js)
-├── backend/           # API e lógica de negócio (Spring Boot)
-├── Img/               # Imagens utilizadas neste README
-└── README.md
-```
+### Frontend
 
-## 🚀 Como Rodar o Projeto
+| Tecnologia | Utilização |
+| :--- | :--- |
+| Next.js 14 | Framework da aplicação web |
+| React | Construção da interface |
+| TypeScript | Tipagem do frontend |
+| Tailwind CSS | Estilização |
+| Recharts | Visualização de dados |
+| Lucide React | Iconografia |
+| Sonner | Notificações da interface |
 
-### Pré-requisitos
+## Desenvolvimento local
 
-Para rodar o projeto, você vai precisar de:
-- **Java 17+**
-- **Node.js 18+**
-- **MySQL 8+**
-- **Redis** (opcional, para caching)
-- **Maven** (já incluído no projeto)
+### Requisitos
 
-### Instalação Rápida
+Java 17 ou superior.
+
+Node.js 18 ou superior.
+
+MySQL 8 ou superior.
+
+Maven compatível com o projeto.
+
+Git.
+
+### Repositório
 
 ```bash
-# 1. Clone o repositório
 git clone https://github.com/MartnsDev/Gest-Pro.git
-cd GestPro
+cd Gest-Pro
+```
 
-# 2. Configure as variáveis de ambiente (veja a seção abaixo)
+### Backend
 
-# 3. Crie o banco de dados
-mysql -u root -p -e "CREATE DATABASE gestpro_db;"
+```bash
+cd Backend
+mvn spring-boot:run
+```
 
-# 4. Inicie o backend
-cd backend
-./mvnw spring-boot:run
+No ambiente local padrão, a API utiliza a porta 8080.
 
-# 5. Em outro terminal, inicie o frontend
-cd frontend
+```text
+http://localhost:8080
+```
+
+### Frontend
+
+```bash
+cd FrontEnd
 npm install
 npm run dev
 ```
 
-**Depois de iniciar, acesse:**
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8080`
-- Documentação Swagger: `http://localhost:8080/swagger-ui.html`
+Exemplo de variável de ambiente local.
 
----
-
-## ⚙️ Como Configurei as Variáveis de Ambiente
-
-Optei por usar variáveis de ambiente para manter as configurações sensíveis fora do código. **Importante: nunca faça commit de credenciais no código.**
-
-### Configuração no Windows
-
-Se você estiver no Windows, use o PowerShell para definir as variáveis:
-```powershell
-# Database
-setx DB_URL "jdbc:mysql://localhost:3306/gestpro_db"
-setx DB_USERNAME "root"
-setx DB_PASSWORD "sua_senha"
-
-# Server
-setx SERVER_PORT "8080"
-setx APP_BASE_URL "http://localhost:8080"
-
-# JPA/Hibernate
-setx JPA_HBM_DDL "update"
-setx JPA_SHOW_SQL "true"
-setx JPA_FORMAT_SQL "true"
-setx JPA_OPEN_IN_VIEW "false"
-
-# Swagger
-setx SWAGGER_API_DOCS_PATH "/v3/api-docs"
-setx SWAGGER_UI_PATH "/swagger-ui.html"
-
-# JWT
-setx JWT_SECRET "sua_chave_secreta_jwt_minimo_256_bits"
-setx JWT_EXPIRATION "86400000"
-
-# Basic Auth
-setx BASIC_AUTH_USER "admin"
-setx BASIC_AUTH_PASSWORD "admin"
-setx BASIC_AUTH_ROLE "ADMIN"
-
-# OAuth2 Google (ver seção OAuth2)
-setx GOOGLE_CLIENT_ID "seu_client_id"
-setx GOOGLE_CLIENT_SECRET "seu_client_secret"
-setx GOOGLE_SCOPE "openid,email,profile"
-setx GOOGLE_REDIRECT_URI "http://localhost:8080/login/oauth2/code/google"
-setx GOOGLE_AUTH_URI "https://accounts.google.com/o/oauth2/v2/auth"
-setx GOOGLE_TOKEN_URI "https://oauth2.googleapis.com/token"
-setx GOOGLE_USERINFO_URI "https://www.googleapis.com/oauth2/v3/userinfo"
-setx GOOGLE_USERNAME_ATTR "sub"
-
-# Email (ver seção Email)
-setx MAIL_HOST "smtp.gmail.com"
-setx MAIL_PORT "587"
-setx MAIL_USERNAME "seu_email@gmail.com"
-setx MAIL_PASSWORD "senha_de_app_google"
-setx MAIL_SMTP_AUTH "true"
-setx MAIL_SMTP_STARTTLS "true"
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080
 ```
 
-**Observação:** Feche e reabra o terminal para aplicar as variáveis.
+Por padrão, o Next.js disponibiliza a aplicação na porta 3000.
 
----
-
-### Configuração no Linux/macOS
-
-Se você usa Linux ou macOS, edite o arquivo de configuração do shell:
-
-```bash
-nano ~/.bashrc  # ou ~/.zshrc se usar zsh
+```text
+http://localhost:3000
 ```
 
-Adicione as seguintes variáveis:
+Credenciais, chaves JWT, senhas, tokens e segredos de serviços externos não devem ser versionados no repositório.
 
-```bash
-# Database
-export DB_URL="jdbc:mysql://localhost:3306/gestpro_db"
-export DB_USERNAME="root"
-export DB_PASSWORD="sua_senha"
+## API
 
-# Server
-export SERVER_PORT="8080"
-export APP_BASE_URL="http://localhost:8080"
+O backend disponibiliza documentação por OpenAPI e Swagger UI quando esse recurso estiver habilitado no ambiente executado.
 
-# JPA/Hibernate
-export JPA_HBM_DDL="update"
-export JPA_SHOW_SQL="true"
-export JPA_FORMAT_SQL="true"
-export JPA_OPEN_IN_VIEW="false"
-
-# Swagger
-export SWAGGER_API_DOCS_PATH="/v3/api-docs"
-export SWAGGER_UI_PATH="/swagger-ui.html"
-
-# JWT
-export JWT_SECRET="sua_chave_secreta_jwt_minimo_256_bits"
-export JWT_EXPIRATION="86400000"
-
-# Basic Auth
-export BASIC_AUTH_USER="admin"
-export BASIC_AUTH_PASSWORD="admin"
-export BASIC_AUTH_ROLE="ADMIN"
-
-# OAuth2 Google
-export GOOGLE_CLIENT_ID="seu_client_id"
-export GOOGLE_CLIENT_SECRET="seu_client_secret"
-export GOOGLE_SCOPE="openid,email,profile"
-export GOOGLE_REDIRECT_URI="http://localhost:8080/login/oauth2/code/google"
-export GOOGLE_AUTH_URI="https://accounts.google.com/o/oauth2/v2/auth"
-export GOOGLE_TOKEN_URI="https://oauth2.googleapis.com/token"
-export GOOGLE_USERINFO_URI="https://www.googleapis.com/oauth2/v3/userinfo"
-export GOOGLE_USERNAME_ATTR="sub"
-
-# Email
-export MAIL_HOST="smtp.gmail.com"
-export MAIL_PORT="587"
-export MAIL_USERNAME="seu_email@gmail.com"
-export MAIL_PASSWORD="senha_de_app_google"
-export MAIL_SMTP_AUTH="true"
-export MAIL_SMTP_STARTTLS="true"
-```
-
-Aplique as alterações:
-
-```bash
-source ~/.bashrc  # ou source ~/.zshrc
-```
-
----
-
-## 🔐 Integrações que Implementei
-
-### OAuth2 - Login com Google
-
-Implementei a autenticação com Google seguindo estes passos:
-
-#### 1. Criei um Projeto no Google Cloud Console
-
-Acessei o [Google Cloud Console](https://console.cloud.google.com) e criei um novo projeto:
-
-<img src="Img/Create-project_googleAuth.png" alt="Criar Projeto Google" width="600"/>
-
-#### 2. Configurei a OAuth Consent Screen
-
-- Acessei **APIs e serviços → Tela de consentimento OAuth**
-- Selecionei o tipo: **Externo**
-- Preenchi o nome do aplicativo e email de suporte
-
-<img src="Img/Criar-um-cliente-auth.png" alt="Configurar OAuth" width="600"/>
-
-#### 3. Criei as Credenciais OAuth 2.0
-
-- Naveguei até **Credenciais → Criar credenciais → ID do cliente OAuth**
-- Escolhi o tipo: **Aplicativo da Web**
-
-<img src="Img/Criar-id-cliente-Auth.png" alt="Criar ID Cliente" width="600"/>
-
-#### 4. Adicionei a URI de Redirecionamento
-
-Configurei a seguinte URI autorizada:
-```
-http://localhost:8080/login/oauth2/code/google
-```
-
-#### 5. Copiei as Credenciais
-
-Após criar, copiei o **Client ID** e **Client Secret** e configurei nas variáveis de ambiente:
-
-```bash
-GOOGLE_CLIENT_ID="seu_client_id_aqui"
-GOOGLE_CLIENT_SECRET="seu_client_secret_aqui"
-```
-
----
-
-### Sistema de Envio de Email via SMTP
-
-Implementei o envio de emails utilizando Gmail para confirmação de cadastro e recuperação de senha.
-
-#### 1. Ativei a Verificação em Duas Etapas
-
-Primeiro, acessei [Google Account Security](https://myaccount.google.com/security) e ativei a verificação em duas etapas.
-
-#### 2. Gerei uma Senha de Aplicativo
-
-<img src="Img/emailsender-1.png" alt="App Passwords Menu" width="600"/>
-
-Acessei **Senhas de app** e criei uma nova senha:
-
-<img src="Img/emailsender-2.png" alt="Criar App Password" width="600"/>
-
-#### 3. Configurei as Variáveis de Ambiente
-
-Usei a senha gerada (16 caracteres) na variável `MAIL_PASSWORD`:
-
-```bash
-MAIL_USERNAME="seu_email@gmail.com"
-MAIL_PASSWORD="xxxx xxxx xxxx xxxx"  # Senha de app gerada
-```
-
-#### Emails que o Sistema Envia
-
-**Confirmação de Cadastro:**
-
-<img src="Img/Confirmar-email_gestpro.png" alt="Email de Confirmação" width="500"/>
-
-Implementei o envio de um código de 6 dígitos com validade de 10 minutos para ativar a conta.
-
-**Recuperação de Senha:**
-
-<img src="Img/Mudar-senha-Gestpro.png" alt="Email Redefinição de Senha" width="500"/>
-
-Criei um sistema de código temporário para redefinir a senha com segurança.
-
-## 📚 Documentação da API que Criei
-
-Implementei documentação interativa completa utilizando **Swagger/OpenAPI 3.0**.
-
-Para acessar após iniciar o backend:
-```
+```text
 http://localhost:8080/swagger-ui.html
 ```
 
-<img src="Img/Documentação-Swagger.png" alt="Swagger UI" />
+<img src="Img/Documentação-Swagger.png" alt="Documentação da API da Gevyro no Swagger UI" />
 
-### Endpoints que Implementei
+A API está organizada por domínios da aplicação, incluindo autenticação, usuários, empresas, caixas, produtos, vendas, clientes, relatórios e configurações.
 
-- **Autenticação**: Login, cadastro, confirmação de email
-- **Usuário**: Perfil, atualização de dados
-- **Produtos**: CRUD completo
-- **Estoque**: Controle de movimentações
-- **Vendas**: Registro e consulta
-- **Clientes**: Gestão de cadastro
-- **Relatórios**: Dashboards e analytics
+Os contratos disponíveis no Swagger devem ser considerados a referência atual dos endpoints implementados.
 
-## 🔒 Segurança que Implementei
+## Segurança
 
-Implementei diversas camadas de segurança no projeto:
+A segurança da aplicação utiliza recursos do ecossistema Spring.
 
-- **Autenticação JWT** com tokens de refresh
-- **OAuth2** para login social integrado
-- **Senhas criptografadas** utilizando BCrypt
-- **Validação de email obrigatória** para ativar contas
-- **Códigos de verificação** com tempo de expiração
-- **Proteção CSRF** para requisições
-- **Rate limiting** para prevenir abuso da API
+As senhas são armazenadas utilizando BCrypt.
 
-## ⚠️ Pontos Importantes
+A autenticação das áreas protegidas utiliza Spring Security e JWT.
 
-Durante o desenvolvimento deste projeto, algumas decisões e boas práticas se mostraram essenciais para manter o sistema seguro, escalável e próximo de um ambiente real de produção:
+O token da sessão pode ser armazenado em cookie HttpOnly, evitando acesso direto pelo JavaScript do navegador.
 
-- **Segurança em primeiro lugar**  
-  Nunca versionar credenciais, tokens, senhas ou secrets no repositório.  
-  Todas as informações sensíveis devem ser configuradas exclusivamente via variáveis de ambiente.
+O login com Google utiliza OAuth2.
 
-- **JWT Secret forte**  
-  Utilize uma chave JWT com no mínimo **256 bits**.  
-  Chaves fracas comprometem toda a segurança da aplicação, independentemente do restante da arquitetura.
+Operações relacionadas à empresa devem validar o vínculo entre o usuário autenticado e o recurso solicitado.
 
-- **Email dedicado para o sistema**  
-  É altamente recomendado utilizar um email exclusivo para o envio de mensagens do sistema  
-  (confirmação de conta, redefinição de senha, notificações).  
-  Evite usar email pessoal, especialmente em ambientes de produção.
+A alteração de senha utiliza verificação por email conforme o fluxo implementado pela aplicação.
 
-- **Redis em produção**  
-  Embora opcional durante o desenvolvimento local, o uso de Redis é fortemente recomendado em produção  
-  para caching, controle de sessões, otimização de performance e redução de carga no banco de dados.
+CORS é configurado de acordo com os ambientes autorizados.
 
-- **Separação de responsabilidades**  
-  Frontend e backend foram desenvolvidos como aplicações independentes, permitindo escalabilidade,  
-  deploy separado e melhor organização do código.
+Em produção, segredos e credenciais devem permanecer exclusivamente em configurações protegidas do ambiente de execução.
 
-- **Ambiente de produção ≠ ambiente de desenvolvimento**  
-  Configurações como logs detalhados, `ddl-auto=update` e `show-sql=true` devem ser usadas apenas em desenvolvimento.  
-  Em produção, essas opções precisam ser revisadas para evitar riscos de segurança e impacto de performance.
-  
+## Planos
 
-## 📖 Links do Projeto
+A Gevyro possui regras de acesso e limites que podem variar conforme o plano disponível na aplicação.
 
-- [Código do Frontend](https://github.com/MartnsDev/Gest-Pro/tree/2ced41f10df3341faa91cdcd0596061cfdcbc920/FrontEnd)
+| Plano | Período | Empresas | Caixas |
+| :--- | :---: | :---: | :---: |
+| Experimental | 7 dias | 1 | 1 |
+| Básico | 30 dias | 1 | 1 |
+| Pro | 30 dias | 2 | 3 |
+| Premium | 30 dias | Ilimitado | Ilimitado |
 
-## 📝 Licença
+As condições comerciais vigentes devem ser consultadas nos canais oficiais da Gevyro, pois preços e características dos planos podem evoluir.
 
-Todos os direitos reservados © 2025 Matheus Martins (MartnsDev)
+## Produção
 
-Este projeto é de minha autoria e não pode ser copiado, reproduzido ou utilizado sem minha autorização expressa.
+A aplicação deve utilizar variáveis de ambiente para todas as informações sensíveis.
 
-## 👤 Sobre Mim
+Credenciais do banco de dados, chaves JWT, credenciais OAuth2 e senhas de serviços de email não devem ser armazenadas diretamente no código fonte.
 
-**Matheus Martins**
+O ambiente de produção deve utilizar HTTPS.
 
-Sou desenvolvedor e criei este projeto para aprender e demonstrar minhas habilidades. Se quiser trocar uma ideia sobre o projeto ou tiver alguma sugestão, fique à vontade para entrar em contato!
+Cookies de autenticação utilizados em produção devem possuir configurações adequadas ao ambiente.
 
-- LinkedIn: [@matheusmartnsdev](https://www.linkedin.com/in/matheusmartnsdev/)
+O comportamento do Hibernate deve ser configurado conscientemente para produção.
 
----
+Logs não devem expor tokens, senhas, credenciais ou outras informações sensíveis.
 
-Desenvolvido com 💚 por Matheus Martins
+Alterações estruturais do banco devem utilizar uma estratégia controlada de migração.
+
+## Status do projeto
+
+A Gevyro está em desenvolvimento contínuo.
+
+Funcionalidades, contratos da API, regras dos planos e estrutura interna podem evoluir conforme novas versões do produto forem desenvolvidas.
+
+Este repositório representa o desenvolvimento técnico da plataforma e não utiliza alegações de liderança de mercado, quantidade de clientes ou resultados comerciais não comprovados.
+
+## Gevyro
+
+Gevyro é a identidade da plataforma de gestão empresarial.
+
+O nome parte do conceito de Gestão Empresarial. VYRO é uma construção própria da marca inspirada na ideia de virada, transformação e mudança de direção.
+
+Essa ideia é sintetizada pela assinatura:
+
+### Gestão em evolução.
+
+## Informações institucionais
+
+**Marca:** Gevyro
+
+**Segmento:** Software de gestão empresarial
+
+**CNPJ:** 68.259.534/0001-70
+
+**Website:** https://www.gevyro.com.br
+
+## Autor e desenvolvimento
+
+A Gevyro é desenvolvida por **Matheus Martins**, MartnsDev.
+
+**GitHub:** https://github.com/MartnsDev
+
+**LinkedIn:** https://www.linkedin.com/in/matheusmartnsdev/
+
+## Licença
+
+```text
+Copyright © 2025 Matheus Martins
+
+Todos os direitos reservados.
+
+O software e seu código fonte são de propriedade de seu autor.
+
+Cópia, modificação, distribuição ou utilização não autorizada deste código
+dependem de autorização expressa do titular dos direitos.
+```
+
+<div align="center">
+
+<br />
+
+### Gevyro
+
+**Gestão em evolução.**
+
+Software de gestão empresarial.
+
+</div>
