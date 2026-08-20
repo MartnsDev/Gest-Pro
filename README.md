@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Img/gevyro-fav-br.png" alt="Gevyro" width="90" />
+<img src="Img/gevyro-fav-br.png" alt="Gevyro" width="110" />
 
 # Gevyro
 
@@ -70,16 +70,11 @@ Ela movimenta o estoque, pertence a um caixa, pode estar relacionada a um client
 
 <br />
 
-<table>
-<tr>
-<td width="50%" valign="top">
+<div align="center">
 
-<img src="Img/gevyro-explicação_3.png" alt="Explicação gevyro" width="400"/>
+<img src="Img/gevyro-explicação_3.png" alt="Recursos da plataforma Gevyro" width="900" />
 
-
-</td>
-</tr>
-</table>
+</div>
 
 <br />
 
@@ -88,27 +83,24 @@ Ela movimenta o estoque, pertence a um caixa, pode estar relacionada a um client
 <table>
 <tr>
 <td align="center" width="50%">
-<img src="Img/gevyro-1.png" alt="Página inicial da Gevyro" />
+<img src="Img/gevyro-1.png" alt="Página inicial da Gevyro" width="100%" />
 <br />
 <sub><b>Experiência de entrada da plataforma</b></sub>
 </td>
-
 <td align="center" width="50%">
-<img src="Img/dashboard-gp-dark.png" alt="Dashboard da Gevyro" />
+<img src="Img/dashboard-gp-dark.png" alt="Dashboard da Gevyro" width="100%" />
 <br />
 <sub><b>Visão geral da operação</b></sub>
 </td>
 </tr>
-
 <tr>
 <td align="center" width="50%">
-<img src="Img/vendas-gp-dark.png" alt="Área de vendas da Gevyro" />
+<img src="Img/vendas-gp-dark.png" alt="Área de vendas da Gevyro" width="100%" />
 <br />
 <sub><b>Vendas e frente de caixa</b></sub>
 </td>
-
 <td align="center" width="50%">
-<img src="Img/relatorios-gp-dark.png" alt="Relatórios da Gevyro" />
+<img src="Img/relatorios-gp-dark.png" alt="Relatórios da Gevyro" width="100%" />
 <br />
 <sub><b>Indicadores e análise da operação</b></sub>
 </td>
@@ -121,8 +113,14 @@ Ela movimenta o estoque, pertence a um caixa, pode estar relacionada a um client
 
 A arquitetura do produto acompanha o fluxo da operação empresarial.
 
+<br />
 
-<img src="Img/gevyro-explicação_1.png" alt="Explicação gevyro" width="400"/>
+<div align="center">
+
+<img src="Img/gevyro-explicação_1.png" alt="Fluxo de dados da plataforma Gevyro" width="750" />
+
+</div>
+
 <br />
 
 Cada módulo possui sua responsabilidade, mas os dados trabalham em conjunto.
@@ -141,9 +139,15 @@ A API utiliza Java e Spring Boot, com Spring Security para autenticação e auto
 
 O MySQL mantém os dados relacionais da aplicação.
 
-<img src="Img/gevyro-explicação_2.png" alt="Explicação gevyro" width="400" />
 <br />
 
+<div align="center">
+
+<img src="Img/gevyro-explicação_2.png" alt="Arquitetura tecnológica da Gevyro" width="800" />
+
+</div>
+
+<br />
 
 A aplicação também utiliza JWT, OAuth2, Hibernate, Jakarta Validation, Maven, Tailwind CSS e ferramentas complementares do ecossistema utilizado pelo projeto.
 
@@ -247,7 +251,7 @@ Consulte o arquivo `LICENSE` para informações aplicáveis ao uso do código.
 
 <div align="center">
 
-<img src="Img/gevyro-fav-br.png" alt="Gevyro" width="55" />
+<img src="Img/gevyro-fav-br.png" alt="Gevyro" width="70" />
 
 ### GEVYRO
 
