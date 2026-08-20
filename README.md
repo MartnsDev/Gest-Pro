@@ -134,7 +134,7 @@ Uma conta pode trabalhar com diferentes empresas conforme as regras de acesso di
 <table>
 <tr>
 <td align="center" width="50%">
-<img src="Img/lading-gp-dark.png" alt="Página inicial da Gevyro" />
+<img src="Img/gevyro-1.png" alt="Página inicial da Gevyro" />
 <br />
 <sub><b>Experiência de entrada da plataforma</b></sub>
 </td>
