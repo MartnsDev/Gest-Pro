@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Img/gestpro-img.jpg" alt="Gevyro" width="90" />
+<img src="Img/gevyro-fav-br.png" alt="Gevyro" width="90" />
 
 # Gevyro
 
