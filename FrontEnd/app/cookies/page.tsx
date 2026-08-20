@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
 import { LegalShell } from "@/components/legal/legal-shell";
 import { CookiePreferencesButton } from "@/components/cookie-preferences-button";
-export const metadata: Metadata = { title: "Política de Cookies", description: "Cookies e tecnologias locais utilizados pela Gevyro." };
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata({ title: "Política de Cookies", description: "Conheça os cookies, armazenamentos locais e preferências utilizados pela plataforma Gevyro.", path: "/cookies" });
 export default function CookiesPage() { return <LegalShell title="Política de Cookies" description="Resultado da análise das tecnologias de armazenamento e preferências encontradas no frontend da Gevyro.">
   <h2>1. O que encontramos</h2><p>A aplicação utiliza cookie de autenticação <code>jwt_token</code>, cookie de CSRF e sessão temporária do OAuth no backend. O frontend usa armazenamento local para tema, preferências de cookies, empresa/caixa selecionados e limpeza de tokens legados. O componente de sidebar pode gravar uma preferência funcional. Não foram encontrados pixels, Google Analytics, Hotjar, Clarity ou cookies de publicidade ativos.</p>
   <h2>2. Estritamente necessários</h2><p>Autenticação, proteção CSRF, segurança e estado temporário do login Google são necessários ao serviço. Eles não são usados para publicidade e não podem ser desativados pelo gerenciador sem comprometer a conta.</p>

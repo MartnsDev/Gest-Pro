@@ -402,13 +402,13 @@ export default function ComoUsarPage() {
               }}>
                 <Icon name={currentSection.icon} size={28} />
               </div>
-              <h1 style={{
+              <h2 style={{
                 fontFamily: "var(--font-syne), 'Syne', 'Inter', sans-serif",
                 fontWeight: 800, fontSize: "clamp(36px, 5vw, 48px)",
                 color: "#f1f5f9", letterSpacing: "-0.03em", marginBottom: 16,
               }}>
                 {currentSection.title}
-              </h1>
+              </h2>
               <p style={{
                 fontFamily: "var(--font-manrope), 'Manrope', 'Inter', sans-serif",
                 fontSize: 18, lineHeight: 1.7, color: "rgba(241,245,249,0.65)",

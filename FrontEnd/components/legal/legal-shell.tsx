@@ -8,7 +8,7 @@ export function LegalShell({ title, description, children }: { title: string; de
     <div className="min-h-screen bg-[#f6f8f7] text-[#303a35]">
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex min-h-[74px] max-w-5xl items-center justify-between gap-4 px-5 py-3">
-          <Link href="/" aria-label="Voltar à página inicial"><Image src="/images/gevyro-logo.png" alt="Gevyro" width={200} height={72} className="h-auto w-[180px] object-contain sm:w-[200px]" /></Link>
+          <Link href="/" aria-label="Voltar à página inicial"><Image src="/images/gevyro-logo-400.webp" alt="Gevyro" width={400} height={145} className="h-auto w-[180px] object-contain sm:w-[200px]" /></Link>
           <Link href="/contato" className="text-sm font-semibold text-[#258c53] hover:underline">Contato</Link>
         </div>
       </header>

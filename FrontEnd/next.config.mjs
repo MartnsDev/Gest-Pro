@@ -27,8 +27,27 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "gevyro.com.br" }],
+        destination: "https://www.gevyro.com.br/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
+      {
+        source: "/dashboard/:path*",
+        headers: [
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow, noarchive, noimageindex",
+          },
+        ],
+      },
       {
         source: "/(.*)",
         headers: [

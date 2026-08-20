@@ -65,7 +65,7 @@ export default function LoginPage() {
       <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 xl:px-24">
         <header className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/images/gevyro-logo.png" alt="Gevyro" width={200} height={72} priority className="h-auto w-[200px] object-contain" />
+            <Image src="/images/gevyro-logo-400.webp" alt="Gevyro" width={400} height={145} priority className="h-auto w-[200px] object-contain" />
           </Link>
           <Link href="/" className="flex items-center gap-2 text-xs text-[#718078] hover:text-[#258c53]"><ArrowLeft size={15} /> Início</Link>
         </header>

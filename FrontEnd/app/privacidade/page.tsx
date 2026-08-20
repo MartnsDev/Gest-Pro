@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
 import { LegalShell } from "@/components/legal/legal-shell";
 import { LEGAL } from "@/lib/legal";
-export const metadata: Metadata = { title: "Política de Privacidade", description: "Como a Gevyro trata dados pessoais e atende à LGPD." };
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata({ title: "Política de Privacidade", description: "Saiba como a Gevyro trata dados pessoais e assegura direitos previstos na LGPD.", path: "/privacidade" });
 export default function PrivacidadePage() { return <LegalShell title="Política de Privacidade" description="Como dados pessoais podem ser tratados na Gevyro e quais direitos são assegurados pela Lei Geral de Proteção de Dados (LGPD).">
   <h2>1. Quem trata os dados</h2><p>A Gevyro, CNPJ {LEGAL.cnpj}, trata dados conforme esta Política. <strong>{LEGAL.pending.legalName}</strong> <strong>{LEGAL.pending.address}</strong></p>
   <h2>2. Papéis na LGPD</h2><p>A Gevyro atua como <strong>controladora</strong> para conta, autenticação, contratação, prevenção de fraude, suporte e obrigações próprias. Quanto aos dados inseridos por empresas usuárias sobre seus clientes, produtos, vendas ou funcionários, atua normalmente como <strong>operadora</strong>, seguindo instruções lícitas do cliente-controlador.</p>

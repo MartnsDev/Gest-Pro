@@ -45,7 +45,7 @@ function PagamentoInner() {
     <main className="min-h-screen bg-[#f6f8f7] text-[#303a35]">
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex h-[74px] max-w-6xl items-center justify-between px-5 lg:px-0">
-          <Link href="/" className="flex items-center"><Image src="/images/gevyro-logo.png" alt="Gevyro" width={200} height={72} priority className="h-auto w-[200px] object-contain" /></Link>
+          <Link href="/" className="flex items-center"><Image src="/images/gevyro-logo-400.webp" alt="Gevyro" width={400} height={145} priority className="h-auto w-[200px] object-contain" /></Link>
           <span className="flex items-center gap-2 text-xs text-[#718078]"><LockKeyhole size={14} className="text-[#258c53]" /> Ambiente seguro</span>
         </div>
       </header>

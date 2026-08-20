@@ -1,13 +1,14 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Mail, MessageCircle, ShieldCheck, CreditCard, LifeBuoy, ArrowUpRight } from "lucide-react";
 import { LegalShell } from "@/components/legal/legal-shell";
 import { LEGAL } from "@/lib/legal";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Contato",
   description: "Canais oficiais de contato, suporte e privacidade da Gevyro.",
-};
+  path: "/contato",
+});
 
 const assuntos = [
   { icon: LifeBuoy, title: "Suporte técnico", text: "Dúvidas de acesso, configuração ou uso da plataforma.", subject: "Suporte técnico — Gevyro" },

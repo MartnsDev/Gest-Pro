@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
 import { LegalShell } from "@/components/legal/legal-shell";
 import { LEGAL } from "@/lib/legal";
-export const metadata: Metadata = { title: "Termos de Uso", description: "Termos de Uso da plataforma Gevyro." };
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata({ title: "Termos de Uso", description: "Consulte as regras e condições para utilização da plataforma de gestão empresarial Gevyro.", path: "/termos" });
 export default function TermosPage() { return <LegalShell title="Termos de Uso" description="Regras iniciais para utilização da plataforma Gevyro. Este documento deve passar por revisão jurídica antes do lançamento comercial definitivo.">
   <h2>1. Identificação e objeto</h2><p>A Gevyro é uma plataforma SaaS de gestão empresarial, acessada pela internet, com funcionalidades de vendas, produtos, estoque, clientes, caixa, relatórios e assinatura. Fornecedor identificado pelo CNPJ {LEGAL.cnpj}. <strong>{LEGAL.pending.legalName}</strong> <strong>{LEGAL.pending.address}</strong></p>
   <h2>2. Conta e credenciais</h2><p>O usuário deve fornecer informações corretas, manter suas credenciais confidenciais e comunicar suspeitas de acesso indevido. A conta é pessoal; ações realizadas por usuários autorizados da empresa são responsabilidade do titular, sem prejuízo das obrigações de segurança da Gevyro. O acesso pode exigir confirmação de e-mail ou autenticação externa.</p>

@@ -5,28 +5,47 @@ import { GeistMono } from "geist/font/mono";
 import { Suspense } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  SITE_NAME,
+  SITE_URL,
+  SOCIAL_IMAGE,
+} from "@/lib/seo";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Gevyro",
+    default: DEFAULT_TITLE,
     template: "%s | Gevyro",
   },
-  description: "Gestão em evolução para vendas, estoque, caixa e resultados do seu negócio.",
-  applicationName: "Gevyro",
-  keywords: ["Gevyro", "gestão", "vendas", "estoque", "caixa", "pequenos negócios"],
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: ["Gevyro", "software de gestão empresarial", "gestão de vendas", "controle de estoque", "controle de caixa"],
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "GEVYRO — Gestão em evolução.",
-    description: "Tecnologia, simplicidade e organização para a evolução do seu negócio.",
-    siteName: "Gevyro",
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    url: "/",
+    siteName: SITE_NAME,
     locale: "pt_BR",
     type: "website",
+    images: [{ url: SOCIAL_IMAGE, width: 1672, height: 941, alt: "Gevyro em uso na gestão de um comércio" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    images: [SOCIAL_IMAGE],
   },
   generator: "MartinsDev",
+  category: "technology",
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/gevyro-fav.png",
+    icon: [{ url: "/gevyro-fav.png", type: "image/png", sizes: "192x192" }],
     shortcut: "/gevyro-fav.png",
-    apple: "/gevyro-fav.png",
+    apple: [{ url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" }],
   },
 };
 

@@ -5,6 +5,41 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BarChart3, Boxes, Building2, Check, ChevronDown, Menu, ReceiptText, ShoppingCart, Wallet, X } from "lucide-react";
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.gevyro.com.br/#organization",
+      name: "Gevyro",
+      url: "https://www.gevyro.com.br/",
+      logo: "https://www.gevyro.com.br/images/gevyro-logo-400.webp",
+      description: "Software de gestão empresarial para vendas, estoque, clientes, caixa e resultados.",
+      slogan: "Gestão em evolução.",
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.gevyro.com.br/#website",
+      url: "https://www.gevyro.com.br/",
+      name: "Gevyro",
+      description: "Software de gestão empresarial para organizar a operação de pequenos negócios.",
+      inLanguage: "pt-BR",
+      publisher: { "@id": "https://www.gevyro.com.br/#organization" },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.gevyro.com.br/#software",
+      name: "Gevyro",
+      url: "https://www.gevyro.com.br/",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      description: "Plataforma de gestão empresarial para vendas, produtos, estoque, clientes, caixa e relatórios.",
+      provider: { "@id": "https://www.gevyro.com.br/#organization" },
+      inLanguage: "pt-BR",
+    },
+  ],
+};
+
 const benefits = [
   { icon: ShoppingCart, title: "Vendas mais rápidas", text: "Registre produtos, pagamentos, descontos e troco no mesmo fluxo." },
   { icon: Boxes, title: "Estoque atualizado", text: "Cada venda dá baixa nos produtos e mantém as quantidades organizadas." },
@@ -40,7 +75,7 @@ function Header() {
     <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-[74px] max-w-6xl items-center justify-between px-5 lg:px-0">
         <Link href="/" className="flex items-center gap-3">
-          <Image src="/images/gevyro-logo.png" alt="Gevyro" width={200} height={72} priority className="h-auto w-[200px] object-contain" />
+          <Image src="/images/gevyro-logo-400.webp" alt="Gevyro" width={400} height={145} priority className="h-auto w-[200px] object-contain" />
         </Link>
         <nav className="hidden items-center gap-8 text-[13px] text-[#27302b] md:flex">
           <a href="#sobre" className="hover:text-[#238a52]">Sobre</a><a href="#recursos" className="hover:text-[#238a52]">Recursos</a><a href="#planos" className="hover:text-[#238a52]">Planos</a><a href="#faq" className="hover:text-[#238a52]">FAQ</a><Link href="/auth/login" className="hover:text-[#238a52]">Entrar</Link>
@@ -119,9 +154,9 @@ function FAQ() {
 }
 
 function Footer() {
-  return <><section className="bg-[#303a35] py-20 text-white"><div className="mx-auto flex max-w-6xl flex-col justify-between gap-8 px-5 md:flex-row md:items-center lg:px-0"><div><h2 className="text-4xl font-light">Comece a organizar <span className="italic text-[#78d6a3]">sua loja</span></h2><p className="mt-4 text-sm text-zinc-300">Teste o Gevyro e conheça a rotina do sistema.</p></div><Link href="/auth/cadastro" className="inline-flex items-center justify-center gap-3 rounded-full bg-[#78d6a3] px-7 py-4 text-[11px] font-bold uppercase tracking-wider text-[#173323]">Criar minha conta <ArrowRight size={16} /></Link></div></section><footer className="bg-white py-14 text-[#3f4944]"><div className="mx-auto grid max-w-6xl gap-10 px-5 sm:grid-cols-3 lg:px-0"><div><Image src="/images/gevyro-logo.png" alt="Gevyro" width={200} height={72} className="h-auto w-[200px] object-contain" /><p className="mt-4 text-sm text-[#718078]">Gestão em evolução.</p><p className="mt-3 text-xs text-[#8a958f]">CNPJ 68.259.534/0001-70</p></div><div><h3 className="font-semibold">Atendimento</h3><div className="mt-4 flex flex-col gap-3 text-sm text-[#718078]"><Link href="/como-usar">Como usar</Link><Link href="/contato">Fale conosco</Link><Link href="/auth/login">Área do cliente</Link></div></div><div><h3 className="font-semibold">Transparência</h3><div className="mt-4 flex flex-col gap-3 text-sm text-[#718078]"><Link href="/termos">Termos de uso</Link><Link href="/privacidade">Política de privacidade</Link><Link href="/contato">Suporte</Link></div></div></div><div className="mx-auto mt-12 flex max-w-6xl flex-col items-center justify-between gap-3 border-t border-zinc-200 px-5 pt-6 text-xs text-[#8a958f] sm:flex-row lg:px-0"><span>© 2026 Gevyro. Todos os direitos reservados.</span><span>Plataforma de gestão desenvolvida no Brasil.</span></div></footer></>;
+  return <><section className="bg-[#303a35] py-20 text-white"><div className="mx-auto flex max-w-6xl flex-col justify-between gap-8 px-5 md:flex-row md:items-center lg:px-0"><div><h2 className="text-4xl font-light">Comece a organizar <span className="italic text-[#78d6a3]">sua loja</span></h2><p className="mt-4 text-sm text-zinc-300">Teste o Gevyro e conheça a rotina do sistema.</p></div><Link href="/auth/cadastro" className="inline-flex items-center justify-center gap-3 rounded-full bg-[#78d6a3] px-7 py-4 text-[11px] font-bold uppercase tracking-wider text-[#173323]">Criar minha conta <ArrowRight size={16} /></Link></div></section><footer className="bg-white py-14 text-[#3f4944]"><div className="mx-auto grid max-w-6xl gap-10 px-5 sm:grid-cols-3 lg:px-0"><div><Image src="/images/gevyro-logo-400.webp" alt="Gevyro" width={400} height={145} className="h-auto w-[200px] object-contain" /><p className="mt-4 text-sm text-[#718078]">Gestão em evolução.</p><p className="mt-3 text-xs text-[#8a958f]">CNPJ 68.259.534/0001-70</p></div><div><h3 className="font-semibold">Atendimento</h3><div className="mt-4 flex flex-col gap-3 text-sm text-[#718078]"><Link href="/como-usar">Como usar</Link><Link href="/contato">Fale conosco</Link><Link href="/auth/login">Área do cliente</Link></div></div><div><h3 className="font-semibold">Transparência</h3><div className="mt-4 flex flex-col gap-3 text-sm text-[#718078]"><Link href="/termos">Termos de uso</Link><Link href="/privacidade">Política de privacidade</Link><Link href="/contato">Suporte</Link></div></div></div><div className="mx-auto mt-12 flex max-w-6xl flex-col items-center justify-between gap-3 border-t border-zinc-200 px-5 pt-6 text-xs text-[#8a958f] sm:flex-row lg:px-0"><span>© 2026 Gevyro. Todos os direitos reservados.</span><span>Plataforma de gestão desenvolvida no Brasil.</span></div></footer></>;
 }
 
 export default function Home() {
-  return <div className="min-h-screen bg-white font-sans"><Header /><main><Hero /><About /><ValueSection /><Resources /><Plans /><FAQ /></main><Footer /><nav aria-label="Links jurídicos" className="flex flex-wrap justify-center gap-x-6 gap-y-3 border-t border-zinc-200 bg-white px-5 py-6 text-xs text-[#718078]"><Link href="/termos">Termos de Uso</Link><Link href="/privacidade">Política de Privacidade</Link><Link href="/cookies">Política de Cookies</Link><Link href="/cancelamento-reembolsos">Cancelamento e Reembolsos</Link><Link href="/seguranca">Segurança</Link><Link href="/contato">Contato</Link></nav></div>;
+  return <div className="min-h-screen bg-white font-sans"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /><Header /><main><Hero /><About /><ValueSection /><Resources /><Plans /><FAQ /></main><Footer /><nav aria-label="Links jurídicos" className="flex flex-wrap justify-center gap-x-6 gap-y-3 border-t border-zinc-200 bg-white px-5 py-6 text-xs text-[#718078]"><Link href="/termos">Termos de Uso</Link><Link href="/privacidade">Política de Privacidade</Link><Link href="/cookies">Política de Cookies</Link><Link href="/cancelamento-reembolsos">Cancelamento e Reembolsos</Link><Link href="/seguranca">Segurança</Link><Link href="/contato">Contato</Link></nav></div>;
 }

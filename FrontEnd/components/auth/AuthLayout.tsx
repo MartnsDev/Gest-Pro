@@ -53,10 +53,10 @@ export function AuthLayout({
               {/* Logo */}
               <div className={styles.authLogo}>
                 <Image
-                  src="/images/gevyro-logo.png"
+                  src="/images/gevyro-logo-400.webp"
                   alt="Gevyro"
-                  width={2083}
-                  height={755}
+                  width={400}
+                  height={145}
                   className="h-auto w-[200px] object-contain"
                 />
               </div>

@@ -1,6 +1,6 @@
-import type { Metadata } from "next";
 import { LegalShell } from "@/components/legal/legal-shell";
-export const metadata: Metadata = { title: "Cancelamento e Reembolsos", description: "Informações sobre assinaturas, cancelamento e reembolsos da Gevyro." };
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata({ title: "Cancelamento e Reembolsos", description: "Informações sobre planos, assinaturas, cancelamento, cobrança e reembolsos da Gevyro.", path: "/cancelamento-reembolsos" });
 export default function CancelamentoPage() { return <LegalShell title="Cancelamento, Assinaturas e Reembolsos" description="Condições confirmadas no sistema e decisões comerciais que ainda precisam ser formalizadas antes da produção.">
   <h2>1. Planos e cobrança</h2><p>Os planos Básico (R$ 77,79/mês), Pro (R$ 127,79/mês) e Premium (R$ 277,79/mês) são apresentados como assinaturas mensais recorrentes. A cobrança é concluída no checkout da Stripe. O resumo final, impostos eventualmente aplicáveis e meio de pagamento são exibidos no ambiente do processador antes da confirmação.</p>
   <h2>2. Período experimental</h2><p>O frontend anuncia 30 dias de teste sem cartão, e o backend contém plano experimental. <strong>PENDÊNCIA: confirmar quando o período começa, elegibilidade, recursos liberados e comportamento ao término.</strong></p>

@@ -1,6 +1,6 @@
-import type { Metadata } from "next";
 import { LegalShell } from "@/components/legal/legal-shell";
-export const metadata: Metadata = { title: "Segurança", description: "Práticas de segurança e reporte responsável da Gevyro." };
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata({ title: "Segurança", description: "Práticas de segurança, proteção de contas e reporte responsável de vulnerabilidades na Gevyro.", path: "/seguranca" });
 export default function SegurancaPage() { return <LegalShell title="Segurança" description="Práticas adotadas e responsabilidades compartilhadas para proteger contas e dados, sem promessas absolutas.">
   <h2>Controles observados</h2><ul><li>senhas processadas com BCrypt no backend;</li><li>autenticação por JWT em cookie HttpOnly com Secure configurável e SameSite;</li><li>proteção CSRF para operações mutáveis e CORS com origens definidas;</li><li>validação da assinatura de webhooks da Stripe e idempotência de eventos;</li><li>checkout hospedado pela Stripe, evitando trânsito de dados completos do cartão;</li><li>códigos de recuperação com validade curta, hash e limite de tentativas;</li><li>autorização baseada na identidade autenticada em fluxos auditados.</li></ul>
   <h2>Responsabilidade compartilhada</h2><p>Use senha exclusiva, proteja o e-mail associado, encerre sessões em dispositivos compartilhados e limite o acesso de colaboradores. Nunca envie senha, JWT, código de recuperação ou dados completos de cartão ao suporte.</p>

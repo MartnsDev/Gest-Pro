@@ -108,7 +108,7 @@ export default function ConfirmarEmailPage() {
         <div className={a.cardBody}>
           {/* brand */}
           <div className={a.cardBrandBlock} style={{ marginBottom: 28 }}>
-            <img src="/images/gevyro-logo.png" alt="Gevyro" style={{ width: 200, height: "auto", margin: "0 auto" }} />
+            <img src="/images/gevyro-logo-400.webp" alt="Gevyro" width={400} height={145} style={{ width: 200, height: "auto", margin: "0 auto" }} />
             <p className={a.cardTagline}>Confirmação de e-mail</p>
           </div>
 
