@@ -88,7 +88,7 @@ Ela movimenta o estoque, pertence a um caixa, pode estar relacionada a um client
 <sub><b>Experiência de entrada da plataforma</b></sub>
 </td>
 <td align="center" width="50%">
-<img src="Img/dashboard-gp-dark.png" alt="Dashboard da Gevyro" width="100%" />
+<img src="Img/gevyro-3.png" alt="Dashboard da Gevyro" width="100%" />
 <br />
 <sub><b>Visão geral da operação</b></sub>
 </td>
