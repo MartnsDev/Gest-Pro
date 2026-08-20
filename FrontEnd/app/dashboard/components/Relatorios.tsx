@@ -12,6 +12,8 @@ import {
   Loader2, FileDown, Table2, Receipt, ShoppingCart,
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAuthJson } from "@/lib/api-v2";
+import { useActionCooldown } from "@/hooks/use-action-cooldown";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface VendasDia   { dia:string; qtdVendas:number; total:number; desconto:number }
@@ -21,7 +23,7 @@ interface VendasHora  { hora:number; qtd:number; total:number }
 interface VendaItem {
   id:number; data:string; formaPagamento:string; formaPagamento2?:string;
   valorFinal:number; desconto:number; troco?:number; observacao?:string;
-  nomeCliente?:string; itens:string[]; origem?:string; // "PDV" | "PEDIDO"
+  nomeCliente?:string; itens:string[]; origem?:string; status?:string; // "PDV" | "PEDIDO"
 }
 interface Relatorio {
   titulo:string; periodo:string; nomeEmpresa:string; geradoEm:string;
@@ -32,9 +34,25 @@ interface Relatorio {
   vendasDiarias:VendasDia[]; pagamentos:Pagamento[];
   topProdutos:ProdutoRel[]; vendasPorHora:VendasHora[];
   vendas:VendaItem[];
+  somentePedidos?:boolean;
+  somentePdv?:boolean;
+  lucroDisponivel?:boolean;
+}
+interface PedidoRelatorio {
+  id:number; nomeCliente?:string; valorTotal:number; desconto:number; valorFinal:number;
+  custoFrete:number; formaPagamento?:string; canalVenda?:string; status?:string;
+  dataPedido:string|number[]; observacao?:string;
+  itens?:{nomeProduto?:string;quantidade?:number;precoUnitario?:number;subtotal?:number}[];
 }
 interface CaixaInfo { id:number; status:string; aberto:boolean; dataAbertura:string; dataFechamento?:string }
+interface VendaPdvRelatorio {
+  id:number; formaPagamento?:string; formaPagamento2?:string; valorTotal:number; desconto:number;
+  valorFinal:number; troco?:number; observacao?:string; dataVenda:string|number[];
+  itens?:{nomeProduto?:string;quantidade?:number;subtotal?:number}[];
+  nomeCliente?:string; cancelada?:boolean;
+}
 type Periodo = "hoje"|"semana"|"mes"|"personalizado"|"caixa";
+type Origem = "todos"|"pdv"|"pedidos";
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?:number|null) =>
@@ -46,12 +64,90 @@ const esc = (s:unknown) =>
                .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 
 async function fetchAuth<T>(path:string, opts?:RequestInit):Promise<T> {
-  const res=await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL??"https://gestpro-backend-production.up.railway.app"}${path}`,
-    {credentials:"include",headers:{"Content-Type":"application/json"}, ...opts},
-  );
-  if(!res.ok){const e=await res.json().catch(()=>null);throw new Error(e?.mensagem??`Erro ${res.status}`);}
-  return res.json();
+  return fetchAuthJson<T>(path,opts);
+}
+
+const inicioDoDia=(data:Date)=>new Date(data.getFullYear(),data.getMonth(),data.getDate(),0,0,0,0);
+const fimDoDia=(data:Date)=>new Date(data.getFullYear(),data.getMonth(),data.getDate(),23,59,59,999);
+const dataValida=(valor:string|number[]|undefined|null)=>{
+  if(!valor)return null;
+  const data=Array.isArray(valor)
+    ?new Date(valor[0],(valor[1]??1)-1,valor[2]??1,valor[3]??0,valor[4]??0,valor[5]??0,Math.floor((valor[6]??0)/1_000_000))
+    :new Date(valor.replace(" ","T"));
+  return Number.isNaN(data.getTime())?null:data;
+};
+
+function limitesPeriodo(periodo:Periodo,dataInicio:string,dataFim:string):{inicio:Date;fim:Date;label:string}|null{
+  const agora=new Date();
+  if(periodo==="hoje")return{inicio:inicioDoDia(agora),fim:fimDoDia(agora),label:"Hoje"};
+  if(periodo==="semana"){
+    const inicio=inicioDoDia(agora);const dia=(inicio.getDay()+6)%7;inicio.setDate(inicio.getDate()-dia);
+    const fim=fimDoDia(new Date(inicio));fim.setDate(fim.getDate()+6);
+    return{inicio,fim,label:"Esta semana"};
+  }
+  if(periodo==="mes")return{inicio:new Date(agora.getFullYear(),agora.getMonth(),1),fim:fimDoDia(new Date(agora.getFullYear(),agora.getMonth()+1,0)),label:"Este mês"};
+  if(periodo==="personalizado"){
+    if(!dataInicio||!dataFim)return null;
+    const inicio=dataValida(`${dataInicio}T00:00:00`);const fim=dataValida(`${dataFim}T23:59:59.999`);
+    if(!inicio||!fim||inicio>fim)return null;
+    return{inicio,fim,label:`${inicio.toLocaleDateString("pt-BR")} → ${fim.toLocaleDateString("pt-BR")}`};
+  }
+  return null;
+}
+
+function montarRelatorioPedidos(pedidos:PedidoRelatorio[],nomeEmpresa:string,limites:{inicio:Date;fim:Date;label:string}):Relatorio{
+  const noPeriodo=pedidos.filter(p=>{const data=dataValida(p.dataPedido);return Boolean(data&&data>=limites.inicio&&data<=limites.fim);});
+  const ativos=noPeriodo.filter(p=>p.status!=="CANCELADO");
+  const cancelados=noPeriodo.filter(p=>p.status==="CANCELADO");
+  const receitaTotal=ativos.reduce((s,p)=>s+Number(p.valorFinal||0),0);
+  const totalDescontos=ativos.reduce((s,p)=>s+Number(p.desconto||0),0);
+  const valores=ativos.map(p=>Number(p.valorFinal||0));
+  const pagamentosMap=new Map<string,{qtd:number;total:number}>();
+  const produtosMap=new Map<string,{quantidade:number;receita:number}>();
+  const diasMap=new Map<string,{dia:string;qtdVendas:number;total:number;desconto:number}>();
+  const horasMap=new Map<number,{qtd:number;total:number}>();
+
+  ativos.forEach(p=>{
+    const forma=p.formaPagamento||"NÃO INFORMADO";
+    const pagamento=pagamentosMap.get(forma)??{qtd:0,total:0};pagamento.qtd++;pagamento.total+=Number(p.valorFinal||0);pagamentosMap.set(forma,pagamento);
+    const data=dataValida(p.dataPedido);
+    if(data){
+      const chave=`${data.getFullYear()}-${String(data.getMonth()+1).padStart(2,"0")}-${String(data.getDate()).padStart(2,"0")}`;
+      const d=diasMap.get(chave)??{dia:data.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}),qtdVendas:0,total:0,desconto:0};d.qtdVendas++;d.total+=Number(p.valorFinal||0);d.desconto+=Number(p.desconto||0);diasMap.set(chave,d);
+      const hora=data.getHours();const h=horasMap.get(hora)??{qtd:0,total:0};h.qtd++;h.total+=Number(p.valorFinal||0);horasMap.set(hora,h);
+    }
+    (p.itens??[]).forEach(item=>{const nome=item.nomeProduto||"Produto removido";const atual=produtosMap.get(nome)??{quantidade:0,receita:0};atual.quantidade+=Number(item.quantidade||0);atual.receita+=Number(item.subtotal||0);produtosMap.set(nome,atual);});
+  });
+
+  return{
+    titulo:"Relatório de Pedidos",periodo:limites.label,nomeEmpresa,
+    geradoEm:new Date().toLocaleString("pt-BR"),totalVendas:ativos.length,receitaTotal,
+    lucroTotal:0,lucroDisponivel:false,totalDescontos,ticketMedio:ativos.length?receitaTotal/ativos.length:0,
+    maiorVenda:valores.length?Math.max(...valores):0,menorVenda:valores.length?Math.min(...valores):0,
+    cancelamentos:cancelados.length,valorCancelado:cancelados.reduce((s,p)=>s+Number(p.valorFinal||0),0),
+    receitaPdv:0,receitaPedidos:receitaTotal,somentePedidos:true,
+    vendasDiarias:[...diasMap].sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>v),
+    pagamentos:[...pagamentosMap].map(([forma,v])=>({forma,...v,percentual:receitaTotal?v.total/receitaTotal*100:0})).sort((a,b)=>b.total-a.total),
+    topProdutos:[...produtosMap].map(([nome,v])=>({nome,...v,lucro:0})).sort((a,b)=>b.quantidade-a.quantidade),
+    vendasPorHora:[...horasMap].map(([hora,v])=>({hora,...v})).sort((a,b)=>a.hora-b.hora),
+    vendas:noPeriodo.map(p=>({id:p.id,data:dataValida(p.dataPedido)?.toLocaleString("pt-BR")??"Data inválida",formaPagamento:p.formaPagamento||"Não informado",formaPagamento2:p.canalVenda,valorFinal:Number(p.valorFinal||0),desconto:Number(p.desconto||0),observacao:p.observacao,nomeCliente:p.nomeCliente,origem:"PEDIDO",status:p.status,itens:(p.itens??[]).map(i=>`${i.nomeProduto||"Produto removido"} x${Number(i.quantidade||0)} = ${fmt(Number(i.subtotal||0))}`)})),
+  };
+}
+
+function montarRelatorioPdv(vendas:VendaPdvRelatorio[],nomeEmpresa:string,limites:{inicio:Date;fim:Date;label:string}):Relatorio{
+  const noPeriodo=vendas.filter(v=>{const data=dataValida(v.dataVenda);return Boolean(data&&data>=limites.inicio&&data<=limites.fim);});
+  const ativas=noPeriodo.filter(v=>!v.cancelada);const canceladas=noPeriodo.filter(v=>v.cancelada);
+  const receitaTotal=ativas.reduce((s,v)=>s+Number(v.valorFinal||0),0);const valores=ativas.map(v=>Number(v.valorFinal||0));
+  const pagamentosMap=new Map<string,{qtd:number;total:number}>();const produtosMap=new Map<string,{quantidade:number;receita:number}>();
+  const diasMap=new Map<string,{dia:string;qtdVendas:number;total:number;desconto:number}>();const horasMap=new Map<number,{qtd:number;total:number}>();
+  ativas.forEach(v=>{
+    const forma=v.formaPagamento2?`${v.formaPagamento||"NÃO INFORMADO"} + ${v.formaPagamento2}`:(v.formaPagamento||"NÃO INFORMADO");
+    const pagamento=pagamentosMap.get(forma)??{qtd:0,total:0};pagamento.qtd++;pagamento.total+=Number(v.valorFinal||0);pagamentosMap.set(forma,pagamento);
+    const data=dataValida(v.dataVenda);if(data){const chave=`${data.getFullYear()}-${String(data.getMonth()+1).padStart(2,"0")}-${String(data.getDate()).padStart(2,"0")}`;const d=diasMap.get(chave)??{dia:data.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}),qtdVendas:0,total:0,desconto:0};d.qtdVendas++;d.total+=Number(v.valorFinal||0);d.desconto+=Number(v.desconto||0);diasMap.set(chave,d);const h=horasMap.get(data.getHours())??{qtd:0,total:0};h.qtd++;h.total+=Number(v.valorFinal||0);horasMap.set(data.getHours(),h);}
+    (v.itens??[]).forEach(item=>{const nome=item.nomeProduto||"Produto removido";const atual=produtosMap.get(nome)??{quantidade:0,receita:0};atual.quantidade+=Number(item.quantidade||0);atual.receita+=Number(item.subtotal||0);produtosMap.set(nome,atual);});
+  });
+  return{titulo:"Relatório de Vendas PDV",periodo:limites.label,nomeEmpresa,geradoEm:new Date().toLocaleString("pt-BR"),totalVendas:ativas.length,receitaTotal,lucroTotal:0,lucroDisponivel:false,somentePdv:true,totalDescontos:ativas.reduce((s,v)=>s+Number(v.desconto||0),0),ticketMedio:ativas.length?receitaTotal/ativas.length:0,maiorVenda:valores.length?Math.max(...valores):0,menorVenda:valores.length?Math.min(...valores):0,cancelamentos:canceladas.length,valorCancelado:canceladas.reduce((s,v)=>s+Number(v.valorFinal||0),0),receitaPdv:receitaTotal,receitaPedidos:0,
+    vendasDiarias:[...diasMap].sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>v),pagamentos:[...pagamentosMap].map(([forma,v])=>({forma,...v,percentual:receitaTotal?v.total/receitaTotal*100:0})).sort((a,b)=>b.total-a.total),topProdutos:[...produtosMap].map(([nome,v])=>({nome,...v,lucro:0})).sort((a,b)=>b.quantidade-a.quantidade),vendasPorHora:[...horasMap].map(([hora,v])=>({hora,...v})).sort((a,b)=>a.hora-b.hora),vendas:noPeriodo.map(v=>({id:v.id,data:dataValida(v.dataVenda)?.toLocaleString("pt-BR")??"Data inválida",formaPagamento:v.formaPagamento||"Não informado",formaPagamento2:v.formaPagamento2,valorFinal:Number(v.valorFinal||0),desconto:Number(v.desconto||0),troco:Number(v.troco||0),observacao:v.observacao,nomeCliente:v.nomeCliente,origem:"PDV",status:v.cancelada?"CANCELADA":"CONCLUÍDA",itens:(v.itens??[]).map(i=>`${i.nomeProduto||"Produto removido"} x${Number(i.quantidade||0)} = ${fmt(Number(i.subtotal||0))}`)}))};
 }
 
 const CORES = ["#10b981","#3b82f6","#a78bfa","#f59e0b","#ef4444","#06b6d4","#ec4899","#84cc16"];
@@ -93,29 +189,47 @@ function OrigemBadge({origem}:{origem?:string}) {
 }
 
 /* ─── Exportadores ───────────────────────────────────────────────────────── */
+function nomeArquivo(rel:Relatorio,extensao:string){
+  const empresa=rel.nomeEmpresa.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-|-$/g,"").toLowerCase()||"empresa";
+  return `${rel.somentePedidos?"pedidos":rel.somentePdv?"pdv":"relatorio"}_${empresa}_${new Date().toISOString().slice(0,10)}.${extensao}`;
+}
+
+function baixarBlob(blob:Blob,nome:string){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=nome;a.style.display="none";
+  document.body.appendChild(a);a.click();a.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function celulaCSV(valor:unknown){
+  let texto=String(valor??"");
+  if(/^[=+\-@]/.test(texto.trimStart()))texto=`'${texto}`;
+  return `"${texto.replace(/"/g,'""')}"`;
+}
+
 function exportCSV(rel:Relatorio) {
   const linhas=[
-    ["#","Origem","Data","Pagamento","2ª Forma","Itens","Desconto","Troco","Total","Cliente","Observação"],
+    ["#","Origem","Status","Data","Pagamento","Canal/2ª forma","Itens","Desconto (R$)","Troco (R$)","Total (R$)","Cliente","Observação"],
     ...rel.vendas.map(v=>[
-      String(v.id), v.origem??"PDV", v.data, v.formaPagamento,
+      String(v.id), v.origem??"PDV",v.status??"", v.data, v.formaPagamento,
       v.formaPagamento2??"", v.itens.join(" | "),
-      fmt(v.desconto), fmt(v.troco??0), fmt(v.valorFinal),
+      Number(v.desconto??0).toFixed(2).replace(".",","),Number(v.troco??0).toFixed(2).replace(".",","),Number(v.valorFinal??0).toFixed(2).replace(".",","),
       v.nomeCliente??"", v.observacao??"",
     ]),
   ];
-  const csv=linhas.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const csv=linhas.map(l=>l.map(celulaCSV).join(";")).join("\r\n");
   const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-  a.download=`relatorio_${rel.nomeEmpresa}_${Date.now()}.csv`;a.click();
+  baixarBlob(blob,nomeArquivo(rel,"csv"));
   toast.success("CSV exportado!");
 }
 
 function exportHTML(rel:Relatorio) {
+  const mostraLucro=rel.lucroDisponivel!==false;
   const pagBarras = rel.pagamentos.map(p=>
     `<div class="bar-row"><span>${esc(p.forma)}</span><div class="bar-wrap"><div class="bar" style="width:${p.percentual.toFixed(1)}%"></div></div><span>${esc(fmt(p.total))} (${p.percentual.toFixed(1)}%)</span></div>`
   ).join("");
   const prodRows = rel.topProdutos.slice(0,10).map((p,i)=>
-    `<tr><td>${i+1}</td><td>${esc(p.nome)}</td><td>${esc(fmtN(p.quantidade))}</td><td>${esc(fmt(p.receita))}</td><td>${esc(fmt(p.lucro))}</td></tr>`
+    `<tr><td>${i+1}</td><td>${esc(p.nome)}</td><td>${esc(fmtN(p.quantidade))}</td><td>${esc(fmt(p.receita))}</td>${mostraLucro?`<td>${esc(fmt(p.lucro))}</td>`:""}</tr>`
   ).join("");
   const vendaRows = rel.vendas.map(v=>
     `<tr><td>#${v.id}</td><td><span class="badge ${v.origem==="PEDIDO"?"badge-blue":"badge-green"}">${v.origem??"PDV"}</span></td><td>${esc(v.data)}</td><td>${esc(v.formaPagamento)}${v.formaPagamento2?" + "+esc(v.formaPagamento2):""}</td><td>${v.itens.map(it=>esc(it)).join("<br>")}</td><td>${esc(fmt(v.desconto))}</td><td>${esc(fmt(v.valorFinal))}</td><td>${esc(v.nomeCliente??"—")}</td></tr>`
@@ -157,7 +271,7 @@ tr:hover td{background:#18181b}
 </div>
 <div class="grid">
   <div class="card"><div class="card-label">Receita Total</div><div class="card-value">${fmt(rel.receitaTotal)}</div><div class="card-sub">${rel.totalVendas} transações</div></div>
-  <div class="card"><div class="card-label">Lucro Total</div><div class="card-value" style="color:#3b82f6">${fmt(rel.lucroTotal)}</div><div class="card-sub">PDV + Pedidos</div></div>
+  ${mostraLucro?`<div class="card"><div class="card-label">Lucro Total</div><div class="card-value" style="color:#3b82f6">${fmt(rel.lucroTotal)}</div><div class="card-sub">PDV + Pedidos</div></div>`:""}
   <div class="card"><div class="card-label">Ticket Médio</div><div class="card-value" style="color:#a78bfa">${fmt(rel.ticketMedio)}</div></div>
   <div class="card"><div class="card-label">Descontos</div><div class="card-value" style="color:#f59e0b">${fmt(rel.totalDescontos)}</div></div>
   <div class="card"><div class="card-label">Maior Transação</div><div class="card-value">${fmt(rel.maiorVenda)}</div></div>
@@ -165,19 +279,18 @@ tr:hover td{background:#18181b}
   <div class="card"><div class="card-label">Cancelamentos</div><div class="card-value" style="color:#ef4444">${rel.cancelamentos}</div><div class="card-sub">${fmt(rel.valorCancelado)}</div></div>
   <div class="card"><div class="card-label">Nº de Transações</div><div class="card-value">${rel.totalVendas}</div></div>
 </div>
-${rel.receitaPdv!=null?`<div class="section"><h2>Origem das Vendas</h2><div class="origem-row">
+${!rel.somentePedidos&&!rel.somentePdv&&rel.receitaPdv!=null?`<div class="section"><h2>Origem das Vendas</h2><div class="origem-row">
   <div class="origem-card"><div class="card-label" style="color:#10b981">PDV (Caixa)</div><div class="card-value">${fmt(rel.receitaPdv)}</div><div class="card-sub">${pdvPct}% do total</div></div>
   <div class="origem-card"><div class="card-label" style="color:#3b82f6">Pedidos (Online)</div><div class="card-value" style="color:#3b82f6">${fmt(rel.receitaPedidos)}</div><div class="card-sub">${pedPct}% do total</div></div>
 </div></div>`:""}
 <div class="section"><h2>Formas de Pagamento</h2>${pagBarras}</div>
-<div class="section"><h2>Top Produtos</h2><table><thead><tr><th>#</th><th>Produto</th><th>Qtd</th><th>Receita</th><th>Lucro</th></tr></thead><tbody>${prodRows}</tbody></table></div>
+<div class="section"><h2>Top Produtos</h2><table><thead><tr><th>#</th><th>Produto</th><th>Qtd</th><th>Receita</th>${mostraLucro?"<th>Lucro</th>":""}</tr></thead><tbody>${prodRows}</tbody></table></div>
 <div class="section"><h2>Transações (${rel.vendas.length})</h2><table><thead><tr><th>#</th><th>Origem</th><th>Data</th><th>Pagamento</th><th>Itens</th><th>Desconto</th><th>Total</th><th>Cliente</th></tr></thead><tbody>${vendaRows}</tbody></table></div>
 <div class="footer">Relatório gerado automaticamente pelo Gevyro • ${esc(rel.geradoEm)}</div>
 </body></html>`;
 
   const blob=new Blob([html],{type:"text/html;charset=utf-8"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-  a.download=`relatorio_${rel.nomeEmpresa}_${Date.now()}.html`;a.click();
+  baixarBlob(blob,nomeArquivo(rel,"html"));
   toast.success("HTML exportado!");
 }
 
@@ -185,11 +298,12 @@ function exportPDF(rel:Relatorio) {
   const janela=window.open("","_blank","width=900,height=700");
   if(!janela){toast.error("Permita pop-ups para exportar PDF.");return;}
 
+  const mostraLucro=rel.lucroDisponivel!==false;
   const pagBarras=rel.pagamentos.map(p=>
     `<div class="bar-row"><span>${esc(p.forma)}</span><div class="bar-wrap"><div class="bar" style="width:${p.percentual.toFixed(1)}%"></div></div><span>${esc(fmt(p.total))} (${p.percentual.toFixed(1)}%)</span></div>`
   ).join("");
   const prodRows=rel.topProdutos.slice(0,15).map((p,i)=>
-    `<tr><td>${i+1}</td><td>${esc(p.nome)}</td><td>${esc(fmtN(p.quantidade))}</td><td>${esc(fmt(p.receita))}</td><td>${esc(fmt(p.lucro))}</td></tr>`
+    `<tr><td>${i+1}</td><td>${esc(p.nome)}</td><td>${esc(fmtN(p.quantidade))}</td><td>${esc(fmt(p.receita))}</td>${mostraLucro?`<td>${esc(fmt(p.lucro))}</td>`:""}</tr>`
   ).join("");
   const vendaRows=rel.vendas.map(v=>
     `<tr><td>#${v.id}</td><td><span class="badge ${v.origem==="PEDIDO"?"badge-b":"badge-g"}">${v.origem??"PDV"}</span></td><td>${esc(v.data)}</td><td>${esc(v.formaPagamento)}${v.formaPagamento2?" + "+esc(v.formaPagamento2):""}</td><td>${esc(v.itens.slice(0,3).join(", "))}${v.itens.length>3?"...":""}</td><td>${esc(fmt(v.desconto))}</td><td>${esc(fmt(v.valorFinal))}</td><td>${esc(v.nomeCliente??"—")}</td></tr>`
@@ -232,17 +346,17 @@ td{padding:6px 8px;border-bottom:1px solid #f1f5f9;color:#334155;font-size:11px}
 </div>
 <div class="grid">
   <div class="card"><div class="card-label">Receita Total</div><div class="card-value">${fmt(rel.receitaTotal)}</div><div class="card-sub">${rel.totalVendas} transações</div></div>
-  <div class="card"><div class="card-label">Lucro (PDV+Pedidos)</div><div class="card-value" style="color:#2563eb">${fmt(rel.lucroTotal)}</div></div>
+  ${mostraLucro?`<div class="card"><div class="card-label">Lucro (PDV+Pedidos)</div><div class="card-value" style="color:#2563eb">${fmt(rel.lucroTotal)}</div></div>`:""}
   <div class="card"><div class="card-label">Ticket Médio</div><div class="card-value" style="color:#7c3aed">${fmt(rel.ticketMedio)}</div></div>
   <div class="card"><div class="card-label">Descontos</div><div class="card-value" style="color:#d97706">${fmt(rel.totalDescontos)}</div></div>
-  <div class="card"><div class="card-label">PDV (Caixa)</div><div class="card-value">${fmt(rel.receitaPdv??0)}</div><div class="card-sub">${pdvPct}% do total</div></div>
-  <div class="card"><div class="card-label">Pedidos (Online)</div><div class="card-value" style="color:#2563eb">${fmt(rel.receitaPedidos??0)}</div><div class="card-sub">${pedPct}% do total</div></div>
+  ${!rel.somentePedidos?`<div class="card"><div class="card-label">PDV (Caixa)</div><div class="card-value">${fmt(rel.receitaPdv??0)}</div><div class="card-sub">${pdvPct}% do total</div></div>`:""}
+  ${!rel.somentePdv?`<div class="card"><div class="card-label">Pedidos</div><div class="card-value" style="color:#2563eb">${fmt(rel.receitaPedidos??0)}</div><div class="card-sub">${pedPct}% do total</div></div>`:""}
   <div class="card"><div class="card-label">Cancelamentos</div><div class="card-value" style="color:#dc2626">${rel.cancelamentos}</div><div class="card-sub">${fmt(rel.valorCancelado)}</div></div>
   <div class="card"><div class="card-label">Nº de Transações</div><div class="card-value" style="color:#1a1a2e">${rel.totalVendas}</div></div>
 </div>
 <div class="section"><h2>Formas de Pagamento</h2>${pagBarras}</div>
-<div class="section"><h2>Top Produtos (PDV + Pedidos)</h2>
-<table><thead><tr><th>#</th><th>Produto</th><th>Qtd</th><th>Receita</th><th>Lucro Est.</th></tr></thead><tbody>${prodRows}</tbody></table></div>
+<div class="section"><h2>Top Produtos (${rel.somentePedidos?"Pedidos":rel.somentePdv?"PDV":"PDV + Pedidos"})</h2>
+<table><thead><tr><th>#</th><th>Produto</th><th>Qtd</th><th>Receita</th>${mostraLucro?"<th>Lucro Est.</th>":""}</tr></thead><tbody>${prodRows}</tbody></table></div>
 <div class="section"><h2>Transações (${rel.vendas.length})</h2>
 <table><thead><tr><th>#</th><th>Origem</th><th>Data</th><th>Pagamento</th><th>Itens</th><th>Desc.</th><th>Total</th><th>Cliente</th></tr></thead><tbody>${vendaRows}</tbody></table></div>
 <div class="footer">Gevyro • ${esc(rel.nomeEmpresa)} • ${esc(rel.geradoEm)}</div>
@@ -256,6 +370,7 @@ td{padding:6px 8px;border-bottom:1px solid #f1f5f9;color:#334155;font-size:11px}
 /* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Relatorios() {
   const {empresaAtiva}=useEmpresa();
+  const [origem,setOrigem]=useState<Origem>("todos");
   const [periodo,setPeriodo]=useState<Periodo>("mes");
   const [dataInicio,setDataInicio]=useState(()=>new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10));
   const [dataFim,setDataFim]=useState(()=>new Date().toISOString().slice(0,10));
@@ -265,6 +380,7 @@ export default function Relatorios() {
   const [relatorio,setRelatorio]=useState<Relatorio|null>(null);
   const [loading,setLoading]=useState(false);
   const [abaVendas,setAbaVendas]=useState(false);
+  const relatorioCooldown=useActionCooldown(`relatorio:${empresaAtiva?.id??"sem-empresa"}`,10);
 
   const carregarCaixas=async()=>{
     if(!empresaAtiva||caixasOk) return;
@@ -275,22 +391,46 @@ export default function Relatorios() {
   };
 
   const gerar=async()=>{
-    if(!empresaAtiva) return;
+    if(!empresaAtiva||loading) return;
+    if(periodo==="personalizado"&&!limitesPeriodo(periodo,dataInicio,dataFim)){toast.error("Informe um período válido.");return;}
+    if(periodo==="caixa"&&!caixaId){toast.error("Selecione um caixa.");return;}
+    if(!relatorioCooldown.tryStart()){toast.info(`Aguarde ${relatorioCooldown.remaining}s para gerar outro relatório.`);return;}
     setLoading(true);setRelatorio(null);
     try{
+      if(origem==="pedidos"){
+        const limites=limitesPeriodo(periodo,dataInicio,dataFim);
+        if(!limites){toast.error(periodo==="caixa"?"O filtro por caixa existe apenas para vendas do PDV.":"Informe um período válido.");return;}
+        const pedidos=await fetchAuth<PedidoRelatorio[]>(`/api/v1/pedidos/empresa/${empresaAtiva.id}`);
+        setRelatorio(montarRelatorioPedidos(pedidos,empresaAtiva.nomeFantasia,limites));
+        setAbaVendas(false);
+        return;
+      }
+      if(origem==="pdv"){
+        if(periodo==="caixa"){
+          if(!caixaId){toast.error("Selecione um caixa.");return;}
+          const porCaixa=await fetchAuth<Relatorio>(`/api/v1/relatorios/caixa/${caixaId}`);
+          setRelatorio({...porCaixa,somentePdv:true,receitaPedidos:0});setAbaVendas(false);return;
+        }
+        const limites=limitesPeriodo(periodo,dataInicio,dataFim);
+        if(!limites){toast.error("Informe um período válido.");return;}
+        const listaCaixas=await fetchAuth<CaixaInfo[]>(`/api/v1/caixas/empresa/${empresaAtiva.id}`);
+        const lotes=await Promise.all(listaCaixas.map(c=>fetchAuth<VendaPdvRelatorio[]>(`/api/v1/vendas/caixa/${c.id}`)));
+        setRelatorio(montarRelatorioPdv(lotes.flat(),empresaAtiva.nomeFantasia,limites));setAbaVendas(false);return;
+      }
       let url="";
       if(periodo==="hoje")       url=`/api/v1/relatorios/hoje?empresaId=${empresaAtiva.id}`;
       else if(periodo==="semana")url=`/api/v1/relatorios/semana?empresaId=${empresaAtiva.id}`;
       else if(periodo==="mes")   url=`/api/v1/relatorios/mes?empresaId=${empresaAtiva.id}`;
       else if(periodo==="caixa"&&caixaId) url=`/api/v1/relatorios/caixa/${caixaId}`;
       else if(periodo==="personalizado"){
-        const ini=new Date(dataInicio+"T00:00:00").toISOString();
-        const fim=new Date(dataFim+"T23:59:59").toISOString();
-        url=`/api/v1/relatorios/periodo?empresaId=${empresaAtiva.id}&inicio=${ini}&fim=${fim}`;
+        const limites=limitesPeriodo(periodo,dataInicio,dataFim);
+        if(!limites){toast.error("Informe um período válido.");return;}
+        url=`/api/v1/relatorios/periodo?empresaId=${empresaAtiva.id}&inicio=${encodeURIComponent(limites.inicio.toISOString())}&fim=${encodeURIComponent(limites.fim.toISOString())}`;
       }
       if(!url){toast.error("Selecione um período.");return;}
       setRelatorio(await fetchAuth<Relatorio>(url));
-    }catch(e:any){toast.error("Erro ao gerar relatório.");}
+      setAbaVendas(false);
+    }catch(e){toast.error(e instanceof Error?e.message:"Erro ao gerar relatório.");}
     finally{setLoading(false);}
   };
 
@@ -311,22 +451,28 @@ export default function Relatorios() {
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
         <div>
           <h2 style={{fontSize:18,fontWeight:700,color:"var(--foreground)",margin:0}}>Relatórios</h2>
-          <p style={{fontSize:13,color:"var(--foreground-muted)",marginTop:3}}>{empresaAtiva.nomeFantasia} · PDV + Pedidos</p>
+          <p style={{fontSize:13,color:"var(--foreground-muted)",marginTop:3}}>{empresaAtiva.nomeFantasia} · {origem==="pedidos"?"Somente pedidos":origem==="pdv"?"Somente PDV":"PDV + Pedidos"}</p>
         </div>
         {relatorio&&(
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button onClick={()=>exportCSV(relatorio)} style={btnG}><Table2 size={13}/>CSV</button>
             <button onClick={()=>exportHTML(relatorio)} style={btnG}><FileDown size={13}/>HTML</button>
-            <button onClick={()=>exportPDF(relatorio)} style={btnG}><FileText size={13}/>PDF</button>
+            <button onClick={()=>exportPDF(relatorio)} style={btnG} title="Abre a impressão do navegador para salvar em PDF"><FileText size={13}/>Imprimir / PDF</button>
           </div>
         )}
       </div>
 
       {/* Filtros */}
       <div style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:12,padding:20}}>
+        <p style={{fontSize:11,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Origem dos dados</p>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:18}}>
+          {([ ["todos","PDV + Pedidos"],["pdv","Somente PDV"],["pedidos","Somente pedidos"] ] as [Origem,string][]).map(([valor,label])=>(
+            <button key={valor} onClick={()=>{setOrigem(valor);setRelatorio(null);if(valor==="pedidos"&&periodo==="caixa")setPeriodo("mes");}} style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${origem===valor?"var(--primary)":"var(--border)"}`,background:origem===valor?"var(--primary-muted)":"transparent",color:origem===valor?"var(--primary)":"var(--foreground-muted)",fontSize:13,fontWeight:origem===valor?600:400,cursor:"pointer"}}>{label}</button>
+          ))}
+        </div>
         <p style={{fontSize:11,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:14}}>Selecionar Período</p>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
-          {([ ["hoje","Hoje"],["semana","Esta Semana"],["mes","Este Mês"],["personalizado","Personalizado"],["caixa","Por Caixa"] ] as [Periodo,string][]).map(([v,l])=>(
+          {([ ["hoje","Hoje"],["semana","Esta Semana"],["mes","Este Mês"],["personalizado","Personalizado"],...(origem!=="pedidos"?[["caixa","Por Caixa"]]:[]) ] as [Periodo,string][]).map(([v,l])=>(
             <button key={v} onClick={()=>{setPeriodo(v);if(v==="caixa")carregarCaixas();}} style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${periodo===v?"var(--primary)":"var(--border)"}`,background:periodo===v?"var(--primary-muted)":"transparent",color:periodo===v?"var(--primary)":"var(--foreground-muted)",fontSize:13,fontWeight:periodo===v?600:400,cursor:"pointer"}}>{l}</button>
           ))}
         </div>
@@ -350,8 +496,8 @@ export default function Relatorios() {
             </select>
           </div>
         )}
-        <button onClick={gerar} disabled={loading} style={{...btnP,minWidth:160,justifyContent:"center",opacity:loading?0.7:1}}>
-          {loading?<><Loader2 size={14} style={{animation:"spin 1s linear infinite"}}/>Gerando...</>:<><BarChart3 size={14}/>Gerar Relatório</>}
+        <button onClick={gerar} disabled={loading||relatorioCooldown.blocked} style={{...btnP,minWidth:160,justifyContent:"center",opacity:loading||relatorioCooldown.blocked?0.7:1,cursor:loading||relatorioCooldown.blocked?"not-allowed":"pointer"}}>
+          {loading?<><Loader2 size={14} style={{animation:"spin 1s linear infinite"}}/>Gerando...</>:relatorioCooldown.blocked?<><Clock size={14}/>Aguarde {relatorioCooldown.remaining}s</>:<><BarChart3 size={14}/>Gerar Relatório</>}
         </button>
       </div>
 
@@ -373,7 +519,7 @@ export default function Relatorios() {
           {/* KPIs */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(175px,1fr))",gap:12}}>
             <StatCard label="Receita Total"   value={fmt(relatorio.receitaTotal)} sub={`${relatorio.totalVendas} transações`} icon={<DollarSign size={16}/>}/>
-            <StatCard label="Lucro Total"     value={fmt(relatorio.lucroTotal)}   icon={<TrendingUp size={16}/>}    color="#3b82f6" sub="PDV + Pedidos"/>
+            {relatorio.lucroDisponivel!==false&&<StatCard label="Lucro Total" value={fmt(relatorio.lucroTotal)} icon={<TrendingUp size={16}/>} color="#3b82f6" sub="PDV + Pedidos"/>}
             <StatCard label="Ticket Médio"    value={fmt(relatorio.ticketMedio)}  icon={<BarChart3 size={16}/>}     color="#a78bfa"/>
             <StatCard label="Descontos"       value={fmt(relatorio.totalDescontos)} icon={<TrendingDown size={16}/>} color="#f59e0b"/>
             <StatCard label="Maior Transação" value={fmt(relatorio.maiorVenda)}   icon={<TrendingUp size={16}/>}/>
@@ -382,7 +528,7 @@ export default function Relatorios() {
           </div>
 
           {/* Origem PDV vs Pedidos */}
-          {(relatorio.receitaPdv!=null||relatorio.receitaPedidos!=null)&&(
+          {!relatorio.somentePedidos&&!relatorio.somentePdv&&(relatorio.receitaPdv!=null||relatorio.receitaPedidos!=null)&&(
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               <div style={{background:"var(--surface-elevated)",border:"1px solid rgba(16,185,129,0.3)",borderRadius:12,padding:"16px 20px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
@@ -407,7 +553,7 @@ export default function Relatorios() {
           <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:16}}>
             {relatorio.vendasDiarias.length>0&&(
               <div style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:12,padding:20}}>
-                <p style={{fontSize:12,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:16}}>Vendas por Dia</p>
+                <p style={{fontSize:12,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:16}}>{relatorio.somentePedidos?"Pedidos por Dia":"Vendas por Dia"}</p>
                 <ResponsiveContainer width="100%" height={220}>
                   <AreaChart data={relatorio.vendasDiarias} margin={{top:4,right:4,left:-16,bottom:0}}>
                     <defs>
@@ -490,13 +636,13 @@ export default function Relatorios() {
             <div style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden"}}>
               <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)"}}>
                 <p style={{fontSize:12,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",margin:0}}>
-                  <Package size={12} style={{marginRight:5}}/>Desempenho de Produtos — PDV + Pedidos
+                  <Package size={12} style={{marginRight:5}}/>Desempenho de Produtos — {relatorio.somentePedidos?"Pedidos":relatorio.somentePdv?"PDV":"PDV + Pedidos"}
                 </p>
               </div>
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead>
-                    <tr>{["#","Produto","Qtd Vendida","Receita","Lucro Estimado","Margem"].map(h=>(
+                    <tr>{["#","Produto","Qtd Vendida","Receita",...(relatorio.lucroDisponivel!==false?["Lucro Estimado","Margem"]:[])].map(h=>(
                       <th key={h} style={{padding:"9px 14px",fontSize:11,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",textAlign:"left",background:"var(--surface)",whiteSpace:"nowrap"}}>{h}</th>
                     ))}</tr>
                   </thead>
@@ -511,10 +657,10 @@ export default function Relatorios() {
                           <td style={{padding:"10px 14px",fontSize:14,fontWeight:500,color:"var(--foreground)"}}>{p.nome}</td>
                           <td style={{padding:"10px 14px",fontSize:13,color:"var(--foreground)"}}>{fmtN(p.quantidade)}</td>
                           <td style={{padding:"10px 14px",fontSize:13,fontWeight:600,color:"var(--primary)"}}>{fmt(p.receita)}</td>
-                          <td style={{padding:"10px 14px",fontSize:13,fontWeight:600,color:"#3b82f6"}}>{fmt(p.lucro)}</td>
+                          {relatorio.lucroDisponivel!==false&&<><td style={{padding:"10px 14px",fontSize:13,fontWeight:600,color:"#3b82f6"}}>{fmt(p.lucro)}</td>
                           <td style={{padding:"10px 14px"}}>
                             <span style={{fontSize:12,fontWeight:700,color:margem>=30?"var(--primary)":margem>=10?"#f59e0b":"#ef4444"}}>{margem.toFixed(1)}%</span>
-                          </td>
+                          </td></>}
                         </tr>
                       );
                     })}
@@ -529,7 +675,7 @@ export default function Relatorios() {
             <div style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden"}}>
               <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <p style={{fontSize:12,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em",margin:0}}>
-                  Transações ({relatorio.vendas.length}) — PDV + Pedidos
+                  {relatorio.somentePedidos?"Pedidos":"Transações"} ({relatorio.vendas.length}) — {relatorio.somentePedidos?"Somente pedidos":relatorio.somentePdv?"Somente PDV":"PDV + Pedidos"}
                 </p>
                 <button onClick={()=>setAbaVendas(v=>!v)} style={btnG}>
                   <ChevronDown size={13} style={{transform:abaVendas?"rotate(180deg)":"none",transition:"transform .2s"}}/>
@@ -581,7 +727,7 @@ export default function Relatorios() {
         <div style={{padding:60,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:14,color:"var(--foreground-subtle)"}}>
           <FileText size={52}/>
           <p style={{fontSize:15,fontWeight:600,color:"var(--foreground)"}}>Selecione um período e gere o relatório</p>
-          <p style={{fontSize:13}}>Combina automaticamente vendas do caixa (PDV) e pedidos online.</p>
+          <p style={{fontSize:13}}>{origem==="pedidos"?"Gera indicadores exclusivamente dos pedidos no período selecionado.":origem==="pdv"?"Gera indicadores exclusivamente das vendas realizadas nos caixas.":"Combina automaticamente vendas do caixa (PDV) e pedidos online."}</p>
         </div>
       )}
       <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>

@@ -23,6 +23,7 @@ import {
   Search
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAuthJson, getUsuario } from "@/lib/api-v2";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Empresa {
@@ -44,32 +45,9 @@ interface Props {
 
 type AbaTipo = "ativas" | "inativas";
 
-/* ─── Helper fetch ───────────────────────────────────────────────────────── */
-async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const token =
-    (typeof window !== "undefined"
-      ? (sessionStorage.getItem("jwt_token") ??
-        document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
-        null)
-      : null) ?? "";
-  const res = await fetch(
-    path.startsWith("http") ? path : `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    {
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      ...opts,
-    },
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => null);
-    throw new Error(err?.mensagem ?? `Erro ${res.status}`);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json();
-}
+const fetchAuth = fetchAuthJson;
+
+const LIMITE_EMPRESAS:Record<string,number>={EXPERIMENTAL:1,BASICO:1,PRO:5,PREMIUM:99999};
 
 const inp: React.CSSProperties = {
   width: "100%",
@@ -83,11 +61,7 @@ const inp: React.CSSProperties = {
   transition: "border-color 0.2s",
 };
 
-const getNotaFiscalApiBase = () => {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-  const cleanUrl = envUrl.replace(/\/api\/v1\/?$/, "").replace(/\/v1\/?$/, "").replace(/\/$/, "");
-  return `${cleanUrl}/api/nota-fiscal`;
-};
+const getNotaFiscalApiBase = () => "/api/nota-fiscal";
 
 const formatarCnpj = (valor: string) => valor.replace(/\D/g, "").slice(0, 14)
   .replace(/^(\d{2})(\d)/, "$1.$2")
@@ -310,6 +284,7 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
   const [empresaParaExcluirPermanente, setEmpresaParaExcluirPermanente] = useState<Empresa | null>(null);
   
   const [abaAtiva, setAbaAtiva] = useState<AbaTipo>("ativas");
+  const [planoUsuario,setPlanoUsuario]=useState("EXPERIMENTAL");
 
   const carregar = async () => {
     try {
@@ -323,7 +298,7 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
     }
   };
 
-  useEffect(() => { carregar(); }, []);
+  useEffect(() => { carregar();getUsuario().then(u=>setPlanoUsuario(u.tipoPlano)).catch(()=>{}); }, []);
 
   const lista = useMemo(() => {
     return empresas.filter(emp => abaAtiva === "ativas" ? emp.ativo : !emp.ativo);
@@ -335,6 +310,9 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
       inativas: empresas.filter(e => !e.ativo).length
     };
   }, [empresas]);
+  const limiteEmpresas=LIMITE_EMPRESAS[planoUsuario]??1;
+  const planoIlimitado=limiteEmpresas>=99999;
+  const usoEmpresas=planoIlimitado?0:Math.min(100,(empresas.length/limiteEmpresas)*100);
 
   const ok = (msg: string) => {
     setSucesso(msg);
@@ -454,13 +432,13 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
   const isAviso = erro.includes("opcional"); 
 
   return (
-    <div className="empresas-page" style={{ padding: "20px 22px 48px", display: "flex", flexDirection: "column", gap: 14, width: "100%", color: "var(--foreground)" }}>
+    <div className="empresas-page" style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20, width: "100%", color: "var(--foreground)" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @media(max-width:700px){.empresas-page{padding:16px 12px 90px!important}.empresa-form-grid,.empresa-edit-grid{grid-template-columns:1fr!important}.empresa-row{align-items:flex-start!important;gap:14px}.empresa-row-actions{width:100%;justify-content:flex-start!important}}
+        @media(max-width:700px){.empresas-page{padding:18px 14px 90px!important}.empresa-form-grid,.empresa-edit-grid{grid-template-columns:1fr!important}.empresa-row{align-items:flex-start!important;gap:14px}.empresa-row-actions{width:100%;justify-content:flex-start!important}}
       `}</style>
       
       {/* Modais de Exclusão */}
@@ -474,8 +452,8 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 760, color: "var(--foreground)", margin: 0, display: "flex", alignItems: "center", gap: 9, letterSpacing: "-.03em" }}>
-            <Network size={21} color="var(--primary)" />
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--foreground)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <Network size={18} color="var(--primary)" />
             {modoSelecao ? "Selecionar empresa" : "Empresas"}
           </h1>
           <p style={{ fontSize: 14, color: "var(--foreground-muted)", marginTop: 6 }}>
@@ -483,11 +461,17 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
           </p>
         </div>
         {!modoSelecao && (
-          <button onClick={() => { setCriando(true); setErro(""); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", background: "var(--primary)", color: "#000", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", transition: "transform 0.2s", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)" }} onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}>
+          <button onClick={() => { setCriando(true); setErro(""); }} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 15px", background: "var(--primary)", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
             <Plus size={18} /> Adicionar Empresa
           </button>
         )}
       </div>
+
+      {!modoSelecao&&<div style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:12,padding:"14px 16px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",gap:12,fontSize:12,marginBottom:8}}><span style={{color:"var(--foreground-muted)",fontWeight:600}}>Uso do plano {planoUsuario}</span><span style={{color:"var(--foreground)",fontWeight:700}}>{empresas.length} / {planoIlimitado?"Ilimitado":limiteEmpresas}</span></div>
+        {!planoIlimitado&&<div style={{height:5,background:"var(--border)",borderRadius:99}}><div style={{height:5,width:`${usoEmpresas}%`,background:usoEmpresas>=100?"#ef4444":"var(--primary)",borderRadius:99}}/></div>}
+        <p style={{fontSize:11,color:"var(--foreground-subtle)",margin:"7px 0 0"}}>Empresas arquivadas preservam seus dados e continuam ocupando a cota. A exclusão definitiva libera uma vaga.</p>
+      </div>}
 
       {/* Banner Informativo (Aparece apenas no modo gerencial se não estiver criando) */}
       {!modoSelecao && !criando && (
@@ -504,14 +488,12 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
 
       {/* Abas */}
       {!modoSelecao && (
-        <div style={{ display: "flex", gap: 24, borderBottom: "1px solid var(--border)", paddingBottom: 16, marginTop: 8 }}>
-          <button onClick={() => setAbaAtiva("ativas")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, fontWeight: abaAtiva === "ativas" ? 700 : 500, color: abaAtiva === "ativas" ? "var(--primary)" : "var(--foreground-muted)", position: "relative", paddingBottom: 8, transition: "color 0.2s" }}>
+        <div style={{ display: "flex", gap: 6, background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:10,padding:5,width:"fit-content" }}>
+          <button onClick={() => setAbaAtiva("ativas")} style={{ background: abaAtiva==="ativas"?"var(--primary-muted)":"transparent", border: abaAtiva==="ativas"?"1px solid var(--primary)":"1px solid transparent",borderRadius:7, cursor: "pointer", fontSize: 13, fontWeight: abaAtiva === "ativas" ? 700 : 500, color: abaAtiva === "ativas" ? "var(--primary)" : "var(--foreground-muted)", padding:"7px 12px" }}>
             Lojas Ativas <span style={{ background: abaAtiva === "ativas" ? "rgba(16, 185, 129, 0.15)" : "var(--surface-overlay)", color: abaAtiva === "ativas" ? "var(--primary)" : "var(--foreground-subtle)", padding: "2px 8px", borderRadius: 99, fontSize: 11, marginLeft: 6 }}>{stats.ativas}</span>
-            {abaAtiva === "ativas" && <div style={{ position: "absolute", bottom: -17, left: 0, right: 0, height: 3, background: "var(--primary)", borderRadius: "3px 3px 0 0" }} />}
           </button>
-          <button onClick={() => setAbaAtiva("inativas")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, fontWeight: abaAtiva === "inativas" ? 700 : 500, color: abaAtiva === "inativas" ? "var(--destructive)" : "var(--foreground-muted)", position: "relative", paddingBottom: 8, transition: "color 0.2s" }}>
+          <button onClick={() => setAbaAtiva("inativas")} style={{ background: abaAtiva==="inativas"?"rgba(239,68,68,.08)":"transparent", border: abaAtiva==="inativas"?"1px solid rgba(239,68,68,.35)":"1px solid transparent",borderRadius:7, cursor: "pointer", fontSize: 13, fontWeight: abaAtiva === "inativas" ? 700 : 500, color: abaAtiva === "inativas" ? "var(--destructive)" : "var(--foreground-muted)", padding:"7px 12px" }}>
             Arquivadas <span style={{ background: abaAtiva === "inativas" ? "rgba(239, 68, 68, 0.15)" : "var(--surface-overlay)", color: abaAtiva === "inativas" ? "var(--destructive)" : "var(--foreground-subtle)", padding: "2px 8px", borderRadius: 99, fontSize: 11, marginLeft: 6 }}>{stats.inativas}</span>
-            {abaAtiva === "inativas" && <div style={{ position: "absolute", bottom: -17, left: 0, right: 0, height: 3, background: "var(--destructive)", borderRadius: "3px 3px 0 0" }} />}
           </button>
         </div>
       )}

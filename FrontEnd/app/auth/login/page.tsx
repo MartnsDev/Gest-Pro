@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { login, loginComGoogle } from "@/lib/api-v2";
+import { useActionCooldown } from "@/hooks/use-action-cooldown";
 
 const AFTER_LOGIN_KEY = "gevyro-request-cookie-consent-after-login";
 const LEGAL_AFTER_LOGIN_KEY = "gevyro-require-legal-ack-after-login";
@@ -27,8 +28,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const loginCooldown = useActionCooldown("login", 5);
 
   const handleGoogle = () => {
+    if (!loginCooldown.tryStart()) {
+      setErro(`Aguarde ${loginCooldown.remaining}s antes de tentar entrar novamente.`);
+      return;
+    }
     sessionStorage.setItem(AFTER_LOGIN_KEY, "true");
     sessionStorage.setItem(LEGAL_AFTER_LOGIN_KEY, "true");
     loginComGoogle();
@@ -42,6 +48,7 @@ export default function LoginPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.email || !form.senha) return setErro("Preencha todos os campos");
+    if (!loginCooldown.tryStart()) return setErro(`Aguarde ${loginCooldown.remaining}s antes de tentar entrar novamente.`);
     setLoading(true);
     setErro("");
     try {
@@ -75,8 +82,8 @@ export default function LoginPage() {
           <h1 className="mt-4 text-4xl font-light tracking-[-.04em] text-[#343b37] sm:text-5xl">Bem-vindo <span className="italic text-[#258c53]">de volta</span></h1>
           <p className="mt-4 text-sm leading-6 text-[#718078]">Entre para acompanhar vendas, estoque, caixa e relatórios.</p>
 
-          <button type="button" onClick={handleGoogle} className="mt-9 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white text-sm font-medium text-[#46514b] transition hover:border-[#258c53]/40 hover:bg-[#f7faf8]">
-            <GoogleIcon /> Continuar com Google
+          <button type="button" onClick={handleGoogle} disabled={loading||loginCooldown.blocked} className="mt-9 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white text-sm font-medium text-[#46514b] transition hover:border-[#258c53]/40 hover:bg-[#f7faf8] disabled:cursor-not-allowed disabled:opacity-60">
+            <GoogleIcon /> {loginCooldown.blocked?`Aguarde ${loginCooldown.remaining}s` : "Continuar com Google"}
           </button>
           <div className="my-7 flex items-center gap-4"><span className="h-px flex-1 bg-zinc-200" /><span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">ou</span><span className="h-px flex-1 bg-zinc-200" /></div>
 
@@ -87,7 +94,7 @@ export default function LoginPage() {
               <span className="relative block"><input type={showPass ? "text" : "password"} value={form.senha} onChange={(event) => set("senha", event.target.value)} autoComplete="current-password" placeholder="Sua senha" className="h-[52px] w-full rounded-xl border border-zinc-200 bg-white px-4 pr-12 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /><button type="button" onClick={() => setShowPass((value) => !value)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-[#258c53]" aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}>{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></span>
             </label>
             {erro && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{erro}</p>}
-            <button type="submit" disabled={loading} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-full bg-[#258c53] text-sm font-bold text-white transition hover:bg-[#1d7544] disabled:cursor-not-allowed disabled:opacity-60">{loading ? "Entrando..." : <>Entrar <ArrowRight size={17} /></>}</button>
+            <button type="submit" disabled={loading||loginCooldown.blocked} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-full bg-[#258c53] text-sm font-bold text-white transition hover:bg-[#1d7544] disabled:cursor-not-allowed disabled:opacity-60">{loading ? "Entrando..." : loginCooldown.blocked?`Tente novamente em ${loginCooldown.remaining}s`:<>Entrar <ArrowRight size={17} /></>}</button>
           </form>
 
           <p className="mt-7 text-center text-sm text-[#718078]">Ainda não tem conta? <Link href="/auth/cadastro" className="font-semibold text-[#258c53] hover:underline">Teste por 30 dias</Link></p>

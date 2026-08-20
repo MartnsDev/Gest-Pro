@@ -15,8 +15,8 @@ import br.com.gestpro.plano.stripe.service.StripePriceProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.SignatureVerificationException;
+import com.stripe.exception.InvalidRequestException;
 import com.stripe.model.Event;
-import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import com.stripe.param.checkout.SessionRetrieveParams;
@@ -27,12 +27,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -49,6 +49,7 @@ public class CheckoutController {
     private final UsuarioRepository usuarioRepository;
     private final StripePriceProperties prices;
     private final StripeWebhookEventRepository eventRepository;
+    private final PlatformTransactionManager transactionManager;
 
     @Value("${stripe.webhook.secret}")
     private String endpointSecret;
@@ -85,6 +86,16 @@ public class CheckoutController {
                             "Você já possui uma assinatura ativa. "
                                     + "Use o portal para alterar o plano."
                     ));
+        } catch (InvalidRequestException exception) {
+            log.error(
+                    "Configuração Stripe inválida no checkout: usuarioId={} plano={} code={}",
+                    usuario.getId(), request.plano(), exception.getCode(), exception
+            );
+            String mensagem = "resource_missing".equals(exception.getCode())
+                    ? "O preço deste plano não existe na conta Stripe configurada. Confira a chave e o Price ID do mesmo ambiente."
+                    : "A Stripe recusou a configuração deste plano.";
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", mensagem, "code", "STRIPE_CONFIGURATION_ERROR"));
         } catch (Exception exception) {
             log.error(
                     "Erro ao criar checkout: usuarioId={} plano={}",
@@ -117,6 +128,15 @@ public class CheckoutController {
                                 "/api/payments/portal"
                         ));
 
+        if (assinatura.getStripeCustomerId() == null
+                || assinatura.getStripeCustomerId().isBlank()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of(
+                            "error", "Esta assinatura ainda não está vinculada à Stripe.",
+                            "code", "CHECKOUT_REQUIRED"
+                    ));
+        }
+
         try {
             return ResponseEntity.ok(Map.of(
                     "url",
@@ -132,8 +152,8 @@ public class CheckoutController {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
-                            "error",
-                            "Não foi possível abrir o portal."
+                            "error", "Não foi possível abrir o portal de cobrança.",
+                            "code", "PORTAL_UNAVAILABLE"
                     ));
         }
     }
@@ -203,6 +223,17 @@ public class CheckoutController {
                         ));
             }
 
+            String subscriptionId = session.getSubscription();
+            if (subscriptionId == null || subscriptionId.isBlank()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("error", "A assinatura ainda não foi criada pela Stripe."));
+            }
+
+            // O webhook continua sendo a fonte principal. Esta sincronização
+            // autenticada torna o retorno do Checkout resiliente a pequenos
+            // atrasos de entrega do webhook, sem confiar no frontend.
+            atualizarPlano.sincronizarPlano(subscriptionId);
+
             return ResponseEntity.ok(Map.of(
                     "plano", plano.name(),
                     "status", status,
@@ -250,16 +281,23 @@ public class CheckoutController {
                     .body("Payload inválido.");
         }
 
-        /*
-         * Evento duplicado: já foi processado com sucesso.
-         */
-        if (eventRepository.existsByStripeEventId(event.getId())) {
-            return ResponseEntity.ok("");
-        }
-
         try {
-            processarEvento(event);
-            registrarEvento(event);
+            new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                if (eventRepository.existsByStripeEventId(event.getId())) {
+                    return;
+                }
+
+                // Reserva o event_id dentro da mesma transação das mudanças
+                // locais. Em caso de falha tudo é revertido e a Stripe pode
+                // reenviar; em concorrência a restrição UNIQUE impede dupla
+                // confirmação.
+                registrarEvento(event);
+                try {
+                    processarEvento(event);
+                } catch (Exception exception) {
+                    throw new IllegalStateException("Falha ao processar evento Stripe.", exception);
+                }
+            });
 
             return ResponseEntity.ok("");
         } catch (Exception exception) {
@@ -289,9 +327,9 @@ public class CheckoutController {
 
         switch (event.getType()) {
             case "checkout.session.completed" ->
-                    checkoutConcluido(event);
+                    checkoutConcluido(objeto);
 
-            case "invoice.payment_succeeded" ->
+            case "invoice.paid", "invoice.payment_succeeded" ->
                     pagamentoConfirmado(objeto);
 
             case "invoice.payment_failed" -> {
@@ -326,15 +364,11 @@ public class CheckoutController {
         }
     }
 
-    private void checkoutConcluido(Event event) {
-        Session session =
-                desserializar(event, Session.class);
-
-        String usuarioId = session.getMetadata()
-                .get("usuarioId");
+    private void checkoutConcluido(JsonNode session) {
+        String usuarioId = textoOuNull(session.path("metadata"), "usuarioId");
 
         if (usuarioId == null || usuarioId.isBlank()) {
-            usuarioId = session.getClientReferenceId();
+            usuarioId = textoOuNull(session, "client_reference_id");
         }
 
         if (usuarioId == null || usuarioId.isBlank()) {
@@ -349,18 +383,18 @@ public class CheckoutController {
                         "Usuário do checkout não encontrado."
                 ));
 
-        if (session.getSubscription() == null
-                || session.getCustomer() == null) {
+        String subscriptionId = textoOuNull(session, "subscription");
+        String customerId = textoOuNull(session, "customer");
+        if (subscriptionId == null || customerId == null) {
             throw new IllegalStateException(
                     "Checkout sem subscription/customer."
             );
         }
 
-        atualizarPlano.ativarPlano(
-                usuario.getEmail(),
-                session.getSubscription(),
-                session.getCustomer()
-        );
+        // A Subscription contém usuarioId nos metadados gravados pelo
+        // servidor. Sincronizar também aceita estados pendentes e evita que
+        // meios de pagamento assíncronos façam o webhook falhar em loop.
+        atualizarPlano.sincronizarPlano(subscriptionId);
     }
 
     private void pagamentoConfirmado(JsonNode objeto) {
@@ -374,7 +408,8 @@ public class CheckoutController {
             return;
         }
 
-        if ("subscription_cycle".equals(motivo)
+        if ("subscription_create".equals(motivo)
+                || "subscription_cycle".equals(motivo)
                 || "subscription_update".equals(motivo)) {
             atualizarPlano.sincronizarPlano(
                     subscriptionId
@@ -393,17 +428,10 @@ public class CheckoutController {
             return;
         }
 
-        if ("active".equals(status)
-                || "trialing".equals(status)
-                || "past_due".equals(status)) {
-            atualizarPlano.sincronizarPlano(
-                    subscriptionId
-            );
-        }
+        atualizarPlano.sincronizarPlano(subscriptionId);
     }
 
-    @Transactional
-    protected void registrarEvento(Event event) {
+    private void registrarEvento(Event event) {
         StripeWebhookEvent processado =
                 new StripeWebhookEvent();
 
@@ -448,22 +476,4 @@ public class CheckoutController {
                 : null;
     }
 
-    @SuppressWarnings("unchecked")
-    private <T extends StripeObject> T desserializar(
-            Event event,
-            Class<T> tipo
-    ) {
-        Optional<StripeObject> objeto =
-                event.getDataObjectDeserializer().getObject();
-
-        if (objeto.isEmpty()
-                || !tipo.isInstance(objeto.get())) {
-            throw new IllegalStateException(
-                    "Objeto Stripe incompatível para "
-                            + event.getType()
-            );
-        }
-
-        return (T) objeto.get();
-    }
 }

@@ -56,6 +56,8 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
 
         if (!empresa.getDono().getId().equals(usuario.getId()))
             throw new ApiException("Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, PATH);
+        if (!Boolean.TRUE.equals(empresa.getAtivo()))
+            throw new ApiException("Esta empresa está arquivada.", HttpStatus.CONFLICT, PATH);
 
         Cliente cliente = null;
         if (dto.getIdCliente() != null)

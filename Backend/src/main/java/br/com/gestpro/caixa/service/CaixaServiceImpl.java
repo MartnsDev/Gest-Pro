@@ -37,6 +37,8 @@ public class CaixaServiceImpl implements CaixaServiceInterface {
 
         if (!empresa.getDono().getId().equals(usuario.getId()))
             throw new ApiException("Esta empresa não pertence ao usuário logado", HttpStatus.FORBIDDEN, "/caixas/abrir");
+        if (!Boolean.TRUE.equals(empresa.getAtivo()))
+            throw new ApiException("Não é possível abrir caixa em uma empresa arquivada.", HttpStatus.CONFLICT, "/caixas/abrir");
 
         long abertos = caixaRepository.countByEmpresaIdAndStatus(empresa.getId(), StatusCaixa.ABERTO);
         if (abertos > 0)

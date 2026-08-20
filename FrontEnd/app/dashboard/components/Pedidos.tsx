@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useEmpresa } from "../context/Empresacontext";
-import { getUsuario, type Usuario } from "@/lib/api-v2";
+import { fetchAuth as fetchApi, getUsuario, type Usuario } from "@/lib/api-v2";
 import {
   Plus, X, Check, Search, ChevronRight, Store, Smartphone,
   DollarSign, CreditCard, ShoppingBag, Truck, CheckCircle2,
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Produto { id:number; nome:string; preco:number; quantidadeEstoque:number; categoria?:string }
+interface Cliente { id:number; nome:string; ativo?:boolean }
 interface ItemCarrinho { produto:Produto; quantidade:number }
 interface ItemPedidoDTO { idProduto:number; nomeProduto:string; quantidade:number; precoUnitario:number; subtotal:number }
 interface Pedido {
@@ -45,7 +46,13 @@ const STATUS_META: Record<StatusPedido,{label:string;color:string;bg:string;bord
   ENTREGUE:   {label:"Entregue",   color:"#10b981", bg:"rgba(16,185,129,0.18)", border:"rgba(16,185,129,0.5)",  icon:<Check size={12}/>},
   CANCELADO:  {label:"Cancelado",  color:"#ef4444", bg:"rgba(239,68,68,0.12)",  border:"rgba(239,68,68,0.4)",   icon:<Ban size={12}/>},
 };
-const STATUS_SELECIONAVEIS: StatusPedido[] = ["PENDENTE","CONFIRMADO","ENVIADO","ENTREGUE"];
+const STATUS_TRANSICOES: Record<StatusPedido, StatusPedido[]> = {
+  PENDENTE: ["CONFIRMADO"],
+  CONFIRMADO: ["ENVIADO", "ENTREGUE"],
+  ENVIADO: ["ENTREGUE"],
+  ENTREGUE: [],
+  CANCELADO: [],
+};
 
 const FORMAS: {value:FormaPagamento;label:string;icon:React.ReactNode}[] = [
   {value:"PIX",label:"Pix",icon:<Smartphone size={13}/>},
@@ -92,18 +99,19 @@ function buildOAuthUrl(marketplace: MarketplaceKey, empresaId: number): string {
     // O partner_id é público — pode ficar no env do frontend.
     const partnerId   = process.env.NEXT_PUBLIC_SHOPEE_PARTNER_ID ?? "";
     const redirectUrl = encodeURIComponent(`${callbackBase}/shopee`);
-    return `https://partner.shopeemobile.com/api/v2/shop/auth_partner?partner_id=${partnerId}&redirect=${redirectUrl}&state=${state}`;
+    return `https://partner.shopeemobile.com/api/v2/shop/auth_partner?partner_id=${encodeURIComponent(partnerId)}&redirect=${redirectUrl}&state=${encodeURIComponent(state)}`;
   }
 
   // Mercado Livre
   const clientId     = process.env.NEXT_PUBLIC_ML_CLIENT_ID ?? "";
   const redirectUri  = encodeURIComponent(`${callbackBase}/mercadolivre`);
-  return `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
+  return `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${encodeURIComponent(clientId)}&redirect_uri=${redirectUri}&state=${encodeURIComponent(state)}`;
 }
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?:number|null) =>
   new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v??0);
+const centavos = (valor:number) => Math.round((valor + Number.EPSILON) * 100) / 100;
 
 const fmtData = (s?:any) => {
   if(!s) return "—";
@@ -115,14 +123,8 @@ const fmtData = (s?:any) => {
 };
 
 async function fetchAuth<T>(path:string,opts?:RequestInit):Promise<T> {
-  const token=(typeof window!=="undefined"
-    ?sessionStorage.getItem("jwt_token")??document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1]??null:null
-    )??"";
-  const res=await fetch(
-    `${API_URL}${path}`,
-    {credentials:"include",headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})}, ...opts},
-  );
-  if(!res.ok){const e=await res.json().catch(()=>null);throw new Error(e?.mensagem??`Erro ${res.status}`);}
+  const res=await fetchApi(path,opts);
+  if(!res.ok){const e=await res.json().catch(()=>null);throw new Error(e?.mensagem??e?.erro??`Erro ${res.status}`);}
   if(res.status===204) return undefined as unknown as T;
   return res.json();
 }
@@ -169,7 +171,7 @@ function SeletorStatus({statusAtual,onChange,salvando}:{
           <div style={{position:"fixed",inset:0,zIndex:99}} onClick={()=>setOpen(false)}/>
           <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,zIndex:100,background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:11,overflow:"hidden",minWidth:185,boxShadow:"0 10px 32px rgba(0,0,0,0.32)"}}>
             <div style={{padding:"6px 10px",borderBottom:"1px solid var(--border)",fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".07em"}}>Alterar status</div>
-            {STATUS_SELECIONAVEIS.map(s=>{
+            {STATUS_TRANSICOES[statusAtual].map(s=>{
               const sm=STATUS_META[s]; const ativo=s===statusAtual;
               return (
                 <button key={s} onClick={()=>{onChange(s);setOpen(false);}}
@@ -373,7 +375,7 @@ function ModalVincularProduto({empresaId,marketplace,onClose,onSucesso}:{
               <span style={{color:"var(--foreground-muted)"}}>{produtoSelecionado.nome}</span>
               <Link2 size={12} color="var(--primary)"/>
               <span style={{color:"var(--foreground-muted)",display:"flex",alignItems:"center",gap:6}}>
-                {React.cloneElement(meta.icon as React.ReactElement,{width:14,height:14})} {anuncioId}
+                {React.cloneElement(meta.icon as React.ReactElement<{width?:number;height?:number}>,{width:14,height:14})} {anuncioId}
               </span>
             </div>
           )}
@@ -601,7 +603,7 @@ function SecaoIntegracoes({empresaId}:{empresaId:number}) {
                     const meta=MARKETPLACE_META[v.marketplace];
                     return (
                       <div key={v.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"var(--surface-overlay)",borderRadius:8,border:"1px solid var(--border-subtle)"}}>
-                        <span style={{display:"flex",alignItems:"center",width:16}}>{React.cloneElement(meta.icon as React.ReactElement,{width:14,height:14})}</span>
+                        <span style={{display:"flex",alignItems:"center",width:16}}>{React.cloneElement(meta.icon as React.ReactElement<{width?:number;height?:number}>,{width:14,height:14})}</span>
                         <div style={{flex:1,minWidth:0}}>
                           <p style={{fontSize:12,fontWeight:500,color:"var(--foreground)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.nomeProduto}</p>
                           <p style={{fontSize:11,color:"var(--foreground-muted)",margin:"1px 0 0"}}>
@@ -655,6 +657,8 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
   empresaId:number;onClose:()=>void;onSucesso:(p:Pedido)=>void;
 }) {
   const [produtos,setProdutos]=useState<Produto[]>([]);
+  const [clientes,setClientes]=useState<Cliente[]>([]);
+  const [clienteId,setClienteId]=useState("");
   const [carrinho,setCarrinho]=useState<ItemCarrinho[]>([]);
   const [busca,setBusca]=useState("");
   const [forma,setForma]=useState<FormaPagamento>("PIX");
@@ -668,8 +672,16 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
   const [salvando,setSalvando]=useState(false);
 
   useEffect(()=>{
-    fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`)
-      .then(setProdutos).catch(()=>toast.error("Erro ao carregar produtos"));
+    let ignore=false;
+    Promise.all([
+      fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`),
+      fetchAuth<Cliente[]>(`/api/v1/clientes?empresaId=${empresaId}&tipo=CLIENTE`),
+    ]).then(([listaProdutos,listaClientes])=>{
+      if(ignore)return;
+      setProdutos(listaProdutos);
+      setClientes(listaClientes.filter(cliente=>cliente.ativo!==false));
+    }).catch(()=>{if(!ignore)toast.error("Erro ao carregar produtos e clientes");});
+    return()=>{ignore=true;};
   },[empresaId]);
 
   const filtrados=useMemo(()=>
@@ -687,28 +699,41 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
 
   const setQtd=(id:number,q:number)=>{
     if(q<=0) setCarrinho(prev=>prev.filter(i=>i.produto.id!==id));
-    else     setCarrinho(prev=>prev.map(i=>i.produto.id===id?{...i,quantidade:q}:i));
+    else setCarrinho(prev=>prev.map(i=>i.produto.id===id
+      ?{...i,quantidade:Math.min(q,i.produto.quantidadeEstoque)}:i));
   };
 
-  const subtotal    = carrinho.reduce((s,i)=>s+i.produto.preco*i.quantidade,0);
+  const subtotal    = centavos(carrinho.reduce((s,i)=>s+i.produto.preco*i.quantidade,0));
   const descontoRaw = parseFloat(desconto.replace(",","."))||0;
-  const descontoN   = tipoDesconto==="PORCENTAGEM"
+  const descontoN   = centavos(tipoDesconto==="PORCENTAGEM"
     ? Math.min(subtotal*(descontoRaw/100),subtotal)
-    : Math.max(0,descontoRaw);
-  const freteN  = Math.max(0,parseFloat(frete.replace(",","."))||0);
-  const total   = Math.max(subtotal-descontoN+freteN,0);
+    : Math.max(0,descontoRaw));
+  const freteN  = centavos(Math.max(0,parseFloat(frete.replace(",","."))||0));
+  const total   = centavos(Math.max(subtotal-descontoN+freteN,0));
 
   const registrar=async()=>{
+    if(salvando)return;
     if(!carrinho.length){toast.error("Adicione pelo menos um produto.");return;}
+    if(subtotal<=0){toast.error("O pedido precisa ter valor maior que zero.");return;}
+    if(!Number.isFinite(descontoRaw)||descontoRaw<0){toast.error("Informe um desconto válido.");return;}
+    if(tipoDesconto==="PORCENTAGEM"&&descontoRaw>100){toast.error("O desconto percentual não pode passar de 100%.");return;}
+    if(descontoN>subtotal){toast.error("O desconto não pode ser maior que o subtotal.");return;}
+    if(!Number.isFinite(freteN)){toast.error("Informe um frete válido.");return;}
+    const itemInvalido=carrinho.find(i=>i.quantidade<1||i.quantidade>i.produto.quantidadeEstoque);
+    if(itemInvalido){toast.error(`Revise a quantidade de ${itemInvalido.produto.nome}.`);return;}
+    if(contaDestino.trim().length>100){toast.error("A conta de destino deve ter até 100 caracteres.");return;}
+    if(endereco.trim().length>300){toast.error("O endereço deve ter até 300 caracteres.");return;}
+    if(observacao.trim().length>500){toast.error("A observação deve ter até 500 caracteres.");return;}
     setSalvando(true);
     try{
       const pedido=await fetchAuth<Pedido>(`/api/v1/pedidos/empresa/${empresaId}`,{
         method:"POST",
         body:JSON.stringify({
           formaPagamento:forma,canalVenda:canal,
-          contaDestino:contaDestino||null,desconto:descontoN,
-          custoFrete:freteN,enderecoEntrega:endereco||null,
-          observacao:observacao||null,
+          idCliente:clienteId?Number(clienteId):null,
+          contaDestino:contaDestino.trim()||null,desconto:descontoN,
+          custoFrete:freteN,enderecoEntrega:endereco.trim()||null,
+          observacao:observacao.trim()||null,
           itens:carrinho.map(i=>({idProduto:i.produto.id,quantidade:i.quantidade})),
         }),
       });
@@ -809,8 +834,15 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
                 <SeletorForma value={forma} onChange={setForma}/>
               </div>
               <div>
+                <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Cliente</label>
+                <select style={{...inp,cursor:"pointer"}} value={clienteId} onChange={e=>setClienteId(e.target.value)}>
+                  <option value="">Consumidor não identificado</option>
+                  {clientes.map(cliente=><option key={cliente.id} value={cliente.id}>{cliente.nome}</option>)}
+                </select>
+              </div>
+              <div>
                 <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Conta Destino</label>
-                <input style={inp} value={contaDestino} onChange={e=>setContaDestino(e.target.value)} placeholder="Ex: Mercado Pago, Nubank..."/>
+                <input style={inp} maxLength={100} value={contaDestino} onChange={e=>setContaDestino(e.target.value)} placeholder="Ex: Mercado Pago, Nubank..."/>
               </div>
               <div>
                 <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Desconto</label>
@@ -836,12 +868,12 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
                 </div>
                 <div>
                   <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Observação</label>
-                  <input style={inp} value={observacao} onChange={e=>setObservacao(e.target.value)} placeholder="Opcional..."/>
+                  <input style={inp} maxLength={500} value={observacao} onChange={e=>setObservacao(e.target.value)} placeholder="Opcional..."/>
                 </div>
               </div>
               <div>
                 <label style={{fontSize:10,fontWeight:600,color:"var(--foreground-muted)",textTransform:"uppercase",letterSpacing:".06em",display:"block",marginBottom:4}}>Endereço de Entrega</label>
-                <input style={inp} value={endereco} onChange={e=>setEndereco(e.target.value)} placeholder="Rua, número, bairro, cidade..."/>
+                <input style={inp} maxLength={300} value={endereco} onChange={e=>setEndereco(e.target.value)} placeholder="Rua, número, bairro, cidade..."/>
               </div>
               <button onClick={registrar} disabled={salvando||!carrinho.length}
                 style={{...btnP,justifyContent:"center",padding:"11px 0",opacity:salvando||!carrinho.length?0.6:1}}>
@@ -875,6 +907,9 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
 
   const mudarStatus=async(novoStatus:StatusPedido)=>{
     if(novoStatus===pedido.status) return;
+    if(!STATUS_TRANSICOES[pedido.status as StatusPedido]?.includes(novoStatus)){
+      toast.error("Essa mudança de status não é permitida.");return;
+    }
     setSalvando(true);
     try{
       const updated=await fetchAuth<Pedido>(`/api/v1/pedidos/${pedido.id}/status`,{
@@ -887,10 +922,12 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
   };
 
   const cancelar=async()=>{
+    if(salvando)return;
+    if(motivo.trim().length>300){toast.error("O motivo deve ter até 300 caracteres.");return;}
     setSalvando(true);
     try{
       const updated=await fetchAuth<Pedido>(`/api/v1/pedidos/${pedido.id}/cancelar`,{
-        method:"POST",body:JSON.stringify({motivo}),
+        method:"POST",body:JSON.stringify({motivo:motivo.trim()}),
       });
       onAtualizado(updated);setCancelando(false);
       toast.success("Pedido cancelado. Estoque devolvido.");
@@ -899,10 +936,12 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
   };
 
   const salvarObs=async()=>{
+    if(salvando)return;
+    if(novaObs.trim().length>500){toast.error("A observação deve ter até 500 caracteres.");return;}
     setSalvando(true);
     try{
       const updated=await fetchAuth<Pedido>(`/api/v1/pedidos/${pedido.id}/observacao`,{
-        method:"PATCH",body:JSON.stringify({observacao:novaObs}),
+        method:"PATCH",body:JSON.stringify({observacao:novaObs.trim()}),
       });
       onAtualizado(updated);setEditandoObs(false);toast.success("Observação salva!");
     }catch(e:any){toast.error(e.message);}
@@ -910,6 +949,10 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
   };
 
   const remover=async()=>{
+    if(removendo)return;
+    if(pedido.status!=="ENTREGUE"&&pedido.status!=="CANCELADO"){
+      toast.error("Finalize ou cancele o pedido antes de removê-lo.");return;
+    }
     setRemovendo(true);
     try{
       await fetchAuth(`/api/v1/pedidos/${pedido.id}`,{method:"DELETE"});
@@ -936,8 +979,8 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
 
           <div style={{display:"flex",alignItems:"center",gap:10,padding:"11px 13px",background:"var(--surface-overlay)",borderRadius:10,flexWrap:"wrap"}}>
             <span style={{fontSize:12,color:"var(--foreground-muted)",fontWeight:500,flexShrink:0}}>Status do pedido:</span>
-            {pedido.status==="CANCELADO"
-              ?<StatusBadge status="CANCELADO"/>
+            {pedido.status==="CANCELADO"||pedido.status==="ENTREGUE"
+              ?<StatusBadge status={pedido.status}/>
               :<SeletorStatus statusAtual={pedido.status as StatusPedido} onChange={mudarStatus} salvando={salvando}/>
             }
           </div>
@@ -1000,7 +1043,7 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
           <div>
             {editandoObs
               ?<div style={{display:"flex",gap:6}}>
-                <input style={{...inp,flex:1}} value={novaObs} onChange={e=>setNovaObs(e.target.value)} placeholder="Observação..." autoFocus/>
+                <input style={{...inp,flex:1}} maxLength={500} value={novaObs} onChange={e=>setNovaObs(e.target.value)} placeholder="Observação..." autoFocus/>
                 <button onClick={salvarObs} disabled={salvando} style={{...btnP,padding:"7px 12px"}}><Check size={13}/></button>
                 <button onClick={()=>setEditandoObs(false)} style={{...btnG,padding:"7px 10px"}}><X size={13}/></button>
               </div>
@@ -1030,7 +1073,7 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
             <div style={{display:"flex",flexDirection:"column",gap:8,padding:12,background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:9}}>
               <p style={{fontSize:12,color:"var(--destructive)",fontWeight:600,margin:0}}>Confirmar cancelamento?</p>
               <p style={{fontSize:11,color:"var(--foreground-muted)",margin:0}}>O estoque será devolvido automaticamente.</p>
-              <input style={inp} value={motivo} onChange={e=>setMotivo(e.target.value)} placeholder="Motivo (opcional)..."/>
+              <input style={inp} maxLength={300} value={motivo} onChange={e=>setMotivo(e.target.value)} placeholder="Motivo (opcional)..."/>
               <div style={{display:"flex",gap:7}}>
                 <button onClick={()=>setCancelando(false)} style={{...btnG,flex:1,justifyContent:"center"}}>Voltar</button>
                 <button onClick={cancelar} disabled={salvando} style={{flex:2,padding:"8px 0",background:"var(--destructive)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",opacity:salvando?0.7:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
@@ -1040,11 +1083,13 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
             </div>
           )}
 
-          <div style={{borderTop:"1px solid var(--border)",paddingTop:12,marginTop:4}}>
-            <button onClick={()=>setConfirmandoRemocao(true)} style={{...btnDanger,width:"100%",justifyContent:"center",fontSize:12}}>
-              <Trash2 size={13}/> Remover do histórico
-            </button>
-          </div>
+          {(pedido.status==="ENTREGUE"||pedido.status==="CANCELADO")&&(
+            <div style={{borderTop:"1px solid var(--border)",paddingTop:12,marginTop:4}}>
+              <button onClick={()=>setConfirmandoRemocao(true)} style={{...btnDanger,width:"100%",justifyContent:"center",fontSize:12}}>
+                <Trash2 size={13}/> Remover do histórico
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1114,6 +1159,9 @@ export default function Pedidos() {
 
   const limparTudo=async()=>{
     if(!empresaAtiva) return;
+    if(pedidos.some(p=>!["ENTREGUE","CANCELADO"].includes(p.status))){
+      toast.error("Finalize ou cancele os pedidos em andamento antes de limpar o histórico.");return;
+    }
     setLimpando(true);
     try{
       await fetchAuth(`/api/v1/pedidos/empresa/${empresaAtiva.id}/historico`,{method:"DELETE"});
@@ -1130,7 +1178,8 @@ export default function Pedidos() {
         busca===""||
         String(p.id).includes(busca)||
         (p.nomeCliente??"").toLowerCase().includes(busca.toLowerCase())||
-        (CANAIS.find(c=>c.value===p.canalVenda)?.label??"").toLowerCase().includes(busca.toLowerCase())
+        (CANAIS.find(c=>c.value===p.canalVenda)?.label??"").toLowerCase().includes(busca.toLowerCase())||
+        p.itens.some(item=>(item.nomeProduto??"").toLowerCase().includes(busca.toLowerCase()))
       ),
   [pedidos,filtroStatus,busca]);
 
@@ -1138,6 +1187,7 @@ export default function Pedidos() {
   const totalBruto  = ativos.reduce((s,p)=>s+p.valorFinal,0);
   const pendentes   = pedidos.filter(p=>p.status==="PENDENTE").length;
   const automaticos = pedidos.filter(p=>p.observacao?.startsWith("Pedido automático")).length;
+  const podeLimparHistorico = pedidos.length>0&&pedidos.every(p=>["ENTREGUE","CANCELADO"].includes(p.status));
 
   if(!empresaAtiva) return(
     <div style={{padding:48,textAlign:"center",color:"var(--foreground-muted)",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
@@ -1156,7 +1206,7 @@ export default function Pedidos() {
           </p>
         </div>
         <div style={{display:"flex",gap:8}}>
-          {abaAtiva==="pedidos"&&pedidos.length>0&&(
+          {abaAtiva==="pedidos"&&podeLimparHistorico&&(
             <button onClick={()=>setConfirmandoLimpar(true)} style={btnDanger}>
               <Trash2 size={14}/> Limpar histórico
             </button>

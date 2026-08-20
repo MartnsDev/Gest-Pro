@@ -34,8 +34,8 @@ public class EmpresaController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<EmpresaResponse> buscarPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(empresaService.buscarPorIdDto(id));
+    public ResponseEntity<EmpresaResponse> buscarPorId(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(empresaService.buscarPorIdDto(id, authentication.getName()));
     }
 
     @PutMapping("/{id}")
@@ -62,15 +62,6 @@ public class EmpresaController {
             return ResponseEntity.badRequest().build();
 
         empresaService.excluirComSenha(id, authentication.getName(), senha);
-        return ResponseEntity.noContent().build();
-    }
-
-    // Rota legada mantida
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(
-            @PathVariable Long id,
-            Authentication authentication) {
-        empresaService.excluir(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 

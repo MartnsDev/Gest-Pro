@@ -32,6 +32,9 @@ public class Criar {
     @Transactional
     public Map<String, Object> criar(CriarNotaRequest request) {
 
+        if(request.getEmpresaId()==null||request.getTipo()==null||request.getFormaPagamento()==null||request.getNaturezaOperacao()==null||request.getNaturezaOperacao().isBlank())
+            throw new ApiException("Empresa, tipo, natureza da operação e pagamento são obrigatórios.",HttpStatus.BAD_REQUEST,"/api/nota-fiscal");
+
         if (request.getItens() == null || request.getItens().isEmpty()) {
             throw new ApiException(
                     "A nota deve conter pelo menos um item.",
@@ -72,6 +75,7 @@ public class Criar {
         int numItem = 1;
 
         for (ItemCalc ic : request.getItens()) {
+            validarItem(ic,numItem);
             // Builder disponível pois ItemNotaFiscal agora tem @Builder
             ItemNotaFiscal item = ItemNotaFiscal.builder()
                     .produtoId(ic.getProdutoId())
@@ -130,6 +134,8 @@ public class Criar {
         nota.setValorTotal(totalProdutos
                 .add(nota.getValorFrete())
                 .subtract(nota.getValorDesconto()));
+        if(nota.getValorFrete().signum()<0||nota.getValorDesconto().signum()<0||nota.getValorTotal().signum()<0)
+            throw new ApiException("Frete e desconto devem ser positivos, e o desconto não pode superar o total.",HttpStatus.BAD_REQUEST,"/api/nota-fiscal");
 
         // 5. Persiste (CascadeType.ALL persiste os itens automaticamente)
         log.info("Criando rascunho de nota fiscal: Tipo={} Empresa={} Número={}",
@@ -147,6 +153,18 @@ public class Criar {
     private BigDecimal calcularImposto(BigDecimal base, BigDecimal aliquota) {
         return base.multiply(aliquota)
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+    }
+
+    private void validarItem(ItemCalc item,int numero){
+        if(item==null||item.getDescricao()==null||item.getDescricao().isBlank())throw new ApiException("Descrição obrigatória no item "+numero+".",HttpStatus.BAD_REQUEST,"/api/nota-fiscal");
+        String ncm=item.getNcm()==null?"":item.getNcm().replaceAll("\\D","");
+        String cfop=item.getCfop()==null?"":item.getCfop().replaceAll("\\D","");
+        if(ncm.length()!=8)throw new ApiException("NCM deve conter 8 dígitos no item "+numero+".",HttpStatus.BAD_REQUEST,"/api/nota-fiscal");
+        if(cfop.length()!=4)throw new ApiException("CFOP deve conter 4 dígitos no item "+numero+".",HttpStatus.BAD_REQUEST,"/api/nota-fiscal");
+        if(item.getQuantidade()==null||item.getQuantidade().signum()<=0)throw new ApiException("Quantidade deve ser maior que zero no item "+numero+".",HttpStatus.BAD_REQUEST,"/api/nota-fiscal");
+        if(item.getValorUnitario()==null||item.getValorUnitario().signum()<0)throw new ApiException("Valor unitário inválido no item "+numero+".",HttpStatus.BAD_REQUEST,"/api/nota-fiscal");
+        if(item.getValorDesconto()!=null&&(item.getValorDesconto().signum()<0||item.getValorDesconto().compareTo(item.getValorBruto())>0))throw new ApiException("Desconto inválido no item "+numero+".",HttpStatus.BAD_REQUEST,"/api/nota-fiscal");
+        item.setNcm(ncm);item.setCfop(cfop);
     }
 
     private BigDecimal coalesce(BigDecimal val, BigDecimal fallback) {

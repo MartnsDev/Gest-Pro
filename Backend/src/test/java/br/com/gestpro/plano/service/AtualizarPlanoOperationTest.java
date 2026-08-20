@@ -6,6 +6,7 @@ import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.plano.stripe.model.Assinatura;
 import br.com.gestpro.plano.stripe.repository.AssinaturaRepository;
+import br.com.gestpro.plano.stripe.service.StripePriceProperties;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Price;
 import com.stripe.model.Subscription;
@@ -26,6 +27,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,6 +43,9 @@ class AtualizarPlanoOperationTest {
 
     @Mock
     private AssinaturaRepository assinaturaRepository;
+
+    @Mock
+    private StripePriceProperties stripePrices;
 
     @InjectMocks
     private AtualizarPlanoOperation sut;
@@ -59,10 +64,14 @@ class AtualizarPlanoOperationTest {
     @BeforeEach
     void setUp() {
         usuario = new Usuario();
+        usuario.setId(7L);
         usuario.setEmail(EMAIL);
 
         assinatura = new Assinatura();
         assinatura.setUsuario(usuario);
+
+        lenient().when(stripePrices.fromPriceId(PRICE_ID_PRO))
+                .thenReturn(br.com.gestpro.plano.stripe.PlanoTipo.PRO);
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
@@ -81,6 +90,10 @@ class AtualizarPlanoOperationTest {
         items.setData(List.of(item));
 
         Subscription subscription = new Subscription();
+        subscription.setId(SUBSCRIPTION_ID);
+        subscription.setStatus("active");
+        subscription.setCustomer(CUSTOMER_ID);
+        subscription.setMetadata(Map.of("usuarioId", String.valueOf(usuario.getId())));
         subscription.setCurrentPeriodEnd(currentPeriodEnd);
         subscription.setItems(items);
 
@@ -285,6 +298,7 @@ class AtualizarPlanoOperationTest {
         @DisplayName("deve marcar assinatura como CANCELADO e rebaixar usuario para EXPERIMENTAL/INATIVO")
         void deveCancelarAssinaturaEBloquearUsuario() {
 
+            usuario.setTipoPlano(TipoPlano.PRO);
             assinatura.setUsuario(usuario);
             when(assinaturaRepository.findByStripeSubscriptionId(SUBSCRIPTION_ID))
                     .thenReturn(Optional.of(assinatura));
@@ -292,7 +306,7 @@ class AtualizarPlanoOperationTest {
             sut.cancelarPlano(SUBSCRIPTION_ID);
 
             assertThat(assinatura.getStatus()).isEqualTo("CANCELADO");
-            assertThat(usuario.getTipoPlano()).isEqualTo(TipoPlano.EXPERIMENTAL);
+            assertThat(usuario.getTipoPlano()).isEqualTo(TipoPlano.PRO);
             assertThat(usuario.getStatusAcesso()).isEqualTo(StatusAcesso.INATIVO);
 
             verify(assinaturaRepository).save(assinatura);

@@ -20,7 +20,7 @@ public class Empresa {
     @Column(nullable = false)
     private String nomeFantasia;
 
-    @Column(name = "cnpj")
+    @Column(name = "cnpj", unique = true)
     private String cnpj;
 
     private String logotipoUrl;

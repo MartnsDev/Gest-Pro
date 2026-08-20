@@ -64,7 +64,7 @@ public class AtualizarPlanoOperation {
         Usuario usuario = usuarioRepository
                 .findByEmail(normalizarEmail(email))
                 .orElseThrow(() -> new IllegalStateException(
-                        "Usuário do checkout não encontrado."
+                        "Usuário do checkout não encontrado: " + normalizarEmail(email)
                 ));
 
         validarProprietarioDaSubscription(subscription, usuario);
@@ -166,9 +166,11 @@ public class AtualizarPlanoOperation {
 
         Assinatura assinatura = assinaturaRepository
                 .findByStripeSubscriptionId(subscriptionId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Assinatura cancelada não encontrada."
-                ));
+                .orElse(null);
+        if (assinatura == null) {
+            log.warn("Cancelamento ignorado: assinatura não encontrada subscriptionId={}", subscriptionId);
+            return;
+        }
 
         Usuario usuario = assinatura.getUsuario();
 
@@ -194,36 +196,21 @@ public class AtualizarPlanoOperation {
     public void marcarInadimplente(String subscriptionId) {
         validarSubscriptionId(subscriptionId);
 
-        /*
-         * Consulta a Stripe para permitir reconstruir a associação caso os
-         * eventos invoice.payment_failed e checkout.session.completed cheguem
-         * fora de ordem.
-         */
-        Subscription subscription =
-                buscarSubscriptionStripe(subscriptionId);
-
-        Assinatura assinatura =
-                localizarOuCriarAssinatura(subscription);
+        Assinatura assinatura = assinaturaRepository
+                .findByStripeSubscriptionId(subscriptionId)
+                .orElse(null);
+        if (assinatura == null) {
+            log.warn("Inadimplência ignorada: assinatura não encontrada subscriptionId={}", subscriptionId);
+            return;
+        }
 
         Usuario usuario = assinatura.getUsuario();
 
-        assinatura.setPlano(extrairPlanoTipo(subscription));
-        assinatura.setDataVencimento(
-                extrairVencimento(subscription)
-        );
-        assinatura.setStripeCustomerId(
-                subscription.getCustomer()
-        );
         assinatura.setStatus(STATUS_INADIMPLENTE);
         assinatura.setUltimaAtualizacao(
                 LocalDateTime.now()
         );
 
-        usuario.setTipoPlano(
-                TipoPlano.fromPlanoTipo(
-                        assinatura.getPlano()
-                )
-        );
         usuario.setStatusAcesso(StatusAcesso.INATIVO);
 
         assinaturaRepository.save(assinatura);
@@ -386,7 +373,7 @@ public class AtualizarPlanoOperation {
 
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new IllegalStateException(
-                        "Usuário da subscription não encontrado."
+                        "Usuário da subscription não encontrado: " + subscription.getId()
                 ));
     }
 
@@ -483,7 +470,7 @@ public class AtualizarPlanoOperation {
              * O webhook receberá erro 500 e tentará novamente.
              */
             throw new IllegalStateException(
-                    "Falha temporária ao consultar a Stripe.",
+                    "Falha ao obter dados da Stripe.",
                     exception
             );
         }

@@ -1,6 +1,8 @@
 package br.com.gestpro.nota.service;
 
 import br.com.gestpro.infra.exception.ApiException;
+import br.com.gestpro.empresa.model.Empresa;
+import br.com.gestpro.empresa.repository.EmpresaRepository;
 import br.com.gestpro.nota.NotaFiscalStatus;
 import br.com.gestpro.nota.RegimeTributario;
 import br.com.gestpro.nota.config.NotaFiscalConfig;
@@ -21,6 +23,7 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.zip.*;
 
@@ -40,11 +43,30 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
     private final Criar criarService; // Serviço que já refatoramos para calcular totais
     private final Cancelar cancelarService; // Serviço que refatoramos para validar cancelamento
     private final ConsultarCEP consultarCepService;
+    private final ConsultarCNPJ consultarCnpjService;
+    private final BuscarMunicipios buscarMunicipiosService;
+    private final EmpresaRepository empresaRepository;
 
     // ATENÇÃO: Em um sistema distribuído (Enterprise), usar Map em memória para cache
     // de certificados não é seguro nem escalável. Use Redis, Vault ou o próprio Banco de Dados.
-    private final Map<Long, byte[]> certCache = new HashMap<>();
-    private final Map<Long, String> senhaCache = new HashMap<>();
+    private final Map<Long, byte[]> certCache = new ConcurrentHashMap<>();
+    private final Map<Long, String> senhaCache = new ConcurrentHashMap<>();
+
+    @Transactional(readOnly = true)
+    public void validarAcessoEmpresa(Long empresaId, String emailUsuario) {
+        if (empresaId == null) throw new ApiException("empresaId é obrigatório.", HttpStatus.BAD_REQUEST, "/api/nota-fiscal");
+        Empresa empresa=empresaRepository.findByIdWithDono(empresaId)
+                .orElseThrow(()->new ApiException("Empresa não encontrada.",HttpStatus.NOT_FOUND,"/api/nota-fiscal"));
+        if (!empresa.getDono().getEmail().equals(emailUsuario))
+            throw new ApiException("Sem permissão para acessar os dados fiscais desta empresa.",HttpStatus.FORBIDDEN,"/api/nota-fiscal");
+        if (!Boolean.TRUE.equals(empresa.getAtivo()))
+            throw new ApiException("Esta empresa está arquivada.",HttpStatus.CONFLICT,"/api/nota-fiscal");
+    }
+
+    @Transactional(readOnly = true)
+    public void validarAcessoNota(Long notaId,String emailUsuario){
+        NotaFiscal nota=buscarPorId(notaId);validarAcessoEmpresa(nota.getEmpresaId(),emailUsuario);
+    }
 
     // =====================================================================
     // CRUD BÁSICO
@@ -122,11 +144,23 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
 
         // 2. Busca dados complementares
         // TODO: Injetar o Serviço de Empresa real aqui para pegar os dados completos do emitente
-        EmpresaInfo empresa = buscarEmpresaInfoMock(nota.getEmpresaId());
+        if (nota.getTipo()==br.com.gestpro.nota.TipoNota.NFSE)
+            throw new ApiException("NFS-e depende da integração municipal e ainda não está disponível para transmissão.",HttpStatus.NOT_IMPLEMENTED,"/api/nota-fiscal/emitir");
+        EmpresaInfo empresa = buscarEmpresaInfo(nota.getEmpresaId());
         List<ItemNotaFiscal> itens = itemRepository.findByNotaFiscalId(nota.getId());
 
         if (itens.isEmpty()) {
             throw new ApiException("Não é possível emitir uma nota sem produtos/serviços.", HttpStatus.BAD_REQUEST, "/api/nota-fiscal/emitir");
+        }
+
+        byte[] certBytes = certCache.get(nota.getEmpresaId());
+        String senhaCert = senhaCache.get(nota.getEmpresaId());
+        if (certBytes == null || senhaCert == null) {
+            throw new ApiException(
+                    "Certificado digital A1 não configurado nesta instância. Envie o arquivo .pfx antes de emitir.",
+                    HttpStatus.PRECONDITION_FAILED,
+                    "/api/nota-fiscal/emitir"
+            );
         }
 
         try {
@@ -144,17 +178,6 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
             String xmlBruto = xmlGeneratorService.gerarXmlNfe(nota, empresa, itens, chaveFinal);
 
             // 5. Assinatura Digital do XML
-            byte[] certBytes = certCache.get(nota.getEmpresaId());
-            String senhaCert = senhaCache.get(nota.getEmpresaId());
-
-            if (certBytes == null || senhaCert == null) {
-                throw new ApiException(
-                        "Certificado digital A1 não configurado para a empresa. Por favor, faça o upload do arquivo .pfx antes de emitir notas.",
-                        HttpStatus.PRECONDITION_FAILED,
-                        "/api/nota-fiscal/emitir"
-                );
-            }
-
             log.info("Assinando digitalmente o XML com o certificado da empresa...");
             String xmlAssinado = assinaturaService.assinarXml(xmlBruto, certBytes, senhaCert);
             nota.setXmlEnviado(xmlAssinado);
@@ -208,14 +231,23 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
 
     @Override
     public NotaFiscal cancelar(CancelarNotaRequest request) {
-        // Já refatoramos isso na classe Cancelar. Aqui nós apenas chamamos ela e orquestramos.
-        Map<String, Object> mapNotaCancelada = cancelarService.cancelar(request);
-        Long notaIdCancelada = (Long) ((Map<String, Object>) mapNotaCancelada.get("nota")).get("id");
-
-        NotaFiscal nota = buscarPorId(notaIdCancelada);
-        EmpresaInfo empresa = buscarEmpresaInfoMock(nota.getEmpresaId());
+        NotaFiscal nota = buscarPorId(request.getNotaId());
+        EmpresaInfo empresa = buscarEmpresaInfo(nota.getEmpresaId());
         byte[] certBytes = certCache.get(nota.getEmpresaId());
         String senhaCert = senhaCache.get(nota.getEmpresaId());
+        if (certBytes == null || senhaCert == null) {
+            throw new ApiException(
+                    "Certificado digital A1 não configurado nesta instância. Envie o arquivo .pfx antes de cancelar.",
+                    HttpStatus.PRECONDITION_FAILED,
+                    "/api/nota-fiscal/cancelar"
+            );
+        }
+
+        // Valida o pedido e registra o cancelamento na mesma transação. Se a
+        // SEFAZ falhar, a exceção abaixo desfaz a alteração no banco.
+        Map<String, Object> mapNotaCancelada = cancelarService.cancelar(request);
+        Long notaIdCancelada = (Long) ((Map<String, Object>) mapNotaCancelada.get("nota")).get("id");
+        nota = buscarPorId(notaIdCancelada);
 
         try {
             // Dispara o evento XML para a SEFAZ avisando do cancelamento
@@ -307,6 +339,7 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              ZipOutputStream zos = new ZipOutputStream(baos)) {
 
+            int arquivosIncluidos = 0;
             for (NotaFiscal nota : notas) {
                 String xml = nota.getXmlAutorizado() != null ? nota.getXmlAutorizado() : nota.getXmlEnviado();
                 if (xml == null) continue;
@@ -320,6 +353,11 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
                 zos.putNextEntry(entry);
                 zos.write(xml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 zos.closeEntry();
+                arquivosIncluidos++;
+            }
+
+            if (arquivosIncluidos == 0) {
+                throw new ApiException("Nenhuma nota do período possui XML disponível para exportação.", HttpStatus.NOT_FOUND, "/api/nota-fiscal/exportar");
             }
 
             zos.finish();
@@ -339,7 +377,12 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
     @Override
     @Transactional(readOnly = true)
     public EstatisticasResponse getEstatisticas(Long empresaId) {
-        return new EstatisticasResponse(); // TODO: Mapear JPQL Count
+        long autorizadas=notaFiscalRepository.countByEmpresaIdAndStatus(empresaId,NotaFiscalStatus.AUTORIZADA);
+        long rejeitadas=notaFiscalRepository.countByEmpresaIdAndStatus(empresaId,NotaFiscalStatus.REJEITADA);
+        long canceladas=notaFiscalRepository.countByEmpresaIdAndStatus(empresaId,NotaFiscalStatus.CANCELADA);
+        LocalDateTime inicio=YearMonth.now().atDay(1).atStartOfDay();
+        java.math.BigDecimal valor=notaFiscalRepository.sumValorAutorizadasByPeriodo(empresaId,inicio).orElse(java.math.BigDecimal.ZERO);
+        return EstatisticasResponse.builder().totalAutorizadas(autorizadas).totalRejeitadas(rejeitadas).totalCanceladas(canceladas).valorTotalMes(valor).build();
     }
 
     @Override
@@ -349,13 +392,12 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
 
     @Override
     public Object consultarCnpj(String cnpj) {
-        // Implementar seu serviço de consulta de CNPJ aqui caso seja isolado igual ao ViaCEP
-        throw new UnsupportedOperationException("Serviço de CNPJ ainda não isolado");
+        return consultarCnpjService.consultarCnpj(cnpj);
     }
 
     @Override
     public List<Object> buscarMunicipios(String uf) {
-        throw new UnsupportedOperationException("Serviço do IBGE ainda não isolado na interface");
+        return new ArrayList<>(buscarMunicipiosService.buscarMunicipios(uf));
     }
 
     // =====================================================================
@@ -421,20 +463,30 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
         }
     }
 
-    private EmpresaInfo buscarEmpresaInfoMock(Long empresaId) {
-        // Isso aqui TEM que ser substituído pela chamada ao seu repositório de Empresa!
-        // Estou criando esse Mock apenas para o código não quebrar na sua máquina agora.
-        return EmpresaInfo.builder()
-                .id(empresaId)
-                .cnpj("00000000000191")
-                .razaoSocial("Empresa Fake para Teste de NF-e")
-                .uf("SP")
-                .codigoIbge("3550308")
-                .regimeTributario(RegimeTributario.SIMPLES_NACIONAL)
-                .build();
+    private EmpresaInfo buscarEmpresaInfo(Long empresaId) {
+        Empresa e=empresaRepository.findByIdWithDono(empresaId)
+                .orElseThrow(()->new ApiException("Empresa não encontrada.",HttpStatus.NOT_FOUND,"/api/nota-fiscal"));
+        String cnpj=e.getCnpj()!=null?e.getCnpj().replaceAll("\\D",""):"";
+        if(cnpj.length()!=14)throw new ApiException("Cadastre um CNPJ válido na empresa antes de emitir.",HttpStatus.PRECONDITION_FAILED,"/api/nota-fiscal/emitir");
+        Map<String,Object> dados;
+        try{dados=consultarCnpjService.consultarCnpj(cnpj);}catch(Exception ex){dados=Map.of();}
+        String codigoIbge=valor(dados,"codigoIbge");
+        String municipio=primeiro(e.getCidade(),valor(dados,"municipio"));
+        String uf=primeiro(e.getUf(),valor(dados,"uf"));
+        String razao=primeiro(e.getRazaoSocial(),valor(dados,"nome"),e.getNomeFantasia());
+        if(vazio(uf)||vazio(municipio)||vazio(e.getLogradouro())||vazio(e.getBairro())||vazio(e.getCep())||vazio(codigoIbge))
+            throw new ApiException("Complete o endereço fiscal da empresa e o código IBGE do município antes de emitir.",HttpStatus.PRECONDITION_FAILED,"/api/nota-fiscal/emitir");
+        return EmpresaInfo.builder().id(e.getId()).cnpj(cnpj).razaoSocial(razao).nomeFantasia(e.getNomeFantasia())
+                .logradouro(e.getLogradouro()).numero(primeiro(e.getNumero(),"S/N")).bairro(e.getBairro()).municipio(municipio)
+                .codigoIbge(codigoIbge).uf(uf).cep(e.getCep()).telefone(e.getTelefone())
+                .regimeTributario(RegimeTributario.SIMPLES_NACIONAL).build();
     }
 
-    private NotaFiscalResumoResponse toResumo(NotaFiscal nota) {
+    private String valor(Map<String,Object> dados,String chave){Object v=dados.get(chave);return v==null?null:String.valueOf(v);}
+    private boolean vazio(String v){return v==null||v.isBlank();}
+    private String primeiro(String... valores){for(String v:valores)if(!vazio(v))return v;return null;}
+
+    public NotaFiscalResumoResponse toResumo(NotaFiscal nota) {
         return NotaFiscalResumoResponse.builder()
                 .id(nota.getId())
                 .numeroNota(nota.getNumeroNota() != null ? String.format("%09d", nota.getNumeroNota()) : "")

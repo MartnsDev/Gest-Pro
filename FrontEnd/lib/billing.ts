@@ -1,6 +1,6 @@
 "use client";
 
-import { fetchAuthJson } from "./api-v2";
+import { fetchAuth, fetchAuthJson } from "./api-v2";
 
 export const PLANOS_PAGOS = [
   {
@@ -42,4 +42,18 @@ export async function criarCheckout(plano: PlanoPagoId): Promise<string> {
   const checkoutUrl = new URL(data.url);
   if (checkoutUrl.protocol !== "https:") throw new Error("A página de pagamento retornada não é segura.");
   return checkoutUrl.toString();
+}
+
+export async function abrirPortalCobranca(): Promise<string | null> {
+  const response = await fetchAuth("/api/payments/portal", {
+    method: "POST",
+  });
+  const data = await response.json().catch(() => null) as { url?: string; error?: string; code?: string } | null;
+  if (response.status === 409 && data?.code === "CHECKOUT_REQUIRED") return null;
+  if (!response.ok) throw new Error(data?.error ?? `Erro ${response.status} ao abrir o portal de cobrança.`);
+  const url = data?.url;
+  if (!url) throw new Error("O backend não retornou o portal de cobrança.");
+  const portalUrl = new URL(url);
+  if (portalUrl.protocol !== "https:") throw new Error("O portal de cobrança retornado não é seguro.");
+  return portalUrl.toString();
 }

@@ -466,25 +466,15 @@ function DashboardInner({
           {/* SeletorEmpresa: oculto no mobile apenas se não houver caixa (simplifica header) */}
           <SeletorEmpresa
             empresaAtiva={empresaAtiva}
-            onSelecionar={async (empresa) => {
+            onSelecionar={(empresa) => {
+              if (empresaAtiva?.id === empresa.id) return;
+
+              // A persistência do contexto é síncrona. Limpamos o caixa da
+              // empresa anterior antes de recarregar para que o DashboardLoader
+              // reconstrua toda a página somente com dados da nova empresa.
               setEmpresaAtiva(empresa);
-              try {
-                const caixa = await buscarCaixaAberto(empresa.id);
-                if (caixa) {
-                  setCaixaAtivo({
-                    ...caixa,
-                    empresaNome: empresa.nomeFantasia,
-                  });
-                } else {
-                  setCaixaAtivo(null);
-                }
-              } catch (err) {
-                console.warn(
-                  "[Gevyro] falha ao buscar caixa ao trocar empresa:",
-                  err,
-                );
-                setCaixaAtivo(null);
-              }
+              setCaixaAtivo(null);
+              globalThis.location.reload();
             }}
             onNova={() => setSecao("empresas")}
           />

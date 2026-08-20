@@ -49,6 +49,11 @@ public class VendaServiceImpl implements VendaServiceInterface {
         Caixa caixa = caixaRepository.findById(dto.getIdCaixa())
                 .orElseThrow(() -> new ApiException("Caixa não encontrado", HttpStatus.NOT_FOUND, "/api/v1/vendas/registrar"));
 
+        if (!caixa.getUsuario().getId().equals(usuario.getId()))
+            throw new ApiException("Sem permissão para este caixa.", HttpStatus.FORBIDDEN, "/api/v1/vendas/registrar");
+        if (caixa.getEmpresa() == null || !Boolean.TRUE.equals(caixa.getEmpresa().getAtivo()))
+            throw new ApiException("A empresa deste caixa está arquivada.", HttpStatus.CONFLICT, "/api/v1/vendas/registrar");
+
         if (!caixa.getAberto())
             throw new ApiException("O caixa está fechado.", HttpStatus.BAD_REQUEST, "/api/v1/vendas/registrar");
 
@@ -74,6 +79,9 @@ public class VendaServiceImpl implements VendaServiceInterface {
         for (RegistrarVendaDTO.ItemVendaDTO itemDTO : dto.getItens()) {
             Produto produto = produtoRepository.findById(itemDTO.getIdProduto())
                     .orElseThrow(() -> new ApiException("Produto não encontrado: " + itemDTO.getIdProduto(), HttpStatus.NOT_FOUND, "/api/v1/vendas/registrar"));
+
+            if (produto.getEmpresa() == null || !produto.getEmpresa().getId().equals(caixa.getEmpresa().getId()))
+                throw new ApiException("Produto não pertence à empresa deste caixa.", HttpStatus.BAD_REQUEST, "/api/v1/vendas/registrar");
 
             int qtd = itemDTO.getQuantidade() != null ? itemDTO.getQuantidade() : 1;
 

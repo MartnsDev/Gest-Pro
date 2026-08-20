@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono";
 import { Suspense } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
@@ -22,6 +23,7 @@ export const metadata: Metadata = {
   },
   description: DEFAULT_DESCRIPTION,
   applicationName: SITE_NAME,
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "default" },
   keywords: ["Gevyro", "software de gestão empresarial", "gestão de vendas", "controle de estoque", "controle de caixa"],
   alternates: { canonical: "/" },
   openGraph: {
@@ -59,6 +61,7 @@ export default function RootLayout({
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false} themes={["dark", "light"]}>
           <Suspense fallback={null}>{children}</Suspense>
+          <PwaInstallPrompt />
           <CookieConsent />
         </ThemeProvider>
       </body>

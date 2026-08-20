@@ -53,6 +53,7 @@ public class ConsultarCNPJ {
                         r.put("complemento", data.get("complemento"));
                         r.put("bairro",      data.get("bairro"));
                         r.put("municipio",   data.get("municipio"));
+                        r.put("codigoIbge",  data.get("ibge"));
                         r.put("uf",          data.get("uf"));
                         r.put("cep",         data.get("cep"));
                         r.put("telefone",    data.get("telefone"));
@@ -81,6 +82,7 @@ public class ConsultarCNPJ {
                         r.put("complemento", data.get("complemento"));
                         r.put("bairro",      data.get("bairro"));
                         r.put("municipio",   data.get("municipio"));
+                        r.put("codigoIbge",  data.get("codigo_municipio"));
                         r.put("uf",          data.get("uf"));
                         r.put("cep",         data.get("cep"));
                         r.put("telefone",    data.get("ddd_telefone_1"));

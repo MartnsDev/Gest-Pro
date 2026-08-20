@@ -42,6 +42,9 @@ public class ProdutoServiceImpl implements ProdutoServiceInterface {
         if (!empresa.getDono().getEmail().equals(emailUsuario))
             throw new ApiException(
                     "Sem permissão para esta empresa.", HttpStatus.FORBIDDEN, "/api/v1/produtos");
+        if (!Boolean.TRUE.equals(empresa.getAtivo()))
+            throw new ApiException(
+                    "Esta empresa está arquivada.", HttpStatus.CONFLICT, "/api/v1/produtos");
         return empresa;
     }
 

@@ -9,7 +9,7 @@ import {
   Building2, ChevronLeft, ChevronRight, TrendingUp, Store
 } from "lucide-react";
 import { useEmpresa } from "../context/Empresacontext";
-import { getToken } from "@/lib/auth-v2"; 
+import { fetchAuth } from "@/lib/api-v2";
 
 // =====================================================================
 // 1. CONFIGURAÇÕES E AMBIENTE
@@ -148,28 +148,9 @@ export default function NotaFiscalPage() {
   // =====================================================================
   // API SEGURA
   // =====================================================================
-  const resolveToken = async () => {
-    try {
-      const t = await getToken();
-      if (t) return t;
-    } catch (e) {}
-    
-    if (typeof window !== "undefined") {
-      return sessionStorage.getItem("jwt_token") || localStorage.getItem("token") || localStorage.getItem("access_token");
-    }
-    return null;
-  };
-
   const fetchSeguro = async (url: string, options: RequestInit = {}) => {
-    const token = await resolveToken();
-    const headers = new Headers(options.headers);
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-    
-    if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
-        headers.set("Content-Type", "application/json");
-    }
-
-    const res = await fetch(url, { ...options, headers });
+    const path=url.startsWith(API_BASE)?url.slice(API_BASE.length):url;
+    const res = await fetchAuth(`/api/nota-fiscal${path}`, options);
     
     const text = await res.text();
     let json = null;
@@ -204,11 +185,8 @@ export default function NotaFiscalPage() {
   const fazerDownloadSeguro = async (url: string, filename: string) => {
     toast.loading("Iniciando download...", { id: "dl_toast" });
     try {
-      const token = await resolveToken();
-      const headers = new Headers();
-      if (token) headers.set("Authorization", `Bearer ${token}`);
-
-      const res = await fetch(url, { headers });
+      const path=url.startsWith(API_BASE)?url.slice(API_BASE.length):url;
+      const res = await fetchAuth(`/api/nota-fiscal${path}`);
       
       if (!res.ok) {
         const contentType = res.headers.get("content-type");
@@ -230,8 +208,8 @@ export default function NotaFiscalPage() {
       const a = document.createElement('a'); 
       a.href = blobUrl; 
       a.download = filename; 
-      a.click();
-      window.URL.revokeObjectURL(blobUrl);
+      document.body.appendChild(a);a.click();a.remove();
+      window.setTimeout(()=>window.URL.revokeObjectURL(blobUrl),1000);
       toast.success("Download concluído!", { id: "dl_toast" });
     } catch (e: any) {
       toast.dismiss("dl_toast"); // Tira o aviso de loading
@@ -260,9 +238,9 @@ export default function NotaFiscalPage() {
 
       const json = await fetchSeguro(`${API_BASE}?${params.toString()}`);
       if (json?.sucesso) {
-        setNotas(json.dados.data || []);
-        const { data, ...rest } = json.dados;
-        setPaginao(rest);
+        const lista=Array.isArray(json.dados)?json.dados:(json.dados?.data??json.dados?.content??[]);
+        setNotas(lista);
+        setPaginao(Array.isArray(json.dados)?null:json.dados);
       }
     } catch (error: any) {
       setErroApi(error.message); // Abre modal
@@ -296,13 +274,20 @@ export default function NotaFiscalPage() {
   const handleEmitir = async () => {
     if (itens.length === 0) { setErroApi("Você precisa adicionar pelo menos um produto/serviço à nota."); return; }
     if (!EMPRESA_ID) { setErroApi("Nenhuma empresa selecionada para a emissão."); return; }
+    if (tipoNota === "NFSE") { setErroApi("A NFS-e depende da integração específica da prefeitura e ainda não está disponível para transmissão."); return; }
+    if (!naturezaOp.trim()) { setErroApi("Informe a natureza da operação."); return; }
+    const doc=clienteDoc.replace(/\D/g,"");
+    if(doc&&doc.length!==11&&doc.length!==14){setErroApi("O CPF/CNPJ do destinatário deve conter 11 ou 14 dígitos.");return;}
+    if(doc&&!clienteNome.trim()){setErroApi("Informe o nome ou razão social do destinatário identificado.");return;}
+    const itemInvalido=itens.findIndex(i=>!i.descricao?.trim()||String(i.ncm??"").replace(/\D/g,"").length!==8||String(i.cfop??"").replace(/\D/g,"").length!==4||Number(i.quantidade)<=0||Number(i.valorUnitario)<0||Number(i.valorDesconto)<0||Number(i.valorDesconto)>Number(i.quantidade)*Number(i.valorUnitario));
+    if(itemInvalido>=0){setErroApi(`Revise o item ${itemInvalido+1}: descrição, NCM (8 dígitos), CFOP (4 dígitos), quantidade, valor e desconto.`);return;}
     setEmitindo(true);
 
     try {
       const payload = {
-        empresaId: EMPRESA_ID, clienteNome, clienteCpfCnpj: clienteDoc.replace(/\D/g, ''),
+        empresaId: EMPRESA_ID, clienteNome:clienteNome.trim(), clienteCpfCnpj: doc,
         tipo: tipoNota, naturezaOperacao: naturezaOp, formaPagamento, informacoesAdicionais: infoAdicionais,
-        itens: itens.map(i => ({ ...i, produtoId: 1 }))
+        itens: itens.map(({id,...i}) => ({ ...i,produtoId:null }))
       };
 
       // 1. Cria a nota no banco
@@ -319,8 +304,9 @@ export default function NotaFiscalPage() {
       // 3. Pega o ID capturado e manda emitir
       const resEmitir = await fetchSeguro(`${API_BASE}/${idDaNota}/emitir`, { method: "POST" });
       
-      if (resEmitir?.dados?.status === "AUTORIZADA" || resEmitir?.status === "AUTORIZADA") {
-        toast.success(`NF Autorizada com Sucesso!`);
+      const status=resEmitir?.dados?.status||resEmitir?.status;
+      if (status === "AUTORIZADA" || status === "CONTINGENCIA") {
+        toast.success(status==="AUTORIZADA"?"Nota autorizada com sucesso!":"Nota salva em contingência para transmissão posterior.");
         setAba("historico"); setItens([]); setClienteNome(""); setClienteDoc(""); setInfoAdicionais("");
       } else {
         setErroApi(`A nota não foi autorizada. Status retornado: ${resEmitir?.dados?.status || resEmitir?.status}`);
@@ -507,16 +493,16 @@ export default function NotaFiscalPage() {
               <SectionTitle>Selecione o Modelo</SectionTitle>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
                 {(["NFE", "NFCE", "NFSE"] as TipoNota[]).map(t => (
-                  <button key={t} onClick={() => setTipoNota(t)} style={{
+                  <button key={t} onClick={() => t!=="NFSE"&&setTipoNota(t)} disabled={t==="NFSE"} style={{
                     display: "flex", flexDirection: "column", gap: 8, padding: "16px 15px",
                     background: tipoNota === t ? theme.primaryAlpha : theme.bgCard,
                     borderWidth: 1, borderStyle: "solid", borderColor: tipoNota === t ? theme.primary : theme.border, 
-                    borderRadius: 12, cursor: "pointer", textAlign: "left", transition: "all .16s"
+                    borderRadius: 12, cursor: t==="NFSE"?"not-allowed":"pointer", textAlign: "left", transition: "all .16s",opacity:t==="NFSE"?.5:1
                   }}>
                     <div style={{ color: tipoNota === t ? theme.primary : theme.textMain }}><Receipt size={20} /></div>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 700, color: theme.textMain, margin: 0 }}>{t}</p>
-                      <p style={{ fontSize: 11, color: theme.textMuted, margin: "3px 0 0" }}>{t === "NFE" ? "Produto (Mod. 55)" : t === "NFCE" ? "Consumidor (Mod. 65)" : "Serviço"}</p>
+                      <p style={{ fontSize: 11, color: theme.textMuted, margin: "3px 0 0" }}>{t === "NFE" ? "Produto (Mod. 55)" : t === "NFCE" ? "Consumidor (Mod. 65)" : "Integração municipal — em breve"}</p>
                     </div>
                   </button>
                 ))}
@@ -633,7 +619,7 @@ export default function NotaFiscalPage() {
                     <label style={lblStyle}>Tipo</label>
                     <select value={tipoSped} onChange={e => setTipoSped(e.target.value)} style={inpStyle}><option value="EFD_ICMS_IPI">EFD ICMS/IPI</option><option value="EFD_CONTRIBUICOES">EFD Contribuições</option></select>
                  </div>
-                 <button onClick={() => fazerDownloadSeguro(`${API_BASE}/exportar/sped?empresaId=${EMPRESA_ID}&periodo=${periodoExport}&tipo=${tipoSped}`, `sped-${periodoExport}.txt`)} style={{...btnStyle, width: "100%", justifyContent: "center", padding: 12}}><FileText size={16}/> BAIXAR SPED TXT</button>
+                 <button disabled style={{...btnStyle, width: "100%", justifyContent:"center",padding:12,cursor:"not-allowed",opacity:.55}} title="Integração SPED ainda não implementada"><FileText size={16}/> SPED — EM BREVE</button>
               </Card>
            </div>
         )}
@@ -658,7 +644,7 @@ export default function NotaFiscalPage() {
                   <div style={{ marginTop: 30, display: "flex", gap: 10 }}>
                       {notaSelecionada.status === "AUTORIZADA" && (
                           <>
-                             <button onClick={() => fazerDownloadSeguro(`${API_BASE}/${notaSelecionada.id}/danfe`, `danfe-${notaSelecionada.numeroNota}.pdf`)} style={{ ...btnStyle, flex: 1, justifyContent: "center" }}><FileText size={16}/> DANFE</button>
+                             <button disabled title="Gerador de DANFE ainda não configurado" style={{ ...btnStyle, flex:1,justifyContent:"center",cursor:"not-allowed",opacity:.55 }}><FileText size={16}/> DANFE em breve</button>
                              <button onClick={() => fazerDownloadSeguro(`${API_BASE}/${notaSelecionada.id}/xml`, `nf-${notaSelecionada.numeroNota}.xml`)} style={{ ...btnStyle, flex: 1, justifyContent: "center", color: theme.primary, borderColor: theme.primaryAlpha }}><Download size={16}/> XML</button>
                              <button onClick={() => handleCancelar(notaSelecionada.id)} style={{ ...btnStyle, flex: 1, justifyContent: "center", color: theme.danger, borderColor: theme.dangerAlpha, background: theme.dangerAlpha }}><Trash2 size={16}/> Cancelar</button>
                           </>

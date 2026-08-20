@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
 
 import java.time.YearMonth;
 import java.util.List;
@@ -16,7 +17,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/nota-fiscal")
-@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class NotaFiscalController {
 
@@ -28,19 +28,21 @@ public class NotaFiscalController {
     // =====================================================================
 
     @PostMapping
-    public ResponseEntity<ApiResponse<NotaFiscal>> criar(@RequestBody CriarNotaRequest request) {
+    public ResponseEntity<ApiResponse<NotaFiscalResumoResponse>> criar(@RequestBody CriarNotaRequest request, Authentication auth) {
         try {
+            notaFiscalServiceImpl.validarAcessoEmpresa(request.getEmpresaId(), auth.getName());
             NotaFiscal nota = notaFiscalService.criar(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(nota));
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(notaFiscalServiceImpl.toResumo(nota)));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.erro(e.getMessage()));
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<NotaFiscal>> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<NotaFiscalResumoResponse>> buscarPorId(@PathVariable Long id, Authentication auth) {
         try {
-            return ResponseEntity.ok(ApiResponse.ok(notaFiscalService.buscarPorId(id)));
+            notaFiscalServiceImpl.validarAcessoNota(id, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(notaFiscalServiceImpl.toResumo(notaFiscalService.buscarPorId(id))));
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
@@ -49,14 +51,16 @@ public class NotaFiscalController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<NotaFiscalResumoResponse>>> listar(
             @RequestParam Long empresaId,
-            @RequestParam(required = false) NotaFiscalStatus status
+            @RequestParam(required = false) NotaFiscalStatus status, Authentication auth
     ) {
+        notaFiscalServiceImpl.validarAcessoEmpresa(empresaId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(notaFiscalService.listar(empresaId, status)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> excluir(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> excluir(@PathVariable Long id, Authentication auth) {
         try {
+            notaFiscalServiceImpl.validarAcessoNota(id, auth.getName());
             notaFiscalService.excluir(id);
             return ResponseEntity.ok(ApiResponse.ok(null));
         } catch (Exception e) {
@@ -69,10 +73,11 @@ public class NotaFiscalController {
     // =====================================================================
 
     @PostMapping("/{id}/emitir")
-    public ResponseEntity<ApiResponse<NotaFiscal>> emitir(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<NotaFiscalResumoResponse>> emitir(@PathVariable Long id, Authentication auth) {
         try {
+            notaFiscalServiceImpl.validarAcessoNota(id, auth.getName());
             NotaFiscal nota = notaFiscalService.emitir(id);
-            return ResponseEntity.ok(ApiResponse.ok(nota));
+            return ResponseEntity.ok(ApiResponse.ok(notaFiscalServiceImpl.toResumo(nota)));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                     .body(ApiResponse.erro(e.getMessage()));
@@ -80,18 +85,20 @@ public class NotaFiscalController {
     }
 
     @PostMapping("/cancelar")
-    public ResponseEntity<ApiResponse<NotaFiscal>> cancelar(@RequestBody CancelarNotaRequest request) {
+    public ResponseEntity<ApiResponse<NotaFiscalResumoResponse>> cancelar(@RequestBody CancelarNotaRequest request, Authentication auth) {
         try {
+            notaFiscalServiceImpl.validarAcessoNota(request.getNotaId(), auth.getName());
             NotaFiscal nota = notaFiscalService.cancelar(request);
-            return ResponseEntity.ok(ApiResponse.ok(nota));
+            return ResponseEntity.ok(ApiResponse.ok(notaFiscalServiceImpl.toResumo(nota)));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.erro(e.getMessage()));
         }
     }
 
     @PostMapping("/inutilizar")
-    public ResponseEntity<ApiResponse<Void>> inutilizar(@RequestBody InutilizarRequest request) {
+    public ResponseEntity<ApiResponse<Void>> inutilizar(@RequestBody InutilizarRequest request, Authentication auth) {
         try {
+            notaFiscalServiceImpl.validarAcessoEmpresa(request.getEmpresaId(), auth.getName());
             notaFiscalService.inutilizar(request);
             return ResponseEntity.ok(ApiResponse.ok(null));
         } catch (Exception e) {
@@ -100,7 +107,8 @@ public class NotaFiscalController {
     }
 
     @PostMapping("/transmitir-contingencias")
-    public ResponseEntity<ApiResponse<Map<String, Integer>>> transmitirContingencias(@RequestParam Long empresaId) {
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> transmitirContingencias(@RequestParam Long empresaId, Authentication auth) {
+        notaFiscalServiceImpl.validarAcessoEmpresa(empresaId, auth.getName());
         int qtd = notaFiscalService.transmitirContingencias(empresaId);
         return ResponseEntity.ok(ApiResponse.ok(Map.of("transmitidas", qtd)));
     }
@@ -110,8 +118,9 @@ public class NotaFiscalController {
     // =====================================================================
 
     @GetMapping("/{id}/xml")
-    public ResponseEntity<byte[]> baixarXml(@PathVariable Long id) {
+    public ResponseEntity<byte[]> baixarXml(@PathVariable Long id, Authentication auth) {
         try {
+            notaFiscalServiceImpl.validarAcessoNota(id, auth.getName());
             byte[] xml = notaFiscalService.baixarXml(id);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_XML);
@@ -123,8 +132,9 @@ public class NotaFiscalController {
     }
 
     @GetMapping("/{id}/danfe")
-    public ResponseEntity<Object> baixarDanfe(@PathVariable Long id) {
+    public ResponseEntity<Object> baixarDanfe(@PathVariable Long id, Authentication auth) {
         try {
+            notaFiscalServiceImpl.validarAcessoNota(id, auth.getName());
             byte[] pdf = notaFiscalService.gerarDanfePdf(id);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
@@ -141,9 +151,10 @@ public class NotaFiscalController {
     @GetMapping("/exportar/xml-mensal")
     public ResponseEntity<Object> exportarXmlsMensal(
             @RequestParam Long empresaId,
-            @RequestParam String periodo
+            @RequestParam String periodo, Authentication auth
     ) {
         try {
+            notaFiscalServiceImpl.validarAcessoEmpresa(empresaId, auth.getName());
             YearMonth ym = YearMonth.parse(periodo);
             byte[] zip = notaFiscalService.gerarZipXmlsMensal(empresaId, ym);
             HttpHeaders headers = new HttpHeaders();
@@ -162,9 +173,10 @@ public class NotaFiscalController {
     public ResponseEntity<Object> exportarSped(
             @RequestParam Long empresaId,
             @RequestParam String periodo,
-            @RequestParam String tipo
+            @RequestParam String tipo, Authentication auth
     ) {
         try {
+            notaFiscalServiceImpl.validarAcessoEmpresa(empresaId, auth.getName());
             YearMonth ym = YearMonth.parse(periodo);
             byte[] sped = notaFiscalService.gerarArquivoSped(empresaId, ym, tipo);
             HttpHeaders headers = new HttpHeaders();
@@ -188,9 +200,10 @@ public class NotaFiscalController {
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadCertificado(
             @PathVariable Long empresaId,
             @RequestParam("arquivo") MultipartFile arquivo,
-            @RequestParam("senha") String senha
+            @RequestParam("senha") String senha, Authentication auth
     ) {
         try {
+            notaFiscalServiceImpl.validarAcessoEmpresa(empresaId, auth.getName());
             byte[] pfxBytes = arquivo.getBytes();
             notaFiscalServiceImpl.registrarCertificado(empresaId, pfxBytes, senha);
             Map<String, String> info = notaFiscalServiceImpl
@@ -217,9 +230,11 @@ public class NotaFiscalController {
     }
 
     @GetMapping("/chave/{chaveAcesso}")
-    public ResponseEntity<ApiResponse<NotaFiscal>> buscarPorChave(@PathVariable String chaveAcesso) {
+    public ResponseEntity<ApiResponse<NotaFiscalResumoResponse>> buscarPorChave(@PathVariable String chaveAcesso, Authentication auth) {
         try {
-            return ResponseEntity.ok(ApiResponse.ok(notaFiscalService.buscarPorChaveAcesso(chaveAcesso)));
+            NotaFiscal nota=notaFiscalService.buscarPorChaveAcesso(chaveAcesso);
+            notaFiscalServiceImpl.validarAcessoEmpresa(nota.getEmpresaId(), auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(notaFiscalServiceImpl.toResumo(nota)));
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
@@ -227,8 +242,9 @@ public class NotaFiscalController {
 
     @GetMapping("/estatisticas")
     public ResponseEntity<ApiResponse<EstatisticasResponse>> getEstatisticas(
-            @RequestParam Long empresaId
+            @RequestParam Long empresaId, Authentication auth
     ) {
+        notaFiscalServiceImpl.validarAcessoEmpresa(empresaId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(notaFiscalService.getEstatisticas(empresaId)));
     }
 }

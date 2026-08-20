@@ -8,7 +8,7 @@ interface Empresa {
   nomeFantasia: string;
   cnpj?: string | null;
   razaoSocial?: string | null;
-  planoNome?: string;
+  planoNome?: string | null;
   ativo?: boolean; // Importante: deve estar presente para o filtro
 }
 

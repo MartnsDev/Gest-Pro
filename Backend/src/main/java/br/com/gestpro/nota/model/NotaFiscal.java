@@ -17,7 +17,7 @@ import java.util.List;
         @Index(name = "idx_empresa_tipo_numero", columnList = "empresa_id, tipo, numero_nota"),
         @Index(name = "idx_chave_acesso",        columnList = "chave_acesso"),
         @Index(name = "idx_status",              columnList = "status")
-})
+}, uniqueConstraints = @UniqueConstraint(name="uk_nota_empresa_tipo_serie_numero",columnNames={"empresa_id","tipo","serie","numero_nota"}))
 @Getter
 @Setter
 @NoArgsConstructor

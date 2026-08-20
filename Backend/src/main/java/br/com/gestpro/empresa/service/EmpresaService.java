@@ -12,6 +12,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +38,7 @@ public class EmpresaService {
     // ────────────────────────────────────────────────────────────────────────
     @Transactional
     public EmpresaResponse criar(CriarEmpresaRequest req) {
-        Usuario dono = usuarioRepository.findByEmail(req.getEmailUsuario())
+        Usuario dono = usuarioRepository.findByEmailForUpdate(req.getEmailUsuario())
                 .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
 
         long totalEmpresasNoSistema = empresaRepository.countByDonoId(dono.getId());
@@ -52,7 +53,7 @@ public class EmpresaService {
         if (req.getCnpj() != null && !req.getCnpj().isBlank()) {
             String documentoLimpo = req.getCnpj().replaceAll("\\D", "");
 
-            if (documentoLimpo.length() == 14 && empresaRepository.existsByCnpj(req.getCnpj())) {
+            if (empresaRepository.existsByCnpj(documentoLimpo)) {
                 throw new ApiException("Este CNPJ já está vinculado a outra empresa no sistema.", HttpStatus.BAD_REQUEST, "/empresas");
             }
 
@@ -62,7 +63,7 @@ public class EmpresaService {
 
         Empresa empresa = new Empresa();
         empresa.setNomeFantasia(req.getNomeFantasia());
-        empresa.setCnpj(req.getCnpj());
+        empresa.setCnpj(normalizarDocumento(req.getCnpj()));
         empresa.setDono(dono);
         empresa.setAtivo(true);
         empresa.setPlano(dono.getTipoPlano());
@@ -70,13 +71,15 @@ public class EmpresaService {
         // PREENCHE ENDEREÇO E RAZÃO SOCIAL AUTOMATICAMENTE
         preencherDadosReceita(empresa, dadosReceita);
 
-        return mapToResponse(empresaRepository.save(empresa));
+        return mapToResponse(salvarEmpresa(empresa));
     }
     // ────────────────────────────────────────────────────────────────────────
     // 2. ATUALIZAÇÃO E RESTAURAÇÃO DE EMPRESA
     // ────────────────────────────────────────────────────────────────────────
     @Transactional
     public EmpresaResponse atualizar(Long id, CriarEmpresaRequest req) {
+        Usuario usuarioBloqueado = usuarioRepository.findByEmailForUpdate(req.getEmailUsuario())
+                .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
         Empresa empresa = empresaRepository.findByIdWithDono(id)
                 .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada"));
 
@@ -88,10 +91,10 @@ public class EmpresaService {
 
         // 1. Validação de Documento apenas se o usuário trocou o CNPJ/CPF
         if (req.getCnpj() != null && !req.getCnpj().equals(empresa.getCnpj()) && !req.getCnpj().isBlank()) {
-            String documentoLimpo = req.getCnpj().replaceAll("\\D", "");
+            String documentoLimpo = normalizarDocumento(req.getCnpj());
 
             // A. Checa duplicidade SOMENTE se for CNPJ (14 dígitos)
-            if (documentoLimpo.length() == 14 && empresaRepository.existsByCnpjAndIdNot(req.getCnpj(), id)) {
+            if (empresaRepository.existsByCnpjAndIdNot(documentoLimpo, id)) {
                 throw new ApiException(
                         "Este CNPJ já está sendo utilizado por outra empresa.",
                         HttpStatus.BAD_REQUEST, "/empresas"
@@ -104,8 +107,8 @@ public class EmpresaService {
 
         // 2. PROTEÇÃO DE RESTAURAÇÃO (Evita burlar o limite do plano)
         if (req.getAtivo() != null && req.getAtivo() && !empresa.getAtivo()) {
-            long ativas = empresaRepository.countByDonoIdAndAtivoTrue(empresa.getDono().getId());
-            int limite = empresa.getDono().getTipoPlano().getLimiteEmpresas();
+            long ativas = empresaRepository.countByDonoIdAndAtivoTrue(usuarioBloqueado.getId());
+            int limite = usuarioBloqueado.getTipoPlano().getLimiteEmpresas();
 
             if (ativas >= limite) {
                 throw new ApiException(
@@ -118,13 +121,13 @@ public class EmpresaService {
 
         // 3. Atualiza os dados
         empresa.setNomeFantasia(req.getNomeFantasia());
-        empresa.setCnpj(req.getCnpj());
+        empresa.setCnpj(normalizarDocumento(req.getCnpj()));
 
         if (req.getAtivo() != null) {
             empresa.setAtivo(req.getAtivo());
         }
 
-        return mapToResponse(empresaRepository.save(empresa));
+        return mapToResponse(salvarEmpresa(empresa));
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -172,9 +175,12 @@ public class EmpresaService {
     }
 
     @Transactional(readOnly = true)
-    public EmpresaResponse buscarPorIdDto(Long id) {
-        return mapToResponse(empresaRepository.findByIdWithDono(id)
-                .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada com o ID: " + id)));
+    public EmpresaResponse buscarPorIdDto(Long id, String emailUsuario) {
+        Empresa empresa = empresaRepository.findByIdWithDono(id)
+                .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada com o ID: " + id));
+        if (!empresa.getDono().getEmail().equals(emailUsuario))
+            throw new ApiException("Você não tem permissão para acessar esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
+        return mapToResponse(empresa);
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -225,6 +231,19 @@ public class EmpresaService {
                 );
             }
             throw e;
+        }
+    }
+
+    private String normalizarDocumento(String documento) {
+        if (documento == null || documento.isBlank()) return null;
+        return documento.replaceAll("\\D", "");
+    }
+
+    private Empresa salvarEmpresa(Empresa empresa) {
+        try {
+            return empresaRepository.saveAndFlush(empresa);
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException("Este CPF/CNPJ já está vinculado a outra empresa.", HttpStatus.CONFLICT, "/empresas");
         }
     }
 

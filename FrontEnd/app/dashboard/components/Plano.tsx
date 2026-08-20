@@ -8,7 +8,7 @@ import {
   Zap, Check
 } from "lucide-react";
 import { useEmpresa } from "../context/Empresacontext";
-import { criarCheckout, type PlanoPagoId } from "@/lib/billing";
+import { abrirPortalCobranca, criarCheckout, type PlanoPagoId } from "@/lib/billing";
 
 // =====================================================================
 // 1. CONFIGURAÇÕES E API
@@ -114,7 +114,11 @@ function PlanosInner() {
     setErro(null); setLoadingPlano(planoId);
 
     try {
-      const url = await criarCheckout(planoId as PlanoPagoId);
+      const possuiAssinaturaPaga = plano?.tipoPlano && plano.tipoPlano !== "EXPERIMENTAL";
+      const portalUrl = possuiAssinaturaPaga
+        ? await abrirPortalCobranca()
+        : null;
+      const url = portalUrl ?? await criarCheckout(planoId as PlanoPagoId);
       globalThis.window.location.assign(url);
     } catch (e: unknown) {
       setErro(e instanceof Error ? e.message : "Não foi possível iniciar o checkout.");
@@ -269,7 +273,7 @@ function PlanosInner() {
                 {isLoading ? <><Loader2 size={18} className="animate-spin" /> Aguarde...</> 
                  : isAtual ? <><Check size={18} /> Plano Atual</> 
                  : !p.pagavel ? p.cta 
-                 : <>{p.cta} {isUpgrade && <ArrowRight size={18} />}</>}
+                 : <>{plano?.tipoPlano !== "EXPERIMENTAL" ? "Gerenciar na Stripe" : p.cta} {isUpgrade && <ArrowRight size={18} />}</>}
               </button>
 
               <div style={{ flex: 1 }}>

@@ -174,8 +174,8 @@ public class PaymentService {
             );
         }
 
-        SessionCreateParams params =
-                SessionCreateParams.builder()
+        com.stripe.param.billingportal.SessionCreateParams params =
+                com.stripe.param.billingportal.SessionCreateParams.builder()
                         .setCustomer(
                                 assinatura.getStripeCustomerId()
                         )
@@ -184,7 +184,8 @@ public class PaymentService {
                         )
                         .build();
 
-        Session session = Session.create(params);
+        com.stripe.model.billingportal.Session session =
+                com.stripe.model.billingportal.Session.create(params);
 
         if (session.getUrl() == null
                 || !session.getUrl().startsWith("https://")) {

@@ -66,8 +66,9 @@ export async function obterCsrfToken(): Promise<string> {
  * Retorna Response - use para quando precisar verificar status manualmente.
  */
 export async function fetchAuth(path: string, options: RequestInit = {}): Promise<Response> {
+  const isFormData=typeof FormData!=="undefined"&&options.body instanceof FormData;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(!isFormData?{"Content-Type":"application/json"}:{}),
     ...(options.headers as Record<string, string> ?? {}),
   };
 
@@ -79,11 +80,24 @@ export async function fetchAuth(path: string, options: RequestInit = {}): Promis
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const url = `${API_BASE_URL}${cleanPath}`;
 
-  const response = await fetch(url, {
+  let response = await fetch(url, {
     ...options,
     headers,
     credentials: "include", 
   });
+
+  // O Spring pode rotacionar o token ao autenticar ou criar uma sessão.
+  // Em mutações consecutivas (ex.: portal -> checkout), repete uma única vez
+  // com o token novo quando o CSRF anterior foi invalidado.
+  if (response.status === 403 && !["GET", "HEAD", "OPTIONS"].includes(method)) {
+    csrfToken = null;
+    headers["X-CSRF-TOKEN"] = await obterCsrfToken();
+    response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+  }
 
   return response;
 }
@@ -97,9 +111,9 @@ export async function fetchAuthJson<T>(path: string, options: RequestInit = {}):
   
   if (!response.ok) {
     const err = await response.json().catch(() => null);
-    throw new Error(err?.mensagem ?? err?.erro ?? `Erro ${response.status}`);
+    throw new Error(err?.mensagem ?? err?.erro ?? err?.error ?? `Erro ${response.status}`);
   }
-  
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 
