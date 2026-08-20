@@ -168,7 +168,7 @@ Uma conta pode trabalhar com diferentes empresas conforme as regras de acesso di
 A arquitetura do produto acompanha o fluxo da operação empresarial.
 
 
-<img src="Img/gevyro-explicação_1.png" alt="Explicação gevyro" />
+<img src="Img/gevyro-explicação_1.png" alt="Explicação gevyro" width="400"/>
 <br />
 
 Cada módulo possui sua responsabilidade, mas os dados trabalham em conjunto.
@@ -187,7 +187,7 @@ A API utiliza Java e Spring Boot, com Spring Security para autenticação e auto
 
 O MySQL mantém os dados relacionais da aplicação.
 
-<img src="Img/gevyro-explicação_2.png" alt="Explicação gevyro" width="200" />
+<img src="Img/gevyro-explicação_2.png" alt="Explicação gevyro" width="400" />
 <br />
 
 
