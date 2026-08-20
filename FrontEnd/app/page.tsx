@@ -50,9 +50,9 @@ const benefits = [
 ];
 
 const areas = [
-  { label: "Vendas", icon: ReceiptText, title: "Venda e receba sem interromper o atendimento", text: "O caixa reúne produtos, descontos, pagamentos e emissão de cupom em uma tela direta." },
-  { label: "Estoque", icon: Boxes, title: "Saiba o que entrou, saiu e precisa ser reposto", text: "Cadastre produtos, acompanhe quantidades e receba alertas antes que um item acabe." },
-  { label: "Relatórios", icon: BarChart3, title: "Entenda o resultado sem montar planilhas", text: "Visualize vendas, lucro, ticket médio, produtos e pagamentos por período." },
+  { label: "Vendas", icon: ReceiptText, title: "Venda e receba sem interromper o atendimento", text: "O caixa reúne produtos, descontos, pagamentos e emissão de cupom em uma tela direta.", image: "/images/landing/gevyro-feature-vendas.avif", imageAlt: "Visão geral de vendas e indicadores no painel da Gevyro" },
+  { label: "Estoque", icon: Boxes, title: "Saiba o que entrou, saiu e precisa ser reposto", text: "Cadastre produtos, acompanhe quantidades e receba alertas antes que um item acabe.", image: "/images/landing/gevyro-feature-estoque.avif", imageAlt: "Tela de movimentações e vendas da operação no sistema Gevyro" },
+  { label: "Relatórios", icon: BarChart3, title: "Entenda o resultado sem montar planilhas", text: "Visualize vendas, lucro, ticket médio, produtos e pagamentos por período.", image: "/images/landing/gevyro-feature-relatorios.avif", imageAlt: "Relatórios de vendas, pagamentos e desempenho no sistema Gevyro" },
 ];
 
 const plans = [
@@ -131,7 +131,7 @@ function Resources() {
     <section id="recursos" className="bg-white py-24 sm:py-32"><div className="mx-auto max-w-6xl px-5 lg:px-0">
       <h2 className="max-w-md text-4xl font-light leading-tight text-[#343b37] sm:text-5xl">O essencial para a operação <span className="italic text-[#258c53]">não parar</span></h2>
       <div className="mt-14 grid items-center gap-12 lg:grid-cols-[.7fr_1.3fr]"><div className="space-y-1 border-y border-zinc-200 py-2">{areas.map((item, index) => <button key={item.label} type="button" onClick={() => setActive(index)} className={`flex w-full items-center justify-between border-b border-zinc-100 px-2 py-5 text-left text-[15px] last:border-0 ${active === index ? "font-semibold text-[#258c53]" : "text-[#4b5650]"}`}>{item.label}<span className="text-xl font-light">{active === index ? "−" : "+"}</span></button>)}</div>
-        <div className="bg-[#f3f6f4] p-6 sm:p-10"><div className="relative aspect-[16/10] overflow-hidden bg-[#edf2ef]"><Image src="/images/landing/gevyro-store-branding-v1.avif" alt="Balcão de uma loja com identidade visual verde e sistema de gestão no caixa" fill className="object-cover object-center" sizes="(max-width: 1024px) 100vw, 60vw" /></div><div className="mx-auto max-w-xl pt-8 text-center"><area.icon className="mx-auto text-[#258c53]" /><h3 className="mt-4 text-xl font-semibold text-[#2f3833]">{area.title}</h3><p className="mt-3 text-sm leading-6 text-[#6a7770]">{area.text}</p></div></div>
+        <div className="bg-[#f3f6f4] p-6 sm:p-10"><div className="relative aspect-[16/10] overflow-hidden bg-white"><Image key={area.image} src={area.image} alt={area.imageAlt} fill className="object-contain object-center" sizes="(max-width: 1024px) 100vw, 60vw" /></div><div className="mx-auto max-w-xl pt-8 text-center"><area.icon className="mx-auto text-[#258c53]" /><h3 className="mt-4 text-xl font-semibold text-[#2f3833]">{area.title}</h3><p className="mt-3 text-sm leading-6 text-[#6a7770]">{area.text}</p></div></div>
       </div>
     </div></section>
   );
