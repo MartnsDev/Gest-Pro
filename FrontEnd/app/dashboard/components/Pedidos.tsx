@@ -1110,6 +1110,15 @@ export default function Pedidos() {
   const [limpando,setLimpando]           = useState(false);
   const [abaAtiva,setAbaAtiva]           = useState<"pedidos"|"integracoes">("pedidos");
 
+  const abrirIntegracoes=()=>{
+    setAbaAtiva("integracoes");
+    toast.info("As integrações estão em desenvolvimento e aprimoramento contínuo.",{
+      description:"Se encontrar qualquer erro, acesse a Central de Suporte.",
+      action:{label:"Abrir suporte",onClick:()=>{window.location.href="/dashboard?section=configuracoes&settings=suporte";}},
+      duration:7000,
+    });
+  };
+
   const carregar=useCallback(async()=>{
     if(!empresaAtiva) return;
     setLoading(true);
@@ -1224,16 +1233,20 @@ export default function Pedidos() {
         <button onClick={()=>setAbaAtiva("pedidos")} style={{padding:"8px 16px",fontSize:13,cursor:"pointer",background:"none",border:"none",color:abaAtiva==="pedidos"?"var(--foreground)":"var(--foreground-muted)",fontWeight:abaAtiva==="pedidos"?600:400,borderBottom:abaAtiva==="pedidos"?"2px solid var(--primary)":"2px solid transparent",marginBottom:-1}}>
           Pedidos
         </button>
-        <button onClick={()=>setAbaAtiva("integracoes")} style={{padding:"8px 16px",fontSize:13,cursor:"pointer",background:"none",border:"none",color:abaAtiva==="integracoes"?"var(--foreground)":"var(--foreground-muted)",fontWeight:abaAtiva==="integracoes"?600:400,borderBottom:abaAtiva==="integracoes"?"2px solid var(--primary)":"2px solid transparent",marginBottom:-1,display:"flex",alignItems:"center",gap:6}}>
+        <button onClick={abrirIntegracoes} style={{padding:"8px 16px",fontSize:13,cursor:"pointer",background:"none",border:"none",color:abaAtiva==="integracoes"?"var(--foreground)":"var(--foreground-muted)",fontWeight:abaAtiva==="integracoes"?600:400,borderBottom:abaAtiva==="integracoes"?"2px solid var(--primary)":"2px solid transparent",marginBottom:-1,display:"flex",alignItems:"center",gap:6}}>
           <Zap size={13}/> Integrações
           {!isPremium&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:99,background:"rgba(234,179,8,0.15)",color:"#854F0B",fontWeight:600,marginLeft:2}}>Premium</span>}
         </button>
       </div>
 
       {abaAtiva==="integracoes"&&(
-        isPremium
-          ?<SecaoIntegracoes empresaId={empresaAtiva.id}/>
-          :<SecaoPremiumLock/>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div role="status" style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,padding:"14px 16px",border:"1px solid rgba(245,158,11,.35)",borderRadius:12,background:"rgba(245,158,11,.09)"}}>
+            <div style={{display:"flex",gap:10,alignItems:"flex-start"}}><AlertTriangle size={18} color="#f59e0b" style={{marginTop:1,flexShrink:0}}/><div><p style={{margin:0,fontSize:13,fontWeight:700,color:"var(--foreground)"}}>Integrações em desenvolvimento e aprimoramento</p><p style={{margin:"4px 0 0",fontSize:12,lineHeight:1.5,color:"var(--foreground-muted)"}}>Algumas conexões podem apresentar instabilidade. Se encontrar qualquer erro, envie os detalhes pela Central de Suporte.</p></div></div>
+            <Link href="/dashboard?section=configuracoes&settings=suporte" style={{flexShrink:0,padding:"8px 12px",borderRadius:8,background:"var(--primary)",color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none"}}>Abrir suporte</Link>
+          </div>
+          {isPremium?<SecaoIntegracoes empresaId={empresaAtiva.id}/>:<SecaoPremiumLock/>}
+        </div>
       )}
 
       {abaAtiva==="pedidos"&&(

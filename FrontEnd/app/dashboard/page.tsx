@@ -273,6 +273,10 @@ function DashboardInner({
     resetarContexto,
   } = useEmpresa();
   const [secao, setSecao] = useState<Secao>(secaoInicial);
+
+  useEffect(() => {
+    setSecao(secaoInicial);
+  }, [secaoInicial]);
   const [modalCaixa, setModalCaixa] = useState(false);
   const [toast, setToast] = useState(mostrarToast);
   const isMobile = useIsMobile();
@@ -553,12 +557,11 @@ function DashboardInner({
             ) : (
               <div className={styles.headerUserInitials}>{iniciais}</div>
             )}
-            {/* Botão Sair: visível no desktop, no mobile está no drawer */}
             {!isMobile && (
               <Button
                 onClick={handleLogout}
                 variant="ghost"
-                className="text-white hover:text-gray-300 hover:bg-[#1a3a52]"
+                className="text-[var(--foreground)] hover:bg-[var(--surface-overlay)] hover:text-[var(--primary)]"
               >
                 Sair
               </Button>

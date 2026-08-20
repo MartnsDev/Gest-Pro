@@ -27,7 +27,7 @@ export function PwaInstallPrompt() {
 
     const instalado = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
     const celular = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    if (instalado || !celular) return;
+    if (instalado) return;
 
     setIos(/iPhone|iPad|iPod/i.test(navigator.userAgent));
     let podeMostrar = Boolean(localStorage.getItem("gevyro-cookie-preferences"));
@@ -36,27 +36,30 @@ export function PwaInstallPrompt() {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => setVisivel(true), 1200);
     };
-    if (podeMostrar) agendar();
+    if (podeMostrar && celular) agendar();
 
     const aposConsentimento = () => {
       podeMostrar = true;
-      agendar();
+      if (celular) agendar();
     };
 
     const guardarConvite = (event: Event) => {
       event.preventDefault();
       setConvite(event as BeforeInstallPromptEvent);
-      if (podeMostrar) setVisivel(true);
+      if (podeMostrar && celular) setVisivel(true);
     };
     const ocultarAoInstalar = () => setVisivel(false);
+    const abrirPeloSite = () => setVisivel(true);
 
     window.addEventListener("beforeinstallprompt", guardarConvite);
     window.addEventListener("appinstalled", ocultarAoInstalar);
+    window.addEventListener("gevyro:install-request", abrirPeloSite);
     window.addEventListener("gevyro:cookie-consent", aposConsentimento);
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener("beforeinstallprompt", guardarConvite);
       window.removeEventListener("appinstalled", ocultarAoInstalar);
+      window.removeEventListener("gevyro:install-request", abrirPeloSite);
       window.removeEventListener("gevyro:cookie-consent", aposConsentimento);
     };
   }, []);

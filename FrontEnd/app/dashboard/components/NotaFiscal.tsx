@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, ReactNode } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   FileText, Upload, Download, Plus, Search, CheckCircle,
@@ -374,6 +375,17 @@ export default function NotaFiscalPage() {
           <button onClick={carregarNotas} style={{ ...btnStyle, background: theme.bgCard }}>
              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Atualizar Dados
           </button>
+        </div>
+
+        <div role="status" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16, padding: "14px 16px", border: "1px solid rgba(245,158,11,.35)", borderRadius: 12, background: theme.warningAlpha }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <AlertTriangle size={18} color={theme.warning} style={{ marginTop: 1, flexShrink: 0 }} />
+            <div>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.textMain }}>Notas Fiscais em desenvolvimento e aprimoramento</p>
+              <p style={{ margin: "4px 0 0", fontSize: 12, lineHeight: 1.5, color: theme.textMuted }}>A emissão fiscal pode apresentar instabilidades durante esta fase. Se encontrar qualquer erro, envie os detalhes pela Central de Suporte.</p>
+            </div>
+          </div>
+          <Link href="/dashboard?section=configuracoes&settings=suporte" style={{ flexShrink: 0, padding: "8px 12px", borderRadius: 8, background: theme.primary, color: "#fff", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>Abrir suporte</Link>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>

@@ -456,6 +456,10 @@ export default function Configuracoes({
   const [erroCarregamento, setErroCarregamento] = useState("");
   const [abaAtiva, setAbaAtiva] = useState<"perfil" | "senha" | "plano" | "notificacoes" | "suporte">("perfil");
 
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("settings") === "suporte") setAbaAtiva("suporte");
+  }, []);
+
   const [novoNome, setNovoNome] = useState("");
   const [salvandoNome, setSalvandoNome] = useState(false);
 
