@@ -74,54 +74,8 @@ Ela movimenta o estoque, pertence a um caixa, pode estar relacionada a um client
 <tr>
 <td width="50%" valign="top">
 
-### Vendas
+<img src="Img/gevyro-explicação_3.png" alt="Explicação gevyro" width="400"/>
 
-Uma frente de caixa integrada à operação.
-
-Produtos, descontos, diferentes formas de pagamento, troco, histórico e cancelamentos fazem parte do mesmo fluxo.
-
-</td>
-<td width="50%" valign="top">
-
-### Estoque
-
-A quantidade disponível acompanha as movimentações realizadas pelo sistema.
-
-Produtos podem possuir informações de custo, venda, margem, categoria, código de barras e estoque mínimo.
-
-</td>
-</tr>
-
-<tr>
-<td width="50%" valign="top">
-
-### Caixa
-
-Abertura, movimentações e fechamento ficam relacionados às vendas realizadas durante a operação.
-
-</td>
-<td width="50%" valign="top">
-
-### Clientes
-
-Informações comerciais podem ser centralizadas e relacionadas às operações realizadas pela empresa.
-
-</td>
-</tr>
-
-<tr>
-<td width="50%" valign="top">
-
-### Indicadores
-
-Os dados gerados pela própria operação alimentam dashboards e relatórios para facilitar o acompanhamento do negócio.
-
-</td>
-<td width="50%" valign="top">
-
-### Empresas
-
-Uma conta pode trabalhar com diferentes empresas conforme as regras de acesso disponíveis, mantendo suas operações separadas.
 
 </td>
 </tr>
