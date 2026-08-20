@@ -47,6 +47,44 @@
   color: var(--foreground);
 }
 
+.dashboardLogoLight,
+.dashboardLogoDark,
+.dashboardLogoDarkWordmark,
+.dashboardLogoDarkSymbol {
+  display: block;
+  width: 118px;
+  height: auto;
+}
+
+.dashboardLogoDark {
+  display: none;
+  position: relative;
+  aspect-ratio: 2083 / 755;
+}
+
+.dashboardLogoDarkWordmark,
+.dashboardLogoDarkSymbol {
+  position: absolute;
+  inset: 0;
+}
+
+.dashboardLogoDarkWordmark {
+  filter: brightness(0) invert(1);
+  opacity: 0.96;
+}
+
+.dashboardLogoDarkSymbol {
+  clip-path: inset(0 69% 0 0);
+}
+
+:global([data-theme="dark"]) .dashboardLogoLight {
+  display: none;
+}
+
+:global([data-theme="dark"]) .dashboardLogoDark {
+  display: block;
+}
+
 .headerTitle {
   font-size: 1.25rem;
   font-weight: 700;

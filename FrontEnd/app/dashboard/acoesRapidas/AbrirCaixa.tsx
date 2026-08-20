@@ -4,12 +4,10 @@ import { useEffect, useState } from "react";
 import { DollarSign, Store, CheckCircle, AlertCircle, Lock, X } from "lucide-react";
 import { useEmpresa, type Empresa, type CaixaInfo } from "../context/Empresacontext";
 import { toast } from "sonner";
+import { fetchAuthJson } from "@/lib/api-v2";
 
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    { credentials:"include", headers:{"Content-Type":"application/json"}, ...opts });
-  if (!res.ok){ const err = await res.json().catch(()=>null); throw new Error(err?.mensagem ?? `Erro ${res.status}`); }
-  return res.json();
+  return fetchAuthJson<T>(path, opts);
 }
 
 const fmt = (v?: number | null) =>

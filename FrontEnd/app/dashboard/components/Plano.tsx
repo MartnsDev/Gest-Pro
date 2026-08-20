@@ -181,17 +181,17 @@ function PlanosInner() {
 
           <div style={{ flex: 1, minWidth: 220, maxWidth: 360 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 10, fontWeight: 600 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 6, color: "#94a3b8" }}><Clock size={14} /> Ciclo de Faturamento</span>
-              <span style={{ color: pct < 20 ? "#ef4444" : "#f8fafc" }}>{plano.diasRestantes} dias restantes</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--foreground-muted)" }}><Clock size={14} /> Ciclo de Faturamento</span>
+              <span style={{ color: pct < 20 ? "var(--destructive)" : "var(--foreground)" }}>{plano.diasRestantes} dias restantes</span>
             </div>
-            <div style={{ height: 8, background: "#0f1115", borderRadius: 99, overflow: "hidden", border: "1px solid #272a30" }}>
+            <div style={{ height: 8, background: "var(--surface-overlay)", borderRadius: 99, overflow: "hidden", border: "1px solid var(--border)" }}>
               <div style={{ width: `${pct}%`, height: "100%", background: barColor(pct), transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)", borderRadius: 99 }} />
             </div>
           </div>
           
           <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", background: "var(--surface-overlay)", border: "1px solid var(--border)", padding: "8px 11px", borderRadius: 8 }}>
             <Building2 size={14} color={planoAtual.corBase} />
-            <span>Lojas ativas: <strong style={{ color: "#fff" }}>{plano.empresasCriadas}</strong> / {plano.limiteEmpresas >= 99 ? "Ilimitado" : plano.limiteEmpresas}</span>
+            <span>Lojas ativas: <strong style={{ color: "var(--foreground)" }}>{plano.empresasCriadas}</strong> / {plano.limiteEmpresas >= 99 ? "Ilimitado" : plano.limiteEmpresas}</span>
           </div>
         </section>
       )}
@@ -264,9 +264,9 @@ function PlanosInner() {
                   width: "100%", padding: 10, marginTop: 10, marginBottom: 16, borderRadius: 8, fontSize: 10, fontWeight: 750,
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: isAtual || !p.pagavel || isLoading ? "default" : "pointer",
                   transition: "all 0.2s",
-                  background: isAtual ? "#272a30" : p.destaque ? p.corBase : "transparent",
-                  color: isAtual ? "#94a3b8" : p.destaque ? "#fff" : "#fff",
-                  border: isAtual ? "none" : p.destaque ? "none" : `1px solid ${isHovered ? p.corBase : "#272a30"}`,
+                  background: isAtual ? "var(--surface-overlay)" : p.destaque ? p.corBase : "transparent",
+                  color: isAtual ? "var(--foreground-muted)" : p.destaque ? "#fff" : "var(--foreground)",
+                  border: isAtual ? "none" : p.destaque ? "none" : `1px solid ${isHovered ? p.corBase : "var(--border)"}`,
                   opacity: isLoading ? 0.7 : 1
                 }}
               >

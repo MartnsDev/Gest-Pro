@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
   Home,
@@ -107,14 +108,29 @@ async function resolverEstadoInicial(
 ): Promise<{ empresa: EmpresaAtiva | null; caixa: CaixaInfo | null }> {
   if (empresas.length === 0) return { empresa: null, caixa: null };
 
-  const ordenadas: EmpresaAtiva[] = empresaCacheId
-    ? [
-        ...empresas.filter((e) => e.id === empresaCacheId),
-        ...empresas.filter((e) => e.id !== empresaCacheId),
-      ]
-    : empresas;
+  // Uma escolha explícita do usuário sempre tem prioridade, mesmo quando
+  // essa empresa não possui caixa aberto. Antes, a busca continuava pelas
+  // demais empresas e acabava substituindo a seleção por outra com caixa.
+  const empresaEmCache = empresas.find((e) => e.id === empresaCacheId);
+  if (empresaEmCache) {
+    try {
+      const caixa = await buscarCaixaAberto(empresaEmCache.id);
+      return {
+        empresa: empresaEmCache,
+        caixa: caixa
+          ? { ...caixa, empresaNome: empresaEmCache.nomeFantasia }
+          : null,
+      };
+    } catch (err) {
+      console.warn(
+        `[Gevyro] erro ao buscar caixa empresaId=${empresaEmCache.id}:`,
+        err,
+      );
+      return { empresa: empresaEmCache, caixa: null };
+    }
+  }
 
-  for (const empresa of ordenadas) {
+  for (const empresa of empresas) {
     try {
       const caixa = await buscarCaixaAberto(empresa.id);
       if (caixa) {
@@ -131,10 +147,7 @@ async function resolverEstadoInicial(
     }
   }
 
-  const empresaFallback =
-    empresas.find((e) => e.id === empresaCacheId) ?? empresas[0] ?? null;
-
-  return { empresa: empresaFallback, caixa: null };
+  return { empresa: empresas[0] ?? null, caixa: null };
 }
 
 /* ─── Detecção de mobile (hook) ─────────────────────────────────────────── */
@@ -426,10 +439,34 @@ function DashboardInner({
       {/* Header */}
       <header className={styles.dashboardHeader}>
         <div className={styles.headerBrand}>
-          <div className={styles.headerLogo}>
-            <img src="/gevyro-fav.png" alt="Gevyro" width={36} height={36} />
+          <div className={styles.headerLogo} role="img" aria-label="Gevyro">
+            <Image
+              src="/images/gevyro-logo.png"
+              alt=""
+              width={2083}
+              height={755}
+              priority
+              className={styles.dashboardLogoLight}
+            />
+            <span className={styles.dashboardLogoDark} aria-hidden="true">
+              <Image
+                src="/images/gevyro-logo.png"
+                alt=""
+                width={2083}
+                height={755}
+                priority
+                className={styles.dashboardLogoDarkWordmark}
+              />
+              <Image
+                src="/images/gevyro-logo.png"
+                alt=""
+                width={2083}
+                height={755}
+                priority
+                className={styles.dashboardLogoDarkSymbol}
+              />
+            </span>
           </div>
-          <span className={styles.headerTitle}>Gevyro</span>
           <div
             style={{
               marginLeft: 16,
