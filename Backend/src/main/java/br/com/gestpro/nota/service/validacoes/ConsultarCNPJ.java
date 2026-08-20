@@ -23,9 +23,7 @@ public class ConsultarCNPJ {
         this.webClient = webClient;
     }
 
-    // -------------------------------------------------------------------------
     // Registro de provedores: URL builder + adaptador de resposta
-    // -------------------------------------------------------------------------
     private record CnpjProvider(
             String nome,
             Function<String, String> urlBuilder,
@@ -207,9 +205,7 @@ public class ConsultarCNPJ {
             )
     );
 
-    // -------------------------------------------------------------------------
     // Consulta principal com fallback encadeado
-    // -------------------------------------------------------------------------
     public Map<String, Object> consultarCnpj(String cnpj) {
         String limpo = cnpj.replaceAll("\\D", "");
         if (limpo.length() != 14) {
@@ -257,9 +253,7 @@ public class ConsultarCNPJ {
                 "Todos os serviços de consulta de CNPJ estão indisponíveis no momento. Tente novamente mais tarde. Detalhes: " + erros);
     }
 
-    // -------------------------------------------------------------------------
     // Utilitário para cast seguro de Map
-    // -------------------------------------------------------------------------
     @SuppressWarnings("unchecked")
     private static Map<String, Object> castMap(Object obj) {
         return (obj instanceof Map<?, ?> m) ? (Map<String, Object>) m : null;

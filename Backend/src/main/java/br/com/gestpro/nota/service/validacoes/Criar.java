@@ -25,9 +25,7 @@ public class Criar {
     private final NotaFiscalRepository notaRepo;
     private final BuscaPorId           buscaPorId;
 
-    // =========================================================================
     // Ação principal
-    // =========================================================================
 
     @Transactional
     public Map<String, Object> criar(CriarNotaRequest request) {
@@ -76,7 +74,6 @@ public class Criar {
 
         for (ItemCalc ic : request.getItens()) {
             validarItem(ic,numItem);
-            // Builder disponível pois ItemNotaFiscal agora tem @Builder
             ItemNotaFiscal item = ItemNotaFiscal.builder()
                     .produtoId(ic.getProdutoId())
                     .codigoProduto(ic.getCodigoProduto())
@@ -146,9 +143,7 @@ public class Criar {
         return buscaPorId.buscarPorId(salva.getId());
     }
 
-    // =========================================================================
     // Helpers
-    // =========================================================================
 
     private BigDecimal calcularImposto(BigDecimal base, BigDecimal aliquota) {
         return base.multiply(aliquota)

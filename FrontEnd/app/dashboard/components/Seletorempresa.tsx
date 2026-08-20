@@ -59,7 +59,6 @@ export default function SeletorEmpresa({
   useEffect(() => {
     fetchAuth<Empresa[]>("/api/v1/empresas")
       .then((data) => {
-        // ─── FILTRO AQUI ───
         // Filtramos para manter apenas as empresas que não estão marcadas como inativas
         const apenasAtivas = data.filter(emp => emp.ativo !== false);
         setEmpresas(apenasAtivas);

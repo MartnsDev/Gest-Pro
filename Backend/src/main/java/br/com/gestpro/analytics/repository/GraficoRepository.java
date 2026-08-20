@@ -16,7 +16,6 @@ import java.util.List;
 @Repository
 public interface GraficoRepository extends JpaRepository<Venda, Long> {
 
-    // ── Formas de pagamento por empresa (PDV + Pedidos) ────────────────────
     @Query(value = """
         SELECT forma, SUM(qtd) AS total
         FROM (
@@ -65,7 +64,6 @@ public interface GraficoRepository extends JpaRepository<Venda, Long> {
         """, nativeQuery = true)
     List<Object[]> countVendasPorProdutoRaw(@Param("empresaId") Long empresaId);
 
-    // ── Vendas diárias por empresa (PDV + Pedidos) ─────────────────────────
     @Query(value = """
         SELECT
             DAYOFWEEK(dt)   AS dia_numero,

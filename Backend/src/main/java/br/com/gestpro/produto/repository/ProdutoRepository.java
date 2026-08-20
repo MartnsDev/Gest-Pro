@@ -13,16 +13,16 @@ import java.util.List;
 @Repository
 public interface ProdutoRepository extends JpaRepository<Produto, Long> {
 
-    // Listagem por usuário (compatibilidade antiga)
+    // Consulta mantida para integrações antigas.
     List<Produto> findByUsuario(Usuario usuario);
 
-    // Listagem por empresa — principal a partir de agora
+    // Consulta principal por empresa.
     List<Produto> findByEmpresa(Empresa empresa);
 
     // Produtos zerados por empresa
     List<Produto> findByQuantidadeEstoqueAndEmpresaId(int quantidade, Long empresaId);
 
-    // Mantém compatibilidade com alertas por email (dashboard)
+    // Usada nos alertas de estoque.
     List<Produto> findByQuantidadeEstoqueAndUsuarioEmail(int quantidade, String email);
 
     @Query("SELECT COUNT(p) FROM Produto p WHERE p.empresa = :empresa AND p.ativo = true")

@@ -37,7 +37,6 @@ public class MarketplaceConnectionController {
     @Value("${app.base-url}")
     private String urlApi;
 
-    // ─── Callbacks OAuth ─────────────────────────────────────────────────────────
 
     /**
      * Shopee OAuth callback.
@@ -83,7 +82,6 @@ public class MarketplaceConnectionController {
         }
     }
 
-    // ─── Conexões ────────────────────────────────────────────────────────────────
 
     @PostMapping("/empresa/{empresaId}/conectar")
     public ResponseEntity<MarketplaceConnection> conectar(
@@ -118,7 +116,6 @@ public class MarketplaceConnectionController {
         return ResponseEntity.ok(service.listarConexoes(empresaId, auth.getName()));
     }
 
-    // ─── Vínculos ────────────────────────────────────────────────────────────────
 
     @PostMapping("/empresa/{empresaId}/vinculos")
     public ResponseEntity<MarketplaceProductLink> vincular(
@@ -153,7 +150,6 @@ public class MarketplaceConnectionController {
         return ResponseEntity.noContent().build();
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────────
 
     private Long extrairEmpresaId(String state) {
         if (state == null || !state.startsWith("empresaId="))
@@ -161,7 +157,6 @@ public class MarketplaceConnectionController {
         return Long.parseLong(state.replace("empresaId=", "").trim());
     }
 
-    // ─── Request bodies ──────────────────────────────────────────────────────────
 
     @Getter @Setter
     public static class ConectarRequest {

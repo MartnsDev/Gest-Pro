@@ -4,7 +4,6 @@ import { useState, useEffect, ReactNode } from "react";
 import { X, BarChart3, FileText } from "lucide-react";
 import { toast } from "sonner";
 
-/* ─── Modal Base Interno ─── */
 function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
     <div
@@ -19,7 +18,6 @@ function Overlay({ onClose, children }: { onClose: () => void; children: ReactNo
   );
 }
 
-/* ─── Tipos ─── */
 interface RelatorioHoje {
   titulo: string; 
   periodo: string; 
@@ -36,7 +34,6 @@ interface RelatorioHoje {
   valorCancelado: number;
 }
 
-/* ─── Helpers e Estilos ─── */
 const fmt = (v?: number | null) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 
 const btnP: React.CSSProperties = {
@@ -46,7 +43,6 @@ const btnP: React.CSSProperties = {
   width: "100%", marginTop: 8
 };
 
-/* ─── Componente Principal ─── */
 interface Props {
   empresaId: number;
   onClose: () => void;

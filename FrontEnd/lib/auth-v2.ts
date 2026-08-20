@@ -8,7 +8,6 @@ import {
   type Usuario,
 } from "./api-v2";
 
-// ─── Token helpers ────────────────────────────────────────────────────────────
 
 export function saveToken(token: string) {
   // Compatibilidade de assinatura: tokens nunca são persistidos pelo cliente.
@@ -24,7 +23,6 @@ export function removeToken() {
 // Re-export getToken para manter compatibilidade
 export { getToken };
 
-// ─── Auth checks ──────────────────────────────────────────────────────────────
 
 export async function checkAuth(): Promise<Usuario | null> {
   try {

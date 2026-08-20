@@ -15,9 +15,7 @@ import java.util.List;
 @Repository
 public interface VendaRepository extends JpaRepository<Venda, Long> {
 
-    // ----------------------------
     // MÉTODOS AUTOMÁTICOS
-    // ----------------------------
     List<Venda> findByCaixaId(Long idCaixa);
 
     List<Venda> findByCaixa(Caixa caixa);

@@ -51,7 +51,7 @@ public class GraficoServiceOperation {
             // Assume que a query retorna: SELECT nome_produto, quantidade_vendida
             String nomeProduto = o[0] != null ? o[0].toString() : "Desconhecido";
 
-            // Converte o retorno numérico de forma segura para evitar NullPointer
+            // A consulta pode retornar valores nulos.
             long quantidade = o[1] != null ? ((Number) o[1]).longValue() : 0L;
 
             return new ProdutoVendasDTO(nomeProduto, quantidade);

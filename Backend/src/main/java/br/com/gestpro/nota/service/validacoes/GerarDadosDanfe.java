@@ -28,9 +28,7 @@ public class GerarDadosDanfe {
     private final NotaFiscalRepository     notaRepo;
     private final ItemNotaFiscalRepository itemRepo;
 
-    // =========================================================================
     // Ponto de entrada
-    // =========================================================================
     @Transactional(readOnly = true)
     public Map<String, Object> gerarDadosDanfe(Long id) {
 
@@ -42,7 +40,6 @@ public class GerarDadosDanfe {
 
         Map<String, Object> danfe = new LinkedHashMap<>();
 
-        // ── Cabeçalho ──────────────────────────────────────────────────────────
         Map<String, Object> cab = new LinkedHashMap<>();
         cab.put("titulo",         tituloPorTipo(nota.getTipo().name()));
         cab.put("modelo",         modeloPorTipo(nota.getTipo().name()));
@@ -61,7 +58,6 @@ public class GerarDadosDanfe {
                 ? nota.getCreatedAt().format(DANFE_DATE) : null);
         danfe.put("cabecalho", cab);
 
-        // ── Emitente ─────────────────────────────────────────────────────────
         // Os dados do emitente devem ser buscados via EmpresaService na camada de serviço.
         // Aqui exportamos apenas os IDs para que o frontend possa enriquecer se necessário.
         Map<String, Object> emit = new LinkedHashMap<>();
@@ -69,7 +65,6 @@ public class GerarDadosDanfe {
         // TODO: Injetar EmpresaService e enriquecer com razaoSocial, cnpj, endereço, etc.
         danfe.put("emitente", emit);
 
-        // ── Destinatário ─────────────────────────────────────────────────────
         Map<String, Object> dest = new LinkedHashMap<>();
         dest.put("clienteId",    nota.getClienteId());
         dest.put("nome",         nota.getClienteNome());
@@ -77,7 +72,6 @@ public class GerarDadosDanfe {
         dest.put("cpfCnpjLimpo", digitos(nota.getClienteCpfCnpj()));
         danfe.put("destinatario", dest);
 
-        // ── Itens ─────────────────────────────────────────────────────────────
         List<Map<String, Object>> itensMap = new ArrayList<>();
         int seq = 1;
         for (ItemNotaFiscal item : itens) {
@@ -107,7 +101,6 @@ public class GerarDadosDanfe {
         }
         danfe.put("itens", itensMap);
 
-        // ── Totais ────────────────────────────────────────────────────────────
         Map<String, Object> totais = new LinkedHashMap<>();
         totais.put("valorProdutos", nota.getValorProdutos());
         totais.put("valorFrete",    nota.getValorFrete());
@@ -139,7 +132,6 @@ public class GerarDadosDanfe {
         totais.put("totalCofinsItens", totalCofinsItens);
         danfe.put("totais", totais);
 
-        // ── Pagamento ─────────────────────────────────────────────────────────
         Map<String, Object> pgto = new LinkedHashMap<>();
         if (nota.getFormaPagamento() != null) {
             pgto.put("forma",      nota.getFormaPagamento().name());
@@ -149,13 +141,11 @@ public class GerarDadosDanfe {
         pgto.put("valor", nota.getValorTotal());
         danfe.put("pagamento", pgto);
 
-        // ── Observações e rastreabilidade ────────────────────────────────────
         danfe.put("naturezaOperacao",    nota.getNaturezaOperacao());
         danfe.put("informacoesAdicionais", nota.getInformacoesAdicionais());
         danfe.put("motivoRejeicao",      nota.getMotivoRejeicao());
         danfe.put("emContingencia",      nota.getEmContingencia());
 
-        // ── QR Code / URL de consulta ─────────────────────────────────────────
         danfe.put("codigoBarras", nota.getChaveAcesso());
         danfe.put("urlConsulta",  gerarUrlConsulta(nota));
 
@@ -163,9 +153,7 @@ public class GerarDadosDanfe {
         return danfe;
     }
 
-    // =========================================================================
     // Helpers privados
-    // =========================================================================
 
     private String tituloPorTipo(String tipo) {
         return switch (tipo) {

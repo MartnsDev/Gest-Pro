@@ -23,9 +23,7 @@ public class NotaFiscalController {
     private final NotaFiscalInterface notaFiscalService;
     private final NotaFiscalServiceImpl notaFiscalServiceImpl;
 
-    // =====================================================================
     // CRUD
-    // =====================================================================
 
     @PostMapping
     public ResponseEntity<ApiResponse<NotaFiscalResumoResponse>> criar(@RequestBody CriarNotaRequest request, Authentication auth) {
@@ -68,9 +66,7 @@ public class NotaFiscalController {
         }
     }
 
-    // =====================================================================
     // CICLO DE VIDA
-    // =====================================================================
 
     @PostMapping("/{id}/emitir")
     public ResponseEntity<ApiResponse<NotaFiscalResumoResponse>> emitir(@PathVariable Long id, Authentication auth) {
@@ -113,9 +109,7 @@ public class NotaFiscalController {
         return ResponseEntity.ok(ApiResponse.ok(Map.of("transmitidas", qtd)));
     }
 
-    // =====================================================================
     // DOWNLOADS
-    // =====================================================================
 
     @GetMapping("/{id}/xml")
     public ResponseEntity<byte[]> baixarXml(@PathVariable Long id, Authentication auth) {
@@ -145,9 +139,7 @@ public class NotaFiscalController {
         }
     }
 
-    // =====================================================================
     // ÁREA DO CONTADOR
-    // =====================================================================
     @GetMapping("/exportar/xml-mensal")
     public ResponseEntity<Object> exportarXmlsMensal(
             @RequestParam Long empresaId,
@@ -193,9 +185,7 @@ public class NotaFiscalController {
         }
     }
 
-    // =====================================================================
     // CERTIFICADO DIGITAL
-    // =====================================================================
     @PostMapping("/certificado/{empresaId}")
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadCertificado(
             @PathVariable Long empresaId,
@@ -214,9 +204,7 @@ public class NotaFiscalController {
         }
     }
 
-    // =====================================================================
     // CONSULTAS AUXILIARES
-    // =====================================================================
     @GetMapping("/cep/{cep}")
     public ResponseEntity<Object> consultarCep(@PathVariable String cep) {
         Object resultado = notaFiscalService.consultarCep(cep);

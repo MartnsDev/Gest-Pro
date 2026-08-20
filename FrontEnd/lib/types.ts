@@ -1,6 +1,4 @@
-// ===================== TIPOS DO SISTEMA GEVYRO =====================
 
-// ─── Usuário e Autenticação ─────────────────────────────────────────
 export interface Usuario {
   id?: number;
   nome: string;
@@ -24,7 +22,6 @@ export interface LoginResponse {
   expiracaoPlano?: string;
 }
 
-// ─── Produto ────────────────────────────────────────────────────────
 export interface Produto {
   id: number;
   nome: string;
@@ -47,7 +44,6 @@ export interface AtualizarProdutoDTO extends CriarProdutoDTO {
   id: number;
 }
 
-// ─── Venda ──────────────────────────────────────────────────────────
 export type FormaPagamento = "DINHEIRO" | "CARTAO_CREDITO" | "CARTAO_DEBITO" | "PIX" | "BOLETO";
 
 export interface ItemVenda {
@@ -82,7 +78,6 @@ export interface RegistrarVendaDTO {
   observacao?: string;
 }
 
-// ─── Cliente ────────────────────────────────────────────────────────
 export interface Cliente {
   id: number;
   nome: string;
@@ -98,7 +93,6 @@ export interface CriarClienteDTO {
   telefone?: string;
 }
 
-// ─── Caixa ──────────────────────────────────────────────────────────
 export type StatusCaixa = "ABERTO" | "FECHADO";
 
 export interface Caixa {
@@ -123,7 +117,6 @@ export interface FecharCaixaDTO {
   valorFechamento: number;
 }
 
-// ─── Dashboard ──────────────────────────────────────────────────────
 export interface DashboardVisaoGeral {
   vendasHoje: number;
   produtosComEstoque: number;
@@ -154,7 +147,6 @@ export interface VendasDiariasData {
   total: number;
 }
 
-// ─── Estoque / Movimentação ─────────────────────────────────────────
 export interface Movimentacao {
   id: number;
   produtoId: number;
@@ -165,7 +157,6 @@ export interface Movimentacao {
   data: string;
 }
 
-// ─── Relatórios ─────────────────────────────────────────────────────
 export interface Relatorio {
   id: number;
   tipo: string;
@@ -174,7 +165,6 @@ export interface Relatorio {
   dados: Record<string, unknown>;
 }
 
-// ─── Erros da API ───────────────────────────────────────────────────
 export interface ApiError {
   erro?: string;
   mensagem?: string;
@@ -182,7 +172,6 @@ export interface ApiError {
   timestamp?: string;
 }
 
-// ─── Resposta genérica ──────────────────────────────────────────────
 export interface ApiResponse<T> {
   data: T | null;
   error: ApiError | null;

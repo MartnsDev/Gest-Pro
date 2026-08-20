@@ -56,7 +56,6 @@ public class ItemNotaFiscal {
     @Column(name = "valor_total", precision = 15, scale = 2, nullable = false)
     private BigDecimal valorTotal;
 
-    // ── Tributação ICMS ──────────────────────────────────────────────────────
 
     /** Código de Situação da Operação do Simples Nacional. Usar para empresas no Simples. */
     @Column(name = "csosn", length = 3)
@@ -78,7 +77,6 @@ public class ItemNotaFiscal {
     @Column(name = "icms_valor", precision = 15, scale = 2)
     private BigDecimal icmsValor = BigDecimal.ZERO;
 
-    // ── Tributação PIS ───────────────────────────────────────────────────────
 
     @Column(name = "cst_pis", length = 2)
     private String cstPis;
@@ -95,7 +93,6 @@ public class ItemNotaFiscal {
     @Column(name = "pis_valor", precision = 15, scale = 2)
     private BigDecimal pisValor = BigDecimal.ZERO;
 
-    // ── Tributação COFINS ────────────────────────────────────────────────────
 
     @Column(name = "cst_cofins", length = 2)
     private String cstCofins;
@@ -112,7 +109,6 @@ public class ItemNotaFiscal {
     @Column(name = "cofins_valor", precision = 15, scale = 2)
     private BigDecimal cofinsValor = BigDecimal.ZERO;
 
-    // ── Controle ─────────────────────────────────────────────────────────────
 
     @Column(name = "numero_item")
     private Integer numeroItem;
@@ -120,7 +116,6 @@ public class ItemNotaFiscal {
     @Column(name = "informacoes_adicionais", length = 500)
     private String informacoesAdicionais;
 
-    // ── Helper bidirecional (mantido manual, não interferir no @Builder) ─────
 
     /**
      * Vincula este item à sua nota fiscal (mantém a consistência bidirecional do JPA).

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, ReactNode } from "react";
-import type { Usuario } from "@/lib/api-v2";
+import { fetchAuthJson, type Usuario } from "@/lib/api-v2";
 import {
   User,
   Camera,
@@ -30,11 +30,13 @@ import {
   FileText,
   HelpCircle,
   BookOpen,
+  ExternalLink,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSelector } from "@/components/language-selector";
 
-/* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Perfil {
   id: number;
   nome: string;
@@ -47,38 +49,10 @@ interface Perfil {
   emailConfirmado: boolean;
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
-const API =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "https://gestpro-backend-production.up.railway.app";
-
-function getToken(): string {
-  if (typeof window === "undefined") return "";
-  return (
-    sessionStorage.getItem("jwt_token") ??
-    document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
-    ""
-  );
-}
-
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const token = getToken();
-  const res = await fetch(`${API}${path}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    ...opts,
-  });
-  if (!res.ok) {
-    const e = await res.json().catch(() => null);
-    throw new Error(e?.mensagem ?? `Erro ${res.status}`);
-  }
-  return res.json();
+  return fetchAuthJson<T>(path, opts);
 }
 
-/* ─── Plano info ─────────────────────────────────────────────────────────── */
 const PLANO_INFO: Record<
   string,
   { label: string; cor: string; icon: ReactNode; beneficios: string[] }
@@ -126,8 +100,8 @@ const PLANO_INFO: Record<
       "Empresas ilimitadas",
       "Caixas ilimitados",
       "Todos os relatórios",
-      "Suporte 24/7",
-      "API access",
+      "Atendimento prioritário",
+      "Recursos avançados de gestão",
     ],
   },
 };
@@ -151,7 +125,6 @@ const card: React.CSSProperties = {
   padding: "22px 24px",
 };
 
-/* ─── Seção wrapper ──────────────────────────────────────────────────────── */
 function Secao({
   titulo,
   sub,
@@ -217,7 +190,6 @@ function Secao({
   );
 }
 
-/* ─── Foto de perfil ─────────────────────────────────────────────────────── */
 function FotoPerfil({
   perfil,
   onAtualizado,
@@ -256,25 +228,13 @@ function FotoPerfil({
     setUploading(true);
 
     try {
-      const token = getToken();
       const fd = new FormData();
       fd.append("foto", file);
 
-      const res = await fetch(`${API}/api/v1/configuracoes/perfil/foto`, {
+      const data = await fetchAuthJson<{ fotoUrl: string }>("/api/v1/configuracoes/perfil/foto", {
         method: "POST",
-        credentials: "include",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
         body: fd,
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.mensagem ?? `Erro ${res.status}`);
-      }
-
-      const data = await res.json();
       URL.revokeObjectURL(localUrl);
 
       const urlFinal = data.fotoUrl as string;
@@ -407,7 +367,6 @@ function FotoPerfil({
   );
 }
 
-/* ─── FAQ Item ───────────────────────────────────────────────────────────── */
 function FaqItem({ pergunta, resposta }: { pergunta: string; resposta: string; }) {
   const [aberto, setAberto] = useState(false);
   return (
@@ -426,20 +385,21 @@ function FaqItem({ pergunta, resposta }: { pergunta: string; resposta: string; }
   );
 }
 
-/* ─── Formulário suporte ─────────────────────────────────────────────────── */
 function FormularioSuporte({ nomeUsuario, emailUsuario }: { nomeUsuario: string; emailUsuario: string; }) {
   const [assunto, setAssunto] = useState("");
   const [categoria, setCategoria] = useState("Suporte técnico");
   const [mensagem, setMensagem] = useState("");
   const [enviado, setEnviado] = useState(false);
+  const [erro, setErro] = useState("");
 
   const CATEGORIAS = ["Suporte técnico", "Dúvida sobre plano", "Problema com pagamento", "Bug / Erro", "Outro"];
 
   const enviar = () => {
     if (!assunto.trim() || !mensagem.trim()) {
-      toast.error("Preencha o assunto e a mensagem");
+      setErro("Preencha o assunto e descreva o que aconteceu.");
       return;
     }
+    setErro("");
     const assuntoFull = `[Gevyro - ${categoria}] ${assunto}`;
     const corpo = [`Nome: ${nomeUsuario}`, `E-mail: ${emailUsuario}`, `Categoria: ${categoria}`, ``, `Mensagem:`, mensagem, ``, `---`, `Enviado via Gevyro`].join("\n");
     globalThis.window.location.href = `mailto:gestprosuporte@gmail.com?subject=${encodeURIComponent(assuntoFull)}&body=${encodeURIComponent(corpo)}`;
@@ -459,12 +419,13 @@ function FormularioSuporte({ nomeUsuario, emailUsuario }: { nomeUsuario: string;
       </div>
       <div>
         <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: 6 }}>Assunto *</label>
-        <input style={inp2} value={assunto} onChange={(e) => setAssunto(e.target.value)} placeholder="Descreva brevemente..." />
+        <input style={inp2} value={assunto} onChange={(e) => { setAssunto(e.target.value); setErro(""); }} placeholder="Descreva brevemente..." />
       </div>
       <div>
         <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: 6 }}>Mensagem *</label>
-        <textarea style={{ ...inp2, resize: "vertical", minHeight: 110 }} value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder="Descreva em detalhes..." />
+        <textarea style={{ ...inp2, resize: "vertical", minHeight: 110 }} value={mensagem} onChange={(e) => { setMensagem(e.target.value); setErro(""); }} placeholder="Informe a tela, o que tentou fazer e a mensagem exibida." />
       </div>
+      {erro && <p role="alert" style={{ margin: 0, padding: "10px 12px", borderRadius: 8, background: "var(--destructive-muted)", color: "var(--destructive)", fontSize: 12 }}>{erro}</p>}
       <button
         onClick={enviar}
         style={{
@@ -475,13 +436,12 @@ function FormularioSuporte({ nomeUsuario, emailUsuario }: { nomeUsuario: string;
           fontSize: 14, fontWeight: 700, cursor: "pointer", transition: "all .2s",
         }}
       >
-        {enviado ? <><CheckCircle size={15} /> E-mail aberto</> : <><Mail size={15} /> Abrir no Gmail</>}
+        {enviado ? <><CheckCircle size={15} /> Mensagem preparada</> : <><Mail size={15} /> Enviar por e-mail</>}
       </button>
     </div>
   );
 }
 
-/* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Configuracoes({
   usuario,
   onFotoAtualizada,
@@ -493,6 +453,7 @@ export default function Configuracoes({
 }) {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [loading, setLoading] = useState(true);
+  const [erroCarregamento, setErroCarregamento] = useState("");
   const [abaAtiva, setAbaAtiva] = useState<"perfil" | "senha" | "plano" | "notificacoes" | "suporte">("perfil");
 
   const [novoNome, setNovoNome] = useState("");
@@ -515,16 +476,19 @@ export default function Configuracoes({
   const [copiado, setCopiado] = useState<string | null>(null);
 
   useEffect(() => {
-    // 1. Busca os dados do perfil
+    setErroCarregamento("");
     fetchAuth<Perfil>("/api/v1/configuracoes/perfil")
       .then((p) => {
         setPerfil(p);
         setNovoNome(p.nome);
       })
-      .catch(() => toast.error("Erro ao carregar perfil"))
+      .catch((erro: unknown) => {
+        const mensagem = erro instanceof Error ? erro.message : "Não foi possível carregar seu perfil.";
+        setErroCarregamento(mensagem);
+        toast.error(mensagem);
+      })
       .finally(() => setLoading(false));
 
-    // 2. Busca as preferências atuais do banco de dados (se houver)
     fetchAuth<any>("/api/v1/configuracoes/notificacoes")
       .then((data) => {
         if (data) setNotif(data);
@@ -599,9 +563,12 @@ export default function Configuracoes({
   };
 
   const copiar = (texto: string, chave: string) => {
-    navigator.clipboard.writeText(texto);
-    setCopiado(chave);
-    setTimeout(() => setCopiado(null), 2000);
+    navigator.clipboard.writeText(texto)
+      .then(() => {
+        setCopiado(chave);
+        setTimeout(() => setCopiado(null), 2000);
+      })
+      .catch(() => toast.error("Não foi possível copiar."));
   };
 
   const plano = perfil ? (PLANO_INFO[perfil.tipoPlano] ?? PLANO_INFO["EXPERIMENTAL"]) : null;
@@ -622,6 +589,17 @@ export default function Configuracoes({
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
+
+  if (erroCarregamento || !perfil) {
+    return (
+      <div style={{ ...card, maxWidth: 620, margin: "48px auto", textAlign: "center" }}>
+        <AlertCircle size={28} color="var(--destructive)" />
+        <h2 style={{ color: "var(--foreground)", fontSize: 18, margin: "12px 0 6px" }}>Não foi possível abrir as configurações</h2>
+        <p style={{ color: "var(--foreground-muted)", fontSize: 13, margin: "0 0 18px" }}>{erroCarregamento || "Os dados da conta não foram encontrados."}</p>
+        <button onClick={() => globalThis.location.reload()} style={{ padding: "10px 18px", border: 0, borderRadius: 8, background: "var(--primary)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Tentar novamente</button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "28px 28px 48px", display: "flex", flexDirection: "column", gap: 24, maxWidth: 760, margin: "0 auto" }}>
@@ -652,7 +630,6 @@ export default function Configuracoes({
         ))}
       </div>
 
-      {/* ── PERFIL ─────────────────────────────────────────────────────── */}
       {abaAtiva === "perfil" && perfil && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Secao titulo="Foto e Nome" sub="Personalize como você aparece no sistema" icon={<User size={18} />}>
@@ -689,7 +666,6 @@ export default function Configuracoes({
         </div>
       )}
 
-      {/* ── SENHA ──────────────────────────────────────────────────────── */}
       {abaAtiva === "senha" && (
         <Secao titulo="Alterar Senha" sub="Um código de verificação será enviado ao seu e-mail" icon={<Lock size={18} />}>
           {etapaSenha === "idle" && (
@@ -741,7 +717,6 @@ export default function Configuracoes({
         </Secao>
       )}
 
-      {/* ── PLANO ──────────────────────────────────────────────────────── */}
       {abaAtiva === "plano" && perfil && plano && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div style={{ ...card, border: `1px solid ${plano.cor}40`, background: `${plano.cor}08`, position: "relative", overflow: "hidden" }}>
@@ -781,7 +756,6 @@ export default function Configuracoes({
         </div>
       )}
 
-      {/* ── NOTIFICAÇÕES ───────────────────────────────────────────────── */}
       {abaAtiva === "notificacoes" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Secao titulo="Aparência" sub="Escolha como o Gevyro aparece neste dispositivo" icon={<Eye size={18} />}>
@@ -791,6 +765,14 @@ export default function Configuracoes({
                 <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "3px 0 0" }}>Alterne entre o modo Dia e o modo Noite. Sua escolha fica salva automaticamente.</p>
               </div>
               <ThemeToggle />
+            </div>
+            <div style={{ height: 1, background: "var(--border)", margin: "18px 0" }} />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)", margin: 0 }}>Idioma do sistema</p>
+                <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "3px 0 0" }}>A alteração é imediata e fica salva neste dispositivo.</p>
+              </div>
+              <LanguageSelector />
             </div>
           </Secao>
 
@@ -840,7 +822,6 @@ export default function Configuracoes({
         </div>
       )}
 
-      {/* ── SUPORTE, TERMOS & COMO USAR ────────────────────────────────── */}
       {abaAtiva === "suporte" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           
@@ -868,8 +849,8 @@ export default function Configuracoes({
           <Secao titulo="Central de Ajuda" sub="Fale diretamente com nossa equipe técnica" icon={<HeadphonesIcon size={18} />}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 20 }}>
               {[
-                { chave: "whatsapp", label: "WhatsApp", valor: "(11) 93264-9629", cor: "#25d366", href: `https://wa.me/5511932649629?text=${encodeURIComponent("Olá! Preciso de suporte no Gevyro.")}`, sub: "Atendimento Rápido", icon: <MessageCircle size={20} color="#25d366" /> },
-                { chave: "email", label: "E-mail", valor: "gestprosuporte@gmail.com", cor: "#3b82f6", href: "mailto:gestprosuporte@gmail.com", sub: "Dúvidas e Financeiro", icon: <Mail size={20} color="#3b82f6" /> },
+                { chave: "whatsapp", label: "WhatsApp", valor: "(11) 93264-9629", cor: "#25d366", href: `https://wa.me/5511932649629?text=${encodeURIComponent(`Olá! Preciso de suporte no Gevyro. Minha conta é ${perfil.email}.`)}`, sub: "Suporte e dúvidas", icon: <MessageCircle size={20} color="#25d366" /> },
+                { chave: "email", label: "E-mail", valor: "gestprosuporte@gmail.com", cor: "#3b82f6", href: `mailto:gestprosuporte@gmail.com?subject=${encodeURIComponent("Suporte Gevyro")}`, sub: "Suporte, cobrança e LGPD", icon: <Mail size={20} color="#3b82f6" /> },
               ].map((canal) => (
                 <a key={canal.chave} href={canal.href} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 12, textDecoration: "none", transition: "transform .2s, border-color .2s" }} onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = canal.cor; }} onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = "var(--border)"; }}>
                   <div style={{ width: 44, height: 44, borderRadius: 12, background: `${canal.cor}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{canal.icon}</div>
@@ -880,16 +861,27 @@ export default function Configuracoes({
                 </a>
               ))}
             </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20, padding: "13px 15px", border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface-overlay)" }}>
+              <Clock size={16} color="var(--primary)" />
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <p style={{ margin: 0, color: "var(--foreground)", fontSize: 13, fontWeight: 700 }}>Ao solicitar suporte</p>
+                <p style={{ margin: "3px 0 0", color: "var(--foreground-muted)", fontSize: 12, lineHeight: 1.5 }}>Informe a tela, o horário aproximado e o que estava tentando fazer. Nunca envie sua senha ou código de acesso.</p>
+              </div>
+              <button onClick={() => copiar(perfil.email, "conta")} style={{ border: "1px solid var(--border)", background: "var(--surface-elevated)", color: "var(--foreground)", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }}>
+                {copiado === "conta" ? <Check size={13} /> : <Copy size={13} />} {copiado === "conta" ? "Conta copiada" : "Copiar conta"}
+              </button>
+            </div>
             
             <div style={{ background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 12, padding: "20px" }}>
-              <p style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 16 }}>Abrir Chamado Rápido (Via Gmail)</p>
+              <p style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 16 }}>Preparar mensagem de suporte</p>
               <FormularioSuporte nomeUsuario={perfil?.nome ?? ""} emailUsuario={perfil?.email ?? ""} />
             </div>
           </Secao>
 
           <Secao titulo="Perguntas Frequentes" sub="Soluções rápidas para as dúvidas mais comuns" icon={<HelpCircle size={18} />}>
             {[
-              { p: "Como faço upgrade de plano?", r: "Entre em contato via e-mail ou WhatsApp solicitando a mudança. A ativação é feita no mesmo dia." },
+              { p: "Como faço upgrade ou renovo meu plano?", r: "Abra a aba Meu Plano ou Planos e escolha a opção desejada. O pagamento e o gerenciamento da assinatura são feitos no ambiente seguro da Stripe." },
               { p: "Como consulto as condições de cancelamento?", r: "Acesse a página Cancelamento e Reembolsos. As condições finais também devem ser conferidas no portal de cobrança antes da confirmação." },
               { p: "Como exporto meus relatórios para enviar ao contador?", r: "Acesse a aba 'Relatórios' e clique no botão de exportar (CSV ou PDF). Você também pode exportar os XMLs direto na aba de Notas Fiscais." },
               { p: "Como a Gevyro protege os dados?", r: "Adotamos controles de autenticação, autorização e segurança compatíveis com a arquitetura. Consulte a página Segurança; nenhum sistema deve prometer proteção absoluta." },
@@ -905,6 +897,7 @@ export default function Configuracoes({
                 <button onClick={() => window.open('/privacidade', '_blank')} style={{ background: "var(--primary-muted)", color: "var(--primary)", border: "none", padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Ver Política de Privacidade</button>
                 <a href={`mailto:gestprosuporte@gmail.com?subject=${encodeURIComponent("Solicitação LGPD — Gevyro")}`} style={{ background: "var(--primary)", color: "#fff", padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Enviar solicitação</a>
                 <button onClick={() => window.dispatchEvent(new Event('gevyro:open-cookie-preferences'))} style={{ background: "transparent", color: "var(--foreground)", border: "1px solid var(--border)", padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Preferências de cookies</button>
+                <button onClick={() => window.open('/seguranca', '_blank')} style={{ background: "transparent", color: "var(--foreground)", border: "1px solid var(--border)", padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>Segurança <ExternalLink size={13} /></button>
               </div>
             </div>
           </Secao>

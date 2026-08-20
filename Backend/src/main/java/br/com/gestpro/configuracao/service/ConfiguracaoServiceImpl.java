@@ -85,7 +85,6 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoServiceInterface {
                 .build();
     }
 
-    // ── Atualizar nome ────────────────────────────────────────────────────
     @Override
     public void atualizarNome(String email, String novoNome) {
         if (novoNome == null || novoNome.isBlank())
@@ -95,7 +94,6 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoServiceInterface {
         usuarioRepository.save(u);
     }
 
-    // ── Upload de foto ────────────────────────────────────────────────────
     @Override
     public String uploadFoto(String email, MultipartFile foto) {
         if (foto == null || foto.isEmpty())
@@ -123,7 +121,6 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoServiceInterface {
         return url;
     }
 
-    // ── Solicitar código de troca de senha ────────────────────────────────
     @Override
     public void solicitarCodigoTrocaSenha(String email) {
         Usuario u = buscar(email);
@@ -139,7 +136,6 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoServiceInterface {
         emailService.enviarCodigoConfirmacao(email, u.getNome(), codigo);
     }
 
-    // ── Trocar senha ──────────────────────────────────────────────────────
     @Override
     public void trocarSenha(String email, TrocarSenhaDTO dto) {
         CodigoTemp ct = codigos.get(email);
@@ -168,7 +164,6 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoServiceInterface {
         codigos.remove(email);
     }
 
-    // ── Notificações ──────────────────────────────────────────────────────
     @Override
     public NotificacoesDTO getNotificacoes(String email) {
         buscar(email); // valida existência
@@ -185,7 +180,6 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoServiceInterface {
         buscar(email); // valida existência — expanda para persistir se necessário
     }
 
-    // ── Helper ────────────────────────────────────────────────────────────
     private Usuario buscar(String email) {
         return usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new ApiException("Usuário não encontrado.",

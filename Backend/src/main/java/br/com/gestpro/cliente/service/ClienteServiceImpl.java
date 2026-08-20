@@ -37,9 +37,22 @@ public class ClienteServiceImpl {
         if (req.getEmpresaId() == null)
             throw new ApiException("empresaId é obrigatório", HttpStatus.BAD_REQUEST, "/clientes");
 
-        if (req.getEmail() != null && !req.getEmail().isBlank()
-                && clienteRepository.existsByEmailAndEmpresaId(req.getEmail(), req.getEmpresaId()))
-            throw new ApiException("Email já cadastrado nesta empresa!", HttpStatus.BAD_REQUEST, "/clientes");
+        String tipo = normalizarTipo(req.getTipo());
+        String email = normalizarEmail(req.getEmail());
+
+        if (email != null && clienteRepository
+                .existsByEmailIgnoreCaseAndEmpresaIdAndTipoAndAtivoTrue(
+                        email,
+                        req.getEmpresaId(),
+                        tipo
+                )) {
+            throw new ApiException(
+                    "E-mail já cadastrado para outro " + rotuloTipo(tipo)
+                            + " nesta empresa.",
+                    HttpStatus.CONFLICT,
+                    "/clientes"
+            );
+        }
 
         Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
                 .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/clientes"));
@@ -48,13 +61,13 @@ public class ClienteServiceImpl {
 
         Cliente c = new Cliente();
         c.setNome(req.getNome());
-        c.setEmail(req.getEmail());
+        c.setEmail(email);
         c.setTelefone(req.getTelefone());
         c.setCpf(req.getCpf());
         c.setCnpj(req.getCnpj());
         c.setContato(req.getContato());
         c.setObservacoes(req.getObservacoes());
-        c.setTipo(req.getTipo() != null ? req.getTipo().toUpperCase() : "CLIENTE");
+        c.setTipo(tipo);
         c.setAtivo(true);
         c.setUsuario(usuario);
         c.setEmpresa(empresa);
@@ -70,14 +83,32 @@ public class ClienteServiceImpl {
         if (!c.getUsuario().getEmail().equals(emailUsuario))
             throw new ApiException("Sem permissão.", HttpStatus.FORBIDDEN, "/clientes/" + id);
 
+        String tipo = req.getTipo() != null ? normalizarTipo(req.getTipo()) : c.getTipo();
+        String email = req.getEmail() != null ? normalizarEmail(req.getEmail()) : c.getEmail();
+
+        if (email != null && clienteRepository
+                .existsByEmailIgnoreCaseAndEmpresaIdAndTipoAndAtivoTrueAndIdNot(
+                        email,
+                        c.getEmpresa().getId(),
+                        tipo,
+                        id
+                )) {
+            throw new ApiException(
+                    "E-mail já cadastrado para outro " + rotuloTipo(tipo)
+                            + " nesta empresa.",
+                    HttpStatus.CONFLICT,
+                    "/clientes/" + id
+            );
+        }
+
         if (req.getNome()        != null) c.setNome(req.getNome());
-        if (req.getEmail()       != null) c.setEmail(req.getEmail());
+        if (req.getEmail()       != null) c.setEmail(email);
         if (req.getTelefone()    != null) c.setTelefone(req.getTelefone());
         if (req.getCpf()         != null) c.setCpf(req.getCpf());
         if (req.getCnpj()        != null) c.setCnpj(req.getCnpj());
         if (req.getContato()     != null) c.setContato(req.getContato());
         if (req.getObservacoes() != null) c.setObservacoes(req.getObservacoes());
-        if (req.getTipo()        != null) c.setTipo(req.getTipo().toUpperCase());
+        if (req.getTipo()        != null) c.setTipo(tipo);
 
         return new ClienteDTO(clienteRepository.save(c));
     }
@@ -141,4 +172,27 @@ public class ClienteServiceImpl {
 
     @Transactional(readOnly = true)
     public List<Cliente> listarClientesAtivos() { return clienteRepository.findByAtivoTrue(); }
+
+    private String normalizarTipo(String tipo) {
+        String normalizado = tipo == null || tipo.isBlank()
+                ? "CLIENTE"
+                : tipo.trim().toUpperCase();
+        if (!normalizado.equals("CLIENTE") && !normalizado.equals("FORNECEDOR")) {
+            throw new ApiException(
+                    "Tipo deve ser CLIENTE ou FORNECEDOR.",
+                    HttpStatus.BAD_REQUEST,
+                    "/clientes"
+            );
+        }
+        return normalizado;
+    }
+
+    private String normalizarEmail(String email) {
+        if (email == null || email.isBlank()) return null;
+        return email.trim().toLowerCase();
+    }
+
+    private String rotuloTipo(String tipo) {
+        return tipo.equals("FORNECEDOR") ? "fornecedor" : "cliente";
+    }
 }

@@ -25,7 +25,7 @@ import java.security.KeyStore;
 @Service
 public class SefazComunicacaoService {
 
-    // A SEFAZ costuma demorar para responder no fim do mês. Aumentando o timeout pra evitar 504.
+    // A SEFAZ pode responder lentamente em períodos de pico.
     private static final int TIMEOUT_CONEXAO = 30_000;
     private static final int TIMEOUT_LEITURA = 60_000;
 
@@ -89,8 +89,7 @@ public class SefazComunicacaoService {
             // Monta o mini-XML de evento
             String xmlEvento = buildXmlCancelamento(chaveAcesso, protocolo, justificativa, homologacao);
 
-            // TODO: Aqui a gente PRECISA assinar esse 'xmlEvento' antes de colocar no SOAP.
-            // Para não quebrar a compilação agora, vou passar direto, mas anote na pauta de dev.
+            // TODO: assinar o XML do evento antes do envio.
 
             // O endpoint de evento geralmente é diferente do de autorização
             String urlStr = NotaFiscalConfig.getWebserviceUrl(uf, "55", homologacao)
@@ -201,7 +200,7 @@ public class SefazComunicacaoService {
     }
 
     /**
-     * Pega o XML gigante devolvido pela SEFAZ e garimpa só o que a gente precisa:
+     * Extrai os campos necessários da resposta da SEFAZ.
      * Cód Status (100 é sucesso), Motivo da Rejeição, Recibo, etc.
      */
     private RetornoSefaz parseRetornoSefaz(String xmlRetorno) {

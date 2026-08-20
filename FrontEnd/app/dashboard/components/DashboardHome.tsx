@@ -10,7 +10,6 @@ import {
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import type { Usuario } from "@/lib/api-v2";
 
-// ─── IMPORTANDO SERVIÇOS E TIPOS ───
 import { 
   dashboardService, 
   type VisaoGeral, 
@@ -19,24 +18,20 @@ import {
   type VendasDiariasData 
 } from "@/lib/services/dashboard";
 
-// ─── IMPORTANDO GRÁFICOS ───
 import { BarChart }  from "./graphs/BarChart";
 import { PieChart }  from "./graphs/PieChart";
 import { AreaTrendChart } from "./graphs/AreaTrendChart";
 
-// ─── IMPORTANDO MODAIS (AÇÕES RÁPIDAS) ───
 import AbrirCaixa from "../acoesRapidas/AbrirCaixa";
 import NovaVenda from "../acoesRapidas/NovaVenda";
 import NovoProduto from "../acoesRapidas/NovoProduto";
 import NovoCliente from "../acoesRapidas/NovoCliente";
 import ModalRelatorioRapido from "../acoesRapidas/ModalRelatorioRapido";
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?: number | null) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
 
-/* ─── ClientOnly & UI Components ─────────────────────────────────────────── */
 function ClientOnly({ children }: { children: ReactNode }) {
   const [ok, setOk] = useState(false);
   useEffect(() => setOk(true), []);
@@ -67,7 +62,6 @@ function EmptyChart() {
   );
 }
 
-/* ─── Componente Principal ───────────────────────────────────────────────── */
 export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuario; onNavegar?: (secao: string) => void; }) {
   const { empresaAtiva, caixaAtivo } = useEmpresa();
 
@@ -147,7 +141,6 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
     { title: "Lucro do mês", value: loading ? "—" : fmt(visao?.lucroMes), icon: <TrendingUp size={15} />, accent: "primary" as const, series: spark.map(v => v * .72), hint: "Resultado acumulado" },
   ];
 
-  // ─── LÓGICA DE ALERTAS CONDICIONAIS ───
   const alertasDoBackend = visao?.alertas ?? [];
   
   // Filtra os alertas de estoque APENAS se a preferência permitir
@@ -166,7 +159,6 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
   const alertasOutros = [...alertasOutrosBackend, ...alertasPlano];
   const todosAlertas = [...alertasProduto, ...alertasOutros];
 
-  // ─── AÇÕES RÁPIDAS (Configuradas para Modais ou Navegação) ───
   const acoes = [
     {
       label: caixaAtivo ? "Ver Caixa" : "Abrir Caixa",
@@ -251,7 +243,6 @@ export default function DashboardHome({ usuario, onNavegar }: { usuario?: Usuari
 
   return (
     <ClientOnly>
-      {/* ── RENDERIZAÇÃO DOS MODAIS EXTRAÍDOS ── */}
       {modalAtivo === "caixa" && (
         <AbrirCaixa
           onConcluido={() => {

@@ -25,7 +25,6 @@ import {
 import { toast } from "sonner";
 import { fetchAuthJson, getUsuario } from "@/lib/api-v2";
 
-/* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Empresa {
   id: number;
   nomeFantasia: string;
@@ -69,7 +68,6 @@ const formatarCnpj = (valor: string) => valor.replace(/\D/g, "").slice(0, 14)
   .replace(/\.(\d{3})(\d)/, ".$1/$2")
   .replace(/(\/\d{4})(\d)/, "$1-$2");
 
-/* ─── Modal de arquivamento por senha (Soft Delete) ──────────────────────── */
 function ModalExclusao({
   empresa,
   onClose,
@@ -167,7 +165,6 @@ function ModalExclusao({
   );
 }
 
-/* ─── Modal de Exclusão DEFINITIVA (Hard Delete) ─────────────────────────── */
 function ModalExclusaoPermanente({
   empresa,
   onClose,
@@ -265,7 +262,6 @@ function ModalExclusaoPermanente({
   );
 }
 
-/* ─── Componente principal ───────────────────────────────────────────────── */
 export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }: Props) {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);

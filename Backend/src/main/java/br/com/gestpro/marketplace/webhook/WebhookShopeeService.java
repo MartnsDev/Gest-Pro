@@ -80,7 +80,6 @@ public class WebhookShopeeService {
         processor.processarPedido(order);
     }
 
-    // ─── Validação HMAC ────────────────────────────────────────────────────────
 
     private void validarAssinatura(byte[] rawBody, String authorization) {
         try {
@@ -106,7 +105,6 @@ public class WebhookShopeeService {
         return HexFormat.of().formatHex(mac.doFinal(data));
     }
 
-    // ─── Conversão do payload ─────────────────────────────────────────────────
 
     private WebhookOrderDTO converterParaOrderDTO(String shopId, String orderId, JsonNode detalhe) {
         List<WebhookOrderDTO.ItemDTO> itens = new ArrayList<>();

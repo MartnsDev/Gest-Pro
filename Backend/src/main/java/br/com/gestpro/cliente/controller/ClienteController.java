@@ -59,7 +59,6 @@ public class ClienteController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Rotas legadas ──────────────────────────────────────────────────────
     @PostMapping("/criar")
     public ResponseEntity<ClienteDTO> criarLegado(
             @RequestBody ClienteRequest req,

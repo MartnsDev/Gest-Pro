@@ -25,7 +25,6 @@ import {
 import { toast } from "sonner";
 import { fetchAuthJson as apiFetchAuthJson } from "@/lib/api-v2";
 
-/* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Produto {
   id: number;
   nome: string;
@@ -218,7 +217,6 @@ const btnG: React.CSSProperties = {
   cursor: "pointer",
 };
 
-/* ─── Gerador de Cupom Não Fiscal ───────────────────────────────────────── */
 function formatarDocumentoEmpresa(value?: string | null) {
   const digits = value?.replace(/\D/g, "") ?? "";
   if (digits.length === 14) return `CNPJ: ${digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}`;
@@ -321,7 +319,6 @@ function gerarCupom(venda: Venda, nomeEmpresa: string, documentoEmpresa?: string
   janela.document.close();
 }
 
-/* ─── Sucesso pós-venda ──────────────────────────────────────────────────── */
 function TelaVendaSucesso({
   venda,
   nomeEmpresa,
@@ -627,7 +624,6 @@ function TelaVendaSucesso({
   );
 }
 
-/* ─── Seletor de forma de pagamento ─────────────────────────────────────── */
 function SeletorForma({
   value,
   onChange,
@@ -687,7 +683,6 @@ function SeletorForma({
   );
 }
 
-/* ─── Modal Nova Venda ───────────────────────────────────────────────────── */
 function ModalNovaVenda({
   caixaId,
   empresaId,
@@ -831,7 +826,7 @@ function ModalNovaVenda({
         body.formaPagamento2 = forma2;
         body.valorPagamento2 = valPag2N;
       }
-      // Envia valorRecebido sempre que dinheiro estiver envolvido e o cliente tiver informado
+      // Valor recebido é usado no cálculo do troco.
       if (temDinheiro) {
         body.valorRecebido = recebidoN > 0 ? recebidoN : valorEmDinheiro;
       }
@@ -1220,7 +1215,6 @@ function ModalNovaVenda({
                 gap: 10,
               }}
             >
-              {/* ── Total a pagar ──────────────────────────────────── */}
               <div
                 style={{
                   background: "var(--surface-overlay)",
@@ -1271,7 +1265,6 @@ function ModalNovaVenda({
                 </div>
               </div>
 
-              {/* ── Desconto ───────────────────────────────────────── */}
               <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <div style={{ flex: 1 }}>
                   <label
@@ -1320,7 +1313,6 @@ function ModalNovaVenda({
                 </div>
               </div>
 
-              {/* ── Forma 1 ────────────────────────────────────────── */}
               <div>
                 <label
                   style={{
@@ -1338,7 +1330,6 @@ function ModalNovaVenda({
                 <SeletorForma value={forma} onChange={(f) => setForma(f)} />
               </div>
 
-              {/* ── Toggle misto ───────────────────────────────────── */}
               <button
                 onClick={() => {
                   setMisto((v) => !v);
@@ -1367,7 +1358,6 @@ function ModalNovaVenda({
                 )}
               </button>
 
-              {/* ── Forma 2 + valor ────────────────────────────────── */}
               {misto && (
                 <div
                   style={{
@@ -1490,7 +1480,6 @@ function ModalNovaVenda({
                 </div>
               )}
 
-              {/* ── Troco / Falta (sempre que dinheiro envolvido) ──── */}
               {temDinheiro && (
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 6 }}
@@ -1696,7 +1685,6 @@ function ModalNovaVenda({
   );
 }
 
-/* ─── Detalhe + editar + cancelar venda ──────────────────────────────────── */
 function DetalheVenda({
   venda,
   nomeEmpresa,
@@ -2180,7 +2168,6 @@ function DetalheVenda({
   );
 }
 
-/* ─── CaixaCard ──────────────────────────────────────────────────────────── */
 function CaixaCard({
   caixa,
   empresaId,
@@ -2709,7 +2696,6 @@ function CaixaCard({
   );
 }
 
-/* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Vendas() {
   const { empresaAtiva, caixaAtivo } = useEmpresa();
   const [caixas, setCaixas] = useState<CaixaInfo[]>([]);

@@ -17,7 +17,6 @@ import java.util.List;
 @Repository
 public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
 
-    // ── Resumo geral do período ───────────────────────────────────────────
     // Retorna List para garantir que o Hibernate não colapse em Object simples
     @Query(value = """
         SELECT
@@ -38,7 +37,6 @@ public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
             @Param("fim") LocalDateTime fim
     );
 
-    // ── Cancelamentos ─────────────────────────────────────────────────────
     @Query(value = """
         SELECT CAST(COUNT(*) AS CHAR) as qtd,
                CAST(COALESCE(SUM(valor_final), 0) AS CHAR) as total
@@ -53,7 +51,6 @@ public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
             @Param("fim") LocalDateTime fim
     );
 
-    // ── Lucro total ───────────────────────────────────────────────────────
     @Query(value = """
         SELECT CAST(COALESCE(SUM(iv.subtotal - COALESCE(p.preco_custo,0) * iv.quantidade), 0) AS CHAR)
         FROM item_venda iv
@@ -69,7 +66,6 @@ public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
             @Param("fim") LocalDateTime fim
     );
 
-    // ── Vendas diárias ────────────────────────────────────────────────────
     @Query(value = """
         SELECT DATE(data_venda) as dia,
                COUNT(*) as qtd_vendas,
@@ -88,7 +84,6 @@ public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
             @Param("fim") LocalDateTime fim
     );
 
-    // ── Totais por forma de pagamento ─────────────────────────────────────
     @Query(value = """
         SELECT forma_pagamento, COUNT(*) as qtd, COALESCE(SUM(valor_final), 0) as total
         FROM venda
@@ -104,7 +99,6 @@ public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
             @Param("fim") LocalDateTime fim
     );
 
-    // ── Top produtos ──────────────────────────────────────────────────────
     @Query(value = """
         SELECT p.nome,
                SUM(iv.quantidade) as qtd,
@@ -126,7 +120,6 @@ public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
             @Param("fim") LocalDateTime fim
     );
 
-    // ── Vendas por hora ───────────────────────────────────────────────────
     @Query(value = """
         SELECT HOUR(data_venda) as hora,
                COUNT(*) as qtd,
@@ -144,7 +137,6 @@ public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
             @Param("fim") LocalDateTime fim
     );
 
-    // ── Lista de vendas (dados básicos via nativa — sem lazy) ─────────────
     @Query(value = """
         SELECT
           v.id, v.data_venda, v.forma_pagamento, v.forma_pagamento2,
@@ -163,7 +155,6 @@ public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
             @Param("fim") LocalDateTime fim
     );
 
-    // ── Itens de uma venda ────────────────────────────────────────────────
     @Query(value = """
         SELECT p.nome, iv.quantidade, iv.subtotal
         FROM item_venda iv
@@ -172,7 +163,6 @@ public interface RelatorioRepository extends JpaRepository<Relatorio, Long> {
         """, nativeQuery = true)
     List<Object[]> itensDaVenda(@Param("vendaId") Long vendaId);
 
-    // ── Itens de múltiplas vendas (para exportar em batch) ────────────────
     @Query(value = """
         SELECT iv.venda_id, p.nome, iv.quantidade, iv.subtotal
         FROM item_venda iv

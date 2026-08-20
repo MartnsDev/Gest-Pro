@@ -50,7 +50,6 @@ public class UploadFotoOperation {
 
         log.info("Fazendo upload de foto para Cloudinary | publicId={}", publicId);
 
-        // CORREÇÃO AQUI: Usando a classe Transformation em vez de um Map aninhado
         Map params = ObjectUtils.asMap(
                 "public_id",      publicId,
                 "overwrite",      true,

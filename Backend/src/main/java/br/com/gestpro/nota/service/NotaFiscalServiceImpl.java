@@ -68,9 +68,7 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
         NotaFiscal nota=buscarPorId(notaId);validarAcessoEmpresa(nota.getEmpresaId(),emailUsuario);
     }
 
-    // =====================================================================
     // CRUD BÁSICO
-    // =====================================================================
 
     @Override
     public NotaFiscal criar(CriarNotaRequest request) {
@@ -117,9 +115,7 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
         notaFiscalRepository.delete(nota);
     }
 
-    // =====================================================================
     // O CORAÇÃO: EMISSÃO PARA A SEFAZ
-    // =====================================================================
 
     @Override
     public NotaFiscal emitir(Long notaId) {
@@ -225,9 +221,7 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
         }
     }
 
-    // =====================================================================
     // OUTRAS AÇÕES DE CICLO DE VIDA E AUXILIARES
-    // =====================================================================
 
     @Override
     public NotaFiscal cancelar(CancelarNotaRequest request) {
@@ -295,9 +289,7 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
         return transmitidas;
     }
 
-    // =====================================================================
     // EXPORTAÇÕES E CONSULTAS
-    // =====================================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -400,9 +392,7 @@ public class NotaFiscalServiceImpl implements NotaFiscalInterface {
         return new ArrayList<>(buscarMunicipiosService.buscarMunicipios(uf));
     }
 
-    // =====================================================================
     // MÉTODOS PRIVADOS - REGRAS INTERNAS
-    // =====================================================================
 
     public void registrarCertificado(Long empresaId, byte[] pfxBytes, String senha) {
         if (!assinaturaService.isCertificadoValido(pfxBytes, senha)) {

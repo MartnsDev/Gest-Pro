@@ -5,7 +5,6 @@
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
 
-// ===================== Tipos =====================
 
 export interface Usuario {
   id: number;
@@ -31,6 +30,61 @@ export interface LoginResponse {
 interface ErrorResponse {
   erro?: string;
   mensagem?: string;
+}
+
+const ROTULOS_CAMPOS: Record<string, string> = {
+  nome: "Nome",
+  email: "E-mail",
+  senha: "Senha",
+  telefone: "Telefone",
+  cpf: "CPF",
+  cnpj: "CNPJ",
+  empresaId: "Empresa",
+  preco: "Preço",
+  quantidadeEstoque: "Quantidade em estoque",
+  estoqueMinimo: "Estoque mínimo",
+};
+
+function detalheErro(valor: unknown): string | null {
+  if (typeof valor === "string" && valor.trim()) {
+    const [campo, ...mensagem] = valor.split(":");
+    if (mensagem.length > 0) {
+      const rotulo = ROTULOS_CAMPOS[campo.trim()] ?? campo.trim();
+      return `${rotulo}: ${mensagem.join(":").trim()}`;
+    }
+    return valor.trim();
+  }
+  if (valor && typeof valor === "object") {
+    const item = valor as Record<string, unknown>;
+    const campo = typeof item.field === "string" ? item.field : typeof item.campo === "string" ? item.campo : "";
+    const mensagem = item.message ?? item.mensagem ?? item.defaultMessage;
+    if (typeof mensagem === "string" && mensagem.trim()) {
+      return campo ? `${ROTULOS_CAMPOS[campo] ?? campo}: ${mensagem.trim()}` : mensagem.trim();
+    }
+  }
+  return null;
+}
+
+export function mensagemErroApi(payload: unknown, status: number): string {
+  const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+  const detalhesBrutos = data.erros ?? data.detalhes ?? data.fieldErrors ?? data.violations;
+  const detalhes = Array.isArray(detalhesBrutos)
+    ? detalhesBrutos.map(detalheErro).filter((item): item is string => Boolean(item))
+    : [];
+  const principal = [data.mensagem, data.erro, data.error, data.message, data.detail]
+    .find((item): item is string => typeof item === "string" && item.trim().length > 0)
+    ?.trim();
+
+  if (detalhes.length > 0) return detalhes.join(" • ");
+  if (principal && !["Bad Request", "Erro de validação"].includes(principal)) return principal;
+
+  if (status === 400 || status === 422) return "Verifique os dados informados e preencha corretamente os campos obrigatórios.";
+  if (status === 401) return "Sua sessão expirou. Entre novamente para continuar.";
+  if (status === 403) return "Você não tem permissão para realizar esta ação.";
+  if (status === 404) return "O registro solicitado não foi encontrado.";
+  if (status === 409) return "Esta ação entra em conflito com um registro existente.";
+  if (status >= 500) return "O servidor não conseguiu concluir a operação. Tente novamente em instantes.";
+  return `Não foi possível concluir a operação (erro ${status}).`;
 }
 
 // O JWT é mantido exclusivamente pelo backend em cookie HttpOnly. Estes
@@ -59,7 +113,6 @@ export async function obterCsrfToken(): Promise<string> {
   return token;
 }
 
-// ===================== Fetch autenticado =====================
 
 /**
  * Fetch autenticado por cookie HttpOnly, com proteção CSRF em mutações.
@@ -111,13 +164,12 @@ export async function fetchAuthJson<T>(path: string, options: RequestInit = {}):
   
   if (!response.ok) {
     const err = await response.json().catch(() => null);
-    throw new Error(err?.mensagem ?? err?.erro ?? err?.error ?? `Erro ${response.status}`);
+    throw new Error(mensagemErroApi(err, response.status));
   }
   if (response.status === 204) return undefined as T;
   return response.json();
 }
 
-// ===================== Funções de Auth =====================
 
 /**
  * Login com e-mail e senha. A credencial permanece apenas no cookie HttpOnly.

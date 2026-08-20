@@ -29,9 +29,7 @@ public class Listar {
 
     private final NotaFiscalRepository notaRepo;
 
-    // =========================================================================
     // Ação principal
-    // =========================================================================
 
     @Transactional(readOnly = true)
     public Map<String, Object> listar(FilterNotaFiscalDTO filter) {
@@ -77,9 +75,7 @@ public class Listar {
         return resposta;
     }
 
-    // =========================================================================
     // Helpers
-    // =========================================================================
 
     /**
      * Resumo leve para a listagem — campos pesados (XMLs, paths) são omitidos.

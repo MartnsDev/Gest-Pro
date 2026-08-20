@@ -13,13 +13,11 @@ import java.util.List;
  */
 public interface NotaFiscalInterface {
 
-    // === CRUD ===
     NotaFiscal criar(CriarNotaRequest request);
     NotaFiscal buscarPorId(Long id);
     List<NotaFiscalResumoResponse> listar(Long empresaId, NotaFiscalStatus status);
     void excluir(Long id);
 
-    // === CICLO DE VIDA FISCAL ===
 
     /**
      * Emite a nota: gera XML → assina → valida XSD → transmite SEFAZ → processa retorno.
@@ -41,22 +39,17 @@ public interface NotaFiscalInterface {
      */
     int transmitirContingencias(Long empresaId);
 
-    // === CONSULTAS ===
     NotaFiscal buscarPorChaveAcesso(String chaveAcesso);
     byte[] baixarXml(Long notaId);
     byte[] gerarDanfePdf(Long notaId);
 
-    // === ÁREA DO CONTADOR ===
     byte[] gerarZipXmlsMensal(Long empresaId, YearMonth periodo);
     byte[] gerarArquivoSped(Long empresaId, YearMonth periodo, String tipoSped);
 
-    // === ESTATÍSTICAS ===
     EstatisticasResponse getEstatisticas(Long empresaId);
 
-    // === CEP / CNPJ ===
     Object consultarCep(String cep);
     Object consultarCnpj(String cnpj);
 
-    // === MUNICIPIOS ===
     List<Object> buscarMunicipios(String uf);
 }

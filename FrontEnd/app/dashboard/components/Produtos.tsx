@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { fetchAuth, fetchAuthJson } from "@/lib/api-v2";
 import { montarProdutoPayload, numeroDecimal, type ProdutoFormData } from "@/lib/produtos";
 
-/* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Produto {
   id: number;
   nome: string;
@@ -46,11 +45,9 @@ const FORM_VAZIO: ProdutoForm = {
 
 const UNIDADES = ["UN", "KG", "G", "L", "ML", "CX", "PCT", "PAR", "M", "CM"];
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?: number | null) =>
   v != null ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v) : "—";
 
-/* ─── Estilos ────────────────────────────────────────────────────────────── */
 const inp: React.CSSProperties = {
   width: "100%", padding: "9px 12px", background: "var(--surface-overlay)",
   border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)",
@@ -72,7 +69,6 @@ const btnDanger: React.CSSProperties = {
   color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
 };
 
-/* ─── Barra de uso de produtos ───────────────────────────────────────────── */
 function BarraUsoProdutos({ total, plano, onUpgrade }: { total: number; plano: string; onUpgrade: () => void; }) {
   const limite = LIMITE_PRODUTOS[plano] ?? 999999;
   const ilimitado = limite >= 999999;
@@ -107,7 +103,6 @@ function BarraUsoProdutos({ total, plano, onUpgrade }: { total: number; plano: s
   );
 }
 
-/* ─── Modal Confirmar Exclusão/Arquivamento ──────────────────────────────── */
 function ModalConfirmarExclusao({ produto, onConfirmar, onClose, saving }: { produto: Produto; onConfirmar: () => Promise<void>; onClose: () => void; saving: boolean; }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -137,7 +132,6 @@ function ModalConfirmarExclusao({ produto, onConfirmar, onClose, saving }: { pro
   );
 }
 
-/* ─── Modal Produto (Criação/Edição) ─────────────────────────────────────── */
 function ModalProduto({ produto, categorias, onSave, onClose, saving }: {
   produto?: Produto; categorias: string[]; onSave: (f: ProdutoForm) => Promise<void>; onClose: () => void; saving: boolean;
 }) {
@@ -247,7 +241,6 @@ function ModalProduto({ produto, categorias, onSave, onClose, saving }: {
   );
 }
 
-/* ─── Modal Estoque ──────────────────────────────────────────────────────── */
 function ModalEstoque({ produto, onSave, onClose, saving }: {
   produto: Produto; onSave: (n: number) => Promise<void>; onClose: () => void; saving: boolean;
 }) {
@@ -282,7 +275,6 @@ function ModalEstoque({ produto, onSave, onClose, saving }: {
   );
 }
 
-/* ─── Componente principal ───────────────────────────────────────────────── */
 type SortKey = "nome" | "categoria" | "preco" | "quantidadeEstoque" | "margemLucro";
 type ModalState = { tipo: "produto"; produto?: Produto } | { tipo: "estoque"; produto: Produto } | { tipo: "excluir"; produto: Produto } | null;
 type AbaTipo = "ativos" | "alerta" | "esgotados" | "inativos";

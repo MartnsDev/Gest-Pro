@@ -10,7 +10,17 @@ import java.util.List;
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
     boolean existsByEmail(String email);
-    boolean existsByEmailAndEmpresaId(String email, Long empresaId);
+    boolean existsByEmailIgnoreCaseAndEmpresaIdAndTipoAndAtivoTrue(
+            String email,
+            Long empresaId,
+            String tipo
+    );
+    boolean existsByEmailIgnoreCaseAndEmpresaIdAndTipoAndAtivoTrueAndIdNot(
+            String email,
+            Long empresaId,
+            String tipo,
+            Long id
+    );
 
     List<Cliente> findByAtivoTrue();
     List<Cliente> findByUsuarioEmailAndAtivoTrue(String email);

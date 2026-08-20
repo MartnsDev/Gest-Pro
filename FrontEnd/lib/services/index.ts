@@ -1,4 +1,3 @@
-// ===================== SERVIÇOS DE API CENTRALIZADOS =====================
 // Todas as chamadas ao backend organizadas por módulo
 
 import { http } from "../http-client";
@@ -18,7 +17,6 @@ import type {
   VendasDiariasData,
 } from "../types";
 
-// ─── Produtos ───────────────────────────────────────────────────────
 export const produtosService = {
   listar: () => http.get<Produto[]>("/api/v1/produtos"),
 
@@ -32,7 +30,6 @@ export const produtosService = {
   excluir: (id: number) => http.delete<void>(`/api/v1/produtos/${id}`),
 };
 
-// ─── Vendas ─────────────────────────────────────────────────────────
 export const vendasService = {
   registrar: (data: RegistrarVendaDTO) =>
     http.post<Venda>("/api/v1/vendas/registrar", data),
@@ -43,7 +40,6 @@ export const vendasService = {
   buscarPorId: (id: number) => http.get<Venda>(`/api/v1/vendas/${id}`),
 };
 
-// ─── Clientes ───────────────────────────────────────────────────────
 export const clientesService = {
   listar: () => http.get<Cliente[]>("/clientes/listar"),
 
@@ -52,7 +48,6 @@ export const clientesService = {
   desativar: (id: number) => http.delete<void>(`/clientes/desativar/${id}`),
 };
 
-// ─── Caixa ──────────────────────────────────────────────────────────
 export const caixaService = {
   abrir: (data: AbrirCaixaDTO) => http.post<Caixa>("/api/v1/caixas/abrir", data),
 
@@ -64,7 +59,6 @@ export const caixaService = {
     http.get<Caixa>(`/api/v1/caixas/aberto?empresaId=${empresaId}`),
 };
 
-// ─── Dashboard ──────────────────────────────────────────────────────
 export const dashboardService = {
   visaoGeral: () => http.get<DashboardVisaoGeral>("/api/v1/dashboard/visao-geral"),
 
@@ -78,7 +72,6 @@ export const dashboardService = {
     http.get<VendasDiariasData[]>("/api/v1/dashboard/vendas/diarias"),
 };
 
-// ─── Exportar todos os serviços ─────────────────────────────────────
 export const api = {
   produtos: produtosService,
   vendas: vendasService,

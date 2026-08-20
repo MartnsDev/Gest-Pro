@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Endpoints de recebimento de webhooks dos marketplaces.
  *
- * IMPORTANTE: estas rotas devem ser liberadas no SecurityFilterChain
+ * Estas rotas são públicas para receber eventos assinados dos marketplaces.
  * (sem autenticação JWT), pois são chamadas diretamente pelos marketplaces.
  * A autenticidade é garantida pela validação do HMAC em cada service.
  *
@@ -32,7 +32,7 @@ public class WebhookController {
     private final ObjectMapper objectMapper;
 
     /**
-     * CORREÇÃO: só existe UM @RequestBody agora (rawBody).
+     * O corpo original é usado na validação da assinatura.
      * O JsonNode é montado a partir do rawBody manualmente, porque o corpo
      * da requisição HTTP só pode ser lido uma vez — ter dois parâmetros
      * @RequestBody fazia o segundo falhar silenciosamente (por isso nenhum

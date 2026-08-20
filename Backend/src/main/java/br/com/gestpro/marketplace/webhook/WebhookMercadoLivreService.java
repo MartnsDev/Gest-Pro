@@ -73,7 +73,6 @@ public class WebhookMercadoLivreService {
         processor.processarPedido(order);
     }
 
-    // ─── Validação HMAC ────────────────────────────────────────────────────────
 
     /**
      * ML envia: x-signature: ts=1704067200,v1=abc123...
@@ -115,7 +114,6 @@ public class WebhookMercadoLivreService {
         return HexFormat.of().formatHex(mac.doFinal(mensagem.getBytes(StandardCharsets.UTF_8)));
     }
 
-    // ─── Conversão do payload ─────────────────────────────────────────────────
 
     private WebhookOrderDTO converterParaOrderDTO(String sellerId, String orderId, JsonNode detalhe) {
         List<WebhookOrderDTO.ItemDTO> itens = new ArrayList<>();

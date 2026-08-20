@@ -29,7 +29,6 @@ public class NotaFiscal {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ── Identificação ────────────────────────────────────────────────────────
 
     @Column(name = "empresa_id", nullable = false)
     private Long empresaId;
@@ -43,7 +42,6 @@ public class NotaFiscal {
     @Column(name = "cliente_cpf_cnpj", length = 18)
     private String clienteCpfCnpj;
 
-    // ── Tipo e Status ────────────────────────────────────────────────────────
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
@@ -53,7 +51,6 @@ public class NotaFiscal {
     @Column(nullable = false, length = 50)
     private NotaFiscalStatus status;
 
-    // ── Numeração SEFAZ ──────────────────────────────────────────────────────
 
     @Column(name = "numero_nota")
     private Long numeroNota;
@@ -64,7 +61,6 @@ public class NotaFiscal {
     @Column(name = "chave_acesso", length = 44, unique = true)
     private String chaveAcesso;
 
-    // ── Dados Comerciais ─────────────────────────────────────────────────────
 
     @Column(name = "natureza_operacao", length = 100, nullable = false)
     private String naturezaOperacao;
@@ -73,7 +69,6 @@ public class NotaFiscal {
     @Column(name = "forma_pagamento", length = 30)
     private FormaPagamento formaPagamento;
 
-    // ── Valores Financeiros ──────────────────────────────────────────────────
 
     @Column(name = "valor_produtos", precision = 15, scale = 2)
     private BigDecimal valorProdutos;
@@ -101,7 +96,6 @@ public class NotaFiscal {
     @Column(name = "valor_total", precision = 15, scale = 2, nullable = false)
     private BigDecimal valorTotal;
 
-    // ── Protocolo e Retorno SEFAZ ────────────────────────────────────────────
 
     @Column(name = "data_emissao", nullable = false)
     private LocalDateTime dataEmissao;
@@ -115,7 +109,6 @@ public class NotaFiscal {
     @Column(name = "motivo_rejeicao", length = 1000)
     private String motivoRejeicao;
 
-    // ── XMLs armazenados ─────────────────────────────────────────────────────
 
     @Column(name = "xml_enviado", columnDefinition = "TEXT")
     private String xmlEnviado;
@@ -131,7 +124,6 @@ public class NotaFiscal {
     @Column(name = "danfe_pdf_path", length = 500)
     private String danfePdfPath;
 
-    // ── Contingência Offline ─────────────────────────────────────────────────
 
     @Builder.Default
     @Column(name = "em_contingencia")
@@ -140,7 +132,6 @@ public class NotaFiscal {
     @Column(name = "justificativa_contingencia", length = 500)
     private String justificativaContingencia;
 
-    // ── Complementares ───────────────────────────────────────────────────────
 
     @Column(name = "informacoes_adicionais", length = 500)
     private String informacoesAdicionais;
@@ -149,7 +140,6 @@ public class NotaFiscal {
     @OneToMany(mappedBy = "notaFiscal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ItemNotaFiscal> itens = new ArrayList<>();
 
-    // ── Auditoria ────────────────────────────────────────────────────────────
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -157,9 +147,7 @@ public class NotaFiscal {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // =========================================================================
     // JPA Lifecycle
-    // =========================================================================
 
     @PrePersist
     void prePersist() {
@@ -174,9 +162,7 @@ public class NotaFiscal {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // =========================================================================
     // Helpers bidirecionais
-    // =========================================================================
 
     /**
      * Adiciona um item e garante que o vínculo bidirecional esteja correto.

@@ -9,7 +9,6 @@ import {
   ReactNode,
 } from "react";
 
-/* ─── Tipos espelhando CaixaResponse do backend ──────────────────────────── */
 export interface CaixaInfo {
   id: number;
   valorInicial?: number | null;
@@ -19,7 +18,7 @@ export interface CaixaInfo {
   aberto?: boolean | null;
   usuarioId?: number | null;
   empresaId?: number | null;
-  empresaNome?: string | null; // adicionado pelo frontend
+  empresaNome?: string | null;
 }
 
 export interface EmpresaAtiva {
@@ -36,7 +35,6 @@ export interface EmpresaAtiva {
 // Compatibilidade com componentes de caixa que utilizam o nome anterior.
 export type Empresa = EmpresaAtiva;
 
-/* ─── Interface do contexto — COMPLETA e sincronizada ───────────────────── */
 interface EmpresaContextType {
   usuarioId: string | null;
   empresaAtiva: EmpresaAtiva | null;
@@ -53,7 +51,6 @@ interface EmpresaContextType {
   resetarContexto: () => void;
 }
 
-/* ─── Chaves localStorage por usuário ───────────────────────────────────── */
 const keyEmpresa = (uid: string) => `gp_empresa_${uid}`;
 const keyCaixa = (uid: string) => `gp_caixa_${uid}`;
 
@@ -84,12 +81,6 @@ function carregar<T>(key: string): T | null {
   }
 }
 
-/* ─── Valor padrão do contexto — TODOS os campos declarados ─────────────── *
- *                                                                             *
- * IMPORTANTE: o valor padrão deve ter EXATAMENTE os mesmos campos            *
- * que EmpresaContextType, caso contrário componentes fora do Provider        *
- * recebem stubs vazios e nada funciona.                                      *
- * ──────────────────────────────────────────────────────────────────────────── */
 const EmpresaContext = createContext<EmpresaContextType>({
   usuarioId: null,
   empresaAtiva: null,
@@ -102,7 +93,6 @@ const EmpresaContext = createContext<EmpresaContextType>({
   resetarContexto: () => {},
 });
 
-/* ─── Provider ───────────────────────────────────────────────────────────── */
 export function EmpresaProvider({ children }: { children: ReactNode }) {
   const [usuarioId, setUsuarioIdState] = useState<string | null>(null);
   const [empresaAtiva, setEmpresaAtivaState] = useState<EmpresaAtiva | null>(
@@ -111,7 +101,6 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   const [caixaAtivo, setCaixaAtivoState] = useState<CaixaInfo | null>(null);
   const [empresas, setEmpresas] = useState<EmpresaAtiva[]>([]);
 
-  /* Ref para uid — evita stale closure nos callbacks */
   const uidRef = useRef<string | null>(null);
 
   /* ── inicializarUsuario ──────────────────────────────────────────────────
@@ -199,12 +188,10 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/* ─── Hook ───────────────────────────────────────────────────────────────── */
 export function useEmpresa() {
   return useContext(EmpresaContext);
 }
 
-/* ─── Leitura do cache sem contexto (usado no DashboardLoader) ───────────── */
 export function lerCacheUsuario(uid: string) {
   return {
     empresaAtiva: carregar<EmpresaAtiva>(keyEmpresa(uid)),

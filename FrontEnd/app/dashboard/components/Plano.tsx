@@ -10,9 +10,7 @@ import {
 import { useEmpresa } from "../context/Empresacontext";
 import { abrirPortalCobranca, criarCheckout, type PlanoPagoId } from "@/lib/billing";
 
-// =====================================================================
 // 1. CONFIGURAÇÕES E API
-// =====================================================================
 const getApiBase = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
   const cleanUrl = envUrl.replace(/\/api\/v1\/?$/, '').replace(/\/v1\/?$/, '').replace(/\/$/, '');
@@ -31,9 +29,7 @@ async function fetchAuth<T>(path: string): Promise<T> {
   return res.json();
 }
 
-// =====================================================================
 // 2. DEFINIÇÃO DOS PLANOS
-// =====================================================================
 const PLANOS = [
   {
     id: "EXPERIMENTAL", nome: "Experimental", descricao: "Explore todo o potencial da plataforma.",
@@ -71,9 +67,7 @@ const DURACAO_TRIAL_DIAS = 30;
 function barWidth(dias: number, total: number) { return total === 0 ? 0 : Math.min(100, Math.max(0, (dias / total) * 100)); }
 function barColor(pct: number) { return pct > 50 ? "#10b981" : pct > 20 ? "#f59e0b" : "#ef4444"; }
 
-// =====================================================================
 // 3. COMPONENTE INTERNO
-// =====================================================================
 function PlanosInner() {
   const searchParams = useSearchParams();
   const [plano, setPlano] = useState<any>(null);
@@ -131,9 +125,7 @@ function PlanosInner() {
   const planoAtual = PLANOS.find((p) => p.id === plano?.tipoPlano);
   const estaAtivo = plano?.statusAcesso === "ATIVO";
 
-  // =====================================================================
   // RENDER (Estilos Nativos Blindados)
-  // =====================================================================
   return (
     <div className="planos-page" style={{ padding: "20px 22px 48px", width: "100%", display: "flex", flexDirection: "column", gap: 14, color: "var(--foreground)" }}>
       

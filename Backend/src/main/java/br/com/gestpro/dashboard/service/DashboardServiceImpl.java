@@ -58,7 +58,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
     @Transactional(readOnly = true)
     public List<VendasDiariasDTO> vendasDiariasSemana(Long empresaId, String email) {
         validarEmpresa(empresaId, email);
-        // vendasDiariasSemana agora usa a query combinada PDV + Pedidos
+        // Combina vendas do PDV e pedidos.
         return graficoServiceOperation.vendasDiariasSemana(empresaId);
     }
 

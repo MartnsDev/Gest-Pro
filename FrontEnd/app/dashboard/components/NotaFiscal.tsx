@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, ReactNode } from "react";
-import { toast } from "sonner"; // Mantido para os 'sucessos', mas os erros agora vão pro Modal
+import { toast } from "sonner";
 import {
   FileText, Upload, Download, Plus, Search, CheckCircle,
   XCircle, ShieldCheck, FileArchive, Send, Trash2, Loader2,
@@ -11,9 +11,6 @@ import {
 import { useEmpresa } from "../context/Empresacontext";
 import { fetchAuth } from "@/lib/api-v2";
 
-// =====================================================================
-// 1. CONFIGURAÇÕES E AMBIENTE
-// =====================================================================
 const getApiBase = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
   const cleanUrl = envUrl.replace(/\/api\/v1\/?$/, '').replace(/\/v1\/?$/, '').replace(/\/$/, '');
@@ -22,9 +19,6 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
-// =====================================================================
-// 2. DESIGN TOKENS
-// =====================================================================
 const theme = {
   bgBase: "transparent",
   bgCard: "var(--surface-elevated)",
@@ -45,9 +39,7 @@ const inpStyle = { padding: "10px 14px", borderRadius: 8, borderWidth: 1, border
 const lblStyle = { display: "block", fontSize: "11px", fontWeight: 600, color: theme.textMuted, marginBottom: "8px", letterSpacing: "0.5px", textTransform: "uppercase" as const };
 const btnStyle = { background: theme.bgInput, borderWidth: 1, borderStyle: "solid", borderColor: theme.border, padding: "8px 14px", borderRadius: 8, cursor: "pointer", color: theme.textMain, display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, transition: "all 0.2s" };
 
-// =====================================================================
 // 3. TIPOS E COMPONENTES AUXILIARES
-// =====================================================================
 type AbaGeral = "historico" | "emitir" | "certificado" | "contador";
 type TipoNota = "NFE" | "NFCE" | "NFSE";
 
@@ -107,9 +99,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// =====================================================================
 // 4. COMPONENTE PRINCIPAL
-// =====================================================================
 export default function NotaFiscalPage() {
   const { empresaAtiva } = useEmpresa();
   const EMPRESA_ID = empresaAtiva?.id;
@@ -145,9 +135,7 @@ export default function NotaFiscalPage() {
   const [periodoExport, setPeriodoExport] = useState(new Date().toISOString().slice(0, 7));
   const [tipoSped, setTipoSped] = useState("EFD_ICMS_IPI");
 
-  // =====================================================================
   // API SEGURA
-  // =====================================================================
   const fetchSeguro = async (url: string, options: RequestInit = {}) => {
     const path=url.startsWith(API_BASE)?url.slice(API_BASE.length):url;
     const res = await fetchAuth(`/api/nota-fiscal${path}`, options);
@@ -217,9 +205,7 @@ export default function NotaFiscalPage() {
     }
   };
 
-  // =====================================================================
   // LÓGICA DE NEGÓCIO E ROTINAS
-  // =====================================================================
   const carregarKPIs = useCallback(async () => {
     if (!EMPRESA_ID) return;
     try {
@@ -372,9 +358,7 @@ export default function NotaFiscalPage() {
     );
   }
 
-  // =====================================================================
   // RENDERIZAÇÃO DA PÁGINA
-  // =====================================================================
   return (
     <ClientOnly>
       <div style={{ padding: "28px 28px 48px", display: "flex", flexDirection: "column", gap: 26, maxWidth: 1200, margin: "0 auto", background: theme.bgBase, color: theme.textMain }}>

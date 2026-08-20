@@ -10,7 +10,6 @@ import java.util.List;
 @NoArgsConstructor
 public class DashboardVisaoGeralResponse {
 
-    // ── KPIs principais (PDV + Pedidos combinados) ────────────────────────
     private BigDecimal vendasHoje;       // faturamento do dia
     private Long       produtosComEstoque;
     private Long       produtosSemEstoque;
@@ -19,25 +18,20 @@ public class DashboardVisaoGeralResponse {
     private BigDecimal vendasSemanais;   // semana (PDV + Pedidos)
     private BigDecimal vendasMes;        // mês   (PDV + Pedidos)
 
-    // ── Lucro (apenas PDV — pedidos não têm preco_custo) ─────────────────
     private BigDecimal lucroDia;
     private BigDecimal lucroMes;
 
-    // ── Estoque ───────────────────────────────────────────────────────────
     private BigDecimal custos;
     private BigDecimal totalInvestido;
 
-    // ── Origem separada (para gráfico de pizza / relatório) ──────────────
     private BigDecimal pdvDia;       // só vendas PDV do dia
     private BigDecimal pedidosDia;   // só pedidos do dia
     private BigDecimal pdvMes;       // só vendas PDV do mês
     private BigDecimal pedidosMes;   // só pedidos do mês
 
-    // ── Extras ────────────────────────────────────────────────────────────
     private PlanoDTO     planoUsuario;
     private List<String> alertas;
 
-    // ── Construtor principal usado pelo DashboardServiceImpl ──────────────
     public DashboardVisaoGeralResponse(
             Object     vendasHoje,
             Object     prodComEstoque,
@@ -62,7 +56,6 @@ public class DashboardVisaoGeralResponse {
         this.alertas             = alertas;
     }
 
-    // ── Helpers de conversão segura ────────────────────────────────────────
     private BigDecimal parseBD(Object obj) {
         if (obj == null) return BigDecimal.ZERO;
         if (obj instanceof BigDecimal bd) return bd;

@@ -21,7 +21,6 @@ import java.util.List;
  * CORREÇÕES aplicadas nesta versão:
  *  - {@code LocalDateTime.atZone()} substituído por {@code LocalDateTime.atZone(ZoneId)}
  *    (LocalDateTime não possui atZoneSameInstant — esse método pertence a ZonedDateTime).
- *  - Todos os getters de ItemNotaFiscal agora funcionam pois a entidade usa @Getter do Lombok.
  *  - Separação clara entre regime Simples Nacional (CSOSN) e Lucro Presumido/Real (CST).
  */
 @Slf4j
@@ -31,9 +30,7 @@ public class XmlGeneratorService {
     private static final ZoneId      ZONE_BR = ZoneId.of("America/Sao_Paulo");
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX");
 
-    // =========================================================================
     // Ponto de entrada
-    // =========================================================================
 
     /**
      * Gera o XML completo da NF-e ou NFC-e a partir dos dados da nota e da empresa emitente.
@@ -80,9 +77,7 @@ public class XmlGeneratorService {
         return xml.toString();
     }
 
-    // =========================================================================
     // Seções do XML
-    // =========================================================================
 
     /** Bloco <ide> — identificação do documento fiscal. */
     private void appendIde(StringBuilder xml, NotaFiscal nota, EmpresaInfo empresa,
@@ -208,7 +203,6 @@ public class XmlGeneratorService {
     private void appendImposto(StringBuilder xml, ItemNotaFiscal item, boolean isSimplesNacional) {
         xml.append("<imposto>");
 
-        // ── ICMS ──
         xml.append("<ICMS>");
         if (isSimplesNacional) {
             String csosn = item.getCsosn() != null ? item.getCsosn() : "400";
@@ -241,7 +235,6 @@ public class XmlGeneratorService {
         }
         xml.append("</ICMS>");
 
-        // ── PIS ──
         xml.append("<PIS>");
         String cstPis = item.getCstPis() != null ? item.getCstPis() : (isSimplesNacional ? "07" : "01");
         if ("07".equals(cstPis) || "08".equals(cstPis) || "09".equals(cstPis)) {
@@ -260,7 +253,6 @@ public class XmlGeneratorService {
         }
         xml.append("</PIS>");
 
-        // ── COFINS ──
         xml.append("<COFINS>");
         String cstCofins = item.getCstCofins() != null ? item.getCstCofins() : (isSimplesNacional ? "07" : "01");
         if ("07".equals(cstCofins) || "08".equals(cstCofins) || "09".equals(cstCofins)) {
@@ -332,9 +324,7 @@ public class XmlGeneratorService {
         }
     }
 
-    // =========================================================================
     // Utilitários
-    // =========================================================================
 
     /** Formata BigDecimal com {@code scale} casas decimais. Trata nulos como zero. */
     private String fmt(BigDecimal val, int scale) {

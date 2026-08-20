@@ -56,7 +56,6 @@ public class MarketplaceConnectionService {
     @Value("${gestpro.marketplace.mercadolivre.client-secret:}")
     private String mlClientSecret;
 
-    // ─── Conexões ────────────────────────────────────────────────────────────────
 
     @Transactional
     public MarketplaceConnection conectar(
@@ -114,7 +113,6 @@ public class MarketplaceConnectionService {
         return connectionRepository.findByEmpresaIdAndActiveTrue(empresaId);
     }
 
-    // ─── Vínculos produto ↔ anúncio ──────────────────────────────────────────────
 
     @Transactional
     public MarketplaceProductLink vincularProduto(
@@ -170,7 +168,6 @@ public class MarketplaceConnectionService {
         return linkRepository.findByMarketplaceAndProduto_Empresa_Id(marketplace, empresaId);
     }
 
-    // ─── OAuth callbacks ──────────────────────────────────────────────────────────
 
     /**
      * Shopee: troca o authorization code pelo access_token via HMAC auth.
@@ -203,10 +200,7 @@ public class MarketplaceConnectionService {
                 .bodyToMono(Map.class)
                 .block();
 
-        // CORREÇÃO: a Shopee SEMPRE retorna o campo "error" -- vazio ("") em
-        // caso de sucesso. containsKey("error") era sempre true, então todo
-        // callback de sucesso era tratado como falha. Agora checamos se o
-        // valor de "error" é não-vazio.
+        // A Shopee retorna a chave error vazia quando a operação funciona.
         String erro = resposta != null ? String.valueOf(resposta.get("error")) : null;
         boolean falhou = resposta == null || (erro != null && !erro.isBlank() && !erro.equals("null"));
 
@@ -265,7 +259,6 @@ public class MarketplaceConnectionService {
         log.info("Conexão Mercado Livre salva: empresaId={} sellerId={}", empresaId, sellerId);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────────
 
     private void salvarConexao(Long empresaId, CanalVenda marketplace, String sellerId,
                                String accessToken, String refreshToken, Long expiresIn) {

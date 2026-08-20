@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-/* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Produto { id:number; nome:string; preco:number; quantidadeEstoque:number; categoria?:string }
 interface Cliente { id:number; nome:string; ativo?:boolean }
 interface ItemCarrinho { produto:Produto; quantidade:number }
@@ -38,7 +37,6 @@ type CanalVenda     = "WHATSAPP"|"INSTAGRAM"|"MERCADO_LIVRE"|"SHOPEE"|"IFOOD"|"T
 type StatusPedido   = "PENDENTE"|"CONFIRMADO"|"ENVIADO"|"ENTREGUE"|"CANCELADO";
 type MarketplaceKey = "SHOPEE"|"MERCADO_LIVRE";
 
-/* ─── Metadados ──────────────────────────────────────────────────────────── */
 const STATUS_META: Record<StatusPedido,{label:string;color:string;bg:string;border:string;icon:React.ReactNode}> = {
   PENDENTE:   {label:"Pendente",   color:"#f59e0b", bg:"rgba(245,158,11,0.12)", border:"rgba(245,158,11,0.4)",  icon:<Clock size={12}/>},
   CONFIRMADO: {label:"Confirmado", color:"#80a99b", bg:"rgba(16,185,129,0.12)", border:"rgba(16,185,129,0.4)",  icon:<CheckCircle2 size={12}/>},
@@ -80,7 +78,6 @@ const MARKETPLACE_META: Record<MarketplaceKey,{label:string;icon:React.ReactNode
   MERCADO_LIVRE: {label:"Mercado Livre", icon:<img src="https://cdn.jsdelivr.net/gh/MartnsDev/Icons@main/mercadolivre.svg" alt="ML"     width={22} height={22}/>, color:"#854F0B", bg:"#FAEEDA", border:"#EF9F27"},
 };
 
-/* ─── URLs OAuth ─────────────────────────────────────────────────────────── */
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app";
 
 /**
@@ -108,7 +105,6 @@ function buildOAuthUrl(marketplace: MarketplaceKey, empresaId: number): string {
   return `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${encodeURIComponent(clientId)}&redirect_uri=${redirectUri}&state=${encodeURIComponent(state)}`;
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?:number|null) =>
   new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v??0);
 const centavos = (valor:number) => Math.round((valor + Number.EPSILON) * 100) / 100;
@@ -129,13 +125,11 @@ async function fetchAuth<T>(path:string,opts?:RequestInit):Promise<T> {
   return res.json();
 }
 
-/* ─── Estilos ────────────────────────────────────────────────────────────── */
 const inp:React.CSSProperties={width:"100%",padding:"8px 11px",background:"var(--surface-overlay)",border:"1px solid var(--border)",borderRadius:8,color:"var(--foreground)",fontSize:13,outline:"none"};
 const btnP:React.CSSProperties={display:"flex",alignItems:"center",gap:6,padding:"9px 16px",background:"var(--primary)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"};
 const btnG:React.CSSProperties={display:"flex",alignItems:"center",gap:6,padding:"7px 11px",background:"transparent",border:"1px solid var(--border)",borderRadius:8,color:"var(--foreground-muted)",fontSize:12,cursor:"pointer"};
 const btnDanger:React.CSSProperties={display:"flex",alignItems:"center",gap:6,padding:"7px 11px",background:"transparent",border:"1px solid rgba(239,68,68,0.35)",borderRadius:8,color:"var(--destructive)",fontSize:12,cursor:"pointer"};
 
-/* ─── Badges ─────────────────────────────────────────────────────────────── */
 function StatusBadge({status}:{status:string}) {
   const m=STATUS_META[status as StatusPedido]??{label:status,color:"var(--foreground-muted)",bg:"var(--surface-overlay)",icon:null};
   return <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,padding:"2px 8px",borderRadius:99,fontWeight:600,color:m.color,background:m.bg}}>{m.icon} {m.label}</span>;
@@ -152,7 +146,6 @@ function AutoBadge() {
   );
 }
 
-/* ─── SeletorStatus ──────────────────────────────────────────────────────── */
 function SeletorStatus({statusAtual,onChange,salvando}:{
   statusAtual:StatusPedido; onChange:(s:StatusPedido)=>void; salvando:boolean;
 }) {
@@ -190,7 +183,6 @@ function SeletorStatus({statusAtual,onChange,salvando}:{
   );
 }
 
-/* ─── SeletorForma ───────────────────────────────────────────────────────── */
 function SeletorForma({value,onChange}:{value:FormaPagamento;onChange:(v:FormaPagamento)=>void}) {
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}}>
@@ -203,7 +195,6 @@ function SeletorForma({value,onChange}:{value:FormaPagamento;onChange:(v:FormaPa
   );
 }
 
-/* ─── ModalConfirmarExclusao ─────────────────────────────────────────────── */
 function ModalConfirmarExclusao({titulo,descricao,onConfirmar,onCancelar,confirmando}:{
   titulo:string;descricao:string;onConfirmar:()=>void;onCancelar:()=>void;confirmando:boolean;
 }) {
@@ -226,7 +217,6 @@ function ModalConfirmarExclusao({titulo,descricao,onConfirmar,onCancelar,confirm
   );
 }
 
-/* ─── ModalConectarMarketplace ───────────────────────────────────────────── */
 /**
  * Redireciona o lojista para a página oficial de autorização OAuth do marketplace.
  * O backend recebe o callback em:
@@ -286,7 +276,6 @@ function ModalConectarMarketplace({empresaId,marketplace,onClose}:{
   );
 }
 
-/* ─── ModalVincularProduto ───────────────────────────────────────────────── */
 function ModalVincularProduto({empresaId,marketplace,onClose,onSucesso}:{
   empresaId:number; marketplace:MarketplaceKey;
   onClose:()=>void; onSucesso:(l:MarketplaceProductLink)=>void;
@@ -393,7 +382,6 @@ function ModalVincularProduto({empresaId,marketplace,onClose,onSucesso}:{
   );
 }
 
-/* ─── SecaoPremiumLock ───────────────────────────────────────────────────── */
 function SecaoPremiumLock() {
   return (
     <div className="animate-fade-in" style={{display:"flex",flexDirection:"column",gap:0,borderRadius:14,overflow:"hidden",border:"1px solid var(--border)"}}>
@@ -460,7 +448,6 @@ function SecaoPremiumLock() {
   );
 }
 
-/* ─── SecaoIntegracoes ───────────────────────────────────────────────────── */
 /**
  * Detecta retorno OAuth via query string (?sucesso=true ou ?erro=...) e exibe toast.
  * Isso é necessário porque o backend redireciona para /dashboard/pedidos após o callback.
@@ -652,7 +639,6 @@ function SecaoIntegracoes({empresaId}:{empresaId:number}) {
   );
 }
 
-/* ─── ModalNovoPedido ────────────────────────────────────────────────────── */
 function ModalNovoPedido({empresaId,onClose,onSucesso}:{
   empresaId:number;onClose:()=>void;onSucesso:(p:Pedido)=>void;
 }) {
@@ -887,7 +873,6 @@ function ModalNovoPedido({empresaId,onClose,onSucesso}:{
   );
 }
 
-/* ─── DetalhePedido ──────────────────────────────────────────────────────── */
 function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
   pedido:Pedido; onClose:()=>void;
   onAtualizado:(p:Pedido)=>void; onRemovido:(id:number)=>void;
@@ -1106,7 +1091,6 @@ function DetalhePedido({pedido,onClose,onAtualizado,onRemovido}:{
   );
 }
 
-/* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Pedidos() {
   const {empresaAtiva}               = useEmpresa();
   const [usuario,setUsuario]         = useState<Usuario|null>(null);

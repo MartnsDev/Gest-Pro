@@ -23,9 +23,7 @@ public class Emitir {
     private final BuscaPorId           buscaPorId;
     private final GerarChaveAcesso     gerarChaveAcesso;
 
-    // =========================================================================
     // Ação principal
-    // =========================================================================
 
     @Transactional
     public Map<String, Object> emitir(Long id) {
@@ -72,9 +70,7 @@ public class Emitir {
         return resposta;
     }
 
-    // =========================================================================
     // Helpers
-    // =========================================================================
 
     /**
      * Gera um protocolo no formato padrão da SEFAZ:

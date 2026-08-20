@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { fetchAuthJson } from "@/lib/api-v2";
 import { useActionCooldown } from "@/hooks/use-action-cooldown";
 
-/* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface VendasDia   { dia:string; qtdVendas:number; total:number; desconto:number }
 interface Pagamento   { forma:string; qtd:number; total:number; percentual:number }
 interface ProdutoRel  { nome:string; quantidade:number; receita:number; lucro:number }
@@ -54,7 +53,6 @@ interface VendaPdvRelatorio {
 type Periodo = "hoje"|"semana"|"mes"|"personalizado"|"caixa";
 type Origem = "todos"|"pdv"|"pedidos";
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?:number|null) =>
   new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v??0);
 const fmtN = (v:number) => new Intl.NumberFormat("pt-BR").format(v);
@@ -157,7 +155,6 @@ const inp:React.CSSProperties = {width:"100%",padding:"8px 11px",background:"var
 const btnP:React.CSSProperties = {display:"flex",alignItems:"center",gap:6,padding:"8px 14px",background:"var(--primary)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"};
 const btnG:React.CSSProperties = {display:"flex",alignItems:"center",gap:6,padding:"7px 12px",background:"transparent",border:"1px solid var(--border)",borderRadius:8,color:"var(--foreground-muted)",fontSize:12,cursor:"pointer"};
 
-/* ─── StatCard ───────────────────────────────────────────────────────────── */
 function StatCard({label,value,sub,icon,color}:{label:string;value:string;sub?:string;icon:React.ReactNode;color?:string}) {
   return (
     <div style={{background:"var(--surface-elevated)",border:"1px solid var(--border)",borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
@@ -171,7 +168,6 @@ function StatCard({label,value,sub,icon,color}:{label:string;value:string;sub?:s
   );
 }
 
-/* ─── Badge de origem ────────────────────────────────────────────────────── */
 function OrigemBadge({origem}:{origem?:string}) {
   if(!origem) return null;
   const isPdv = origem==="PDV";
@@ -188,7 +184,6 @@ function OrigemBadge({origem}:{origem?:string}) {
   );
 }
 
-/* ─── Exportadores ───────────────────────────────────────────────────────── */
 function nomeArquivo(rel:Relatorio,extensao:string){
   const empresa=rel.nomeEmpresa.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-|-$/g,"").toLowerCase()||"empresa";
   return `${rel.somentePedidos?"pedidos":rel.somentePdv?"pdv":"relatorio"}_${empresa}_${new Date().toISOString().slice(0,10)}.${extensao}`;
@@ -367,7 +362,6 @@ td{padding:6px 8px;border-bottom:1px solid #f1f5f9;color:#334155;font-size:11px}
   toast.success("Janela de impressão aberta.");
 }
 
-/* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Relatorios() {
   const {empresaAtiva}=useEmpresa();
   const [origem,setOrigem]=useState<Origem>("todos");

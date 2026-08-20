@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { useEmpresa } from "../context/Empresacontext"; // Para pegar o nome da empresa pro cupom
 import { fetchAuthJson } from "@/lib/api-v2";
 
-/* ─── Tipos Locais ─── */
 interface Produto { id: number; nome: string; preco: number; quantidadeEstoque: number; categoria?: string }
 interface ItemCarrinho { produto: Produto; quantidade: number }
 interface Venda {
@@ -60,7 +59,6 @@ const FORMA_LABEL: Record<string, string> = {
   PIX: "Pix", DINHEIRO: "Dinheiro", CARTAO_DEBITO: "Débito", CARTAO_CREDITO: "Crédito",
 };
 
-/* ─── Helpers & Componentes Base ─── */
 const fmt = (v?: number | null) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 const esc = (value: unknown) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
@@ -96,7 +94,6 @@ const btnG: React.CSSProperties = {
   color: "var(--foreground-muted)", fontSize: 13, cursor: "pointer", justifyContent: "center"
 };
 
-/* ─── Gerador de Cupom Não Fiscal ─── */
 function formatarDocumentoEmpresa(value?: string | null) {
   const digits = value?.replace(/\D/g, "") ?? "";
   if (digits.length === 14) return `CNPJ: ${digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}`;
@@ -192,7 +189,6 @@ function TituloEtapa({ numero, titulo, detalhe }: { numero: number; titulo: stri
   );
 }
 
-/* ─── Tela de Sucesso e Impressão ─── */
 function TelaVendaSucesso({ venda, nomeEmpresa, documentoEmpresa, onFechar }: { venda: Venda; nomeEmpresa: string; documentoEmpresa?: string | null; onFechar: () => void; }) {
   const [passo, setPasso] = useState<"sucesso" | "nota">("sucesso");
   const misto = venda.formaPagamento2 && venda.valorPagamento2;
@@ -260,7 +256,6 @@ function TelaVendaSucesso({ venda, nomeEmpresa, documentoEmpresa, onFechar }: { 
 }
 
 
-/* ─── Componente Principal ─── */
 interface Props {
   caixaId: number;
   empresaId: number;

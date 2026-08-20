@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, Tag, Ruler, Barcode, ShoppingCart, DollarSign, Check, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import React from "react";
+import { fetchAuthJson } from "@/lib/api-v2";
 
 export interface ProdutoForm {
   nome: string;
@@ -69,14 +70,10 @@ export default function FormularioProduto({ onClose }: { onClose: () => void }) 
         estoqueMinimo: parseInt(form.estoqueMinimo) || 0,
       };
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}/api/v1/produtos`, {
+      await fetchAuthJson("/api/v1/produtos", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(payload),
       });
-
-      if (!res.ok) throw new Error("Erro ao salvar");
 
       // MOSTRA O MODAL DE SUCESSO
       setShowSuccessModal(true);

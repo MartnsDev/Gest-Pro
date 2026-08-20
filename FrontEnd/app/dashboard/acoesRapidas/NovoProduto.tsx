@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { fetchAuthJson } from "@/lib/api-v2";
 import { montarProdutoPayload, numeroDecimal } from "@/lib/produtos";
 
-/* ─── Modal Base Interno ─── */
 function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
     <div
@@ -44,7 +43,6 @@ function ModalBox({ title, sub, onClose, children }: { title: string; sub?: stri
   );
 }
 
-/* ─── Configurações e Estilos ─── */
 const UNIDADES = ["UN", "KG", "G", "L", "ML", "CX", "PCT", "PAR", "M", "CM"];
 
 const inp: React.CSSProperties = {
@@ -65,7 +63,6 @@ const btnG: React.CSSProperties = {
 
 const fmt = (v?: number | null) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 
-/* ─── Componente Principal ─── */
 interface Props {
   empresaId: number;
   onClose: () => void;

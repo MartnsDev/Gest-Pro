@@ -55,7 +55,6 @@ import Pedidos from "./components/Pedidos";
 import NotasFiscais from "./components/NotaFiscal";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-/* ─── Tipos ──────────────────────────────────────────────────────────────── */
 type Secao =
   | "dashboard"
   | "produtos"
@@ -76,7 +75,6 @@ const BASE =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://gestpro-backend-production.up.railway.app";
 
-/* ─── fetchAuth ──────────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     credentials: "include",
@@ -108,9 +106,7 @@ async function resolverEstadoInicial(
 ): Promise<{ empresa: EmpresaAtiva | null; caixa: CaixaInfo | null }> {
   if (empresas.length === 0) return { empresa: null, caixa: null };
 
-  // Uma escolha explícita do usuário sempre tem prioridade, mesmo quando
-  // essa empresa não possui caixa aberto. Antes, a busca continuava pelas
-  // demais empresas e acabava substituindo a seleção por outra com caixa.
+  // Mantém a empresa escolhida mesmo sem caixa aberto.
   const empresaEmCache = empresas.find((e) => e.id === empresaCacheId);
   if (empresaEmCache) {
     try {
@@ -150,7 +146,6 @@ async function resolverEstadoInicial(
   return { empresa: empresas[0] ?? null, caixa: null };
 }
 
-/* ─── Detecção de mobile (hook) ─────────────────────────────────────────── */
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -163,7 +158,6 @@ function useIsMobile() {
   return isMobile;
 }
 
-/* ─── Toast de pagamento ─────────────────────────────────────────────────── */
 function ToastPagamento({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const t = setTimeout(onClose, 6000);
@@ -260,7 +254,6 @@ function ToastPagamento({ onClose }: { onClose: () => void }) {
   );
 }
 
-/* ─── Dashboard principal ────────────────────────────────────────────────── */
 function DashboardInner({
   usuario,
   mostrarToast,
@@ -641,7 +634,6 @@ function DashboardInner({
   );
 }
 
-/* ─── DashboardLoader ────────────────────────────────────────────────────── */
 function DashboardLoader() {
   const searchParams = useSearchParams();
   const { inicializarUsuario } = useEmpresa();
@@ -738,7 +730,6 @@ function DashboardLoader() {
   );
 }
 
-/* ─── Página raiz ────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
   return (
     <EmpresaProvider>

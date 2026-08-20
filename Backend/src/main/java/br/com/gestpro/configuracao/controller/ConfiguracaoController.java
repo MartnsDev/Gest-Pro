@@ -28,7 +28,6 @@ public class ConfiguracaoController {
     private final UploadFotoOperation     uploadFoto;
     private final VerificarPlanoOperation verificarPlano;
 
-    // --- GET /perfil -------------------------------------------------------
     @GetMapping("/perfil")
     public ResponseEntity<Map<String, Object>> getPerfil(Authentication auth) {
         Usuario u = buscar(auth.getName());
@@ -47,7 +46,6 @@ public class ConfiguracaoController {
         ));
     }
 
-    // --- PUT /perfil/nome --------------------------------------------------
     @PutMapping("/perfil/nome")
     public ResponseEntity<Map<String, String>> atualizarNome(
             @RequestBody Map<String, String> body,
@@ -65,7 +63,6 @@ public class ConfiguracaoController {
         return ResponseEntity.ok(Map.of("nome", u.getNome()));
     }
 
-    // --- POST /perfil/foto -------------------------------------------------
     /**
      * Recebe um MultipartFile com key "foto", faz upload para o Cloudinary
      * e persiste a URL pública no campo fotoUpload do usuário.
@@ -96,7 +93,6 @@ public class ConfiguracaoController {
         return ResponseEntity.ok(Map.of("fotoUrl", url));
     }
 
-    // --- DELETE /perfil/foto -----------------------------------------------
     @DeleteMapping("/perfil/foto")
     public ResponseEntity<Void> removerFoto(Authentication auth) {
         String email = auth.getName();
@@ -109,14 +105,12 @@ public class ConfiguracaoController {
         return ResponseEntity.noContent().build();
     }
 
-    // --- POST /senha/solicitar-codigo --------------------------------------
     @PostMapping("/senha/solicitar-codigo")
     public ResponseEntity<Map<String, String>> solicitarCodigoSenha(Authentication auth) {
         // Implementação existente no seu projeto
         return ResponseEntity.ok(Map.of("mensagem", "Código enviado para seu e-mail"));
     }
 
-    // --- POST /senha/trocar ------------------------------------------------
     @PostMapping("/senha/trocar")
     public ResponseEntity<Map<String, String>> trocarSenha(
             @RequestBody Map<String, String> body,
@@ -125,7 +119,6 @@ public class ConfiguracaoController {
         return ResponseEntity.ok(Map.of("mensagem", "Senha alterada com sucesso"));
     }
 
-    // --- GET & PUT /notificacoes -------------------------------------------
     @GetMapping("/notificacoes")
     public ResponseEntity<NotificacaoPreferenciasDTO> getNotificacoes(Authentication auth) {
         // Usa o método buscar() que já existe nesta classe!
@@ -154,7 +147,6 @@ public class ConfiguracaoController {
         return ResponseEntity.ok().build();
     }
 
-    // --- Helper ------------------------------------------------------------
     private Usuario buscar(String email) {
         return usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new ApiException(

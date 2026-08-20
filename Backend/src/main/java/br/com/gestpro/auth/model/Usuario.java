@@ -63,9 +63,7 @@ public class Usuario {
     @Column(name = "login_google", nullable = false)
     private boolean loginGoogle = false;
 
-    // ==============================
     // Preferências de Notificação
-    // ==============================
     @Column(name = "email_vendas", nullable = false)
     private boolean emailVendas = false;
 
@@ -78,9 +76,7 @@ public class Usuario {
     @Column(name = "alerta_vencimento_plano", nullable = false)
     private boolean alertaVencimentoPlano = true;
 
-    // ==============================
     // Regras automáticas de persistência
-    // ==============================
     @PrePersist
     public void prePersist() {
         if (dataCriacao == null) dataCriacao = LocalDateTime.now();

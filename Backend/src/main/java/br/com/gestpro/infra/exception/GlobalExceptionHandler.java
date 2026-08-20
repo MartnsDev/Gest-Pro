@@ -19,9 +19,7 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    // =====================================================
     // 1. Exceção personalizada da API
-    // =====================================================
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<RetornoErroAPI> handleApiException(ApiException ex) {
 
@@ -37,10 +35,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(erro, ex.getStatus());
     }
 
-    // =====================================================
     // 2. Validação de DTO (@Valid / @Validated)
     // Captura erros de validação de campos
-    // =====================================================
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<RetornoErroAPI> handleValidationExceptions(
             MethodArgumentNotValidException ex,
@@ -65,10 +61,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(retorno);
     }
 
-    // =====================================================
     // 3. Recursos não encontrados
     // EntityNotFoundException ou NoSuchElementException
-    // =====================================================
     @ExceptionHandler({EntityNotFoundException.class, NoSuchElementException.class})
     public ResponseEntity<RetornoErroAPI> handleNotFoundException(Exception ex, HttpServletRequest request) {
 
@@ -84,11 +78,9 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(404).body(retorno);
     }
 
-    // =====================================================
     // 4. Falhas de autenticação e autorização (Spring Security)
     // AuthenticationException -> 401
     // AccessDeniedException -> 403
-    // =====================================================
     @ExceptionHandler({AuthenticationException.class, AccessDeniedException.class})
     public ResponseEntity<RetornoErroAPI> handleSecurityExceptions(Exception ex, HttpServletRequest request) {
 
@@ -106,9 +98,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(retorno);
     }
 
-    // =====================================================
     // 5. Qualquer outra exceção não prevista
-    // =====================================================
     @ExceptionHandler(Exception.class)
     public ResponseEntity<RetornoErroAPI> handleAllExceptions(Exception ex, HttpServletRequest request) {
 

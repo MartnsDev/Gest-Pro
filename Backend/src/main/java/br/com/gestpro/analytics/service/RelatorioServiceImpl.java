@@ -33,7 +33,6 @@ public class RelatorioServiceImpl implements RelatorioServiceInterface {
     private final EmpresaRepository   empresaRepository;
     private final CaixaRepository     caixaRepository;
 
-    // ─── Endpoints de conveniência ────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
@@ -87,7 +86,6 @@ public class RelatorioServiceImpl implements RelatorioServiceInterface {
         return montar(emp, "Relatório do Caixa #" + caixaId, inicio, fim);
     }
 
-    // ─── Montagem principal ────────────────────────────────────────────────
 
     private RelatorioDTO montar(Empresa emp, String titulo,
                                 LocalDateTime inicio, LocalDateTime fim) {
@@ -98,7 +96,6 @@ public class RelatorioServiceImpl implements RelatorioServiceInterface {
         rel.setGeradoEm(LocalDateTime.now().format(FMT_DT));
         rel.setPeriodo(inicio.format(FMT_DT) + " → " + fim.format(FMT_DT));
 
-        // ── KPIs principais ───────────────────────────────────────────────
         double receita      = toDouble(dashboardRepository.faturamentoPeriodo(id, inicio, fim));
         double lucro        = toDouble(dashboardRepository.lucroPorPeriodo(id, inicio, fim));
         double descontos    = toDouble(dashboardRepository.descontoTotalPeriodo(id, inicio, fim));
@@ -120,7 +117,6 @@ public class RelatorioServiceImpl implements RelatorioServiceInterface {
         rel.setCancelamentos(cancelTot);
         rel.setValorCancelado(valCancel);
 
-        // ── Origem (pizza) ────────────────────────────────────────────────
         // Sobrescreve com valores reais do período via faturamentoPeriodo já calculado
         // Usa as queries separadas de PDV e Pedidos para o período:
         double recPdvPeriodo     = toDouble(dashboardRepository.somaPdvPeriodo(id, inicio, fim));
@@ -128,14 +124,12 @@ public class RelatorioServiceImpl implements RelatorioServiceInterface {
         rel.setReceitaPdv(recPdvPeriodo);
         rel.setReceitaPedidos(recPedidosPeriodo);
 
-        // ── Vendas diárias ────────────────────────────────────────────────
         List<Object[]> dias = dashboardRepository.vendasDiariasPeriodo(id, inicio, fim);
         rel.setVendasDiarias(dias.stream().map(r -> {
             String diaStr = r[0] != null ? r[0].toString().substring(5).replace("-", "/") : "?";
             return new RelatorioDTO.VendasDiaItem(diaStr, toDouble(r[1]));
         }).collect(Collectors.toList()));
 
-        // ── Pagamentos ────────────────────────────────────────────────────
         Map<String, long[]> pagMap = new LinkedHashMap<>(); // [qtd, total_cents]
         for (Object[] r : dashboardRepository.pagamentosPdvPeriodo(id, inicio, fim)) {
             String forma = str(r[0]);
@@ -161,19 +155,16 @@ public class RelatorioServiceImpl implements RelatorioServiceInterface {
                 .collect(Collectors.toList());
         rel.setPagamentos(pags);
 
-        // ── Top produtos ──────────────────────────────────────────────────
         List<Object[]> prods = dashboardRepository.topProdutosPeriodo(id, inicio, fim);
         rel.setTopProdutos(prods.stream().map(r -> new RelatorioDTO.ProdutoItem(
                 str(r[0]), toLong(r[1]), toDouble(r[2]), toDouble(r[3])
         )).collect(Collectors.toList()));
 
-        // ── Pico por hora ─────────────────────────────────────────────────
         List<Object[]> horas = dashboardRepository.vendasPorHoraPeriodo(id, inicio, fim);
         rel.setVendasPorHora(horas.stream().map(r ->
                 new RelatorioDTO.VendasHoraItem((int) toLong(r[0]), toLong(r[1]), toDouble(r[2]))
         ).collect(Collectors.toList()));
 
-        // ── Listagem individual (PDV + Pedidos) ───────────────────────────
         List<RelatorioDTO.VendaItem> vendas = new ArrayList<>();
 
         // PDV
@@ -224,7 +215,6 @@ public class RelatorioServiceImpl implements RelatorioServiceInterface {
         return rel;
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────────
 
     private Empresa validar(Long empresaId, String email) {
         Empresa e = empresaRepository.findById(empresaId)

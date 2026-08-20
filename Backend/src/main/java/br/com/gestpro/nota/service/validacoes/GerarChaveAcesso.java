@@ -13,9 +13,7 @@ public class GerarChaveAcesso {
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    // =========================================================================
     // Geração da chave
-    // =========================================================================
     public String gerar(NotaFiscal nota, String cnpjEmitente, String ufCodigo) {
 
         String aamm    = nota.getDataEmissao().format(DateTimeFormatter.ofPattern("yyMM"));
@@ -35,9 +33,7 @@ public class GerarChaveAcesso {
         return chave;
     }
 
-    // =========================================================================
     // Dígito verificador
-    // =========================================================================
     private String calcularDigitoVerificador(String chave) {
         int soma          = 0;
         int multiplicador = 2;
@@ -52,9 +48,7 @@ public class GerarChaveAcesso {
         return String.valueOf(dv);
     }
 
-    // =========================================================================
     // Tabela de UFs
-    // =========================================================================/**
     public static String getCodigoUf(String uf) {
         if (uf == null) return "35";
         return switch (uf.toUpperCase().trim()) {

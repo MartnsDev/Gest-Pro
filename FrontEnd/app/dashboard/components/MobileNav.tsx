@@ -78,7 +78,6 @@ export default function MobileNav({ secao, onChange, caixaAtivo, onLogout }: Mob
 
   return (
     <>
-      {/* ── Drawer "Mais" ── */}
       {drawerOpen && (
         <div
           style={{
@@ -211,7 +210,6 @@ export default function MobileNav({ secao, onChange, caixaAtivo, onLogout }: Mob
         </div>
       )}
 
-      {/* ── Bottom Nav Bar ── */}
       <nav
         style={{
           position: "fixed",

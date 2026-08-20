@@ -18,7 +18,6 @@ public class RelatorioDTO {
     private String nomeEmpresa;
     private String geradoEm;
 
-    // ── KPIs ───────────────────────────────────────────────────────────────
     private long   totalVendas;      // PDV + Pedidos
     private double receitaTotal;
     private double lucroTotal;       // PDV (preco_custo) + Pedidos (preco_custo via item_pedido)
@@ -29,22 +28,17 @@ public class RelatorioDTO {
     private long   cancelamentos;    // PDV + Pedidos
     private double valorCancelado;
 
-    // ── Origem (para gráfico de pizza) ─────────────────────────────────────
     private double receitaPdv;
     private double receitaPedidos;
 
-    // ── Gráficos ───────────────────────────────────────────────────────────
     private List<VendasDiaItem>  vendasDiarias;
     private List<PagamentoItem>  pagamentos;
     private List<ProdutoItem>    topProdutos;
     private List<VendasHoraItem> vendasPorHora;
 
-    // ── Listagem individual ────────────────────────────────────────────────
     private List<VendaItem> vendas;
 
-    // ────────────────────────────────────────────────────────────────────────
     //  Itens internos
-    // ────────────────────────────────────────────────────────────────────────
 
     @Data @NoArgsConstructor
     public static class VendasDiaItem {

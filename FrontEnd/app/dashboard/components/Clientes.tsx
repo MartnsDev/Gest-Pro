@@ -23,8 +23,8 @@ import {
   DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAuthJson } from "@/lib/api-v2";
 
-/* ─── Tipos ──────────────────────────────────────────────────────────────── */
 type Tipo = "CLIENTE" | "FORNECEDOR";
 
 interface Contato {
@@ -76,30 +76,8 @@ interface Divida {
   quitadoEm?: string;
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const token =
-    (typeof globalThis.window !== "undefined"
-      ? (sessionStorage.getItem("jwt_token") ??
-        document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
-        null)
-      : null) ?? "";
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
-    {
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      ...opts,
-    },
-  );
-  if (!res.ok) {
-    const e = await res.json().catch(() => null);
-    throw new Error(e?.mensagem ?? `Erro ${res.status}`);
-  }
-  return res.json();
+  return fetchAuthJson<T>(path, opts);
 }
 
 const fmtCpf = (v: string) =>
@@ -110,7 +88,6 @@ const fmtCnpj = (v: string) =>
     .replace(/\D/g, "")
     .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 
-/* ─── Estilos ────────────────────────────────────────────────────────────── */
 const inp: React.CSSProperties = {
   width: "100%",
   padding: "9px 12px",
@@ -147,19 +124,20 @@ const btnG: React.CSSProperties = {
   cursor: "pointer",
 };
 
-/* ─── Modal de Contato ───────────────────────────────────────────────────── */
 function ModalContato({
   item,
   tipoInicial,
   onSave,
   onClose,
   saving,
+  error,
 }: {
   item?: Contato;
   tipoInicial: Tipo;
   onSave: (f: ContatoForm) => Promise<void>;
   onClose: () => void;
   saving: boolean;
+  error?: string;
 }) {
   const [form, setForm] = useState<ContatoForm>(
     item
@@ -175,9 +153,12 @@ function ModalContato({
         }
       : { ...FORM_VAZIO, tipo: tipoInicial },
   );
+  const [validationError, setValidationError] = useState("");
 
-  const set = (k: keyof ContatoForm, v: string) =>
+  const set = (k: keyof ContatoForm, v: string) => {
+    setValidationError("");
     setForm((f) => ({ ...f, [k]: v }));
+  };
   const isForn = form.tipo === "FORNECEDOR";
 
   return (
@@ -278,6 +259,11 @@ function ModalContato({
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {(validationError || error) && (
+            <div role="alert" style={{ padding: "10px 12px", borderRadius: 9, border: "1px solid rgba(239,68,68,.35)", background: "var(--destructive-muted)", color: "var(--destructive)", fontSize: 12, lineHeight: 1.5 }}>
+              {validationError || error}
+            </div>
+          )}
           <div>
             <label
               style={{
@@ -457,7 +443,19 @@ function ModalContato({
             <button
               onClick={() => {
                 if (!form.nome.trim()) {
-                  toast.error("Nome obrigatório");
+                  setValidationError("Preencha o campo Nome.");
+                  return;
+                }
+                if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+                  setValidationError("Informe um e-mail válido, como nome@empresa.com.br.");
+                  return;
+                }
+                if (!isForn && form.cpf && form.cpf.replace(/\D/g, "").length !== 11) {
+                  setValidationError("O CPF deve conter 11 números.");
+                  return;
+                }
+                if (isForn && form.cnpj && form.cnpj.replace(/\D/g, "").length !== 14) {
+                  setValidationError("O CNPJ deve conter 14 números.");
                   return;
                 }
                 onSave(form);
@@ -486,7 +484,6 @@ function ModalContato({
   );
 }
 
-/* ─── Modal de Dívidas ───────────────────────────────────────────────────── */
 function ModalDividas({
   cliente,
   empresaId,
@@ -976,7 +973,6 @@ function ModalDividas({
   );
 }
 
-/* ─── Card de detalhe ────────────────────────────────────────────────────── */
 function DetalheContato({
   item,
   onEditar,
@@ -1139,7 +1135,6 @@ function DetalheContato({
   );
 }
 
-/* ─── Componente principal ───────────────────────────────────────────────── */
 type SortKey = "nome" | "email" | "telefone";
 
 export default function Clientes() {
@@ -1147,6 +1142,7 @@ export default function Clientes() {
   const [todos, setTodos] = useState<Contato[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
   const [aba, setAba] = useState<Tipo>("CLIENTE");
   const [filtro, setFiltro] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("nome");
@@ -1217,6 +1213,7 @@ export default function Clientes() {
 
   const handleSalvar = async (form: ContatoForm) => {
     if (!empresaAtiva) return;
+    setFormError("");
     setSaving(true);
     try {
       const body = {
@@ -1255,7 +1252,9 @@ export default function Clientes() {
       }
       setModal(null);
     } catch (e: any) {
-      toast.error(e.message);
+      const mensagem = e instanceof Error ? e.message : "Não foi possível salvar o cadastro.";
+      setFormError(mensagem);
+      toast.error(mensagem);
     } finally {
       setSaving(false);
     }
@@ -1805,8 +1804,9 @@ export default function Clientes() {
           item={modal.item}
           tipoInicial={aba}
           onSave={handleSalvar}
-          onClose={() => setModal(null)}
+          onClose={() => { setFormError(""); setModal(null); }}
           saving={saving}
+          error={formError}
         />
       )}
       {modal?.tipo === "detalhe" && modal.item && (

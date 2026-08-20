@@ -43,7 +43,6 @@ public class Estatisticas {
         LocalDateTime inicioMes = hoje.withDayOfMonth(1).atStartOfDay();
         LocalDateTime fimMes = hoje.withDayOfMonth(hoje.lengthOfMonth()).atTime(23, 59, 59);
 
-        // IMPORTANTE: Lá no seu NotaFiscalRepository, crie ou ajuste esse método para receber o Long e o Enum.
         // Faturamento só contabiliza o que a SEFAZ disse "OK" (AUTORIZADA).
         BigDecimal valorMes = notaRepo.sumValorTotalByEmpresaIdAndStatusAndDataEmissaoBetween(
                 empresaId, NotaFiscalStatus.AUTORIZADA, inicioMes, fimMes

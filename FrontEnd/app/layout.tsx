@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
+import { LanguageProvider } from "@/components/language-provider";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
@@ -60,9 +61,11 @@ export default function RootLayout({
     <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false} themes={["dark", "light"]}>
-          <Suspense fallback={null}>{children}</Suspense>
-          <PwaInstallPrompt />
-          <CookieConsent />
+          <LanguageProvider>
+            <Suspense fallback={null}>{children}</Suspense>
+            <PwaInstallPrompt />
+            <CookieConsent />
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

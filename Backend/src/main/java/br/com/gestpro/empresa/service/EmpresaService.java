@@ -33,9 +33,7 @@ public class EmpresaService {
     private final VerificarCNPJ            verificarCNPJ;
     private final VerificarCPF             verificarCPF;
 
-    // ────────────────────────────────────────────────────────────────────────
     // 1. CRIAÇÃO DE EMPRESA
-    // ────────────────────────────────────────────────────────────────────────
     @Transactional
     public EmpresaResponse criar(CriarEmpresaRequest req) {
         Usuario dono = usuarioRepository.findByEmailForUpdate(req.getEmailUsuario())
@@ -57,7 +55,6 @@ public class EmpresaService {
                 throw new ApiException("Este CNPJ já está vinculado a outra empresa no sistema.", HttpStatus.BAD_REQUEST, "/empresas");
             }
 
-            // SALVA OS DADOS AQUI!
             dadosReceita = validarDocumentoFiscal(req.getCnpj());
         }
 
@@ -73,9 +70,7 @@ public class EmpresaService {
 
         return mapToResponse(salvarEmpresa(empresa));
     }
-    // ────────────────────────────────────────────────────────────────────────
     // 2. ATUALIZAÇÃO E RESTAURAÇÃO DE EMPRESA
-    // ────────────────────────────────────────────────────────────────────────
     @Transactional
     public EmpresaResponse atualizar(Long id, CriarEmpresaRequest req) {
         Usuario usuarioBloqueado = usuarioRepository.findByEmailForUpdate(req.getEmailUsuario())
@@ -130,9 +125,7 @@ public class EmpresaService {
         return mapToResponse(salvarEmpresa(empresa));
     }
 
-    // ────────────────────────────────────────────────────────────────────────
     // 3. EXCLUSÃO E LISTAGEM
-    // ────────────────────────────────────────────────────────────────────────
     @Transactional
     public void excluir(Long id, String emailUsuario) {
         Empresa empresa = empresaRepository.findByIdWithDono(id)
@@ -183,9 +176,7 @@ public class EmpresaService {
         return mapToResponse(empresa);
     }
 
-    // ────────────────────────────────────────────────────────────────────────
     // EXCLUSÃO PERMANENTE (HARD DELETE)
-    // ────────────────────────────────────────────────────────────────────────
     @Transactional
     public void excluirPermanentementeComSenha(Long id, String emailUsuario, String senha) {
         Empresa empresa = empresaRepository.findByIdWithDono(id)
@@ -203,9 +194,7 @@ public class EmpresaService {
         empresaRepository.delete(empresa);
     }
 
-    // ────────────────────────────────────────────────────────────────────────
     // 4. MÉTODOS AUXILIARES (HELPERS)
-    // ────────────────────────────────────────────────────────────────────────
     private Map<String, Object> validarDocumentoFiscal(String documentoBruto) {
         if (documentoBruto == null || documentoBruto.isBlank()) {
             return null;

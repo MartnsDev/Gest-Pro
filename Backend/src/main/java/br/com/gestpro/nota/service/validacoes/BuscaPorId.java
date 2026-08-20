@@ -25,9 +25,7 @@ public class BuscaPorId {
     private final NotaFiscalRepository     notaRepo;
     private final ItemNotaFiscalRepository itemRepo;
 
-    // =========================================================================
     // API pública
-    // =========================================================================
 
     @Transactional(readOnly = true)
     public Map<String, Object> buscarPorId(Long id) {
@@ -52,9 +50,7 @@ public class BuscaPorId {
         });
     }
 
-    // =========================================================================
     // Serialização (acessível a outros serviços do pacote)
-    // =========================================================================
     Map<String, Object> notaParaMap(NotaFiscal n) {
         Map<String, Object> m = new HashMap<>();
         // Identificação

@@ -6,8 +6,8 @@ import {
   CreditCard, Building2, FileText 
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAuthJson } from "@/lib/api-v2";
 
-/* ─── Modal Base Interno ─── */
 function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
     <div
@@ -42,7 +42,6 @@ function ModalBox({ title, sub, onClose, children }: { title: string; sub?: stri
   );
 }
 
-/* ─── Configurações e Estilos ─── */
 type Tipo = "CLIENTE" | "FORNECEDOR";
 
 const inp: React.CSSProperties = {
@@ -61,7 +60,6 @@ const btnG: React.CSSProperties = {
   color: "var(--foreground-muted)", fontSize: 13, cursor: "pointer", justifyContent: "center"
 };
 
-/* ─── Componente Principal ─── */
 interface Props {
   empresaId: number;
   onClose: () => void;
@@ -87,15 +85,8 @@ export default function NovoCliente({ empresaId, onClose, onConcluido }: Props) 
     
     setSaving(true);
     try {
-      const token = sessionStorage.getItem("jwt_token") ?? document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? "";
-      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-      
-      const res = await fetch(`${base}/api/v1/clientes`, {
+      await fetchAuthJson("/api/v1/clientes", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
         body: JSON.stringify({
           empresaId,
           nome: form.nome, 
@@ -108,11 +99,6 @@ export default function NovoCliente({ empresaId, onClose, onConcluido }: Props) 
           tipo: form.tipo
         })
       });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.mensagem || "Falha ao cadastrar contato");
-      }
       
       toast.success(`${form.tipo === "CLIENTE" ? "Cliente" : "Fornecedor"} cadastrado com sucesso!`); 
       onConcluido(); 

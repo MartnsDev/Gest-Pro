@@ -40,7 +40,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
     private final EmpresaRepository  empresaRepository;
     private final ClienteRepository  clienteRepository;
 
-    // ─── Registrar ───────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -76,7 +75,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         pedido.setObservacao(dto.getObservacao());
         pedido.setStatus(StatusPedido.CONFIRMADO);
 
-        // ─── Itens + débito de estoque ───────────────────────────────────
         List<ItemPedido> itens = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
 
@@ -129,7 +127,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         return salvo;
     }
 
-    // ─── Atualizar status ────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -143,7 +140,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         return pedidoRepository.save(pedido);
     }
 
-    // ─── Cancelar ────────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -167,7 +163,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         return pedidoRepository.save(pedido);
     }
 
-    // ─── Observação ──────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -177,7 +172,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         return pedidoRepository.save(pedido);
     }
 
-    // ─── Remover pedido individual ───────────────────────────────────────
 
     @Override
     @Transactional
@@ -187,7 +181,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         log.info("Pedido id={} removido do histórico por {}.", id, emailUsuario);
     }
 
-    // ─── Limpar histórico ────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -203,7 +196,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
         log.info("Histórico de pedidos da empresa {} limpo por {}.", empresaId, emailUsuario);
     }
 
-    // ─── Consultas ───────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
@@ -222,7 +214,6 @@ public class PedidoServiceImpl implements PedidoServiceInterface {
                 .orElseThrow(() -> new ApiException("Pedido não encontrado", HttpStatus.NOT_FOUND, PATH));
     }
 
-    // ─── Helper ──────────────────────────────────────────────────────────
 
     private Pedido buscarComPermissao(Long id, String emailUsuario) {
         Pedido pedido = buscarPorId(id);

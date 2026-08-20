@@ -10,9 +10,7 @@ import java.util.Map;
 @Service
 public class VerificarCPF {
 
-    // -------------------------------------------------------------------------
     // Validação matemática local — sem API, sem custo, sem LGPD
-    // -------------------------------------------------------------------------
     public Map<String, Object> consultarCpf(String cpf) {
         String limpo = cpf.replaceAll("\\D", "");
 
@@ -41,16 +39,12 @@ public class VerificarCPF {
         return r;
     }
 
-    // -------------------------------------------------------------------------
     // Rejeita CPFs com todos os dígitos iguais (000.000.000-00, etc.)
-    // -------------------------------------------------------------------------
     private boolean isFormatoValido(String cpf) {
         return !cpf.chars().allMatch(c -> c == cpf.charAt(0));
     }
 
-    // -------------------------------------------------------------------------
     // Algoritmo oficial da Receita Federal para os dois dígitos verificadores
-    // -------------------------------------------------------------------------
     private boolean isDigitosValidos(String cpf) {
         return calcularDigito(cpf, 9) == Character.getNumericValue(cpf.charAt(9))
                 && calcularDigito(cpf, 10) == Character.getNumericValue(cpf.charAt(10));
@@ -65,9 +59,7 @@ public class VerificarCPF {
         return (resto == 10 || resto == 11) ? 0 : resto;
     }
 
-    // -------------------------------------------------------------------------
     // Formata: 12345678901 → 123.456.789-01
-    // -------------------------------------------------------------------------
     private String formatarCpf(String cpf) {
         return cpf.replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
     }
