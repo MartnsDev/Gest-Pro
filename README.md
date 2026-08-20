@@ -187,7 +187,7 @@ A API utiliza Java e Spring Boot, com Spring Security para autenticação e auto
 
 O MySQL mantém os dados relacionais da aplicação.
 
-<img src="Img/gevyro-explicação_2.png" alt="Explicação gevyro" />
+<img src="Img/gevyro-explicação_2.png" alt="Explicação gevyro" width="200" />
 <br />
 
 
