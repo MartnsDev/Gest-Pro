@@ -5,7 +5,7 @@ export const SITE_NAME = "Gevyro";
 export const DEFAULT_TITLE = "Gevyro | Software de Gestão Empresarial";
 export const DEFAULT_DESCRIPTION =
   "Administre vendas, estoque, clientes, caixa e resultados da sua empresa em um só lugar com o software de gestão empresarial Gevyro.";
-export const SOCIAL_IMAGE = "/images/landing/gestpro-hero-regional-market-v1.webp";
+export const SOCIAL_IMAGE = "/images/social/gevyro-dashboard.avif";
 
 export function pageMetadata({
   title,
@@ -27,14 +27,7 @@ export function pageMetadata({
       siteName: SITE_NAME,
       locale: "pt_BR",
       type: "website",
-      images: [
-        {
-          url: SOCIAL_IMAGE,
-          width: 1672,
-          height: 941,
-          alt: "Gevyro em uso na gestão de um comércio",
-        },
-      ],
+      images: [{ url: SOCIAL_IMAGE, width: 1200, height: 630, alt: "Painel de gestão empresarial Gevyro", type: "image/avif" }],
     },
     twitter: {
       card: "summary_large_image",

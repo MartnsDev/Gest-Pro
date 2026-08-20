@@ -9,6 +9,8 @@ import {
   AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAuth, fetchAuthJson } from "@/lib/api-v2";
+import { montarProdutoPayload, numeroDecimal, type ProdutoFormData } from "@/lib/produtos";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Produto {
@@ -27,22 +29,11 @@ interface Produto {
   ativo: boolean;
 }
 
-interface ProdutoForm {
-  nome: string;
-  categoria: string;
-  descricao: string;
-  unidade: string;
-  codigoBarras: string;
-  preco: string;
-  precoCusto: string;
-  quantidadeEstoque: string;
-  estoqueMinimo: string;
-  ativo: boolean;
-}
+type ProdutoForm = ProdutoFormData;
 
 const LIMITE_PRODUTOS: Record<string, number> = {
   EXPERIMENTAL: 300,
-  BASICO: 800,
+  BASICO: 500,
   PRO: 999999,
   PREMIUM: 999999,
 };
@@ -58,27 +49,6 @@ const UNIDADES = ["UN", "KG", "G", "L", "ML", "CX", "PCT", "PAR", "M", "CM"];
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const fmt = (v?: number | null) =>
   v != null ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v) : "—";
-
-async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const token =
-    (typeof window !== "undefined"
-      ? (sessionStorage.getItem("jwt_token") ?? document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? null)
-      : null) ?? "";
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}${path}`,
-    {
-      credentials: "include",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      ...opts,
-    },
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => null);
-    throw new Error(err?.mensagem ?? `Erro ${res.status}`);
-  }
-  if (res.status === 204) return {} as T;
-  return res.json();
-}
 
 /* ─── Estilos ────────────────────────────────────────────────────────────── */
 const inp: React.CSSProperties = {
@@ -178,15 +148,13 @@ function ModalProduto({ produto, categorias, onSave, onClose, saving }: {
   );
 
   const set = (k: keyof ProdutoForm, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
-  const precoNum = parseFloat(form.preco.replace(",", ".")) || 0;
-  const custoNum = parseFloat(form.precoCusto.replace(",", ".")) || 0;
+  const precoNum = numeroDecimal(form.preco) || 0;
+  const custoNum = numeroDecimal(form.precoCusto) || 0;
   const lucro = precoNum > 0 && custoNum > 0 ? precoNum - custoNum : null;
   const margem = lucro != null && precoNum > 0 ? (lucro / precoNum) * 100 : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    if (!form.preco || parseFloat(form.preco) <= 0) { toast.error("Preço de venda é obrigatório"); return; }
     await onSave(form);
   };
 
@@ -350,12 +318,13 @@ export default function Produtos({ onNavegar }: { onNavegar?: (s: string) => voi
     setLoading(true);
     try {
       const [prods, perfil] = await Promise.allSettled([
-        fetchAuth<Produto[]>(`/api/v1/produtos?empresaId=${empresaAtiva.id}`),
-        fetchAuth<{ tipoPlano: string }>("/api/v1/configuracoes/perfil"),
+        fetchAuthJson<Produto[]>(`/api/v1/produtos?empresaId=${empresaAtiva.id}`),
+        fetchAuthJson<{ tipoPlano: string }>("/api/v1/configuracoes/perfil"),
       ]);
-      if (prods.status === "fulfilled")  setProdutos(prods.value);
+      if (prods.status === "fulfilled") setProdutos(prods.value);
+      else throw prods.reason;
       if (perfil.status === "fulfilled") setPlanoAtual(perfil.value.tipoPlano);
-    } catch { toast.error("Erro ao carregar produtos"); }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao carregar produtos"); }
     finally { setLoading(false); }
   };
 
@@ -396,14 +365,14 @@ export default function Produtos({ onNavegar }: { onNavegar?: (s: string) => voi
     if (!empresaAtiva) return;
     setSaving(true);
     try {
-      const body = { empresaId: empresaAtiva.id, nome: form.nome, categoria: form.categoria || null, descricao: form.descricao || null, unidade: form.unidade || null, codigoBarras: form.codigoBarras || null, preco: parseFloat(form.preco), precoCusto: form.precoCusto ? parseFloat(form.precoCusto) : null, quantidadeEstoque: parseInt(form.quantidadeEstoque), estoqueMinimo: parseInt(form.estoqueMinimo) || 0, ativo: form.ativo };
+      const body = montarProdutoPayload(form, empresaAtiva.id);
       const editing = modal?.tipo === "produto" && modal.produto;
       if (editing) {
-        const updated = await fetchAuth<Produto>(`/api/v1/produtos/${modal.produto!.id}`, { method: "PUT", body: JSON.stringify(body) });
+        const updated = await fetchAuthJson<Produto>(`/api/v1/produtos/${modal.produto!.id}`, { method: "PUT", body: JSON.stringify(body) });
         setProdutos((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
         toast.success("Produto atualizado!");
       } else {
-        const created = await fetchAuth<Produto>("/api/v1/produtos", { method: "POST", body: JSON.stringify(body) });
+        const created = await fetchAuthJson<Produto>("/api/v1/produtos", { method: "POST", body: JSON.stringify(body) });
         setProdutos((prev) => [created, ...prev]);
         toast.success("Produto cadastrado!");
       }
@@ -433,7 +402,7 @@ const handleEstoque = async (novoEstoque: number) => {
         ativo: p.ativo
       };
 
-      const updated = await fetchAuth<Produto>(`/api/v1/produtos/${p.id}`, {
+      const updated = await fetchAuthJson<Produto>(`/api/v1/produtos/${p.id}`, {
         method: "PUT",
         body: JSON.stringify(body),
       });
@@ -453,9 +422,13 @@ const handleEstoque = async (novoEstoque: number) => {
     const id = modal.produto.id;
     setSaving(true);
     try {
-      await fetchAuth(`/api/v1/produtos/${id}`, { method: "DELETE" });
-      setProdutos((prev) => prev.map((p) => (p.id === id ? { ...p, ativo: false } : p)));
-      toast.success("Produto arquivado com sucesso!");
+      const response = await fetchAuth(`/api/v1/produtos/${id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const erro = await response.json().catch(() => null);
+        throw new Error(erro?.mensagem ?? erro?.erro ?? `Erro ${response.status}`);
+      }
+      await carregar();
+      toast.success("Produto removido do estoque com sucesso!");
       setModal(null);
     } catch (e: any) { toast.error(e.message); setModal(null); }
     finally { setSaving(false); }
@@ -478,7 +451,7 @@ const handleRestaurar = async (p: Produto) => {
         ativo: true // ⬅️ Aqui está a mágica da restauração
       };
 
-      const updated = await fetchAuth<Produto>(`/api/v1/produtos/${p.id}`, { 
+      const updated = await fetchAuthJson<Produto>(`/api/v1/produtos/${p.id}`, {
         method: "PUT", 
         body: JSON.stringify(body) 
       });
@@ -487,6 +460,14 @@ const handleRestaurar = async (p: Produto) => {
       toast.success("Produto restaurado com sucesso!");
     } catch (e: any) { 
       toast.error(e.message); 
+    }
+  };
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortAsc((asc) => !asc);
+    else {
+      setSortKey(key);
+      setSortAsc(true);
     }
   };
 

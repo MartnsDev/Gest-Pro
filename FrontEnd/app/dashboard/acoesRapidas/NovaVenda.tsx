@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useEmpresa } from "../context/Empresacontext"; // Para pegar o nome da empresa pro cupom
+import { fetchAuthJson } from "@/lib/api-v2";
 
 /* ─── Tipos Locais ─── */
 interface Produto { id: number; nome: string; preco: number; quantidadeEstoque: number; categoria?: string }
@@ -26,6 +27,24 @@ interface Venda {
   itens: { idProduto: number; nomeProduto?: string; quantidade: number; precoUnitario: number; subtotal: number; }[];
   nomeCliente?: string;
   cancelada?: boolean;
+}
+
+function normalizarTroco(venda: Venda): Venda {
+  const segundoPagamento = venda.formaPagamento2
+    ? Math.max(0, Number(venda.valorPagamento2) || 0)
+    : 0;
+  const valorEmDinheiro =
+    venda.formaPagamento === "DINHEIRO"
+      ? Math.max(0, venda.valorFinal - segundoPagamento)
+      : venda.formaPagamento2 === "DINHEIRO"
+        ? segundoPagamento
+        : 0;
+
+  if (valorEmDinheiro <= 0 || !venda.valorRecebido) return venda;
+  return {
+    ...venda,
+    troco: Math.max(0, Number(venda.valorRecebido) - valorEmDinheiro),
+  };
 }
 
 type FormaPagamento = "PIX" | "DINHEIRO" | "CARTAO_DEBITO" | "CARTAO_CREDITO";
@@ -161,6 +180,18 @@ function SeletorForma({ value, onChange, label }: { value: FormaPagamento; onCha
   );
 }
 
+function TituloEtapa({ numero, titulo, detalhe }: { numero: number; titulo: string; detalhe?: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 11 }}>
+      <span style={{ width: 23, height: 23, borderRadius: 7, background: "var(--primary-muted)", color: "var(--primary)", display: "grid", placeItems: "center", fontSize: 11, fontWeight: 800, flexShrink: 0 }}>{numero}</span>
+      <div>
+        <p style={{ fontSize: 12, fontWeight: 750, color: "var(--foreground)", margin: 0 }}>{titulo}</p>
+        {detalhe && <p style={{ fontSize: 10, color: "var(--foreground-subtle)", margin: "2px 0 0" }}>{detalhe}</p>}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Tela de Sucesso e Impressão ─── */
 function TelaVendaSucesso({ venda, nomeEmpresa, documentoEmpresa, onFechar }: { venda: Venda; nomeEmpresa: string; documentoEmpresa?: string | null; onFechar: () => void; }) {
   const [passo, setPasso] = useState<"sucesso" | "nota">("sucesso");
@@ -259,15 +290,9 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
   // Busca do Catálogo
   useEffect(() => {
     const fetchProdutos = async () => {
-      const token = sessionStorage.getItem("jwt_token") ?? document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? "";
-      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-      
       try {
-        const res = await fetch(`${base}/api/v1/produtos?empresaId=${empresaId}`, {
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-        });
-        if (res.ok) setProdutos(await res.json());
-      } catch (e) {
+        setProdutos(await fetchAuthJson<Produto[]>(`/api/v1/produtos?empresaId=${empresaId}`));
+      } catch {
         toast.error("Erro ao carregar catálogo.");
       }
     };
@@ -309,15 +334,19 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
   const falta = temDinheiro && recebidoN > 0 && recebidoN < valorEmDinheiro ? valorEmDinheiro - recebidoN : null;
 
   const registrar = async () => {
+    if (salvando) return;
     if (!carrinho.length) { toast.error("Adicione produtos ao pedido."); return; }
+    if (subtotal <= 0) { toast.error("A venda precisa ter um valor maior que zero."); return; }
+    if (descontoN >= subtotal) { toast.error("O desconto deve ser menor que o subtotal da venda."); return; }
+    const itemInvalido = carrinho.find(item => item.quantidade <= 0 || item.quantidade > item.produto.quantidadeEstoque);
+    if (itemInvalido) { toast.error(`Revise a quantidade disponível de ${itemInvalido.produto.nome}.`); return; }
+    if (misto && forma === forma2) { toast.error("Escolha duas formas de pagamento diferentes."); return; }
     if (misto && valPag2N <= 0) { toast.error("Informe o valor da segunda forma de pagamento."); return; }
-    if (misto && valPag2N >= total) { toast.error("O valor da 2ª forma deve ser menor que o total."); return; }
+    if (misto && valPag2N >= total) { toast.error("Informe apenas a parte paga na 2ª forma. Ela precisa ser menor que o total para sobrar valor na 1ª forma."); return; }
+    if (temDinheiro && recebidoN > 0 && recebidoN < valorEmDinheiro) { toast.error(`Faltam ${fmt(valorEmDinheiro - recebidoN)} no pagamento em dinheiro.`); return; }
     
     setSalvando(true);
     try {
-      const token = sessionStorage.getItem("jwt_token") ?? document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? "";
-      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-      
       const body: any = {
         idCaixa: caixaId,
         formaPagamento: forma,
@@ -330,16 +359,12 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
         body.formaPagamento2 = forma2;
         body.valorPagamento2 = valPag2N;
       }
-      if (temDinheiro && recebidoN > 0) body.valorRecebido = recebidoN;
+      if (temDinheiro) body.valorRecebido = recebidoN > 0 ? recebidoN : valorEmDinheiro;
 
-      const res = await fetch(`${base}/api/v1/vendas/registrar`, {
+      const vendaConcluida = normalizarTroco(await fetchAuthJson<Venda>("/api/v1/vendas/registrar", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(body),
-      });
-
-      if (!res.ok) throw new Error("Erro ao finalizar venda.");
-      const vendaConcluida = await res.json();
+      }));
       
       toast.success("Venda finalizada com sucesso!");
       
@@ -379,20 +404,20 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
     <Overlay onClose={onClose}>
       <div className="animate-fade-in" style={{
         background: "var(--surface-elevated)", border: "1px solid var(--border)",
-        borderRadius: 16, width: "100%", maxWidth: 900, maxHeight: "95vh",
-        display: "flex", flexDirection: "column", overflow: "hidden",
+        borderRadius: 18, width: "100%", maxWidth: 1080, maxHeight: "calc(100vh - 24px)",
+        display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden",
         boxShadow: "0 20px 40px rgba(0,0,0,0.4)"
       }}>
         
         {/* Header Modal */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ background: "rgba(16,185,129,0.15)", padding: 8, borderRadius: 10 }}>
               <ShoppingCart size={18} color="var(--primary)" />
             </div>
             <div>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Nova Venda Rápida</h2>
-              <p style={{ fontSize: 12, color: "var(--foreground-muted)", margin: "2px 0 0" }}>Caixa Aberto #{caixaId}</p>
+              <h2 style={{ fontSize: 16, fontWeight: 750, color: "var(--foreground)", margin: 0 }}>Nova venda</h2>
+              <p style={{ fontSize: 11, color: "var(--foreground-muted)", margin: "2px 0 0" }}>Caixa #{caixaId} aberto · produtos e pagamento</p>
             </div>
           </div>
           <button onClick={onClose} style={{ background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, padding: 6, cursor: "pointer", color: "var(--foreground-muted)" }}>
@@ -401,12 +426,13 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
         </div>
 
         {/* Layout em 2 Colunas */}
-        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", flex: 1, minHeight: 0 }}>
+        <div className="venda-layout" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.25fr) minmax(380px, .9fr)", alignItems: "start" }}>
           
           {/* COLUNA ESQUERDA: Busca e Carrinho */}
-          <div style={{ display: "flex", flexDirection: "column", borderRight: "1px solid var(--border)", background: "var(--surface-main)" }}>
+          <div className="venda-catalogo" style={{ display: "flex", flexDirection: "column", borderRight: "1px solid var(--border)", background: "var(--surface-main)" }}>
             
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ padding: "14px 18px 12px", borderBottom: "1px solid var(--border)" }}>
+              <TituloEtapa numero={1} titulo="Escolha os produtos" detalhe={`${filtrados.length} produto(s) disponível(is)`} />
               <div style={{ position: "relative" }}>
                 <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-subtle)" }} />
                 <input 
@@ -420,7 +446,7 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
             </div>
 
             {/* Catálogo de Produtos */}
-            <div style={{ overflowY: "auto", flex: 1, borderBottom: "1px solid var(--border)" }}>
+            <div style={{ overflowY: "auto", maxHeight: 230, borderBottom: "1px solid var(--border)" }}>
               {filtrados.length === 0 ? (
                  <div style={{ padding: 40, textAlign: "center", color: "var(--foreground-subtle)" }}>Nenhum produto encontrado.</div>
               ) : (
@@ -430,7 +456,7 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
                     <div key={p.id} onClick={() => addItem(p)}
                       style={{ 
                         display: "flex", alignItems: "center", justifyContent: "space-between", 
-                        padding: "12px 20px", cursor: "pointer", borderBottom: "1px solid var(--border-subtle)",
+                        padding: "10px 18px", cursor: "pointer", borderBottom: "1px solid var(--border-subtle)",
                         transition: "background 0.1s"
                       }}
                       onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = "var(--surface-overlay)")}
@@ -461,8 +487,11 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
             </div>
 
             {/* Mini-carrinho inferior */}
-            <div style={{ height: "180px", overflowY: "auto", padding: "12px 20px", background: "var(--surface-overlay)" }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 12 }}>Carrinho de Venda</p>
+            <div style={{ maxHeight: 260, minHeight: carrinho.length ? 110 : 82, overflowY: "auto", padding: "12px 18px", background: "var(--surface-overlay)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <p style={{ fontSize: 11, fontWeight: 750, color: "var(--foreground)", margin: 0 }}>Carrinho</p>
+                <span style={{ fontSize: 10, color: "var(--foreground-muted)", background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 99, padding: "3px 8px" }}>{carrinho.reduce((s, item) => s + item.quantidade, 0)} item(ns)</span>
+              </div>
               {carrinho.length === 0 ? (
                 <p style={{ fontSize: 12, color: "var(--foreground-subtle)", fontStyle: "italic" }}>Clique nos produtos acima para adicionar.</p>
               ) : (
@@ -494,42 +523,45 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
           </div>
 
           {/* COLUNA DIREITA: Pagamento e Finalização */}
-          <div style={{ display: "flex", flexDirection: "column", background: "var(--surface-elevated)" }}>
-            <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="venda-pagamento" style={{ display: "flex", flexDirection: "column", background: "var(--surface-elevated)" }}>
+            <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
               
               {/* Formas de Pagamento */}
-              <div>
-                <SeletorForma label={misto ? `1ª Forma (Paga: ${fmt(valPag1)})` : "Forma de Pagamento Principal"} value={forma} onChange={setForma} />
+              <div style={{ padding: 12, border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface-main)" }}>
+                <TituloEtapa numero={2} titulo="Defina o pagamento" detalhe={misto ? `Primeira forma: ${fmt(valPag1)}` : `Total nesta forma: ${fmt(total)}`} />
+                <SeletorForma value={forma} onChange={setForma} />
                 
                 <button
                   onClick={() => { setMisto(v => !v); setValPag2(""); setRecebido(""); }}
                   style={{ ...btnG, width: "100%", marginTop: 8, background: misto ? "rgba(59,130,246,0.05)" : "transparent", borderColor: misto ? "#3b82f6" : "var(--border)", color: misto ? "#3b82f6" : "var(--foreground-muted)" }}
                 >
-                  {misto ? <><X size={13} /> Remover Pagamento Misto</> : <><Plus size={13} /> Pagamento Misto (Dividir em 2 Cartões/Formas)</>}
+                  {misto ? <><X size={13} /> Usar uma forma</> : <><Plus size={13} /> Dividir pagamento</>}
                 </button>
               </div>
 
               {/* Pagamento Secundário (Misto) */}
               {misto && (
-                <div style={{ padding: 14, background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 10 }}>
-                  <SeletorForma label="2ª Forma de Pagamento" value={forma2} onChange={f => { setForma2(f); setRecebido(""); }} />
+                <div style={{ padding: 12, background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 12 }}>
+                  <SeletorForma label="Segunda forma" value={forma2} onChange={f => { setForma2(f); setRecebido(""); }} />
                   <div style={{ marginTop: 10 }}>
-                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Valor Pago na 2ª Forma</label>
-                    <input style={inpStyle} type="number" min="0" step="0.01" value={valPag2} onChange={e => setValPag2(e.target.value)} placeholder="0,00" />
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", display: "block", marginBottom: 4 }}>{forma2 === "DINHEIRO" ? "Quanto do total será pago em dinheiro?" : `Quanto será pago em ${FORMA_LABEL[forma2]}?`}</label>
+                    <input style={inpStyle} type="number" min="0" max={Math.max(total - 0.01, 0)} step="0.01" value={valPag2} onChange={e => setValPag2(e.target.value)} placeholder="Ex.: 10,00" />
+                    <p style={{ fontSize: 10, color: "var(--foreground-subtle)", margin: "6px 0 0" }}>Restante em {FORMA_LABEL[forma]}: <strong>{fmt(valPag1)}</strong></p>
                   </div>
                   {valPag2N >= total && valPag2N > 0 && (
-                    <p style={{ fontSize: 11, color: "var(--destructive)", marginTop: 6, fontWeight: 500 }}>⚠ O valor secundário deve ser menor que o total.</p>
+                    <p style={{ fontSize: 11, color: "var(--destructive)", marginTop: 6, fontWeight: 500 }}>⚠ Informe somente a parte paga nessa forma. Para dinheiro + {FORMA_LABEL[forma]}, use um valor menor que {fmt(total)}.</p>
                   )}
                 </div>
               )}
 
               {/* Dinheiro / Troco Dinâmico */}
               {temDinheiro && (
-                <div>
+                <div style={{ padding: 12, border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface-main)" }}>
                   <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                    Valor recebido em Dinheiro {misto && valorEmDinheiro > 0 && <span style={{ textTransform: "none", fontWeight: 400 }}>(Esperado: {fmt(valorEmDinheiro)})</span>}
+                    Valor da nota entregue {misto && valorEmDinheiro > 0 && <span style={{ textTransform: "none", fontWeight: 400 }}>(parte em dinheiro: {fmt(valorEmDinheiro)})</span>}
                   </label>
-                  <input style={inpStyle} type="number" min="0" step="0.01" value={recebido} onChange={e => setRecebido(e.target.value)} placeholder="Quanto o cliente deu em nota?" />
+                  <input style={inpStyle} type="number" min="0" step="0.01" value={recebido} onChange={e => setRecebido(e.target.value)} placeholder="Opcional — use para calcular o troco" />
+                  <p style={{ fontSize: 10, color: "var(--foreground-subtle)", margin: "6px 0 0" }}>Preencha somente se precisar calcular o troco.</p>
                   
                   {recebidoN > 0 && recebidoN >= valorEmDinheiro && troco !== null && troco > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", background: "rgba(16,185,129,0.1)", padding: "10px 14px", borderRadius: 8, marginTop: 8 }}>
@@ -547,21 +579,24 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
               )}
 
               {/* Desconto & Obs */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Desconto R$</label>
-                  <input style={inpStyle} type="number" min="0" step="0.01" value={desconto} onChange={e => setDesconto(e.target.value)} placeholder="0,00" />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Observação (Opcional)</label>
-                  <input style={inpStyle} value={observacao} onChange={e => setObservacao(e.target.value)} placeholder="Detalhes da venda..." />
+              <div style={{ padding: 12, border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface-main)" }}>
+                <TituloEtapa numero={3} titulo="Ajustes opcionais" />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Desconto R$</label>
+                    <input style={inpStyle} type="number" min="0" step="0.01" value={desconto} onChange={e => setDesconto(e.target.value)} placeholder="0,00" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Observação</label>
+                    <input style={inpStyle} value={observacao} onChange={e => setObservacao(e.target.value)} placeholder="Opcional..." />
+                  </div>
                 </div>
               </div>
 
             </div>
 
             {/* Rodapé de Resumo e Botão */}
-            <div style={{ padding: "20px 24px", borderTop: "1px solid var(--border)", background: "var(--surface-overlay)" }}>
+            <div style={{ padding: "12px 16px 14px", borderTop: "1px solid var(--border)", background: "var(--surface-overlay)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--foreground-muted)", marginBottom: 6 }}>
                 <span>Subtotal dos Itens</span><span>{fmt(subtotal)}</span>
               </div>
@@ -589,6 +624,13 @@ export default function NovaVenda({ caixaId, empresaId, onClose, onConcluido }: 
             </div>
           </div>
         </div>
+        <style jsx>{`
+          @media (max-width: 760px) {
+            .venda-layout { grid-template-columns: 1fr !important; overflow-y: auto; }
+            .venda-catalogo { min-height: 520px !important; border-right: 0 !important; border-bottom: 1px solid var(--border); }
+            .venda-pagamento { overflow: visible !important; }
+          }
+        `}</style>
       </div>
     </Overlay>
   );

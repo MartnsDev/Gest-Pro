@@ -6,6 +6,8 @@ import {
   ShoppingCart, DollarSign 
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAuthJson } from "@/lib/api-v2";
+import { montarProdutoPayload, numeroDecimal } from "@/lib/produtos";
 
 /* ─── Modal Base Interno ─── */
 function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
@@ -83,15 +85,9 @@ export default function NovoProduto({ empresaId, onClose, onConcluido }: Props) 
   useEffect(() => {
     const carregarCategorias = async () => {
       try {
-        const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-        const res = await fetch(`${base}/api/v1/produtos?empresaId=${empresaId}`, {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const prods = await res.json();
-          const cats = [...new Set(prods.map((p: any) => p.categoria).filter(Boolean))] as string[];
-          setCategorias(cats);
-        }
+        const prods = await fetchAuthJson<Array<{ categoria?: string }>>(`/api/v1/produtos?empresaId=${empresaId}`);
+        const cats = [...new Set(prods.map((p) => p.categoria).filter(Boolean))] as string[];
+        setCategorias(cats);
       } catch (e) {
         console.error("Erro ao carregar categorias", e);
       }
@@ -102,47 +98,22 @@ export default function NovoProduto({ empresaId, onClose, onConcluido }: Props) 
   const set = (k: string, v: string | boolean) => setForm(f => ({ ...f, [k]: v }));
   
   // Cálculos em tempo real
-  const precoNum = parseFloat(form.preco.replace(",", ".")) || 0;
-  const custoNum = parseFloat(form.precoCusto.replace(",", ".")) || 0;
+  const precoNum = numeroDecimal(form.preco) || 0;
+  const custoNum = numeroDecimal(form.precoCusto) || 0;
   const lucro = precoNum > 0 && custoNum > 0 ? precoNum - custoNum : null;
   const margem = lucro != null && precoNum > 0 ? (lucro / precoNum) * 100 : null;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    if (!form.preco || precoNum <= 0) { toast.error("Preço de venda é obrigatório"); return; }
-    
     setSaving(true);
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-      
-      const res = await fetch(`${base}/api/v1/produtos`, {
+      const payload = montarProdutoPayload(form, empresaId);
+      await fetchAuthJson("/api/v1/produtos", {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          empresaId,
-          nome: form.nome,
-          categoria: form.categoria || null,
-          descricao: form.descricao || null,
-          unidade: form.unidade || null,
-          codigoBarras: form.codigoBarras || null,
-          preco: precoNum,
-          precoCusto: custoNum > 0 ? custoNum : null,
-          quantidadeEstoque: parseInt(form.quantidadeEstoque) || 0,
-          estoqueMinimo: parseInt(form.estoqueMinimo) || 0,
-          ativo: form.ativo,
-        })
+        body: JSON.stringify(payload),
       });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.mensagem || "Falha ao cadastrar produto");
-      }
       
-      toast.success(`"${form.nome}" cadastrado!`); 
+      toast.success(`"${payload.nome}" cadastrado!`);
       onConcluido(); 
       onClose();
     } catch (error: any) { 

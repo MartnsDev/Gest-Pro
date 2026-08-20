@@ -97,7 +97,7 @@ export default function FormularioProduto({ onClose }: { onClose: () => void }) 
       
       {/* MODAL DE SUCESSO (Aparece por cima de tudo) */}
       {showSuccessModal && (
-        <div style={{ position: "absolute", inset: 0, background: "#111", zInternal: 10000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRadius: "14px", textAlign: "center", animation: "fadeIn 0.3s ease" }}>
+        <div style={{ position: "absolute", inset: 0, background: "#111", zIndex: 10000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRadius: "14px", textAlign: "center", animation: "fadeIn 0.3s ease" }}>
           <div style={{ background: "rgba(16, 185, 129, 0.1)", padding: "20px", borderRadius: "50%", marginBottom: "16px" }}>
             <CheckCircle2 size={64} color="#10b981" />
           </div>

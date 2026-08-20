@@ -23,6 +23,7 @@ import {
   Ban,
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAuthJson as apiFetchAuthJson } from "@/lib/api-v2";
 
 /* ─── Tipos ──────────────────────────────────────────────────────────────── */
 interface Produto {
@@ -60,6 +61,24 @@ interface Venda {
   nomeCliente?: string;
   cancelada?: boolean;
   motivoCancelamento?: string;
+}
+
+function normalizarTroco(venda: Venda): Venda {
+  const segundoPagamento = venda.formaPagamento2
+    ? Math.max(0, Number(venda.valorPagamento2) || 0)
+    : 0;
+  const valorEmDinheiro =
+    venda.formaPagamento === "DINHEIRO"
+      ? Math.max(0, venda.valorFinal - segundoPagamento)
+      : venda.formaPagamento2 === "DINHEIRO"
+        ? segundoPagamento
+        : 0;
+
+  if (valorEmDinheiro <= 0 || !venda.valorRecebido) return venda;
+  return {
+    ...venda,
+    troco: Math.max(0, Number(venda.valorRecebido) - valorEmDinheiro),
+  };
 }
 interface CaixaInfo {
   id: number;
@@ -160,28 +179,7 @@ const fmtData = (s?: any) => {
 };
 
 async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
-  const token =
-    (typeof window !== "undefined"
-      ? (sessionStorage.getItem("jwt_token") ??
-        document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ??
-        null)
-      : null) ?? "";
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}${path}`,
-    {
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      ...opts,
-    },
-  );
-  if (!res.ok) {
-    const e = await res.json().catch(() => null);
-    throw new Error(e?.mensagem ?? `Erro ${res.status}`);
-  }
-  return res.json();
+  return apiFetchAuthJson<T>(path, opts);
 }
 
 const inp: React.CSSProperties = {
@@ -781,16 +779,40 @@ function ModalNovaVenda({
       : null;
 
   const registrar = async () => {
+    if (salvando) return;
     if (!carrinho.length) {
       toast.error("Adicione pelo menos um produto.");
+      return;
+    }
+    if (subtotal <= 0) {
+      toast.error("A venda precisa ter um valor maior que zero.");
+      return;
+    }
+    if (descontoN >= subtotal) {
+      toast.error("O desconto deve ser menor que o subtotal da venda.");
+      return;
+    }
+    const itemInvalido = carrinho.find(
+      (item) => item.quantidade <= 0 || item.quantidade > item.produto.quantidadeEstoque,
+    );
+    if (itemInvalido) {
+      toast.error(`Revise a quantidade disponível de ${itemInvalido.produto.nome}.`);
+      return;
+    }
+    if (misto && forma === forma2) {
+      toast.error("Escolha duas formas de pagamento diferentes.");
       return;
     }
     if (misto && valPag2N <= 0) {
       toast.error("Informe o valor da segunda forma de pagamento.");
       return;
     }
+    if (temDinheiro && recebidoN > 0 && recebidoN < valorEmDinheiro) {
+      toast.error(`Faltam ${fmt(valorEmDinheiro - recebidoN)} no pagamento em dinheiro.`);
+      return;
+    }
     if (misto && valPag2N >= total) {
-      toast.error("O valor do segundo pagamento deve ser menor que o total.");
+      toast.error("Informe apenas a parte paga na 2ª forma. Ela precisa ser menor que o total para sobrar valor na 1ª forma.");
       return;
     }
     setSalvando(true);
@@ -810,12 +832,14 @@ function ModalNovaVenda({
         body.valorPagamento2 = valPag2N;
       }
       // Envia valorRecebido sempre que dinheiro estiver envolvido e o cliente tiver informado
-      if (temDinheiro && recebidoN > 0) body.valorRecebido = recebidoN;
+      if (temDinheiro) {
+        body.valorRecebido = recebidoN > 0 ? recebidoN : valorEmDinheiro;
+      }
 
-      const venda = await fetchAuth<Venda>("/api/v1/vendas/registrar", {
+      const venda = normalizarTroco(await fetchAuth<Venda>("/api/v1/vendas/registrar", {
         method: "POST",
         body: JSON.stringify(body),
-      });
+      }));
       onClose();
       onSucesso(venda);
     } catch (e: any) {
@@ -1387,18 +1411,24 @@ function ModalNovaVenda({
                         marginBottom: 4,
                       }}
                     >
-                      Valor na 2ª forma (R$)
+                      {forma2 === "DINHEIRO"
+                        ? "Quanto do total será pago em dinheiro?"
+                        : `Quanto será pago em ${FORMA_LABEL[forma2]}?`}
                     </label>
                     <input
                       style={inp}
                       type="number"
                       min="0"
+                      max={Math.max(total - 0.01, 0)}
                       step="0.01"
                       value={valPag2}
                       onChange={(e) => setValPag2(e.target.value)}
                       placeholder="Ex: 5,00"
                       autoFocus
                     />
+                    <p style={{ fontSize: 10, color: "var(--foreground-subtle)", margin: "6px 0 0", lineHeight: 1.5 }}>
+                      O restante, {fmt(valPag1)}, será cobrado em {FORMA_LABEL[forma]}. Este campo define a divisão, não o valor da nota entregue.
+                    </p>
                   </div>
                   {/* Split visual */}
                   {valPag2N > 0 && valPag2N < total && (
@@ -1454,8 +1484,7 @@ function ModalNovaVenda({
                         margin: 0,
                       }}
                     >
-                      ⚠ O valor da 2ª forma não pode ser maior ou igual ao
-                      total.
+                      ⚠ Informe somente a parte paga nessa forma. Para dinheiro + {FORMA_LABEL[forma]}, use um valor menor que {fmt(total)}.
                     </p>
                   )}
                 </div>
@@ -1475,7 +1504,7 @@ function ModalNovaVenda({
                       letterSpacing: ".06em",
                     }}
                   >
-                    Quanto o cliente entregou em dinheiro?
+                    Valor da nota entregue
                     {misto && valorEmDinheiro > 0 && (
                       <span
                         style={{
@@ -1484,7 +1513,7 @@ function ModalNovaVenda({
                           textTransform: "none",
                         }}
                       >
-                        (esperado: {fmt(valorEmDinheiro)})
+                        (parte em dinheiro: {fmt(valorEmDinheiro)})
                       </span>
                     )}
                   </label>
@@ -1495,8 +1524,11 @@ function ModalNovaVenda({
                     step="0.01"
                     value={recebido}
                     onChange={(e) => setRecebido(e.target.value)}
-                    placeholder={fmt(valorEmDinheiro)}
+                    placeholder="Opcional — use para calcular o troco"
                   />
+                  <p style={{ fontSize: 10, color: "var(--foreground-subtle)", margin: 0, lineHeight: 1.5 }}>
+                    Exemplo: informe R$ 10,00 na divisão e R$ 50,00 aqui para aplicar R$ 10,00 em dinheiro, devolver R$ 40,00 e cobrar o restante na outra forma.
+                  </p>
 
                   {/* Resultado */}
                   {recebidoN > 0 &&
@@ -2155,12 +2187,14 @@ function CaixaCard({
   nomeEmpresa,
   documentoEmpresa,
   onNovaVenda,
+  refreshKey,
 }: {
   caixa: CaixaInfo;
   empresaId: number;
   nomeEmpresa: string;
   documentoEmpresa?: string | null;
   onNovaVenda?: () => void;
+  refreshKey: number;
 }) {
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [loading, setLoading] = useState(false);
@@ -2171,10 +2205,10 @@ function CaixaCard({
   useEffect(() => {
     setLoading(true);
     fetchAuth<Venda[]>(`/api/v1/vendas/caixa/${caixa.id}`)
-      .then(setVendas)
+      .then((resultado) => setVendas(resultado.map(normalizarTroco)))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [caixa.id]);
+  }, [caixa.id, refreshKey]);
 
   const resumoPagamento = useMemo(() => {
     const map: Record<string, number> = {};
@@ -2182,10 +2216,13 @@ function CaixaCard({
       .filter((v) => !v.cancelada)
       .forEach((v) => {
         const k = FORMA_LABEL[v.formaPagamento] ?? v.formaPagamento;
-        map[k] = (map[k] ?? 0) + v.valorFinal;
-        if (v.formaPagamento2 && v.valorPagamento2) {
+        const segundoPagamento = v.formaPagamento2
+          ? Math.max(0, Number(v.valorPagamento2) || 0)
+          : 0;
+        map[k] = (map[k] ?? 0) + Math.max(0, v.valorFinal - segundoPagamento);
+        if (v.formaPagamento2 && segundoPagamento > 0) {
           const k2 = FORMA_LABEL[v.formaPagamento2] ?? v.formaPagamento2;
-          map[k2] = (map[k2] ?? 0) + v.valorPagamento2;
+          map[k2] = (map[k2] ?? 0) + segundoPagamento;
         }
       });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
@@ -2679,6 +2716,7 @@ export default function Vendas() {
   const [loading, setLoading] = useState(false);
   const [modalNova, setModalNova] = useState(false);
   const [vendaSucesso, setVendaSucesso] = useState<Venda | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const carregar = async () => {
     if (!empresaAtiva) return;
@@ -2812,6 +2850,7 @@ export default function Vendas() {
               empresaId={empresaAtiva.id}
               nomeEmpresa={empresaAtiva.nomeFantasia}
               documentoEmpresa={empresaAtiva.cnpj || empresaAtiva.cpf}
+              refreshKey={refreshKey}
               onNovaVenda={
                 caixaAtivo?.id === c.id ? () => setModalNova(true) : undefined
               }
@@ -2827,6 +2866,7 @@ export default function Vendas() {
           onClose={() => setModalNova(false)}
           onSucesso={(venda) => {
             carregar();
+            setRefreshKey((value) => value + 1);
             setVendaSucesso(venda);
           }}
         />
