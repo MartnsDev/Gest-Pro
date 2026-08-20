@@ -309,7 +309,7 @@ Desenvolvido por **Matheus Martins · MartnsDev**
 
 ## Direitos
 
-Copyright © 2025 Matheus Martins.
+Copyright © 2026 Matheus Martins.
 
 Todos os direitos reservados.
 
@@ -321,7 +321,7 @@ Consulte o arquivo `LICENSE` para informações aplicáveis ao uso do código.
 
 <div align="center">
 
-<img src="Img/gestpro-img.jpg" alt="Gevyro" width="55" />
+<img src="Img/gevyro-fav-br.png" alt="Gevyro" width="55" />
 
 ### GEVYRO
 
