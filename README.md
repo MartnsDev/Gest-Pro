@@ -167,25 +167,9 @@ Uma conta pode trabalhar com diferentes empresas conforme as regras de acesso di
 
 A arquitetura do produto acompanha o fluxo da operação empresarial.
 
-```text
-Empresa
 
-    Produtos
-        ↓
-      Venda
-        ↓
-      Caixa
-
-        ↓
-
-Dados da operação
-
-        ↓
-
-Dashboard
-Relatórios
-Indicadores
-```
+<img src="Img/gevyro-explicação_1.png" alt="Explicação gevyro" />
+<br />
 
 Cada módulo possui sua responsabilidade, mas os dados trabalham em conjunto.
 
@@ -203,21 +187,9 @@ A API utiliza Java e Spring Boot, com Spring Security para autenticação e auto
 
 O MySQL mantém os dados relacionais da aplicação.
 
-```text
-Next.js + React + TypeScript
+<img src="Img/gevyro-explicação_2.png" alt="Explicação gevyro" />
+<br />
 
-            ↓
-
-        REST API
-
-            ↓
-
-Java + Spring Boot + Spring Security
-
-            ↓
-
-           MySQL
-```
 
 A aplicação também utiliza JWT, OAuth2, Hibernate, Jakarta Validation, Maven, Tailwind CSS e ferramentas complementares do ecossistema utilizado pelo projeto.
 
