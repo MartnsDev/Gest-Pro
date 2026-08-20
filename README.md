@@ -95,12 +95,12 @@ Ela movimenta o estoque, pertence a um caixa, pode estar relacionada a um client
 </tr>
 <tr>
 <td align="center" width="50%">
-<img src="Img/vendas-gp-dark.png" alt="Área de vendas da Gevyro" width="100%" />
+<img src="Img/gevyro5.png" alt="Área de vendas da Gevyro" width="100%" />
 <br />
 <sub><b>Vendas e frente de caixa</b></sub>
 </td>
 <td align="center" width="50%">
-<img src="Img/relatorios-gp-dark.png" alt="Relatórios da Gevyro" width="100%" />
+<img src="Img/gevyro-4.png" alt="Relatórios da Gevyro" width="100%" />
 <br />
 <sub><b>Indicadores e análise da operação</b></sub>
 </td>
