@@ -40,26 +40,22 @@ public class EmpresaService {
                 .orElseThrow(() -> new ApiException("Usuário não encontrado", HttpStatus.NOT_FOUND, "/empresas"));
 
         long totalEmpresasNoSistema = empresaRepository.countByDonoId(dono.getId());
-        int limiteEmpresas = dono.getTipoPlano().getLimiteEmpresas();
+        verificarPlano.validarLimiteEmpresas(dono, totalEmpresasNoSistema);
 
-        if (totalEmpresasNoSistema >= limiteEmpresas) {
-            throw new ApiException("Limite atingido. Seu plano permite ter no máximo " + limiteEmpresas + " empresa(s).", HttpStatus.FORBIDDEN, "/empresas");
-        }
-
-        Map<String, Object> dadosReceita = null; // Variável para guardar o resultado
+        Map<String, Object> dadosReceita = null;
 
         if (req.getCnpj() != null && !req.getCnpj().isBlank()) {
-            String documentoLimpo = req.getCnpj().replaceAll("\\D", "");
+            String documentoLimpo = normalizarDocumento(req.getCnpj());
 
             if (empresaRepository.existsByCnpj(documentoLimpo)) {
-                throw new ApiException("Este CNPJ já está vinculado a outra empresa no sistema.", HttpStatus.BAD_REQUEST, "/empresas");
+                throw new ApiException("Este CPF/CNPJ já está vinculado a outra empresa no sistema.", HttpStatus.CONFLICT, "/empresas");
             }
 
             dadosReceita = validarDocumentoFiscal(req.getCnpj());
         }
 
         Empresa empresa = new Empresa();
-        empresa.setNomeFantasia(req.getNomeFantasia());
+        empresa.setNomeFantasia(req.getNomeFantasia().trim());
         empresa.setCnpj(normalizarDocumento(req.getCnpj()));
         empresa.setDono(dono);
         empresa.setAtivo(true);
@@ -84,20 +80,23 @@ public class EmpresaService {
 
         verificarPlano.validarAcesso(empresa.getDono());
 
-        // 1. Validação de Documento apenas se o usuário trocou o CNPJ/CPF
-        if (req.getCnpj() != null && !req.getCnpj().equals(empresa.getCnpj()) && !req.getCnpj().isBlank()) {
-            String documentoLimpo = normalizarDocumento(req.getCnpj());
+        String documentoNovo = normalizarDocumento(req.getCnpj());
+        String documentoAtual = normalizarDocumento(empresa.getCnpj());
+        boolean documentoAlterado = !java.util.Objects.equals(documentoNovo, documentoAtual);
+        Map<String, Object> dadosReceita = null;
 
-            // A. Checa duplicidade SOMENTE se for CNPJ (14 dígitos)
-            if (empresaRepository.existsByCnpjAndIdNot(documentoLimpo, id)) {
+        // Valida o documento somente quando ele realmente foi alterado.
+        if (documentoAlterado && documentoNovo != null) {
+
+            // Impede que o mesmo documento seja vinculado a outra empresa.
+            if (empresaRepository.existsByCnpjAndIdNot(documentoNovo, id)) {
                 throw new ApiException(
-                        "Este CNPJ já está sendo utilizado por outra empresa.",
-                        HttpStatus.BAD_REQUEST, "/empresas"
+                        "Este CPF/CNPJ já está sendo utilizado por outra empresa.",
+                        HttpStatus.CONFLICT, "/empresas"
                 );
             }
 
-            // B. Valida na Receita
-            validarDocumentoFiscal(req.getCnpj());
+            dadosReceita = validarDocumentoFiscal(documentoNovo);
         }
 
         // 2. PROTEÇÃO DE RESTAURAÇÃO (Evita burlar o limite do plano)
@@ -115,8 +114,12 @@ public class EmpresaService {
         }
 
         // 3. Atualiza os dados
-        empresa.setNomeFantasia(req.getNomeFantasia());
-        empresa.setCnpj(normalizarDocumento(req.getCnpj()));
+        empresa.setNomeFantasia(req.getNomeFantasia().trim());
+        empresa.setCnpj(documentoNovo);
+        if (documentoAlterado) {
+            limparDadosReceita(empresa);
+            preencherDadosReceita(empresa, dadosReceita);
+        }
 
         if (req.getAtivo() != null) {
             empresa.setAtivo(req.getAtivo());
@@ -148,7 +151,8 @@ public class EmpresaService {
             throw new ApiException("Você não tem permissão para excluir esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
         }
 
-        if (!passwordEncoder.matches(senha, empresa.getDono().getSenha())) {
+        if (empresa.getDono().getSenha() == null
+                || !passwordEncoder.matches(senha, empresa.getDono().getSenha())) {
             throw new ApiException("Senha incorreta.", HttpStatus.UNAUTHORIZED, "/empresas");
         }
 
@@ -186,7 +190,8 @@ public class EmpresaService {
             throw new ApiException("Você não tem permissão para excluir esta empresa.", HttpStatus.FORBIDDEN, "/empresas");
         }
 
-        if (!passwordEncoder.matches(senha, empresa.getDono().getSenha())) {
+        if (empresa.getDono().getSenha() == null
+                || !passwordEncoder.matches(senha, empresa.getDono().getSenha())) {
             throw new ApiException("Senha incorreta.", HttpStatus.UNAUTHORIZED, "/empresas");
         }
 
@@ -202,25 +207,26 @@ public class EmpresaService {
 
         String documento = documentoBruto.replaceAll("\\D", "");
 
-        try {
-            if (documento.length() == 11) {
+        if (documento.length() == 11) {
+            try {
                 verificarCPF.consultarCpf(documento);
-                return null; // CPF geralmente não retorna endereço completo público
-            } else if (documento.length() == 14) {
-                // RETORNA OS DADOS DA RECEITA PARA O SERVIÇO!
-                return verificarCNPJ.consultarCnpj(documento);
-            } else {
-                throw new ApiException("Quantidade de caracteres inválida.", HttpStatus.BAD_REQUEST, "/empresas");
+            } catch (RuntimeException cpfInvalido) {
+                throw new ApiException("CPF inválido.", HttpStatus.BAD_REQUEST, "/empresas");
             }
-        } catch (Exception e) {
-            if (e.getMessage() != null && (e.getMessage().contains("503") || e.getMessage().toLowerCase().contains("offline"))) {
-                throw new ApiException(
-                        "O serviço de consulta de CPF/CNPJ está temporariamente fora do ar. Deixe o campo vazio por enquanto.",
-                        HttpStatus.SERVICE_UNAVAILABLE, "/empresas"
-                );
-            }
-            throw e;
+            return null;
         }
+        if (documento.length() == 14) {
+            if (!verificarCNPJ.isCnpjValido(documento)) {
+                throw new ApiException("CNPJ inválido.", HttpStatus.BAD_REQUEST, "/empresas");
+            }
+            try {
+                return verificarCNPJ.consultarCnpj(documento);
+            } catch (Exception consultaIndisponivel) {
+                log.warn("Consulta cadastral de CNPJ indisponível; cadastro seguirá sem enriquecimento.");
+                return null;
+            }
+        }
+        throw new ApiException("Informe um CPF com 11 dígitos ou CNPJ com 14 dígitos.", HttpStatus.BAD_REQUEST, "/empresas");
     }
 
     private String normalizarDocumento(String documento) {
@@ -255,11 +261,32 @@ public class EmpresaService {
         }
     }
 
+    private void limparDadosReceita(Empresa empresa) {
+        empresa.setRazaoSocial(null);
+        empresa.setCep(null);
+        empresa.setLogradouro(null);
+        empresa.setNumero(null);
+        empresa.setBairro(null);
+        empresa.setCidade(null);
+        empresa.setUf(null);
+        empresa.setTelefone(null);
+    }
+
     private EmpresaResponse mapToResponse(Empresa empresa) {
         EmpresaResponse res = new EmpresaResponse();
         res.setId(empresa.getId());
         res.setNomeFantasia(empresa.getNomeFantasia());
-        res.setCnpj(empresa.getCnpj());
+        String documento = normalizarDocumento(empresa.getCnpj());
+        res.setCnpj(documento != null && documento.length() == 14 ? documento : null);
+        res.setCpf(documento != null && documento.length() == 11 ? documento : null);
+        res.setRazaoSocial(empresa.getRazaoSocial());
+        res.setCep(empresa.getCep());
+        res.setLogradouro(empresa.getLogradouro());
+        res.setNumero(empresa.getNumero());
+        res.setBairro(empresa.getBairro());
+        res.setCidade(empresa.getCidade());
+        res.setUf(empresa.getUf());
+        res.setTelefone(empresa.getTelefone());
         res.setPlanoNome(empresa.getDono().getTipoPlano().name());
         res.setLimiteCaixas(empresa.getDono().getTipoPlano().getLimiteCaixasPorEmpresa());
         res.setAtivo(empresa.getAtivo()); // Fundamental para as abas do frontend

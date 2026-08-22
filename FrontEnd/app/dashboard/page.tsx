@@ -685,7 +685,8 @@ function DashboardLoader() {
       let caixaResolvido: CaixaInfo | null = null;
 
       try {
-        const empresas = await fetchAuth<EmpresaAtiva[]>("/api/v1/empresas");
+        const empresas = (await fetchAuth<EmpresaAtiva[]>("/api/v1/empresas"))
+          .filter((empresa) => empresa.ativo !== false);
         if (desmontado) return;
 
         if (empresas.length > 0) {

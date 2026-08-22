@@ -206,7 +206,7 @@ public class VerificarCNPJ {
     // Consulta principal com fallback encadeado
     public Map<String, Object> consultarCnpj(String cnpj) {
         String limpo = cnpj.replaceAll("\\D", "");
-        if (limpo.length() != 14) {
+        if (!isCnpjValido(limpo)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CNPJ inválido.");
         }
 
@@ -249,6 +249,27 @@ public class VerificarCNPJ {
         // Todos os provedores falharam
         throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                 "Todos os serviços de consulta de CNPJ estão indisponíveis no momento. Tente novamente mais tarde. Detalhes: " + erros);
+    }
+
+    public boolean isCnpjValido(String cnpj) {
+        String limpo = cnpj == null ? "" : cnpj.replaceAll("\\D", "");
+        if (limpo.length() != 14 || limpo.chars().allMatch(c -> c == limpo.charAt(0))) {
+            return false;
+        }
+        return calcularDigito(limpo, 12) == Character.getNumericValue(limpo.charAt(12))
+                && calcularDigito(limpo, 13) == Character.getNumericValue(limpo.charAt(13));
+    }
+
+    private int calcularDigito(String cnpj, int tamanho) {
+        int[] pesos = tamanho == 12
+                ? new int[]{5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
+                : new int[]{6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2};
+        int soma = 0;
+        for (int i = 0; i < tamanho; i++) {
+            soma += Character.getNumericValue(cnpj.charAt(i)) * pesos[i];
+        }
+        int resto = soma % 11;
+        return resto < 2 ? 0 : 11 - resto;
     }
 
     // Utilitário para cast seguro de Map

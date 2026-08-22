@@ -28,7 +28,8 @@ import { fetchAuthJson, getUsuario } from "@/lib/api-v2";
 interface Empresa {
   id: number;
   nomeFantasia: string;
-  cnpj: string;
+  cnpj?: string | null;
+  cpf?: string | null;
   planoNome: string;
   limiteCaixas: number;
   ativo: boolean; 
@@ -62,11 +63,30 @@ const inp: React.CSSProperties = {
 
 const getNotaFiscalApiBase = () => "/api/nota-fiscal";
 
-const formatarCnpj = (valor: string) => valor.replace(/\D/g, "").slice(0, 14)
-  .replace(/^(\d{2})(\d)/, "$1.$2")
-  .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-  .replace(/\.(\d{3})(\d)/, ".$1/$2")
-  .replace(/(\/\d{4})(\d)/, "$1-$2");
+const digitosDocumento = (valor?: string | null) => (valor ?? "").replace(/\D/g, "").slice(0, 14);
+
+const formatarDocumento = (valor: string) => {
+  const digitos = digitosDocumento(valor);
+  if (digitos.length <= 11) {
+    return digitos
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1-$2");
+  }
+  return digitos
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\/\d{4})(\d)/, "$1-$2");
+};
+
+const documentoEmpresa = (empresa: Empresa) => empresa.cnpj || empresa.cpf || "";
+
+const validarDocumentoOpcional = (valor: string): string | null => {
+  const digitos = digitosDocumento(valor);
+  if (digitos.length === 0 || digitos.length === 11 || digitos.length === 14) return null;
+  return "Informe um CPF com 11 dígitos, um CNPJ com 14 dígitos ou deixe o campo vazio.";
+};
 
 function ModalExclusao({
   empresa,
@@ -285,7 +305,12 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
   const carregar = async () => {
     try {
       const data = await fetchAuth<Empresa[]>("/api/v1/empresas");
-      const empresasComStatus = data.map(emp => ({ ...emp, ativo: emp.ativo !== false }));
+      const empresasComStatus = data.map(emp => ({
+        ...emp,
+        cnpj: emp.cnpj ?? null,
+        cpf: emp.cpf ?? null,
+        ativo: emp.ativo !== false,
+      }));
       setEmpresas(empresasComStatus);
     } catch (e: any) {
       setErro(e.message);
@@ -317,7 +342,7 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
 
   const iniciarEdicao = (emp: Empresa) => {
     setEditandoId(emp.id);
-    setEditForm({ nomeFantasia: emp.nomeFantasia, cnpj: emp.cnpj ?? "" });
+    setEditForm({ nomeFantasia: emp.nomeFantasia, cnpj: formatarDocumento(documentoEmpresa(emp)) });
     setErro("");
   };
 
@@ -334,8 +359,8 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
       const response = await fetchAuth<any>(`${getNotaFiscalApiBase()}/cnpj/${limpo}`);
       const data = response?.dados ?? response?.data ?? response;
       const nome = data.fantasia || data.nomeFantasia || data.nome || data.razao_social || data.razaoSocial || "";
-      if (tipo === "novo") setForm(current => ({ ...current, cnpj: formatarCnpj(limpo), nomeFantasia: nome || current.nomeFantasia }));
-      else setEditForm(current => ({ ...current, cnpj: formatarCnpj(limpo), nomeFantasia: nome || current.nomeFantasia }));
+      if (tipo === "novo") setForm(current => ({ ...current, cnpj: formatarDocumento(limpo), nomeFantasia: nome || current.nomeFantasia }));
+      else setEditForm(current => ({ ...current, cnpj: formatarDocumento(limpo), nomeFantasia: nome || current.nomeFantasia }));
       toast.success("Dados do CNPJ encontrados.");
     } catch (e: any) {
       setErro(e.message || "Não foi possível consultar esse CNPJ.");
@@ -349,13 +374,18 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
       setErro("Nome fantasia é obrigatório.");
       return;
     }
+    const erroDocumento = validarDocumentoOpcional(editForm.cnpj);
+    if (erroDocumento) {
+      setErro(erroDocumento);
+      return;
+    }
     setSalvandoId(id);
     setErro("");
     try {
       const targetEmpresa = empresas.find(e => e.id === id);
       const bodyClean = {
           nomeFantasia: editForm.nomeFantasia,
-          cnpj: editForm.cnpj.trim() || null,
+          cnpj: digitosDocumento(editForm.cnpj) || null,
           ativo: targetEmpresa?.ativo 
       };
 
@@ -380,12 +410,17 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
       setErro("Nome fantasia é obrigatório.");
       return;
     }
+    const erroDocumento = validarDocumentoOpcional(form.cnpj);
+    if (erroDocumento) {
+      setErro(erroDocumento);
+      return;
+    }
     setSalvando(true);
     setErro("");
     try {
       await fetchAuth("/api/v1/empresas", {
         method: "POST",
-        body: JSON.stringify({ ...form, cnpj: form.cnpj.trim() || null }),
+        body: JSON.stringify({ ...form, nomeFantasia: form.nomeFantasia.trim(), cnpj: digitosDocumento(form.cnpj) || null }),
       });
       ok("Empresa cadastrada com sucesso!");
       setForm({ nomeFantasia: "", cnpj: "" });
@@ -409,7 +444,7 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
 
   const handleRestaurar = async (emp: Empresa) => {
       try {
-          const bodyClean = { nomeFantasia: emp.nomeFantasia, cnpj: emp.cnpj, ativo: true };
+          const bodyClean = { nomeFantasia: emp.nomeFantasia, cnpj: documentoEmpresa(emp) || null, ativo: true };
           await fetchAuth(`/api/v1/empresas/${emp.id}`, { method: "PUT", body: JSON.stringify(bodyClean) });
           setEmpresas(prev => prev.map(e => e.id === emp.id ? { ...e, ativo: true } : e));
           toast.success("Empresa restaurada com sucesso!");
@@ -522,12 +557,12 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
               <input value={form.nomeFantasia} onChange={(e) => setForm((f) => ({ ...f, nomeFantasia: e.target.value }))} placeholder="Ex: Filial Centro, Loja Shopping..." style={{...inp, padding: "12px 16px", fontSize: 15}} autoFocus />
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: 8 }}>CNPJ <span style={{ fontWeight: 400, opacity: 0.7 }}>(opcional)</span></label>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: 8 }}>CPF ou CNPJ <span style={{ fontWeight: 400, opacity: 0.7 }}>(opcional)</span></label>
               <div style={{ display: "flex", gap: 8 }}>
-                <input value={form.cnpj} onChange={(e) => setForm((f) => ({ ...f, cnpj: formatarCnpj(e.target.value) }))} placeholder="00.000.000/0001-00" maxLength={18} style={{...inp, padding: "12px 16px", fontSize: 15}} />
-                <button type="button" onClick={() => consultarCnpj("novo")} disabled={buscandoCnpj === "novo"} title="Consultar dados do CNPJ" style={{ minWidth: 46, display: "grid", placeItems: "center", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--primary)", cursor: "pointer" }}>{buscandoCnpj === "novo" ? <Loader2 size={17} className="animate-spin" /> : <Search size={17} />}</button>
+                <input inputMode="numeric" value={form.cnpj} onChange={(e) => { setForm((f) => ({ ...f, cnpj: formatarDocumento(e.target.value) })); setErro(""); }} placeholder="CPF ou CNPJ" maxLength={18} style={{...inp, padding: "12px 16px", fontSize: 15}} />
+                <button type="button" onClick={() => consultarCnpj("novo")} disabled={buscandoCnpj === "novo" || digitosDocumento(form.cnpj).length !== 14} title={digitosDocumento(form.cnpj).length === 14 ? "Consultar dados do CNPJ" : "A consulta automática está disponível para CNPJ"} style={{ minWidth: 46, display: "grid", placeItems: "center", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--primary)", cursor: digitosDocumento(form.cnpj).length === 14 ? "pointer" : "not-allowed", opacity: digitosDocumento(form.cnpj).length === 14 ? 1 : 0.45 }}>{buscandoCnpj === "novo" ? <Loader2 size={17} className="animate-spin" /> : <Search size={17} />}</button>
               </div>
-              <p style={{ fontSize: 10, color: "var(--foreground-subtle)", margin: "6px 0 0" }}>Usado na identificação da empresa e nos documentos fiscais.</p>
+              <p style={{ fontSize: 10, color: "var(--foreground-subtle)", margin: "6px 0 0" }}>Pode ficar vazio. Para emitir nota fiscal, será necessário cadastrar um CNPJ.</p>
             </div>
           </div>
           
@@ -579,8 +614,8 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
                         <input value={editForm.nomeFantasia} onChange={(e) => setEditForm((f) => ({ ...f, nomeFantasia: e.target.value }))} autoFocus style={{...inp, padding: "10px 14px"}} />
                       </div>
                       <div>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: 6 }}>CNPJ</label>
-                        <div style={{ display: "flex", gap: 7 }}><input value={editForm.cnpj} onChange={(e) => setEditForm((f) => ({ ...f, cnpj: formatarCnpj(e.target.value) }))} placeholder="00.000.000/0001-00" maxLength={18} style={{...inp, padding: "10px 14px"}} /><button type="button" onClick={() => consultarCnpj(emp.id)} disabled={buscandoCnpj === emp.id} title="Consultar dados do CNPJ" style={{ minWidth: 42, display: "grid", placeItems: "center", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--primary)", cursor: "pointer" }}>{buscandoCnpj === emp.id ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}</button></div>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: 6 }}>CPF ou CNPJ <span style={{ fontWeight: 400 }}>(opcional)</span></label>
+                        <div style={{ display: "flex", gap: 7 }}><input inputMode="numeric" value={editForm.cnpj} onChange={(e) => { setEditForm((f) => ({ ...f, cnpj: formatarDocumento(e.target.value) })); setErro(""); }} placeholder="CPF ou CNPJ" maxLength={18} style={{...inp, padding: "10px 14px"}} /><button type="button" onClick={() => consultarCnpj(emp.id)} disabled={buscandoCnpj === emp.id || digitosDocumento(editForm.cnpj).length !== 14} title="Consultar dados do CNPJ" style={{ minWidth: 42, display: "grid", placeItems: "center", background: "var(--surface-overlay)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--primary)", cursor: digitosDocumento(editForm.cnpj).length === 14 ? "pointer" : "not-allowed", opacity: digitosDocumento(editForm.cnpj).length === 14 ? 1 : 0.45 }}>{buscandoCnpj === emp.id ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}</button></div>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
@@ -607,7 +642,7 @@ export default function GerenciarEmpresas({ onEmpresaSelecionada, modoSelecao }:
                           {emp.razaoSocial && (
                             <span style={{ fontSize: 12, color: "var(--foreground-muted)" }}>{emp.razaoSocial}</span>
                           )}
-                          <span style={{ fontSize: 12, color: "var(--foreground-subtle)", fontFamily: "monospace" }}>{emp.cnpj || "Sem CNPJ"}</span>
+                          <span style={{ fontSize: 12, color: "var(--foreground-subtle)", fontFamily: "monospace" }}>{documentoEmpresa(emp) ? formatarDocumento(documentoEmpresa(emp)) : "Sem CPF/CNPJ"}</span>
                           {emp.cidade && emp.uf && (
                             <span style={{ fontSize: 12, color: "var(--foreground-muted)" }}>• {emp.cidade} - {emp.uf}</span>
                           )}

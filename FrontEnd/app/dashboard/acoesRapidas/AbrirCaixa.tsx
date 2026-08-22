@@ -26,7 +26,7 @@ export default function AbrirCaixa({ onConcluido }: { onConcluido?: () => void }
   const [loading,     setLoading]     = useState(false);
   const [erro,        setErro]        = useState("");
 
-  useEffect(()=>{ fetchAuth<Empresa[]>("/api/v1/empresas").then(setEmpresas).catch(()=>{}); },[]);
+  useEffect(()=>{ fetchAuth<Empresa[]>("/api/v1/empresas").then((lista)=>setEmpresas(lista.filter((empresa)=>empresa.ativo!==false))).catch(()=>{}); },[]);
 
   const abrirCaixa = async () => {
     if (!empresaSel){ setErro("Selecione uma empresa."); return; }

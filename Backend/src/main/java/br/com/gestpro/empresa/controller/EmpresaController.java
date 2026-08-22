@@ -70,7 +70,11 @@ public class EmpresaController {
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
             Authentication auth) {
-        empresaService.excluirPermanentementeComSenha(id, auth.getName(), body.get("senha"));
+        String senha = body.get("senha");
+        if (senha == null || senha.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        empresaService.excluirPermanentementeComSenha(id, auth.getName(), senha);
         return ResponseEntity.noContent().build();
     }
 
