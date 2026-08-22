@@ -1,5 +1,6 @@
 package br.com.gestpro.infra.security;
 
+import br.com.gestpro.auth.service.CookieSecurityProperties;
 import br.com.gestpro.infra.filter.JwtAuthenticationFilter;
 import br.com.gestpro.infra.filter.OAuth2LoginSuccessHandler;
 import br.com.gestpro.infra.filter.PlanAccessFilter;
@@ -23,19 +24,22 @@ public class SecurityConfig {
     private final PlanAccessFilter planAccessFilter;
     private final OAuth2LoginSuccessHandler oauthSuccessHandler;
     private final CorsConfigurationSource corsConfigurationSource;
+    private final CookieSecurityProperties cookieSecurityProperties;
 
     public SecurityConfig(
             CustomOAuth2UserService customOAuth2UserService,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             PlanAccessFilter planAccessFilter,
             OAuth2LoginSuccessHandler oauthSuccessHandler,
-            CorsConfigurationSource corsConfigurationSource
+            CorsConfigurationSource corsConfigurationSource,
+            CookieSecurityProperties cookieSecurityProperties
     ) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.planAccessFilter = planAccessFilter;
         this.oauthSuccessHandler = oauthSuccessHandler;
         this.corsConfigurationSource = corsConfigurationSource;
+        this.cookieSecurityProperties = cookieSecurityProperties;
     }
 
     @Bean
@@ -49,8 +53,8 @@ public class SecurityConfig {
         csrfRepository.setHeaderName("X-CSRF-TOKEN");
         csrfRepository.setCookieCustomizer(cookie -> cookie
                 .httpOnly(true)
-                .secure(true)
-                .sameSite("Lax")
+                .secure(cookieSecurityProperties.isSecure())
+                .sameSite(cookieSecurityProperties.getSameSite())
                 .path("/")
         );
 

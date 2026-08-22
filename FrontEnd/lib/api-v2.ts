@@ -184,7 +184,12 @@ export async function login(email: string, senha: string): Promise<Usuario> {
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(data?.erro || data?.mensagem || "Falha no login.");
+    const mensagem = mensagemErroApi(data, response.status);
+    throw new Error(
+      mensagem === "NAO_AUTENTICADO"
+        ? "E-mail ou senha inválidos."
+        : mensagem
+    );
   }
 
   // O Spring rotaciona/invalida o CSRF token ao autenticar.

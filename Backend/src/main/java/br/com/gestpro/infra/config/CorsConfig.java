@@ -38,10 +38,9 @@ public class CorsConfig {
                 new LinkedHashSet<>();
 
         origens.add(frontendUrl);
-        origens.add("https://gestpro.site");
-        origens.add("https://www.gestpro.site");
+        origens.add("https://gevyro.com.br");
+        origens.add("https://www.gevyro.com.br");
         origens.add("http://localhost:3000");
-
         config.setAllowedOrigins(
                 new ArrayList<>(origens)
         );

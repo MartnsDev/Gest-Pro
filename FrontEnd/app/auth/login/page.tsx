@@ -60,6 +60,10 @@ export default function LoginPage() {
         window.setTimeout(() => window.dispatchEvent(new Event("gevyro:open-cookie-preferences")), 250);
       }
     } catch (error: unknown) {
+      // Evita que uma tentativa OAuth interrompida mantenha uma consulta de
+      // sessão pendente a cada nova abertura da página de login.
+      sessionStorage.removeItem(AFTER_LOGIN_KEY);
+      sessionStorage.removeItem(LEGAL_AFTER_LOGIN_KEY);
       const message = error instanceof Error ? error.message : "Credenciais inválidas ou erro no servidor";
       setErro(message === "PLANO_INATIVO" ? "Não foi possível iniciar uma nova sessão. Tente novamente." : message);
     } finally {
