@@ -10,6 +10,7 @@ import lombok.Data;
  */
 @Data @Builder
 public class UsuarioResponse {
+    private Long id;
     private String nome;
     private String email;
     private String foto;          // foto Google (URL completa)
@@ -31,6 +32,7 @@ public class UsuarioResponse {
         }
 
         return UsuarioResponse.builder()
+                .id(u.getId())
                 .nome(u.getNome())
                 .email(u.getEmail())
                 .foto(u.getFoto())                // campo foto_google

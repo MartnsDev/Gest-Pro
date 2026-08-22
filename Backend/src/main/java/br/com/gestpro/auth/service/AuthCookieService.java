@@ -62,4 +62,22 @@ public class AuthCookieService {
                 cookie.toString()
         );
     }
+
+    public void removerSessaoTemporaria(
+            HttpServletResponse response
+    ) {
+        ResponseCookie cookie = ResponseCookie
+                .from("JSESSIONID", "")
+                .httpOnly(true)
+                .secure(properties.isSecure())
+                .sameSite(properties.getSameSite())
+                .path("/")
+                .maxAge(Duration.ZERO)
+                .build();
+
+        response.addHeader(
+                HttpHeaders.SET_COOKIE,
+                cookie.toString()
+        );
+    }
 }

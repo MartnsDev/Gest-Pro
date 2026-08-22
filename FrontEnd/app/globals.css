@@ -91,6 +91,19 @@
 .legal-content a { color: #258c53; font-weight: 600; text-decoration: underline; }
 .legal-content strong { color: #46514b; }
 
+/* Mantém os campos de autenticação consistentes quando o Chrome preenche
+   credenciais automaticamente. Sem isso, o navegador injeta um fundo cinza. */
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus,
+.auth-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #303a35 !important;
+  caret-color: #303a35;
+  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  box-shadow: 0 0 0 1000px #fff inset !important;
+  transition: background-color 9999s ease-out 0s;
+}
+
 [data-theme="light"] {
   color-scheme: light;
 

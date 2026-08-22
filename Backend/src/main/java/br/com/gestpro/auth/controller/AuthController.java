@@ -7,10 +7,13 @@ import br.com.gestpro.auth.service.AuthenticationService;
 import br.com.gestpro.auth.service.AuthCookieService;
 import br.com.gestpro.infra.exception.ApiException;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -89,8 +92,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> loginUsuario(
             @Valid @RequestBody LoginUsuarioDTO request,
+            HttpServletRequest servletRequest,
             HttpServletResponse response
     ) {
+        encerrarSessaoAnterior(servletRequest, response);
+
         try {
             return ResponseEntity.ok(
                     authService.loginManual(
@@ -104,7 +110,20 @@ public class AuthController {
             // Uma tentativa de troca de conta nunca deve preservar a sessão
             // anterior quando as novas credenciais forem rejeitadas.
             authCookieService.remover(response);
+            authCookieService.removerSessaoTemporaria(response);
             throw exception;
         }
+    }
+
+    private void encerrarSessaoAnterior(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
+        authCookieService.removerSessaoTemporaria(response);
     }
 }

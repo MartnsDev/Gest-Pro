@@ -62,11 +62,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = extrairTokenDoCookie(request);
 
-        if (token == null
-                || SecurityContextHolder.getContext().getAuthentication() != null) {
+        if (token == null) {
+            // APIs autenticadas usam exclusivamente o JWT HttpOnly. Uma
+            // autenticação antiga da sessão OAuth nunca pode substituir o
+            // cookie atual nem sobreviver depois do logout.
+            SecurityContextHolder.clearContext();
             filterChain.doFilter(request, response);
             return;
         }
+
+        // O JWT presente na requisição é a autoridade da API, mesmo que uma
+        // HttpSession antiga tenha carregado outro SecurityContext.
+        SecurityContextHolder.clearContext();
 
         try {
             String email = jwtService.getEmailFromToken(token);

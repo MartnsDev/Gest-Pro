@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Check, CreditCard, Loader2, LockKeyhole, ShieldCheck } from "lucide-react";
 import { criarCheckout, PLANOS_PAGOS, type PlanoPagoId } from "@/lib/billing";
-import { getUsuario } from "@/lib/api-v2";
+import { getUsuario, limparDadosSessaoCliente } from "@/lib/api-v2";
 
 function PagamentoInner() {
   const router = useRouter();
@@ -15,6 +15,7 @@ function PagamentoInner() {
   const planoInicial = PLANOS_PAGOS.some((plano) => plano.id === planoUrl) ? planoUrl as PlanoPagoId : "PRO";
   const [selecionado, setSelecionado] = useState<PlanoPagoId>(planoInicial);
   const [email, setEmail] = useState("");
+  const [usuarioSessao, setUsuarioSessao] = useState<{ id: number; email: string } | null>(null);
   const [verificandoSessao, setVerificandoSessao] = useState(true);
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState("");
@@ -22,10 +23,20 @@ function PagamentoInner() {
 
   useEffect(() => {
     if (searchParams.has("token")) globalThis.window.history.replaceState({}, "", "/pagamento");
+    let ativo = true;
     getUsuario()
-      .then((usuario) => setEmail(usuario.email))
-      .catch(() => router.replace("/auth/login"))
+      .then((usuario) => {
+        if (!ativo) return;
+        const emailNormalizado = usuario.email.trim().toLowerCase();
+        setUsuarioSessao({ id: usuario.id, email: emailNormalizado });
+        setEmail(emailNormalizado);
+      })
+      .catch(() => {
+        limparDadosSessaoCliente();
+        router.replace("/auth/login");
+      })
       .finally(() => setVerificandoSessao(false));
+    return () => { ativo = false; };
   }, [router, searchParams]);
   const plano = PLANOS_PAGOS.find((item) => item.id === selecionado)!;
 
@@ -33,6 +44,20 @@ function PagamentoInner() {
     setErro("");
     setProcessando(true);
     try {
+      if (!usuarioSessao) throw new Error("Sua sessão não pôde ser confirmada. Entre novamente.");
+      const usuarioAtual = await getUsuario();
+      const mesmoEmail = usuarioAtual.email.trim().toLowerCase() === usuarioSessao.email;
+      const idsCompativeis =
+        usuarioAtual.id <= 0 ||
+        usuarioSessao.id <= 0 ||
+        usuarioAtual.id === usuarioSessao.id;
+      const mesmaConta = mesmoEmail && idsCompativeis;
+      if (!mesmaConta) {
+        limparDadosSessaoCliente();
+        setEmail("");
+        setUsuarioSessao(null);
+        throw new Error("A conta da sessão mudou. Entre novamente antes de assinar.");
+      }
       const url = await criarCheckout(selecionado);
       window.location.assign(url);
     } catch (error) {

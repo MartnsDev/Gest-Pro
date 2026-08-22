@@ -6,9 +6,12 @@ import br.com.gestpro.auth.repository.UsuarioRepository;
 import br.com.gestpro.auth.service.AuthCookieService;
 import br.com.gestpro.infra.exception.ApiException;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -49,8 +52,17 @@ public class UsuarioController {
     }
 
     @PostMapping("/auth/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse response) {
+    public ResponseEntity<Void> logout(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
         authCookieService.remover(response);
+        authCookieService.removerSessaoTemporaria(response);
         return ResponseEntity.noContent().build();
     }
 }

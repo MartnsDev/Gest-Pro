@@ -3,6 +3,7 @@
 import { useState, useEffect, ReactNode } from "react";
 import { X, BarChart3, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAuthJson } from "@/lib/api-v2";
 
 function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
@@ -58,22 +59,9 @@ export default function ModalRelatorioRapido({ empresaId, onClose, onIrRelatorio
     const fetchRelatorio = async () => {
       setLoading(true);
       try {
-        const token = sessionStorage.getItem("jwt_token") ?? document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/)?.[1] ?? "";
-        const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-        
-        const res = await fetch(`${base}/api/v1/relatorios/hoje?empresaId=${empresaId}`, {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          }
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => null);
-          throw new Error(errorData?.mensagem || "Não foi possível carregar o resumo de hoje.");
-        }
-
-        const data = await res.json();
+        const data = await fetchAuthJson<RelatorioHoje>(
+          `/api/v1/relatorios/hoje?empresaId=${empresaId}`,
+        );
         setRel(data);
       } catch (error: any) {
         setErro(error.message);

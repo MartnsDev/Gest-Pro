@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
-import { login, loginComGoogle } from "@/lib/api-v2";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
+import { getUsuario, limparDadosSessaoCliente, login, loginComGoogle, logout } from "@/lib/api-v2";
 import { useActionCooldown } from "@/hooks/use-action-cooldown";
 
 const AFTER_LOGIN_KEY = "gevyro-request-cookie-consent-after-login";
@@ -26,11 +26,34 @@ export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ email: "", senha: "" });
   const [loading, setLoading] = useState(false);
+  const [preparandoSessao, setPreparandoSessao] = useState(true);
+  const [sessaoPreparada, setSessaoPreparada] = useState(false);
   const [erro, setErro] = useState("");
   const [showPass, setShowPass] = useState(false);
   const loginCooldown = useActionCooldown("login", 5);
+  const preparacaoIniciada = useRef(false);
+
+  useEffect(() => {
+    if (preparacaoIniciada.current) return;
+    preparacaoIniciada.current = true;
+
+    // A rota de login é uma fronteira de sessão: nenhum cookie ou dado da
+    // conta anterior pode sobreviver enquanto novas credenciais são exibidas.
+    logout()
+      .then(() => {
+        setForm({ email: "", senha: "" });
+        setErro("");
+        setSessaoPreparada(true);
+      })
+      .catch(() => {
+        limparDadosSessaoCliente();
+        setErro("Não foi possível limpar a sessão anterior. Recarregue a página antes de entrar.");
+      })
+      .finally(() => setPreparandoSessao(false));
+  }, []);
 
   const handleGoogle = () => {
+    if (preparandoSessao || !sessaoPreparada) return;
     if (!loginCooldown.tryStart()) {
       setErro(`Aguarde ${loginCooldown.remaining}s antes de tentar entrar novamente.`);
       return;
@@ -47,13 +70,28 @@ export default function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!sessaoPreparada) return setErro("Recarregue a página para limpar a sessão anterior antes de entrar.");
     if (!form.email || !form.senha) return setErro("Preencha todos os campos");
     if (!loginCooldown.tryStart()) return setErro(`Aguarde ${loginCooldown.remaining}s antes de tentar entrar novamente.`);
     setLoading(true);
     setErro("");
     try {
-      const usuario = await login(form.email.trim().toLowerCase(), form.senha);
-      router.push(usuario.statusAcesso === "INATIVO" ? "/pagamento" : "/dashboard");
+      const usuarioLogin = await login(form.email.trim().toLowerCase(), form.senha);
+      const usuarioSessao = await getUsuario();
+      const mesmoEmail =
+        usuarioLogin.email.trim().toLowerCase() === usuarioSessao.email.trim().toLowerCase();
+      const idsCompativeis =
+        usuarioLogin.id <= 0 ||
+        usuarioSessao.id <= 0 ||
+        usuarioLogin.id === usuarioSessao.id;
+      const mesmaConta = mesmoEmail && idsCompativeis;
+
+      if (!mesmaConta) {
+        await logout().catch(() => limparDadosSessaoCliente());
+        throw new Error("A sessão retornada não corresponde à conta informada. Entre novamente.");
+      }
+
+      router.replace(usuarioSessao.statusAcesso === "INATIVO" ? "/pagamento" : "/dashboard");
       if (sessionStorage.getItem(AFTER_LOGIN_KEY) === "true") {
         sessionStorage.removeItem(AFTER_LOGIN_KEY);
         localStorage.removeItem("gevyro-cookie-preferences");
@@ -86,19 +124,29 @@ export default function LoginPage() {
           <h1 className="mt-4 text-3xl font-light tracking-[-.04em] text-[#343b37] sm:text-5xl">Bem-vindo <span className="italic text-[#258c53]">de volta</span></h1>
           <p className="mt-4 text-sm leading-6 text-[#718078]">Entre para acompanhar vendas, estoque, caixa e relatórios.</p>
 
-          <button type="button" onClick={handleGoogle} disabled={loading||loginCooldown.blocked} className="mt-9 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white text-sm font-medium text-[#46514b] transition hover:border-[#258c53]/40 hover:bg-[#f7faf8] disabled:cursor-not-allowed disabled:opacity-60">
-            <GoogleIcon /> {loginCooldown.blocked?`Aguarde ${loginCooldown.remaining}s` : "Continuar com Google"}
+          <button type="button" onClick={handleGoogle} disabled={preparandoSessao||!sessaoPreparada||loading||loginCooldown.blocked} className="mt-9 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white text-sm font-medium text-[#46514b] transition hover:border-[#258c53]/40 hover:bg-[#f7faf8] disabled:cursor-not-allowed disabled:opacity-60">
+            <GoogleIcon /> {preparandoSessao ? "Limpando sessão..." : !sessaoPreparada ? "Recarregue para continuar" : loginCooldown.blocked?`Aguarde ${loginCooldown.remaining}s` : "Continuar com Google"}
           </button>
           <div className="my-7 flex items-center gap-4"><span className="h-px flex-1 bg-zinc-200" /><span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">ou</span><span className="h-px flex-1 bg-zinc-200" /></div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <label className="block"><span className="mb-2 block text-xs font-semibold text-[#46514b]">E-mail</span><input type="email" value={form.email} onChange={(event) => set("email", event.target.value)} autoComplete="email" placeholder="seu@email.com" className="h-[52px] w-full rounded-xl border border-zinc-200 bg-white px-4 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /></label>
+          <form onSubmit={handleSubmit} autoComplete="on" className="space-y-5">
+            <label className="block">
+              <span className="mb-2 block text-xs font-semibold text-[#46514b]">E-mail</span>
+              <span className="group relative block">
+                <Mail size={18} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[#9aa59f] transition-colors group-focus-within:text-[#258c53]" />
+                <input type="email" value={form.email} onChange={(event) => set("email", event.target.value)} autoComplete="email" placeholder="seu@email.com" className="auth-input h-[54px] w-full rounded-2xl border border-[#dce3df] bg-white pl-11 pr-4 text-sm text-[#303a35] shadow-[0_1px_2px_rgba(30,50,40,.04)] outline-none transition placeholder:text-[#a3ada7] hover:border-[#bdc9c2] focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" />
+              </span>
+            </label>
             <label className="block">
               <span className="mb-2 flex items-center justify-between text-xs font-semibold text-[#46514b]">Senha <Link href="/esqueceu-senha" className="font-normal text-[#258c53] hover:underline">Esqueceu a senha?</Link></span>
-              <span className="relative block"><input type={showPass ? "text" : "password"} value={form.senha} onChange={(event) => set("senha", event.target.value)} autoComplete="current-password" placeholder="Sua senha" className="h-[52px] w-full rounded-xl border border-zinc-200 bg-white px-4 pr-12 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /><button type="button" onClick={() => setShowPass((value) => !value)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-[#258c53]" aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}>{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></span>
+              <span className="group relative block">
+                <LockKeyhole size={18} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[#9aa59f] transition-colors group-focus-within:text-[#258c53]" />
+                <input type={showPass ? "text" : "password"} value={form.senha} onChange={(event) => set("senha", event.target.value)} autoComplete="current-password" placeholder="Sua senha" className="auth-input h-[54px] w-full rounded-2xl border border-[#dce3df] bg-white pl-11 pr-12 text-sm text-[#303a35] shadow-[0_1px_2px_rgba(30,50,40,.04)] outline-none transition placeholder:text-[#a3ada7] hover:border-[#bdc9c2] focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" />
+                <button type="button" onClick={() => setShowPass((value) => !value)} className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-[#9aa59f] transition hover:bg-[#eff7f2] hover:text-[#258c53]" aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}>{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+              </span>
             </label>
             {erro && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{erro}</p>}
-            <button type="submit" disabled={loading||loginCooldown.blocked} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-full bg-[#258c53] text-sm font-bold text-white transition hover:bg-[#1d7544] disabled:cursor-not-allowed disabled:opacity-60">{loading ? "Entrando..." : loginCooldown.blocked?`Tente novamente em ${loginCooldown.remaining}s`:<>Entrar <ArrowRight size={17} /></>}</button>
+            <button type="submit" disabled={preparandoSessao||!sessaoPreparada||loading||loginCooldown.blocked} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-full bg-[#258c53] text-sm font-bold text-white transition hover:bg-[#1d7544] disabled:cursor-not-allowed disabled:opacity-60">{preparandoSessao ? "Limpando sessão anterior..." : !sessaoPreparada ? "Recarregue a página" : loading ? "Entrando..." : loginCooldown.blocked?`Tente novamente em ${loginCooldown.remaining}s`:<>Entrar <ArrowRight size={17} /></>}</button>
           </form>
 
           <p className="mt-7 text-center text-sm text-[#718078]">Ainda não tem conta? <Link href="/auth/cadastro" className="font-semibold text-[#258c53] hover:underline">Teste por 30 dias</Link></p>

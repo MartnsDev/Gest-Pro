@@ -111,6 +111,8 @@ export function limparDadosSessaoCliente(): void {
   sessionStorage.removeItem("checkout_email");
   sessionStorage.removeItem("gevyro-request-cookie-consent-after-login");
   sessionStorage.removeItem("gevyro-require-legal-ack-after-login");
+  localStorage.removeItem("gevyro-account-consents");
+  localStorage.removeItem("gevyro-google-legal-ack");
 
   const chavesPorConta = [
     "gp_empresa_",
@@ -130,6 +132,12 @@ export function limparDadosSessaoCliente(): void {
       localStorage.removeItem(key);
     }
   });
+
+  // O service worker atual é network-only, mas remove caches criados por
+  // versões antigas para impedir que dados de outra conta reapareçam.
+  if ("caches" in window) {
+    void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+  }
 }
 
 function publicarLogout(): void {
@@ -169,7 +177,8 @@ export async function fetchAuth(path: string, options: RequestInit = {}): Promis
   let response = await fetch(url, {
     ...options,
     headers,
-    credentials: "include", 
+    credentials: "include",
+    cache: "no-store",
   });
 
   // O Spring pode rotacionar o token ao autenticar ou criar uma sessão.
@@ -182,6 +191,7 @@ export async function fetchAuth(path: string, options: RequestInit = {}): Promis
       ...options,
       headers,
       credentials: "include",
+      cache: "no-store",
     });
   }
 
@@ -213,6 +223,7 @@ export async function login(email: string, senha: string): Promise<Usuario> {
     headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": await obterCsrfToken() },
     body: JSON.stringify({ email, senha }),
     credentials: "include",
+    cache: "no-store",
   });
 
   const data = await response.json().catch(() => null);
@@ -229,7 +240,7 @@ export async function login(email: string, senha: string): Promise<Usuario> {
   csrfToken = null;
 
   return {
-    id:             data.id ?? 0,
+    id:             Number.isSafeInteger(Number(data.id)) ? Number(data.id) : 0,
     nome:           data.nome,
     email:          data.email,
     foto:           data.foto || undefined,
@@ -299,7 +310,7 @@ export async function getUsuario(): Promise<Usuario> {
   }
 
   return {
-    id:             data.id,
+    id:             Number.isSafeInteger(Number(data.id)) ? Number(data.id) : 0,
     nome:           data.nome,
     email:          data.email,
     foto:           data.foto || undefined,

@@ -28,6 +28,16 @@ export function CookieConsent() {
   useEffect(() => {
     const afterLogin = sessionStorage.getItem(AFTER_LOGIN_KEY) === "true";
     if (!afterLogin) return;
+
+    // Um OAuth cancelado pode voltar para a tela de login deixando o marcador
+    // pendente. Nessa rota não há sessão a consultar, então encerramos o fluxo
+    // para não gerar 401 a cada montagem da página.
+    if (window.location.pathname.startsWith("/auth/login")) {
+      sessionStorage.removeItem(AFTER_LOGIN_KEY);
+      sessionStorage.removeItem(LEGAL_AFTER_LOGIN_KEY);
+      return;
+    }
+
     let active = true;
     getUsuario().then((usuario) => {
       if (!active) return;
@@ -45,7 +55,11 @@ export function CookieConsent() {
       setManage(true);
       setRequireLegal(sessionStorage.getItem(LEGAL_AFTER_LOGIN_KEY) === "true");
       setVisible(true);
-    }).catch(() => setVisible(false));
+    }).catch(() => {
+      sessionStorage.removeItem(AFTER_LOGIN_KEY);
+      sessionStorage.removeItem(LEGAL_AFTER_LOGIN_KEY);
+      setVisible(false);
+    });
     return () => { active = false; };
   }, []);
   function save(value: Choice) {

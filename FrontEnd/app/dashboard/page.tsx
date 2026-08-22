@@ -674,7 +674,11 @@ function DashboardLoader() {
 
       if (desmontado) return;
 
-      const uid = String(data.id);
+      // Versões antigas de /api/usuario não retornavam id. O e-mail
+      // normalizado mantém o cache isolado até backend e frontend atualizarem.
+      const uid = data.id > 0
+        ? String(data.id)
+        : data.email.trim().toLowerCase();
       const cache = lerCacheUsuario(uid);
 
       let empresaResolvida: EmpresaAtiva | null = null;
