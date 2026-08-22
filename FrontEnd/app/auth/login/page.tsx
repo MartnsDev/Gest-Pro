@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
-import { getUsuario, limparDadosSessaoCliente, login, loginComGoogle, logout } from "@/lib/api-v2";
+import { getUsuario, limparDadosSessaoCliente, login, loginComGoogle, logout, reenviarConfirmacao } from "@/lib/api-v2";
 import { useActionCooldown } from "@/hooks/use-action-cooldown";
 
 const AFTER_LOGIN_KEY = "gevyro-request-cookie-consent-after-login";
@@ -30,6 +30,8 @@ export default function LoginPage() {
   const [sessaoPreparada, setSessaoPreparada] = useState(false);
   const [erro, setErro] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [precisaConfirmar, setPrecisaConfirmar] = useState(false);
+  const [reenviando, setReenviando] = useState(false);
   const loginCooldown = useActionCooldown("login", 5);
   const preparacaoIniciada = useRef(false);
 
@@ -42,12 +44,17 @@ export default function LoginPage() {
     logout()
       .then(() => {
         setForm({ email: "", senha: "" });
-        setErro("");
+        const oauthFalhou = new URLSearchParams(window.location.search).get("error") === "oauth2";
+        setErro(oauthFalhou ? "Não foi possível entrar com o Google. Tente novamente ou use e-mail e senha." : "");
         setSessaoPreparada(true);
       })
       .catch(() => {
+        // O próprio POST /auth/login invalida qualquer sessão anterior antes
+        // de validar as novas credenciais. Se o logout preventivo falhar, a
+        // limpeza local basta para liberar a tentativa sem exigir F5 do usuário.
         limparDadosSessaoCliente();
-        setErro("Não foi possível limpar a sessão anterior. Recarregue a página antes de entrar.");
+        setForm({ email: "", senha: "" });
+        setSessaoPreparada(true);
       })
       .finally(() => setPreparandoSessao(false));
   }, []);
@@ -66,11 +73,12 @@ export default function LoginPage() {
   const set = (key: "email" | "senha", value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
     setErro("");
+    setPrecisaConfirmar(false);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!sessaoPreparada) return setErro("Recarregue a página para limpar a sessão anterior antes de entrar.");
+    if (!sessaoPreparada) return setErro("Aguarde enquanto preparamos um acesso seguro.");
     if (!form.email || !form.senha) return setErro("Preencha todos os campos");
     if (!loginCooldown.tryStart()) return setErro(`Aguarde ${loginCooldown.remaining}s antes de tentar entrar novamente.`);
     setLoading(true);
@@ -104,8 +112,22 @@ export default function LoginPage() {
       sessionStorage.removeItem(LEGAL_AFTER_LOGIN_KEY);
       const message = error instanceof Error ? error.message : "Credenciais inválidas ou erro no servidor";
       setErro(message === "PLANO_INATIVO" ? "Não foi possível iniciar uma nova sessão. Tente novamente." : message);
+      setPrecisaConfirmar(message.toLowerCase().includes("confirme seu e-mail"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReenvio = async () => {
+    if (!form.email.trim() || reenviando) return;
+    setReenviando(true);
+    try {
+      setErro(await reenviarConfirmacao(form.email));
+      setPrecisaConfirmar(false);
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Não foi possível reenviar agora.");
+    } finally {
+      setReenviando(false);
     }
   };
 
@@ -125,7 +147,7 @@ export default function LoginPage() {
           <p className="mt-4 text-sm leading-6 text-[#718078]">Entre para acompanhar vendas, estoque, caixa e relatórios.</p>
 
           <button type="button" onClick={handleGoogle} disabled={preparandoSessao||!sessaoPreparada||loading||loginCooldown.blocked} className="mt-9 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white text-sm font-medium text-[#46514b] transition hover:border-[#258c53]/40 hover:bg-[#f7faf8] disabled:cursor-not-allowed disabled:opacity-60">
-            <GoogleIcon /> {preparandoSessao ? "Limpando sessão..." : !sessaoPreparada ? "Recarregue para continuar" : loginCooldown.blocked?`Aguarde ${loginCooldown.remaining}s` : "Continuar com Google"}
+            <GoogleIcon /> {preparandoSessao || !sessaoPreparada ? "Preparando acesso..." : loginCooldown.blocked?`Aguarde ${loginCooldown.remaining}s` : "Continuar com Google"}
           </button>
           <div className="my-7 flex items-center gap-4"><span className="h-px flex-1 bg-zinc-200" /><span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">ou</span><span className="h-px flex-1 bg-zinc-200" /></div>
 
@@ -146,7 +168,8 @@ export default function LoginPage() {
               </span>
             </label>
             {erro && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{erro}</p>}
-            <button type="submit" disabled={preparandoSessao||!sessaoPreparada||loading||loginCooldown.blocked} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-full bg-[#258c53] text-sm font-bold text-white transition hover:bg-[#1d7544] disabled:cursor-not-allowed disabled:opacity-60">{preparandoSessao ? "Limpando sessão anterior..." : !sessaoPreparada ? "Recarregue a página" : loading ? "Entrando..." : loginCooldown.blocked?`Tente novamente em ${loginCooldown.remaining}s`:<>Entrar <ArrowRight size={17} /></>}</button>
+            {precisaConfirmar && <button type="button" onClick={handleReenvio} disabled={reenviando} className="w-full text-sm font-semibold text-[#258c53] hover:underline disabled:opacity-60">{reenviando ? "Reenviando..." : "Reenviar e-mail de confirmação"}</button>}
+            <button type="submit" disabled={preparandoSessao||!sessaoPreparada||loading||loginCooldown.blocked} className="flex h-[52px] w-full items-center justify-center gap-3 rounded-full bg-[#258c53] text-sm font-bold text-white transition hover:bg-[#1d7544] disabled:cursor-not-allowed disabled:opacity-60">{preparandoSessao || !sessaoPreparada ? "Preparando acesso seguro..." : loading ? "Entrando..." : loginCooldown.blocked?`Tente novamente em ${loginCooldown.remaining}s`:<>Entrar <ArrowRight size={17} /></>}</button>
           </form>
 
           <p className="mt-7 text-center text-sm text-[#718078]">Ainda não tem conta? <Link href="/auth/cadastro" className="font-semibold text-[#258c53] hover:underline">Teste por 30 dias</Link></p>

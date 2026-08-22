@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Camera, Check, Eye, EyeOff } from "lucide-react";
-import { cadastrar, loginComGoogle } from "@/lib/api-v2";
+import { cadastrar, loginComGoogle, reenviarConfirmacao } from "@/lib/api-v2";
 
 const LEGAL_ACKNOWLEDGEMENTS_KEY = "gevyro-legal-acknowledgements";
 const AFTER_LOGIN_KEY = "gevyro-request-cookie-consent-after-login";
@@ -32,6 +32,8 @@ export default function CadastroPage() {
   const [showPass, setShowPass] = useState(false);
   const [success, setSuccess] = useState(false);
   const [aceitouDocumentos, setAceitouDocumentos] = useState(false);
+  const [reenviando, setReenviando] = useState(false);
+  const [avisoReenvio, setAvisoReenvio] = useState("");
 
   const validarConsentimentos = () => {
     if (!aceitouDocumentos) {
@@ -64,6 +66,14 @@ export default function CadastroPage() {
   const handleFoto = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      event.target.value = "";
+      return setErro("Selecione um arquivo de imagem válido.");
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      event.target.value = "";
+      return setErro("A foto deve ter no máximo 5 MB.");
+    }
     setFoto(file);
     const reader = new FileReader();
     reader.onload = () => setFotoPreview(reader.result as string);
@@ -73,8 +83,8 @@ export default function CadastroPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.nome.trim()) return setErro("Nome é obrigatório");
-    if (!form.email) return setErro("E-mail é obrigatório");
-    if (form.senha.length < 6 || !/[A-Za-z]/.test(form.senha) || !/\d/.test(form.senha)) return setErro("A senha precisa ter ao menos 6 caracteres, com letras e números");
+    if (!form.email.trim()) return setErro("E-mail é obrigatório");
+    if (form.senha.length < 8 || !/[A-Za-z]/.test(form.senha) || !/\d/.test(form.senha)) return setErro("A senha precisa ter ao menos 8 caracteres, com letras e números");
     if (form.senha !== form.confirmar) return setErro("As senhas não conferem");
     if (!validarConsentimentos()) return;
     setLoading(true);
@@ -88,6 +98,18 @@ export default function CadastroPage() {
       setErro(error instanceof Error ? error.message : "Erro ao cadastrar. Tente novamente.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReenvio = async () => {
+    setReenviando(true);
+    setAvisoReenvio("");
+    try {
+      setAvisoReenvio(await reenviarConfirmacao(form.email));
+    } catch (error) {
+      setAvisoReenvio(error instanceof Error ? error.message : "Não foi possível reenviar agora.");
+    } finally {
+      setReenviando(false);
     }
   };
 
@@ -105,6 +127,9 @@ export default function CadastroPage() {
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#258c53]/10 text-[#258c53]"><Check size={30} /></div>
               <h1 className="mt-7 text-4xl font-light tracking-[-.04em]">Conta <span className="italic text-[#258c53]">criada</span></h1>
               <p className="mt-4 text-sm leading-7 text-[#718078]">Enviamos a confirmação para <strong className="font-semibold text-[#343b37]">{form.email}</strong>. Confirme o e-mail para acessar sua conta.</p>
+              <p className="mt-2 text-xs leading-5 text-[#8a958f]">Confira também as pastas de spam e promoções. O link vale por 24 horas.</p>
+              {avisoReenvio && <p role="status" className="mt-4 rounded-xl bg-[#f3f7f4] px-4 py-3 text-sm text-[#46514b]">{avisoReenvio}</p>}
+              <button type="button" disabled={reenviando} onClick={handleReenvio} className="mt-5 text-sm font-semibold text-[#258c53] hover:underline disabled:opacity-60">{reenviando ? "Reenviando..." : "Não recebeu? Reenviar confirmação"}</button>
               <button type="button" onClick={() => router.push("/auth/login")} className="mt-8 flex h-[52px] w-full items-center justify-center gap-3 rounded-full bg-[#258c53] text-sm font-bold text-white hover:bg-[#1d7544]">Ir para o login <ArrowRight size={17} /></button>
             </div>
           ) : (
@@ -128,7 +153,7 @@ export default function CadastroPage() {
                 <label className="block"><span className="mb-2 block text-xs font-semibold text-[#46514b]">Nome completo</span><input type="text" value={form.nome} onChange={(event) => set("nome", event.target.value)} autoComplete="name" placeholder="Seu nome" className="h-[50px] w-full rounded-xl border border-zinc-200 px-4 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /></label>
                 <label className="block"><span className="mb-2 block text-xs font-semibold text-[#46514b]">E-mail</span><input type="email" value={form.email} onChange={(event) => set("email", event.target.value)} autoComplete="email" placeholder="seu@email.com" className="h-[50px] w-full rounded-xl border border-zinc-200 px-4 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /></label>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block"><span className="mb-2 block text-xs font-semibold text-[#46514b]">Senha</span><span className="relative block"><input type={showPass ? "text" : "password"} value={form.senha} onChange={(event) => set("senha", event.target.value)} autoComplete="new-password" placeholder="Letras e números" className="h-[50px] w-full rounded-xl border border-zinc-200 px-4 pr-11 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /><button type="button" onClick={() => setShowPass((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}>{showPass ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>
+                  <label className="block"><span className="mb-2 block text-xs font-semibold text-[#46514b]">Senha</span><span className="relative block"><input type={showPass ? "text" : "password"} value={form.senha} onChange={(event) => set("senha", event.target.value)} autoComplete="new-password" placeholder="8+ caracteres" className="h-[50px] w-full rounded-xl border border-zinc-200 px-4 pr-11 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /><button type="button" onClick={() => setShowPass((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}>{showPass ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>
                   <label className="block"><span className="mb-2 block text-xs font-semibold text-[#46514b]">Confirmar senha</span><input type={showPass ? "text" : "password"} value={form.confirmar} onChange={(event) => set("confirmar", event.target.value)} autoComplete="new-password" placeholder="Repita a senha" className="h-[50px] w-full rounded-xl border border-zinc-200 px-4 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#258c53] focus:ring-4 focus:ring-[#258c53]/10" /></label>
                 </div>
                 <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 bg-[#f8faf9] p-4 text-xs leading-5 text-[#59665f]">

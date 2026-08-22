@@ -99,6 +99,7 @@ public class SecurityConfig {
                                 "/auth/login",
                                 "/auth/cadastro",
                                 "/auth/confirmar",
+                                "/auth/reenviar-confirmacao",
                                 "/auth/logout",
                                 "/auth/csrf",
                                 "/api/auth/esqueceu-senha",

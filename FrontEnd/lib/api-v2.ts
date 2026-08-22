@@ -275,8 +275,28 @@ export async function cadastrar(
 
   const data = await response.json().catch(() => null) as ErrorResponse | null;
   if (!response.ok) {
-    throw new Error(data?.erro || data?.mensagem || "Erro ao cadastrar usuário");
+    throw new Error(mensagemErroApi(data, response.status));
   }
+}
+
+/**
+ * Solicita um novo link sem revelar se o e-mail está cadastrado.
+ */
+export async function reenviarConfirmacao(email: string): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/auth/reenviar-confirmacao`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-TOKEN": await obterCsrfToken(),
+    },
+    body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(mensagemErroApi(data, response.status));
+  return data?.mensagem ?? "Se houver uma conta pendente, enviaremos um novo link.";
 }
 
 /**

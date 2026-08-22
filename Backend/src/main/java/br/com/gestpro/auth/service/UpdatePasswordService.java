@@ -18,6 +18,7 @@ import java.util.Locale;
 public class UpdatePasswordService {
 
     private static final Duration VALIDADE = Duration.ofMinutes(10);
+    private static final Duration INTERVALO_REENVIO = Duration.ofSeconds(60);
     private static final int MAX_TENTATIVAS = 5;
 
     private final UsuarioRepository usuarioRepository;
@@ -51,6 +52,15 @@ public class UpdatePasswordService {
             return;
         }
 
+        Boolean primeiroEnvio = redis.opsForValue().setIfAbsent(
+                envioKey(email),
+                "1",
+                INTERVALO_REENVIO
+        );
+        if (!Boolean.TRUE.equals(primeiroEnvio)) {
+            return;
+        }
+
         String codigo = gerarCodigo();
         String hash = passwordEncoder.encode(codigo);
 
@@ -62,13 +72,14 @@ public class UpdatePasswordService {
 
         redis.delete(tentativasKey(email));
 
-        emailService.enviarEmail(
-                email,
-                usuario.getNome(),
-                "Código de recuperação",
-                "Seu código de recuperação é: " + codigo
-                        + "\n\nEle expira em 10 minutos."
-        );
+        try {
+            emailService.enviarCodigoConfirmacao(email, usuario.getNome(), codigo);
+        } catch (RuntimeException exception) {
+            redis.delete(codigoKey(email));
+            redis.delete(tentativasKey(email));
+            redis.delete(envioKey(email));
+            throw exception;
+        }
     }
 
     @Transactional
@@ -106,18 +117,16 @@ public class UpdatePasswordService {
         }
 
         usuario.setSenha(passwordEncoder.encode(novaSenha));
-
-        /*
-         * Depois de provar controle do e-mail, a conta pode usar login manual.
-         * O login Google continuará funcionando normalmente.
-         */
-        usuario.setLoginGoogle(false);
+        usuario.setEmailConfirmado(true);
+        usuario.setTokenConfirmacao(null);
+        usuario.setDataEnvioConfirmacao(null);
         usuario.setCodigoRecuperacao(null);
 
         usuarioRepository.save(usuario);
 
         redis.delete(codigoKey(email));
         redis.delete(tentativasKey(email));
+        redis.delete(envioKey(email));
     }
 
     private String gerarCodigo() {
@@ -137,6 +146,10 @@ public class UpdatePasswordService {
 
     private String tentativasKey(String email) {
         return "auth:reset:attempts:" + email;
+    }
+
+    private String envioKey(String email) {
+        return "auth:reset:sent:" + email;
     }
 
     private ApiException codigoInvalido() {

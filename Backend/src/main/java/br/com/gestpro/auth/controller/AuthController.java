@@ -21,6 +21,10 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -87,6 +91,24 @@ public class AuthController {
         }
 
         response.sendRedirect(destino);
+    }
+
+    public record ReenvioConfirmacaoRequest(
+            @NotBlank(message = "Email é obrigatório")
+            @Email(message = "Email inválido")
+            @Size(max = 254, message = "Email excede o tamanho permitido")
+            String email
+    ) {}
+
+    @PostMapping("/reenviar-confirmacao")
+    public ResponseEntity<Map<String, Object>> reenviarConfirmacao(
+            @Valid @RequestBody ReenvioConfirmacaoRequest request
+    ) {
+        authService.reenviarConfirmacao(request.email(), baseUrl);
+        return ResponseEntity.ok(Map.of(
+                "sucesso", true,
+                "mensagem", "Se houver uma conta pendente para este e-mail, enviaremos um novo link de confirmação."
+        ));
     }
 
     @PostMapping("/login")

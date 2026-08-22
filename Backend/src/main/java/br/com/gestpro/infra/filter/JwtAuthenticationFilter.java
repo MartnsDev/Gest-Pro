@@ -23,6 +23,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Set<String> ROTAS_PUBLICAS = Set.of(
             "/auth/login",
             "/auth/cadastro",
+            "/auth/confirmar",
+            "/auth/reenviar-confirmacao",
             "/auth/logout",
             "/auth/csrf",
             "/api/auth/esqueceu-senha",

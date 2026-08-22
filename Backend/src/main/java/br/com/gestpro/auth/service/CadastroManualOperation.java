@@ -1,7 +1,6 @@
 package br.com.gestpro.auth.service;
 
 import br.com.gestpro.auth.EmailService;
-import br.com.gestpro.auth.MailTrapEmail;
 import br.com.gestpro.plano.StatusAcesso;
 import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.auth.model.Usuario;
@@ -26,17 +25,15 @@ public class CadastroManualOperation {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final UploadFotoOperation uploadFotoOperation;
-    private final MailTrapEmail mailTrapEmail;
 
     public CadastroManualOperation(UsuarioRepository usuarioRepository,
                                    EmailService emailService,
                                    PasswordEncoder passwordEncoder,
-                                   UploadFotoOperation uploadFotoOperation, MailTrapEmail mailTrapEmail) {
+                                   UploadFotoOperation uploadFotoOperation) {
         this.usuarioRepository = usuarioRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.uploadFotoOperation = uploadFotoOperation;
-        this.mailTrapEmail = mailTrapEmail;
     }
 
     @Transactional
@@ -56,7 +53,9 @@ public class CadastroManualOperation {
         if (existenteOpt.isPresent()) {
             Usuario existente = existenteOpt.get();
 
-            if (!existente.isEmailConfirmado() && !existente.isLoginGoogle()) {
+            if (!existente.isEmailConfirmado()
+                    && !existente.isLoginGoogle()
+                    && podeReenviar(existente)) {
                 renovarTokenConfirmacao(existente);
                 usuarioRepository.save(existente);
                 enviarEmailConfirmacao(existente, baseUrl);
@@ -66,7 +65,7 @@ public class CadastroManualOperation {
             return existente;
         }
 
-        Usuario usuario = criarNovoUsuario(nome, email, senha, foto);
+        Usuario usuario = criarNovoUsuario(nome.trim(), email, senha, foto);
         usuarioRepository.save(usuario);
         enviarEmailConfirmacao(usuario, baseUrl);
 
@@ -125,15 +124,30 @@ public class CadastroManualOperation {
         gerarTokenConfirmacao(usuario);
     }
 
+    private boolean podeReenviar(Usuario usuario) {
+        return usuario.getDataEnvioConfirmacao() == null
+                || usuario.getDataEnvioConfirmacao().isBefore(LocalDateTime.now().minusSeconds(60));
+    }
+
+    @Transactional
+    public void reenviarConfirmacao(String email, String baseUrl) {
+        String normalizado = email.trim().toLowerCase(Locale.ROOT);
+        usuarioRepository.findByEmailForUpdate(normalizado).ifPresent(usuario -> {
+            if (usuario.isEmailConfirmado() || usuario.isLoginGoogle() || !podeReenviar(usuario)) {
+                return;
+            }
+            renovarTokenConfirmacao(usuario);
+            usuarioRepository.save(usuario);
+            enviarEmailConfirmacao(usuario, baseUrl);
+        });
+    }
+
     // EMAIL
     private void enviarEmailConfirmacao(Usuario usuario, String baseUrl) {
 
         try {
             String linkConfirmacao = baseUrl + "/auth/confirmar?token=" + usuario.getTokenConfirmacao();
-            // Produção
-              emailService.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
-            // Testes
-            // mailTrapEmail.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
+            emailService.enviarConfirmacao(usuario.getEmail(), linkConfirmacao);
         } catch (Exception e) {
             throw new ApiException(
                     "Erro ao enviar e-mail de confirmação.",

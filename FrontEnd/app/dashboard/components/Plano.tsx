@@ -104,10 +104,17 @@ function PlanosInner() {
   }, []);
 
   async function handleAssinar(planoId: string) {
-    if (!emailUsuario) { setErro("Não foi possível identificar seu e-mail. Recarregue a página."); return; }
     setErro(null); setLoadingPlano(planoId);
 
     try {
+      let emailCheckout = emailUsuario;
+      if (!emailCheckout) {
+        const usuario = await fetchAuth<{ email?: string }>("/api/usuario");
+        emailCheckout = usuario.email?.trim() || null;
+        if (!emailCheckout) throw new Error("Não foi possível identificar sua conta. Entre novamente.");
+        setEmailUsuario(emailCheckout);
+      }
+
       const possuiAssinaturaPaga = plano?.tipoPlano && plano.tipoPlano !== "EXPERIMENTAL";
       const portalUrl = possuiAssinaturaPaga
         ? await abrirPortalCobranca()

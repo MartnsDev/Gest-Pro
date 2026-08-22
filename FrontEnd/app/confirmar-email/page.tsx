@@ -85,7 +85,7 @@ export default function ConfirmarEmailPage() {
     setCountdown(REDIRECT_SECONDS);
     const tick = setInterval(() => setCountdown((p) => p - 1), 1000);
     const redirect = setTimeout(
-      () => router.push("/"),
+      () => router.push("/auth/login"),
       REDIRECT_SECONDS * 1000,
     );
     return () => {
@@ -142,7 +142,7 @@ export default function ConfirmarEmailPage() {
 
                 <button
                   className={a.btnPrimary}
-                  onClick={() => router.push("/")}
+                  onClick={() => router.push("/auth/login")}
                   style={{ marginTop: 8 }}
                 >
                   Ir para login agora <ArrowRight size={16} />

@@ -45,6 +45,10 @@ public class AuthenticationService implements IAuthenticationService {
         return confirmarEmailOperation.execute(token);
     }
 
+    public void reenviarConfirmacao(String email, String baseUrl) {
+        cadastroManual.reenviarConfirmacao(email, baseUrl);
+    }
+
     @Override
     public LoginResponse loginManual(String email, String senha,
                                      String path, HttpServletResponse response) {

@@ -8,6 +8,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 
 @Service
 public class EmailService {
@@ -131,7 +132,6 @@ public class EmailService {
     }
 
     //  CONFIRMAÇÃO DE CONTA
-    @org.springframework.scheduling.annotation.Async
     public void enviarConfirmacao(String emailDestino, String linkConfirmacao) {
         String corpo = hero(
                 "linear-gradient(135deg,#10b981 0%%,#059669 100%%)",
@@ -184,7 +184,6 @@ public class EmailService {
     }
 
     //  CÓDIGO DE VERIFICAÇÃO — exibição grande + botão copiar via JS
-    @org.springframework.scheduling.annotation.Async
     public void enviarCodigoConfirmacao(String emailDestino, String nomeUsuario, String codigo) {
         String nome = (nomeUsuario != null && !nomeUsuario.isBlank()) ? nomeUsuario : "usuário";
 
@@ -291,19 +290,20 @@ public class EmailService {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.resend.com/emails"))
+                    .timeout(Duration.ofSeconds(10))
                     .header("Authorization", "Bearer " + resendApiKey)
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json))
                     .build();
 
-            HttpResponse<String> response = HttpClient.newHttpClient()
+            HttpResponse<String> response = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .build()
                     .send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200 || response.statusCode() == 201) {
                 System.out.println(
-                        "✅ E-mail aceito pelo Resend para " + to
-                                + " | Status: " + response.statusCode()
-                                + " | Resposta: " + response.body()
+                        "✅ E-mail aceito pelo Resend | Status: " + response.statusCode()
                 );
             } else {
                 throw new RuntimeException("Resend recusou: " + response.statusCode() + " - " + response.body());
