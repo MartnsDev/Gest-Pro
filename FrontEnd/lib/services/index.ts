@@ -56,7 +56,7 @@ export const caixaService = {
   obterResumo: (id: number) => http.get<Caixa>(`/api/v1/caixas/${id}/resumo`),
 
   buscarAberto: (empresaId: number) =>
-    http.get<Caixa>(`/api/v1/caixas/aberto?empresaId=${empresaId}`),
+    http.get<Caixa | null>(`/api/v1/caixas/aberto?empresaId=${empresaId}`),
 };
 
 export const dashboardService = {

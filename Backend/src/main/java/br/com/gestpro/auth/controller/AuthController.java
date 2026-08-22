@@ -4,6 +4,7 @@ import br.com.gestpro.auth.dto.AuthDTO.CadastroRequestDTO;
 import br.com.gestpro.auth.dto.AuthDTO.LoginResponse;
 import br.com.gestpro.auth.dto.AuthDTO.LoginUsuarioDTO;
 import br.com.gestpro.auth.service.AuthenticationService;
+import br.com.gestpro.auth.service.AuthCookieService;
 import br.com.gestpro.infra.exception.ApiException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -22,15 +23,18 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthenticationService authService;
+    private final AuthCookieService authCookieService;
     private final String frontendUrl;
     private final String baseUrl;
 
     public AuthController(
             AuthenticationService authService,
+            AuthCookieService authCookieService,
             @Value("${app.frontend.url}") String frontendUrl,
             @Value("${app.base-url}") String baseUrl
     ) {
         this.authService = authService;
+        this.authCookieService = authCookieService;
         this.frontendUrl = frontendUrl;
         this.baseUrl = baseUrl;
     }
@@ -87,13 +91,20 @@ public class AuthController {
             @Valid @RequestBody LoginUsuarioDTO request,
             HttpServletResponse response
     ) {
-        return ResponseEntity.ok(
-                authService.loginManual(
-                        request.email(),
-                        request.senha(),
-                        "/auth/login",
-                        response
-                )
-        );
+        try {
+            return ResponseEntity.ok(
+                    authService.loginManual(
+                            request.email(),
+                            request.senha(),
+                            "/auth/login",
+                            response
+                    )
+            );
+        } catch (RuntimeException exception) {
+            // Uma tentativa de troca de conta nunca deve preservar a sessão
+            // anterior quando as novas credenciais forem rejeitadas.
+            authCookieService.remover(response);
+            throw exception;
+        }
     }
 }

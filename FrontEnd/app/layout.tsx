@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { LanguageProvider } from "@/components/language-provider";
+import { AuthSessionSync } from "@/components/auth-session-sync";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
@@ -62,6 +63,7 @@ export default function RootLayout({
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false} themes={["dark", "light"]}>
           <LanguageProvider>
+            <AuthSessionSync />
             <Suspense fallback={null}>{children}</Suspense>
             <PwaInstallPrompt />
             <CookieConsent />

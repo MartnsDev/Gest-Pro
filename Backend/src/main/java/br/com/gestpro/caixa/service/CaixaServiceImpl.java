@@ -105,8 +105,13 @@ public class CaixaServiceImpl implements CaixaServiceInterface {
         if (!empresa.getDono().getEmail().equals(emailUsuario))
             throw new ApiException("Esta empresa não pertence ao usuário logado", HttpStatus.FORBIDDEN, "/caixas/aberto");
 
-        Caixa caixa = caixaRepository.findFirstByEmpresaIdAndStatus(empresaId, StatusCaixa.ABERTO)
-                .orElseThrow(() -> new ApiException("Nenhum caixa aberto para esta empresa.", HttpStatus.NOT_FOUND, "/caixas/aberto"));
+        Caixa caixa = caixaRepository
+                .findFirstByEmpresaIdAndStatus(empresaId, StatusCaixa.ABERTO)
+                .orElse(null);
+
+        if (caixa == null) {
+            return null;
+        }
 
         caixa.recalcularTotalVendas();
         return mapToResponse(caixa);

@@ -102,6 +102,39 @@ export function getToken(): null { return null; }
 export function hasToken(): boolean { return false; }
 
 let csrfToken: string | null = null;
+export const AUTH_EVENT_KEY = "gevyro-auth-event";
+
+export function limparDadosSessaoCliente(): void {
+  if (typeof window === "undefined") return;
+
+  removerTokenCookie();
+  sessionStorage.removeItem("checkout_email");
+  sessionStorage.removeItem("gevyro-request-cookie-consent-after-login");
+  sessionStorage.removeItem("gevyro-require-legal-ack-after-login");
+
+  const chavesPorConta = [
+    "gp_empresa_",
+    "gp_caixa_",
+    "empresa_ativa_uid_",
+    "caixa_ativo_uid_",
+  ];
+  const chavesLegadas = new Set([
+    "empresa_ativa",
+    "caixa_ativo",
+    "empresaAtiva",
+    "caixaAtivo",
+  ]);
+
+  Object.keys(localStorage).forEach((key) => {
+    if (chavesLegadas.has(key) || chavesPorConta.some((prefixo) => key.startsWith(prefixo))) {
+      localStorage.removeItem(key);
+    }
+  });
+}
+
+function publicarLogout(): void {
+  localStorage.setItem(AUTH_EVENT_KEY, JSON.stringify({ type: "logout", at: Date.now() }));
+}
 
 export async function obterCsrfToken(): Promise<string> {
   if (csrfToken) return csrfToken;
@@ -239,18 +272,14 @@ export async function cadastrar(
  * Logout — remove cookie local e invalida sessão no backend.
  */
 export async function logout(): Promise<void> {
-  // 1. Chama o backend primeiro (enquanto ainda tem o token)
-  await fetch(`${API_BASE_URL}/auth/logout`, {
-    method: "POST",
-    headers: { "X-CSRF-TOKEN": await obterCsrfToken() },
-    credentials: "include",
-  }).catch(() => {});
+  const response = await fetchAuth("/auth/logout", { method: "POST" });
+  if (!response.ok) {
+    throw new Error("Não foi possível encerrar a sessão com segurança. Tente novamente.");
+  }
 
-  // 2. Limpa tudo localmente
-  removerTokenCookie();
-  localStorage.removeItem("token");
-  localStorage.removeItem("access_token");
   csrfToken = null;
+  limparDadosSessaoCliente();
+  publicarLogout();
 }
 
 /**

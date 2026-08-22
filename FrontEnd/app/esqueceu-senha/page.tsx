@@ -58,13 +58,13 @@ export default function EsqueceuSenhaPage() {
 
   return (
     <main className="min-h-screen bg-white text-[#343b37] lg:grid lg:grid-cols-[1.05fr_.95fr]">
-      <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 xl:px-24">
+      <section className="flex min-h-screen flex-col px-4 py-5 sm:px-10 sm:py-6 lg:px-16 xl:px-24">
         <header className="flex items-center justify-between">
-          <Link href="/" className="flex items-center"><Image src="/images/gevyro-logo-400.webp" alt="Gevyro" width={400} height={145} priority className="h-auto w-[200px] object-contain" /></Link>
+          <Link href="/" className="flex items-center"><Image src="/images/gevyro-logo-400.webp" alt="Gevyro" width={400} height={145} priority className="h-auto w-[150px] object-contain sm:w-[200px]" /></Link>
           <Link href="/auth/login" className="flex items-center gap-2 text-xs text-[#718078] hover:text-[#258c53]"><ArrowLeft size={15} /> Voltar ao login</Link>
         </header>
 
-        <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center py-12">
+        <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center py-8 sm:py-12">
           {etapa === 3 ? (
             <div className="text-center">
               <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#258c53]/10 text-[#258c53]"><Check size={30} /></span>
@@ -75,7 +75,7 @@ export default function EsqueceuSenhaPage() {
           ) : (
             <>
               <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#258c53]">Recuperação de acesso</p>
-              <h1 className="mt-4 text-4xl font-light tracking-[-.04em] sm:text-5xl">{etapa === 1 ? <>Esqueceu sua <span className="italic text-[#258c53]">senha?</span></> : <>Crie uma <span className="italic text-[#258c53]">nova senha</span></>}</h1>
+              <h1 className="mt-4 text-3xl font-light tracking-[-.04em] sm:text-5xl">{etapa === 1 ? <>Esqueceu sua <span className="italic text-[#258c53]">senha?</span></> : <>Crie uma <span className="italic text-[#258c53]">nova senha</span></>}</h1>
               <p className="mt-4 text-sm leading-6 text-[#718078]">{etapa === 1 ? "Informe o e-mail cadastrado e enviaremos um código de verificação." : <>Enviamos um código para <strong className="font-semibold text-[#343b37]">{email}</strong>.</>}</p>
 
               <div className="my-8 flex items-center gap-3" aria-label={`Etapa ${etapa} de 2`}>

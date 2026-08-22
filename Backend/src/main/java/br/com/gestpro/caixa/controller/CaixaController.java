@@ -49,7 +49,14 @@ public class CaixaController {
     public ResponseEntity<CaixaResponse> caixaAberto(
             @RequestParam Long empresaId,
             Authentication authentication) {
-        return ResponseEntity.ok(caixaService.buscarCaixaAberto(empresaId, authentication.getName()));
+        CaixaResponse caixa = caixaService.buscarCaixaAberto(
+                empresaId,
+                authentication.getName()
+        );
+
+        return caixa == null
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(caixa);
     }
 
     /** Lista todos os caixas de uma empresa, do mais recente ao mais antigo */

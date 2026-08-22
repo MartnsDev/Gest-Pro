@@ -5,6 +5,7 @@ import {
   getUsuario,
   removerTokenCookie,
   getToken,
+  logout as logoutApi,
   type Usuario,
 } from "./api-v2";
 
@@ -43,17 +44,5 @@ export async function requireAuth(): Promise<Usuario> {
 }
 
 export async function logout(): Promise<void> {
-  try {
-    await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL ?? "https://gestpro-backend-production.up.railway.app"}/auth/logout`,
-      { method: "POST", credentials: "include" }
-    );
-  } catch {
-    // ignora erro de rede
-  } finally {
-    removeToken();
-    sessionStorage.removeItem("checkout_email");
-    localStorage.removeItem("token");
-    localStorage.removeItem("access_token");
-  }
+  await logoutApi();
 }

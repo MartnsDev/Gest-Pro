@@ -81,6 +81,7 @@ async function fetchAuth<T>(path: string): Promise<T> {
     headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error(`HTTP_${res.status}`);
+  if (res.status === 204) return null as T;
   return res.json();
 }
 
@@ -306,9 +307,14 @@ function DashboardInner({
     .slice(0, 2);
 
   const handleLogout = async () => {
-    resetarContexto();
-    await logout();
-    globalThis.location.href = "/";
+    try {
+      await logout();
+      resetarContexto();
+      globalThis.location.replace("/");
+    } catch (error) {
+      const mensagem = error instanceof Error ? error.message : "Não foi possível sair da conta.";
+      globalThis.alert(mensagem);
+    }
   };
 
   const tituloSecao: Record<Secao, string> = {
@@ -402,7 +408,7 @@ function DashboardInner({
     empresaAtiva?.nomeFantasia ?? caixaAtivo?.empresaNome ?? "";
 
   return (
-    <div className={styles.dashboardContainer}>
+    <div className={`${styles.dashboardContainer} dashboard-mobile-scope`}>
       {toast && <ToastPagamento onClose={() => setToast(false)} />}
 
       {cancelado && secao === "planos" && (
@@ -465,6 +471,7 @@ function DashboardInner({
             </span>
           </div>
           <div
+            className={styles.headerTitle}
             style={{
               marginLeft: 16,
               paddingLeft: 16,

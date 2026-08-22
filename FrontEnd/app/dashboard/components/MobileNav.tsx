@@ -13,6 +13,8 @@ import {
   MoreHorizontal,
   X,
   LogOut,
+  ShoppingBag,
+  FileText,
 } from "lucide-react";
 
 type Secao =
@@ -43,10 +45,12 @@ const mainItems: { id: Secao; label: string; icon: React.ReactNode }[] = [
   { id: "produtos", label: "Produtos", icon: <Package size={20} /> },
   { id: "vendas", label: "Vendas", icon: <CreditCard size={20} /> },
   { id: "clientes", label: "Clientes", icon: <Users size={20} /> },
-  { id: "relatorios", label: "Relatórios", icon: <BarChart3 size={20} /> },
 ];
 
 const moreItems: { id: Secao; label: string; icon: React.ReactNode }[] = [
+  { id: "pedidos", label: "Pedidos", icon: <ShoppingBag size={20} /> },
+  { id: "relatorios", label: "Relatórios", icon: <BarChart3 size={20} /> },
+  { id: "notafiscal", label: "Notas fiscais", icon: <FileText size={20} /> },
   { id: "empresas", label: "Empresas", icon: <Building2 size={20} /> },
   { id: "configuracoes", label: "Configurações", icon: <Settings size={20} /> },
   { id: "planos", label: "Planos", icon: <Zap size={20} /> },
@@ -100,6 +104,9 @@ export default function MobileNav({ secao, onChange, caixaAtivo, onLogout }: Mob
               border: "1px solid var(--border)",
               borderRadius: 18,
               padding: "8px 4px 4px",
+              maxHeight: "min(70vh, 560px)",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
               boxShadow: "0 -8px 40px rgba(0,0,0,0.35)",
               animation: "slideUp .22s cubic-bezier(.175,.885,.32,1.1)",
             }}
@@ -216,13 +223,13 @@ export default function MobileNav({ secao, onChange, caixaAtivo, onLogout }: Mob
           bottom: 0,
           left: 0,
           right: 0,
-          height: 68,
+          minHeight: 68,
           background: "var(--surface)",
           borderTop: "1px solid var(--border)",
           display: "flex",
           alignItems: "stretch",
           zIndex: 900,
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 4px)",
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
         }}

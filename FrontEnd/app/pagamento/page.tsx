@@ -44,41 +44,41 @@ function PagamentoInner() {
   return (
     <main className="min-h-screen bg-[#f6f8f7] text-[#303a35]">
       <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex h-[74px] max-w-6xl items-center justify-between px-5 lg:px-0">
-          <Link href="/" className="flex items-center"><Image src="/images/gevyro-logo-400.webp" alt="Gevyro" width={400} height={145} priority className="h-auto w-[200px] object-contain" /></Link>
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:h-[74px] sm:px-5 lg:px-0">
+          <Link href="/" className="flex min-w-0 items-center"><Image src="/images/gevyro-logo-400.webp" alt="Gevyro" width={400} height={145} priority className="h-auto w-[145px] object-contain sm:w-[200px]" /></Link>
           <span className="flex items-center gap-2 text-xs text-[#718078]"><LockKeyhole size={14} className="text-[#258c53]" /> Ambiente seguro</span>
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-6xl gap-8 px-5 py-10 lg:grid-cols-[1fr_380px] lg:px-0 lg:py-14">
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-7 sm:gap-8 sm:px-5 sm:py-10 lg:grid-cols-[1fr_380px] lg:px-0 lg:py-14">
         <section>
           <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#258c53]">Continue usando o Gevyro</p>
-          <h1 className="mt-3 max-w-2xl text-4xl font-light tracking-[-.04em] sm:text-5xl">Escolha o plano ideal para a <span className="italic text-[#258c53]">sua operação</span></h1>
+          <h1 className="mt-3 max-w-2xl text-3xl font-light leading-tight tracking-[-.04em] sm:text-5xl">Escolha o plano ideal para a <span className="italic text-[#258c53]">sua operação</span></h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-[#718078]">Seu acesso está aguardando a renovação. Selecione um plano e conclua a assinatura com segurança.</p>
           {cancelado && <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">Pagamento cancelado. Nenhuma cobrança foi realizada; escolha um plano quando estiver pronto.</p>}
           {erro && <p role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{erro}</p>}
 
-          <div className="mt-9 grid gap-4 sm:grid-cols-3">
+          <div className="mt-7 grid gap-3 sm:mt-9 sm:grid-cols-3 sm:gap-4">
             {PLANOS_PAGOS.map((item) => {
               const ativo = item.id === selecionado;
               return (
-                <button key={item.id} type="button" onClick={() => { setSelecionado(item.id); setErro(""); }} className={`relative min-h-48 rounded-2xl border bg-white p-5 text-left transition ${ativo ? "border-[#258c53] ring-4 ring-[#258c53]/10" : "border-zinc-200 hover:border-[#258c53]/40"}`}>
+                <button key={item.id} type="button" onClick={() => { setSelecionado(item.id); setErro(""); }} className={`relative min-h-0 rounded-2xl border bg-white p-4 text-left transition sm:min-h-48 sm:p-5 ${ativo ? "border-[#258c53] ring-4 ring-[#258c53]/10" : "border-zinc-200 hover:border-[#258c53]/40"}`}>
                   {item.destaque && <span className="absolute right-4 top-4 rounded-full bg-[#e7f6ed] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-[#258c53]">Mais escolhido</span>}
                   <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${ativo ? "border-[#258c53] bg-[#258c53]" : "border-zinc-300"}`}>{ativo && <Check size={12} className="text-white" />}</span>
-                  <h2 className="mt-7 text-xl font-semibold">{item.nome}</h2><p className="mt-1 text-xs text-[#718078]">{item.descricao}</p>
-                  <p className="mt-5 text-2xl font-bold text-[#258c53]">R$ {item.preco}<span className="text-xs font-normal text-[#718078]">/mês</span></p>
+                  <h2 className="mt-4 text-xl font-semibold sm:mt-7">{item.nome}</h2><p className="mt-1 pr-24 text-xs text-[#718078] sm:pr-0">{item.descricao}</p>
+                  <p className="mt-3 text-2xl font-bold text-[#258c53] sm:mt-5">R$ {item.preco}<span className="text-xs font-normal text-[#718078]">/mês</span></p>
                 </button>
               );
             })}
           </div>
 
-          <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-6">
+          <div className="mt-5 rounded-2xl border border-zinc-200 bg-white p-4 sm:mt-6 sm:p-6">
             <h2 className="text-sm font-semibold">Incluído no plano {plano.nome}</h2>
             <ul className="mt-5 grid gap-4 sm:grid-cols-2">{plano.recursos.map((recurso) => <li key={recurso} className="flex items-center gap-3 text-sm text-[#59665f]"><Check size={16} className="shrink-0 text-[#258c53]" />{recurso}</li>)}</ul>
           </div>
         </section>
 
-        <aside className="h-fit rounded-2xl bg-[#303a35] p-7 text-white lg:sticky lg:top-8">
+        <aside className="h-fit rounded-2xl bg-[#303a35] p-5 text-white sm:p-7 lg:sticky lg:top-8">
           <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#78d6a3]">Resumo da assinatura</p>
           <div className="mt-6 flex items-start justify-between border-b border-white/10 pb-6"><div><h2 className="text-xl font-semibold">Plano {plano.nome}</h2><p className="mt-1 text-xs text-zinc-400">Cobrança mensal recorrente</p></div><p className="text-xl font-bold">R$ {plano.preco}</p></div>
           <div className="flex items-center justify-between py-6"><span className="text-sm text-zinc-300">Total hoje</span><span className="text-2xl font-bold text-[#78d6a3]">R$ {plano.preco}</span></div>

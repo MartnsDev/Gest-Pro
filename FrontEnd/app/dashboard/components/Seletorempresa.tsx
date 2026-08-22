@@ -43,6 +43,7 @@ async function fetchAuth<T>(path: string, opts?: RequestInit): Promise<T> {
     },
   );
   if (!res.ok) throw new Error(`Erro ${res.status}`);
+  if (res.status === 204) return null as T;
   return res.json();
 }
 
@@ -71,7 +72,7 @@ export default function SeletorEmpresa({
     if (!aberto) return;
     empresas.forEach(async (emp) => {
       try {
-        const c = await fetchAuth<CaixaInfo>(
+        const c = await fetchAuth<CaixaInfo | null>(
           `/api/v1/caixas/aberto?empresaId=${emp.id}`,
         );
         setCaixas((prev) => ({ ...prev, [emp.id]: c }));
@@ -92,8 +93,9 @@ export default function SeletorEmpresa({
   }, []);
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
+    <div ref={ref} className="empresa-selector" style={{ position: "relative" }}>
       <button
+        className="empresa-selector-trigger"
         onClick={() => setAberto((a) => !a)}
         style={{
           display: "flex",
@@ -141,6 +143,7 @@ export default function SeletorEmpresa({
 
       {aberto && (
         <div
+          className="empresa-selector-menu"
           style={{
             position: "absolute",
             top: "calc(100% + 8px)",

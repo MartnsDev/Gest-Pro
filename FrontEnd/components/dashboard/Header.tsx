@@ -71,9 +71,13 @@ export function Header({ usuario, section }: HeaderProps) {
     setLoggingOut(true);
     try {
       await logout();
-    } catch {}
-    removeToken();
-    window.location.href = "/";
+      removeToken();
+      window.location.replace("/");
+    } catch (error) {
+      const mensagem = error instanceof Error ? error.message : "Não foi possível sair da conta.";
+      window.alert(mensagem);
+      setLoggingOut(false);
+    }
   };
 
   const primeiroNome = usuario.nome.split(" ")[0];
