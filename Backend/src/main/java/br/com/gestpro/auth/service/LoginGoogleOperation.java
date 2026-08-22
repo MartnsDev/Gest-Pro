@@ -9,10 +9,12 @@ import br.com.gestpro.plano.TipoPlano;
 import br.com.gestpro.plano.service.VerificarPlanoOperation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 
 @Service
+@Slf4j
 public class LoginGoogleOperation {
 
     private final UsuarioRepository usuarioRepository;
@@ -41,13 +43,20 @@ public class LoginGoogleOperation {
                         u.setTokenConfirmacao(null);
                     }
 
-                    // Verifica expiração do plano — atualiza status sem bloquear o login
-                        verificarPlano.validarAcesso(u);
+                    u.setLoginGoogle(true);
+
+                    // Atualiza o status do plano, mas permite autenticar para que
+                    // contas inativas possam acessar a página de pagamento.
+                    try {
+                        verificarPlano.validarAcessoIsolado(u);
+                    } catch (ApiException exception) {
+                        log.info("Plano sem acesso durante login Google: {}", u.getId());
+                    }
 
                     return usuarioRepository.save(u);
                 })
                 .orElseGet(() -> {
-                    // Novo usuário via Google — inicia período Experimental de 7 dias
+                    // Novo usuário via Google — inicia o período experimental.
                     Usuario novo = new Usuario();
                     novo.setNome(nome);
                     novo.setEmail(email);
@@ -61,7 +70,7 @@ public class LoginGoogleOperation {
 
                     LocalDateTime agora = LocalDateTime.now();
                     novo.setDataCriacao(agora);
-                    novo.setDataPrimeiroLogin(agora); // relógio dos 7 dias começa aqui
+                    novo.setDataPrimeiroLogin(agora);
 
                     return usuarioRepository.save(novo);
                 });

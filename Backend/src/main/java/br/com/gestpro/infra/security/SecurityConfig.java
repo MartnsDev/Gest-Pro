@@ -132,10 +132,7 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService))
                         .successHandler(oauthSuccessHandler)
-                        .failureUrl(
-                                oauthSuccessHandler.getFrontendUrl()
-                                        + "/auth/login?error=oauth2"
-                        ));
+                        .failureHandler(oauthSuccessHandler));
 
         http.addFilterBefore(
                 jwtAuthenticationFilter,

@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -21,7 +23,7 @@ import java.util.Map;
 @Slf4j
 @Component
 public class OAuth2LoginSuccessHandler
-        implements AuthenticationSuccessHandler {
+        implements AuthenticationSuccessHandler, AuthenticationFailureHandler {
 
     private final LoginGoogleOperation loginGoogleOperation;
     private final AuthCookieService authCookieService;
@@ -108,6 +110,7 @@ public class OAuth2LoginSuccessHandler
             if (session != null) {
                 session.invalidate();
             }
+            authCookieService.removerSessaoTemporaria(response);
 
             response.setHeader(
                     "Cache-Control",
@@ -133,12 +136,36 @@ public class OAuth2LoginSuccessHandler
             );
 
             authCookieService.remover(response);
+            limparSessaoTemporaria(request, response);
 
             response.sendRedirect(
                     frontendUrl
                             + "/auth/login?error=oauth2"
             );
         }
+    }
+
+    @Override
+    public void onAuthenticationFailure(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException exception
+    ) throws IOException {
+        log.warn("Google recusou ou não concluiu a autenticação: {}", exception.getMessage());
+        authCookieService.remover(response);
+        limparSessaoTemporaria(request, response);
+        response.sendRedirect(frontendUrl + "/auth/login?error=oauth2");
+    }
+
+    private void limparSessaoTemporaria(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        authCookieService.removerSessaoTemporaria(response);
     }
 
     private void validarEmailConfirmado(
