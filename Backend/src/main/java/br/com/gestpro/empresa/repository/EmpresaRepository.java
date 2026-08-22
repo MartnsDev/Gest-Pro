@@ -21,9 +21,9 @@ public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
 
     long countByDonoIdAndAtivoTrue(Long donoId);
 
-    @Query(value = "SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END FROM empresas e WHERE REPLACE(REPLACE(REPLACE(REPLACE(e.cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = :documento", nativeQuery = true)
-    boolean existsByCnpj(@Param("documento") String documento);
+    @Query(value = "SELECT COUNT(*) FROM empresas e WHERE REPLACE(REPLACE(REPLACE(REPLACE(e.cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = :documento", nativeQuery = true)
+    long countByDocumentoNormalizado(@Param("documento") String documento);
 
-    @Query(value = "SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END FROM empresas e WHERE e.id <> :id AND REPLACE(REPLACE(REPLACE(REPLACE(e.cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = :documento", nativeQuery = true)
-    boolean existsByCnpjAndIdNot(@Param("documento") String documento, @Param("id") Long id);
+    @Query(value = "SELECT COUNT(*) FROM empresas e WHERE e.id <> :id AND REPLACE(REPLACE(REPLACE(REPLACE(e.cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = :documento", nativeQuery = true)
+    long countByDocumentoNormalizadoAndIdNot(@Param("documento") String documento, @Param("id") Long id);
 }

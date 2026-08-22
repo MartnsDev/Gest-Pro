@@ -82,10 +82,42 @@ const formatarDocumento = (valor: string) => {
 
 const documentoEmpresa = (empresa: Empresa) => empresa.cnpj || empresa.cpf || "";
 
+const todosDigitosIguais = (digitos: string) => /^(\d)\1+$/.test(digitos);
+
+const cpfValido = (cpf: string) => {
+  if (cpf.length !== 11 || todosDigitosIguais(cpf)) return false;
+  const calcular = (tamanho: number) => {
+    let soma = 0;
+    for (let indice = 0; indice < tamanho; indice++) soma += Number(cpf[indice]) * (tamanho + 1 - indice);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  return calcular(9) === Number(cpf[9]) && calcular(10) === Number(cpf[10]);
+};
+
+const cnpjValido = (cnpj: string) => {
+  if (cnpj.length !== 14 || todosDigitosIguais(cnpj)) return false;
+  const calcular = (tamanho: 12 | 13) => {
+    const pesos = tamanho === 12
+      ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+      : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const soma = pesos.reduce((total, peso, indice) => total + Number(cnpj[indice]) * peso, 0);
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  };
+  return calcular(12) === Number(cnpj[12]) && calcular(13) === Number(cnpj[13]);
+};
+
 const validarDocumentoOpcional = (valor: string): string | null => {
   const digitos = digitosDocumento(valor);
-  if (digitos.length === 0 || digitos.length === 11 || digitos.length === 14) return null;
-  return "Informe um CPF com 11 dígitos, um CNPJ com 14 dígitos ou deixe o campo vazio.";
+  if (digitos.length === 0) return null;
+  if (digitos.length === 11) {
+    return cpfValido(digitos) ? null : "CPF inválido: confira os números e os dois dígitos verificadores.";
+  }
+  if (digitos.length === 14) {
+    return cnpjValido(digitos) ? null : "CNPJ inválido: confira os números e os dois dígitos verificadores.";
+  }
+  return `Documento incompleto: foram informados ${digitos.length} dígitos. CPF deve ter 11 e CNPJ deve ter 14.`;
 };
 
 function ModalExclusao({

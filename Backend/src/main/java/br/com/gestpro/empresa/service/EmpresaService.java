@@ -16,6 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -47,7 +48,7 @@ public class EmpresaService {
         if (req.getCnpj() != null && !req.getCnpj().isBlank()) {
             String documentoLimpo = normalizarDocumento(req.getCnpj());
 
-            if (empresaRepository.existsByCnpj(documentoLimpo)) {
+            if (empresaRepository.countByDocumentoNormalizado(documentoLimpo) > 0) {
                 throw new ApiException("Este CPF/CNPJ já está vinculado a outra empresa no sistema.", HttpStatus.CONFLICT, "/empresas");
             }
 
@@ -89,7 +90,7 @@ public class EmpresaService {
         if (documentoAlterado && documentoNovo != null) {
 
             // Impede que o mesmo documento seja vinculado a outra empresa.
-            if (empresaRepository.existsByCnpjAndIdNot(documentoNovo, id)) {
+            if (empresaRepository.countByDocumentoNormalizadoAndIdNot(documentoNovo, id) > 0) {
                 throw new ApiException(
                         "Este CPF/CNPJ já está sendo utilizado por outra empresa.",
                         HttpStatus.CONFLICT, "/empresas"
@@ -210,14 +211,23 @@ public class EmpresaService {
         if (documento.length() == 11) {
             try {
                 verificarCPF.consultarCpf(documento);
-            } catch (RuntimeException cpfInvalido) {
-                throw new ApiException("CPF inválido.", HttpStatus.BAD_REQUEST, "/empresas");
+            } catch (ResponseStatusException cpfInvalido) {
+                String motivo = cpfInvalido.getReason();
+                throw new ApiException(
+                        motivo == null || motivo.isBlank() ? "CPF inválido." : motivo,
+                        HttpStatus.BAD_REQUEST,
+                        "/empresas"
+                );
             }
             return null;
         }
         if (documento.length() == 14) {
             if (!verificarCNPJ.isCnpjValido(documento)) {
-                throw new ApiException("CNPJ inválido.", HttpStatus.BAD_REQUEST, "/empresas");
+                throw new ApiException(
+                        "CNPJ inválido: confira os 14 números e os dígitos verificadores.",
+                        HttpStatus.BAD_REQUEST,
+                        "/empresas"
+                );
             }
             try {
                 return verificarCNPJ.consultarCnpj(documento);

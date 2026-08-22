@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     // 1. Exceção personalizada da API
@@ -102,9 +104,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<RetornoErroAPI> handleAllExceptions(Exception ex, HttpServletRequest request) {
 
+        log.error("Erro interno não tratado em {} {}", request.getMethod(), request.getRequestURI(), ex);
+
         RetornoErroAPI erro = new RetornoErroAPI(
                 false,
-                ex.getMessage(),
+                "O servidor não conseguiu concluir a operação. Tente novamente em instantes.",
                 500,
                 request.getRequestURI(),
                 LocalDateTime.now(),
